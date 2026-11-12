@@ -1,0 +1,106 @@
+{
+ "validator": "StAEDI (io.xlate:staedi) 1.26.7",
+ "validator_published": "2026-11-08",
+ "jar_bytes": 323801,
+ "corpus": {
+  "sha256": "f7b3079094167dbe64feb19d9931ae34a2719e4f791fad31ab8a76fbace6904d",
+  "files": 2676
+ },
+ "passed": true,
+ "files": 2676,
+ "transaction_sets": 24130,
+ "faulted_files": 14,
+ "rejections_matched": 15,
+ "injected": [
+  {
+   "fault": "missing mandatory segment (855 without CTT)",
+   "document": "855",
+   "expected": "MANDATORY_SEGMENT_MISSING",
+   "got": [
+    "MANDATORY_SEGMENT_MISSING"
+   ],
+   "clean_passes": true
+  },
+  {
+   "fault": "invalid date (856 DTM02)",
+   "document": "856",
+   "expected": "INVALID_DATE",
+   "got": [
+    "INVALID_DATE"
+   ],
+   "clean_passes": true
+  },
+  {
+   "fault": "segment count wrong (856 SE01)",
+   "document": "856",
+   "expected": "CONTROL_COUNT_DOES_NOT_MATCH_ACTUAL_COUNT",
+   "got": [
+    "CONTROL_COUNT_DOES_NOT_MATCH_ACTUAL_COUNT"
+   ],
+   "clean_passes": true
+  },
+  {
+   "fault": "element too long (856 N102)",
+   "document": "856",
+   "expected": "DATA_ELEMENT_TOO_LONG",
+   "got": [
+    "DATA_ELEMENT_TOO_LONG"
+   ],
+   "clean_passes": true
+  },
+  {
+   "fault": "PO reference over 22 characters (856 PRF01)",
+   "document": "856",
+   "expected": "DATA_ELEMENT_TOO_LONG",
+   "got": [
+    "DATA_ELEMENT_TOO_LONG"
+   ],
+   "clean_passes": true
+  },
+  {
+   "fault": "PO reference over 22 characters (810 BIG04)",
+   "document": "810",
+   "expected": "DATA_ELEMENT_TOO_LONG",
+   "got": [
+    "DATA_ELEMENT_TOO_LONG"
+   ],
+   "clean_passes": true
+  },
+  {
+   "fault": "group control number mismatch (GE02)",
+   "document": "850",
+   "expected": "CONTROL_REFERENCE_MISMATCH",
+   "got": [
+    "CONTROL_REFERENCE_MISMATCH"
+   ],
+   "clean_passes": true
+  },
+  {
+   "fault": "unknown segment (850 with ZZZ)",
+   "document": "850",
+   "expected": "SEGMENT_NOT_IN_DEFINED_TRANSACTION_SET",
+   "got": [
+    "SEGMENT_NOT_IN_DEFINED_TRANSACTION_SET"
+   ],
+   "clean_passes": true
+  },
+  {
+   "fault": "mandatory element missing (810 BIG02 invoice number)",
+   "document": "810",
+   "expected": "REQUIRED_DATA_ELEMENT_MISSING",
+   "got": [
+    "REQUIRED_DATA_ELEMENT_MISSING"
+   ],
+   "clean_passes": true
+  },
+  {
+   "fault": "non-numeric quantity (850 PO102)",
+   "document": "850",
+   "expected": "INVALID_CHARACTER_DATA",
+   "got": [
+    "INVALID_CHARACTER_DATA"
+   ],
+   "clean_passes": true
+  }
+ ]
+}

@@ -1,21 +1,26 @@
 {
   "name": "tg-retail-demo-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Read-only MCP server and seeded demo database for TG for Retail prototypes. All data is fictional.",
+  "description": "One Ashby and Northfield demo world behind every TG for Retail prototype: X12 files, a derived database, and a read-only MCP and REST server. All data is fictional.",
   "type": "module",
   "engines": {
     "node": ">=22.13"
   },
   "scripts": {
-    "build": "node --no-warnings data/seed.js && node --no-warnings scripts/check.js",
+    "build": "node --no-warnings world/build.js && node --no-warnings scripts/openapi.js && node --no-warnings scripts/check.js",
+    "world": "node --no-warnings world/build.js",
     "check": "node --no-warnings scripts/check.js",
-    "start": "node --no-warnings src/server.js",
-    "smoke": "node --no-warnings scripts/smoke.js"
+    "validate": "node --no-warnings scripts/validate-x12.js",
+    "openapi": "node --no-warnings scripts/openapi.js",
+    "contract": "node --no-warnings scripts/contract.js",
+    "smoke": "node --no-warnings scripts/smoke.js",
+    "start": "node --no-warnings src/server.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",
     "express": "5.2.1",
-    "zod": "3.25.76"
+    "zod": "3.25.76",
+    "zod-to-json-schema": "3.25.2"
   }
 }

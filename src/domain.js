@@ -1,215 +1,219 @@
-// Answer logic shared by the MCP tools, the record pages and the build checks.
-// Every answer is computed from the database at the scenario's fixed demo clock.
-import { fmtET } from '../data/lib.js';
+// Answer logic shared by the MCP tools, the record pages and the checks.
+// One timeline. Record lookups return the record's whole history; questions about "now" take an as-of time.
+import { fmtET, et } from '../world/lib.js';
 
 export const COMPANY = 'ASHBY';
 export const NOT_AVAILABLE = 'Not available to Ashby';
 const H = 3600000;
-const NAME = { NORTHFIELD: 'Northfield Retailer', ASHBY: 'Ashby Supplier', KINROSS: 'Kinross Logistics', BROOKLINE: 'Brookline Goods', CEDARPINE: 'Cedar & Pine Home' };
-const nm = (id) => NAME[id] || id;
-
-export function scenario(db, id) {
-  const s = db.prepare('SELECT * FROM scenarios WHERE id = ?').get(id);
-  if (!s) return null;
-  const override = process.env[`CLOCK_${id.toUpperCase()}`];
-  return { ...s, clockDate: new Date(override || s.clock) };
-}
+/** The story clock: what "now" means when a question gives no as-of time. Default: P10, Tuesday 17 November 11:00 Eastern. */
+export const storyClock = () => new Date(process.env.STORY_CLOCK || '2026-11-17T16:00:00.000Z');
+export const asOfDate = (v) => { if (!v) return storyClock(); const d = new Date(/T/.test(v) ? v : `${v}T23:59:00-05:00`); if (Number.isNaN(d.getTime())) throw new Error('as_of must be an ISO date or date-time'); return d; };
 
 export function timeLeft(deadline, clock) {
   const ms = deadline - clock;
-  if (ms < 0) {
-    const h = Math.round(-ms / H);
-    return h >= 24 ? `Overdue by ${Math.floor(h / 24)} day${h >= 48 ? 's' : ''}` : `Overdue by ${h} hour${h === 1 ? '' : 's'}`;
-  }
+  if (ms < 0) { const h = Math.round(-ms / H); return h >= 24 ? `Overdue by ${Math.floor(h / 24)} day${h >= 48 ? 's' : ''}` : h >= 1 ? `Overdue by ${h} hour${h === 1 ? '' : 's'}` : `Overdue by ${Math.max(1, Math.round(-ms / 60000))} minutes`; }
   const h = Math.floor(ms / H);
   if (h >= 24) { const d = Math.floor(h / 24); return `${d} day${d === 1 ? '' : 's'} left`; }
   if (h >= 1) return `${h} hour${h === 1 ? '' : 's'} left`;
   return `${Math.max(1, Math.round(ms / 60000))} minutes left`;
 }
+const J = (s) => (s ? JSON.parse(s) : null);
+export const rule = (db, id) => { if (!id) return null; const r = db.prepare('SELECT id, statement, source, basis FROM rules WHERE id = ?').get(id); return r ? { ...r } : null; };
+const nameOf = (db, id) => db.prepare('SELECT name FROM parties WHERE id = ?').get(id)?.name || id;
+const docRow = (db, d) => ({ reference: d.reference, document: `${d.name} (${d.doc_type})`, sent: fmtET(d.sent_at), from: nameOf(db, d.sender_id), to: nameOf(db, d.receiver_id), status: d.status, link: `document/${encodeURIComponent(d.doc_id)}` });
+export const normPo = (raw) => String(raw).trim().toUpperCase().replace(/^PO\s*/, '').replace(/^(\d)/, 'NR-$1');
 
-function endOfDay(clock) {
-  const s = fmtET(clock).slice(0, 10);
-  // 23:59 Eastern on the clock's day
-  const probe = new Date(clock.getTime());
-  for (let k = 0; k < 48; k++) { const t = new Date(probe.getTime() + k * 30 * 60000); if (fmtET(t).slice(0, 10) !== s) return new Date(t.getTime() - 60000); }
-  return new Date(clock.getTime() + 12 * H);
+export function ownsOrder(db, po) { const o = db.prepare('SELECT supplier_id FROM orders WHERE po = ?').get(po); return !o ? 'missing' : o.supplier_id === COMPANY ? 'own' : 'other'; }
+
+/** Rejections on a document as they stood at a time: open until the corrected document was sent. */
+function openErrors(db, docId, t) {
+  return db.prepare('SELECT e.*, r.sent_at reported_at, c.sent_at corrected_at FROM errors e JOIN documents r ON r.doc_id = e.reported_by LEFT JOIN documents c ON c.doc_id = e.corrected_by WHERE e.doc_id = ?').all(docId)
+    .filter((e) => e.reported_at <= t && !(e.corrected_at && e.corrected_at <= t));
 }
+const dockOpen = (o) => et(o.requested_delivery, o.ship_to === 'DC4' ? '07:00' : '06:00');
 
-const rule = (db, id) => (id ? db.prepare('SELECT id, statement, source FROM rules WHERE id = ?').get(id) : null);
-const docRow = (d) => ({ doc_id: d.doc_id, reference: d.reference, document: `${d.name} (${d.doc_type})`, sent: fmtET(d.sent_at), from: nm(d.sender_id), to: nm(d.receiver_id), status: d.status, link: `order/${encodeURIComponent(d.po || '')}#${encodeURIComponent(d.doc_id)}` });
-
-export function ownsOrder(db, sc, po) {
-  const o = db.prepare('SELECT supplier_id FROM orders WHERE scenario = ? AND po = ?').get(sc, po);
-  if (!o) return 'missing';
-  return o.supplier_id === COMPANY ? 'own' : 'other';
-}
-
-/** Orders needing attention: open rejections and required documents not yet sent, with the rule and time left. */
-export function attention(db, sc) {
-  const S = scenario(db, sc); const clock = S.clockDate; const eod = endOfDay(clock);
-  const out = []; const checked = [];
-  const orders = db.prepare('SELECT * FROM orders WHERE scenario = ? AND supplier_id = ? ORDER BY po').all(sc, COMPANY);
-  const docsOf = db.prepare('SELECT * FROM documents WHERE scenario = ? AND po = ? AND sent_at <= ? ORDER BY sent_at');
-  const errOf = db.prepare("SELECT * FROM errors WHERE scenario = ? AND doc_id = ? AND status = 'Open'");
-  const shipOf = db.prepare('SELECT * FROM shipments WHERE scenario = ? AND po = ?');
-  const whOf = db.prepare('SELECT * FROM warehouse_orders WHERE scenario = ? AND po = ?');
+/**
+ * Orders needing attention at a time: rejected documents, and required documents not sent as their deadline nears.
+ * Northfield documents only unless warehouse is true, which adds the Kinross shipping advice.
+ */
+export function attention(db, asOf = storyClock(), { warehouse = false } = {}) {
+  const t = asOf.toISOString(); const out = []; const checked = [];
+  const since = new Date(asOf.getTime() - 12 * 24 * H).toISOString();
+  const orders = db.prepare("SELECT * FROM orders WHERE supplier_id = ? AND stream <> 'store' AND received_at <= ? AND received_at >= ? ORDER BY po").all(COMPANY, t, since);
+  const docsOf = db.prepare('SELECT doc_id, reference, doc_type, sent_at FROM documents WHERE po = ? AND sent_at <= ? AND test = 0 ORDER BY sent_at');
+  const evOf = db.prepare("SELECT at FROM events WHERE po = ? AND at <= ? AND kind = 'wms.departure_scan' ORDER BY at");
+  const anyErr = db.prepare('SELECT 1 x FROM errors e JOIN documents r ON r.doc_id = e.reported_by WHERE e.doc_id = ? AND r.sent_at <= ?');
   for (const o of orders) {
-    const docs = docsOf.all(sc, o.po, clock.toISOString());
-    const has = (t) => docs.some((d) => d.doc_type === t && d.status === 'Delivered');
-    const openErr = (t) => { for (const d of docs.filter((x) => x.doc_type === t)) { const e = errOf.get(sc, d.doc_id); if (e) return { d, e }; } return null; };
-    const add = (reason, ruleId, deadline, records, extra = {}) => out.push({
-      po: o.po, reason, rule: rule(db, ruleId), deadline: fmtET(deadline), time_left: timeLeft(deadline, clock), _t: deadline.getTime(),
-      records, link: `order/${encodeURIComponent(o.po)}`, ...extra,
-    });
-    const received = new Date(o.received_at);
-    if (!docs.some((d) => d.doc_type === '855')) add('Order acknowledgment not sent', 'NF-ACK', new Date(received.getTime() + 24 * H), [o.po]);
-    const sh = shipOf.get(sc, o.po);
-    if (sh) {
-      const planned = new Date(sh.planned_departure); const departed = sh.departed_at ? new Date(sh.departed_at) : null;
-      if (!has('856')) {
-        const rej = openErr('856');
-        if (rej) add(`Ship notice rejected: ${rej.e.cause}`, rej.e.rule_id, planned, [rej.d.reference], { rejected: rej.d.reference, truck: fmtET(planned) });
-        else if (departed) add('Ship notice not sent; truck has left', 'NF-ASN', departed, [o.po], { truck: fmtET(departed), state: 'Late' });
-        else if (planned <= eod) add('Ship notice not sent', 'NF-ASN', planned, [o.po], { truck: fmtET(planned) });
+    const docs = docsOf.all(o.po, t);
+    const of = (ty) => docs.filter((d) => d.doc_type === ty);
+    const good = (ty) => of(ty).some((d) => !anyErr.get(d.doc_id, t));
+    const firstOpen = (ty) => { for (const d of of(ty)) { const e = openErrors(db, d.doc_id, t)[0]; if (e) return { d, e }; } return null; };
+    const add = (reason, ruleId, deadline, records, extra = {}) => out.push({ po: o.po, reason, rule: rule(db, ruleId), deadline: fmtET(deadline), time_left: timeLeft(deadline, asOf), _t: deadline.getTime(), records, link: `order/${encodeURIComponent(o.po)}`, ...extra });
+    if (!of('855').length && !of('865').length) { const due = new Date(Date.parse(o.received_at) + 24 * H); if (due - asOf <= 8 * H) add('Order acknowledgment not sent', 'NF-1.4', due, [o.po]); }
+    const dep = evOf.all(o.po, t).pop();
+    if (dep) {
+      const departed = new Date(dep.at);
+      if (!good('856')) {
+        const rej = firstOpen('856');
+        if (rej) add(`Ship notice rejected: ${rej.e.cause}`, rej.e.rule_id || 'NF-4.2', dockOpen(o), [rej.d.reference], { rejected: rej.d.reference, corrected_ship_notice_due: 'Before the shipment reaches the DC', truck_left: fmtET(departed) });
+        else if (!of('856').length) add('Ship notice not sent; the truck has left', 'NF-4.2', new Date(departed.getTime() + H), [o.po], { truck_left: fmtET(departed), ...(asOf - departed > H ? { state: 'Late' } : {}) });
       }
-      if (departed && !has('810')) {
-        const rej = openErr('810'); const due = new Date(departed.getTime() + 48 * H);
-        if (rej) add(`Invoice rejected: ${rej.e.cause}`, rej.e.rule_id, due, [rej.d.reference], { rejected: rej.d.reference, shipped: fmtET(departed) });
-        else add('Invoice not sent', 'NF-INV', due, [o.po], { shipped: fmtET(departed) });
+      if (!good('810')) {
+        const rej = firstOpen('810'); const due = new Date(departed.getTime() + 48 * H);
+        if (rej) add(`Invoice rejected: ${rej.e.cause}`, rej.e.rule_id || 'NF-7.9', due, [rej.d.reference], { rejected: rej.d.reference, shipped: fmtET(departed) });
+        else if (!of('810').length && due - asOf <= 24 * H) add('Invoice not sent', 'NF-7.9', due, [o.po], { shipped: fmtET(departed) });
       }
     }
-    const wh = whOf.get(sc, o.po);
-    if (wh && !wh.advice_at) {
-      const due = new Date(new Date(wh.order_sent_at).getTime() + 24 * H);
-      if (due <= eod) add('Warehouse shipping advice (945) not received from Kinross', 'KX-945', due, [o.po], { warehouse_status: 'Unknown', order_sent: fmtET(wh.order_sent_at) });
+    if (warehouse) {
+      const w = db.prepare('SELECT * FROM warehouse_orders WHERE po = ? AND sent_at <= ?').get(o.po, t);
+      if (w && !(w.advice_at && w.advice_at <= t)) { const due = new Date(Date.parse(w.sent_at) + 24 * H); if (due - asOf <= 8 * H) add('Warehouse shipping advice (945) not received from Kinross', 'KX-945', due, [w.ref], { warehouse_status: 'Unknown', warehouse_order_sent: fmtET(w.sent_at) }); }
     }
-    const cha = docs.find((d) => d.doc_type === '865');
-    if (cha) checked.push({ po: o.po, item: 'Business acceptance of the change acknowledgment', state: 'Not expected', rule: rule(db, 'NF-997'), evidence: 'Technical acknowledgment (997) received', link: `order/${encodeURIComponent(o.po)}` });
+    const cha = of('865').pop();
+    if (cha && asOf - new Date(cha.sent_at) <= 48 * H) checked.push({ po: o.po, item: 'Business acceptance of the change acknowledgment', state: 'Not expected', rule: rule(db, 'NF-1.5'), evidence: 'Technical acknowledgment (997) received', link: `order/${encodeURIComponent(o.po)}` });
   }
-  out.sort((a, b) => a._t - b._t);
-  out.forEach((x) => delete x._t);
-  return { scenario: sc, as_of: fmtET(clock), retailer: 'Northfield Retailer', orders_needing_attention: out.length, items: out, checked_nothing_to_chase: checked };
+  out.sort((a, b) => a._t - b._t); out.forEach((x) => delete x._t);
+  return { as_of: fmtET(asOf), retailer: 'Northfield Retailer', scope: warehouse ? 'Northfield documents and the Kinross shipping advice' : 'Northfield documents', orders_needing_attention: out.length, items: out, checked_nothing_to_chase: checked };
 }
 
-/** Why a document was rejected, its rule, its correction, and later documents with the same cause. */
-export function explainRejection(db, sc, reference) {
-  const S = scenario(db, sc);
+/** Why a document was rejected, its rule, its correction, and later documents that failed for the same cause. */
+export function explainRejection(db, reference) {
   const ref = reference.trim().toUpperCase();
-  const docs = db.prepare('SELECT * FROM documents WHERE scenario = ? AND (upper(reference) = ? OR upper(doc_id) = ? OR upper(po) = ?) ORDER BY sent_at').all(sc, ref, ref, ref);
+  const docs = db.prepare("SELECT * FROM documents WHERE (upper(reference) = ? OR upper(doc_id) = ? OR upper(po) = ?) AND doc_type NOT IN ('997','824') ORDER BY sent_at").all(ref, ref, ref);
   if (!docs.length) return { found: false, message: `No document ${reference} in Ashby’s records` };
   if (docs.every((d) => d.supplier_id !== COMPANY)) return { found: false, not_available: true, message: NOT_AVAILABLE };
-  const own = docs.filter((d) => d.supplier_id === COMPANY);
-  const errs = [];
-  for (const d of own) for (const e of db.prepare('SELECT * FROM errors WHERE scenario = ? AND doc_id = ?').all(sc, d.doc_id)) errs.push({ d, e });
-  if (!errs.length) return { found: true, rejected: false, documents: own.map(docRow), message: `${reference} has no rejection on record` };
+  const errs = []; for (const d of docs.filter((x) => x.supplier_id === COMPANY)) for (const e of db.prepare('SELECT * FROM errors WHERE doc_id = ?').all(d.doc_id)) errs.push({ d, e });
+  if (!errs.length) return { found: true, rejected: false, documents: docs.map((d) => docRow(db, d)), message: `${reference} has no rejection on record` };
   return {
-    found: true, rejected: true, as_of: fmtET(S.clockDate),
+    found: true, rejected: true,
     rejections: errs.map(({ d, e }) => {
-      const rep = db.prepare('SELECT * FROM documents WHERE scenario = ? AND doc_id = ?').get(sc, e.reported_by);
-      const fix = e.corrected_by ? db.prepare('SELECT * FROM documents WHERE scenario = ? AND doc_id = ?').get(sc, e.corrected_by) : null;
-      const later = db.prepare(`SELECT e.*, d.reference, d.doc_type, d.name, d.sent_at, d.po FROM errors e JOIN documents d ON d.scenario = e.scenario AND d.doc_id = e.doc_id
-        WHERE e.scenario = ? AND e.cause = ? AND d.supplier_id = ? AND d.sent_at > ? ORDER BY d.sent_at`).all(sc, e.cause, COMPANY, d.sent_at);
+      const rep = db.prepare('SELECT * FROM documents WHERE doc_id = ?').get(e.reported_by);
+      const fix = e.corrected_by ? db.prepare('SELECT * FROM documents WHERE doc_id = ?').get(e.corrected_by) : null;
+      const later = db.prepare('SELECT e.status est, d.* FROM errors e JOIN documents d ON d.doc_id = e.doc_id WHERE e.cause = ? AND d.supplier_id = ? AND d.sent_at > ? AND d.sent_at <= ? ORDER BY d.sent_at').all(e.cause, COMPANY, d.sent_at, new Date(Date.parse(d.sent_at) + 7 * 24 * H).toISOString());
+      const root = db.prepare("SELECT data FROM events WHERE po = ? AND kind IN ('erp.setting','erp.substitution') ORDER BY at LIMIT 1").get(d.po);
       return {
-        document: { reference: d.reference, type: `${d.name} (${d.doc_type})`, po: d.po, sent: fmtET(d.sent_at) },
-        rejected_by: { document: `${rep.name} (${rep.doc_type})`, reference: rep.reference, at: fmtET(rep.sent_at) },
-        cause: e.cause, field: e.field, sent_value: e.sent_value,
-        sent_length: e.field.includes('PO reference') && e.sent_value ? `${e.sent_value.length} characters` : undefined,
-        allowed: e.allowed, rule: rule(db, e.rule_id), root_cause: e.root_cause,
+        document: { reference: d.reference, type: `${d.name} (${d.doc_type})`, po: d.po, sent: fmtET(d.sent_at), link: `document/${encodeURIComponent(d.doc_id)}` },
+        rejected_by: { document: `${rep.name} (${rep.doc_type})`, reference: rep.reference, at: fmtET(rep.sent_at), link: `document/${encodeURIComponent(rep.doc_id)}` },
+        cause: e.cause, field: e.field, sent_value: e.sent_value, sent_length: e.cause.startsWith('PO reference') && e.sent_value ? `${e.sent_value.length} characters` : undefined,
+        allowed: e.allowed, rule: rule(db, e.rule_id), root_cause: root ? J(root.data).note : null,
         status: e.status, correction: fix ? { resent: fmtET(fix.sent_at), status: fix.status } : null,
-        same_cause_later: later.map((x) => ({ reference: x.reference, document: `${x.name} (${x.doc_type})`, po: x.po, sent: fmtET(x.sent_at), status: x.status === 'Open' ? 'Open: not corrected' : 'Corrected and accepted', link: `order/${encodeURIComponent(x.po)}` })),
+        same_cause_later: later.map((x) => ({ reference: x.reference, document: `${x.name} (${x.doc_type})`, po: x.po, sent: fmtET(x.sent_at), status: x.est === 'Open' ? 'Open: not corrected' : 'Corrected and accepted', link: `order/${encodeURIComponent(x.po)}` })),
         link: `order/${encodeURIComponent(d.po)}`,
       };
     }),
   };
 }
 
-/** EDI health for Ashby with one retailer over N days ending at the clock. */
-export function health(db, sc, days = 30) {
-  const S = scenario(db, sc); const end = S.clockDate; const start = new Date(end.getTime() - days * 24 * H);
-  const args = [sc, COMPANY, start.toISOString(), end.toISOString()];
-  const where = 'scenario = ? AND supplier_id = ? AND retailer_id = \'NORTHFIELD\' AND sent_at > ? AND sent_at <= ?';
-  const byType = db.prepare(`SELECT doc_type, name, count(*) n FROM documents WHERE ${where} GROUP BY doc_type, name ORDER BY n DESC`).all(...args);
+/** EDI health for Ashby with Northfield over N days ending at a time. */
+export function health(db, days = 30, asOf = storyClock()) {
+  const end = asOf.toISOString(), start = new Date(asOf.getTime() - days * 24 * H).toISOString();
+  const where = "supplier_id = ? AND partner_id = 'NORTHFIELD' AND test = 0 AND sent_at > ? AND sent_at <= ?";
+  const byType = db.prepare(`SELECT doc_type, name, count(*) n FROM documents WHERE ${where} GROUP BY doc_type, name ORDER BY n DESC`).all(COMPANY, start, end);
   const total = byType.reduce((a, r) => a + r.n, 0);
-  const fails = db.prepare(`SELECT e.cause, e.channel, d.reference, d.doc_type, e.status FROM errors e JOIN documents d ON d.scenario = e.scenario AND d.doc_id = e.doc_id WHERE d.scenario = ? AND d.supplier_id = ? AND d.retailer_id = 'NORTHFIELD' AND d.sent_at > ? AND d.sent_at <= ?`).all(...args);
+  const all = db.prepare(`SELECT e.cause, e.channel, d.reference, d.status dst, c.sent_at corrected_at FROM errors e JOIN documents d ON d.doc_id = e.doc_id LEFT JOIN documents c ON c.doc_id = e.corrected_by
+    WHERE d.supplier_id = ? AND d.partner_id = 'NORTHFIELD' AND d.test = 0 AND d.sent_at > ? AND d.sent_at <= ?`).all(COMPANY, start, end);
+  const fails = all.filter((f) => !/^Held/.test(f.dst)); const holds = all.filter((f) => /^Held/.test(f.dst));
+  const open = (f) => !(f.corrected_at && f.corrected_at <= end);
   const causes = {};
-  for (const f of fails) (causes[f.cause] ||= { cause: f.cause, failures: 0, open: 0 }), causes[f.cause].failures++, f.status === 'Open' && causes[f.cause].open++;
+  for (const f of fails) { (causes[f.cause] ||= { cause: f.cause, failures: 0, open: 0 }); causes[f.cause].failures++; if (open(f)) causes[f.cause].open++; }
   const ranked = Object.values(causes).sort((a, b) => b.failures - a.failures || a.cause.localeCompare(b.cause));
-  const top = ranked.slice(0, 3); const rest = ranked.slice(3);
+  const top = ranked.slice(0, 3), rest = ranked.slice(3);
   return {
-    scenario: sc, partner: 'Northfield Retailer', period: `${days} days ending ${fmtET(end)}`, connection: 'Live',
+    partner: 'Northfield Retailer', period: `${days} days ending ${fmtET(asOf)}`, connection: 'Live',
     documents: total, by_type: byType.map((r) => ({ document: `${r.name} (${r.doc_type})`, count: r.n })),
     failures: fails.length, failure_rate: total ? `${((fails.length / total) * 100).toFixed(1)}%` : '0%',
     rejected_by: { application_advice_824: fails.filter((f) => f.channel.includes('824')).length, technical_acknowledgment_997: fails.filter((f) => f.channel.includes('997')).length },
-    open_failures: fails.filter((f) => f.status === 'Open').map((f) => f.reference),
-    top_causes: top,
+    open_failures: fails.filter(open).map((f) => f.reference), top_causes: top,
     other_causes: { causes: rest.length, failures: rest.reduce((a, r) => a + r.failures, 0), largest: rest.length ? Math.max(...rest.map((r) => r.failures)) : 0 },
+    invoices_held_not_rejected: holds.map((h) => h.reference),
   };
 }
 
-/** Delivery check for a list of POs: requested date against the receiving advice. */
-export function deliveries(db, sc, pos) {
+/** Delivery check for a list of POs: the requested delivery date against the receiving advice. */
+export function deliveries(db, pos) {
   const rows = pos.map((raw) => {
-    const po = raw.trim().toUpperCase().replace(/^PO\s*/, '').replace(/^(\d)/, 'NR-$1');
-    const own = ownsOrder(db, sc, po);
+    const po = normPo(raw); const own = ownsOrder(db, po);
     if (own === 'missing') return { po, result: 'No order found in Ashby’s records' };
     if (own === 'other') return { po, result: NOT_AVAILABLE };
-    const o = db.prepare('SELECT * FROM orders WHERE scenario = ? AND po = ?').get(sc, po);
-    const sh = db.prepare('SELECT * FROM shipments WHERE scenario = ? AND po = ?').get(sc, po);
-    const asn = db.prepare("SELECT * FROM documents WHERE scenario = ? AND po = ? AND doc_type = '856' AND status = 'Delivered' ORDER BY sent_at LIMIT 1").get(sc, po);
-    const rcv = db.prepare("SELECT * FROM documents WHERE scenario = ? AND po = ? AND doc_type = '861' ORDER BY sent_at LIMIT 1").get(sc, po);
-    const body = rcv ? JSON.parse(rcv.body) : null;
+    const o = db.prepare('SELECT * FROM orders WHERE po = ?').get(po);
+    const sh = db.prepare('SELECT * FROM shipments WHERE po = ? ORDER BY shipped_at').all(po);
+    const dep = db.prepare("SELECT at FROM events WHERE po = ? AND kind = 'wms.departure_scan' ORDER BY at").all(po);
+    const rc = db.prepare('SELECT receipt, received_at, sum(qty) q FROM receipts WHERE po = ? GROUP BY receipt, received_at ORDER BY received_at').all(po);
     let result = 'No receipt record';
-    if (body) {
-      const late = Math.round((Date.parse(body.received_day) - Date.parse(o.requested_delivery)) / (24 * H));
-      result = late <= 0 ? 'On time' : `Late by ${late} day${late === 1 ? '' : 's'}`;
-    }
-    return {
-      po, result, requested_delivery: o.requested_delivery,
-      truck_planned: sh ? fmtET(sh.planned_departure) : null, truck_left: sh && sh.departed_at ? fmtET(sh.departed_at) : null,
-      ship_notice: asn ? { reference: asn.reference, sent: fmtET(asn.sent_at) } : null,
-      receipt: rcv ? { reference: rcv.reference, received: body.received_day, at: fmtET(rcv.sent_at), cases: body.lines.reduce((a, l) => a + l.cases, 0) } : null,
-      link: `order/${encodeURIComponent(po)}`,
-    };
+    if (rc.length) { const day = fmtET(rc[rc.length - 1].received_at).slice(0, 10); const late = Math.round((Date.parse(day) - Date.parse(o.requested_delivery)) / (24 * H)); result = late <= 0 ? 'On time' : `Late by ${late} day${late === 1 ? '' : 's'}`; }
+    else if (sh.length) result = 'Shipped; no receipt recorded yet';
+    return { po, result, requested_delivery: o.requested_delivery, truck_left: dep.length ? fmtET(dep[dep.length - 1].at) : null,
+      ship_notices: sh.map((s) => ({ reference: s.shipment_id, sent: fmtET(s.sent_at), cartons: s.cartons })), receipts: rc.map((r) => ({ reference: r.receipt, received: fmtET(r.received_at), quantity: r.q })), link: `order/${encodeURIComponent(po)}` };
   });
   const own = rows.filter((r) => r.requested_delivery);
-  return {
-    scenario: sc, basis: 'Requested delivery date on the purchase order against the receiving advice (861) date',
-    checked: rows.length, on_time: own.filter((r) => r.result === 'On time').length,
-    late: own.filter((r) => r.result.startsWith('Late')).length, no_receipt: own.filter((r) => r.result === 'No receipt record').length,
-    orders: rows,
-  };
+  return { basis: 'Requested delivery date on the purchase order against the date on Northfield’s receiving advice (861)', checked: rows.length, on_time: own.filter((r) => r.result === 'On time').length, late: own.filter((r) => r.result.startsWith('Late')).length, no_receipt: own.filter((r) => /receipt/.test(r.result)).length, orders: rows };
 }
 
-export function lifecycle(db, sc, poIn) {
-  const po = poIn.trim().toUpperCase().replace(/^(\d)/, 'NR-$1');
-  const own = ownsOrder(db, sc, po);
+/** One order: lines, changes, every document in order, shipments, receipts, invoices, payments, charges and other records. */
+export function lifecycle(db, poIn) {
+  const po = normPo(poIn); const own = ownsOrder(db, po);
   if (own === 'missing') return { found: false, message: `No order ${po} in Ashby’s records` };
   if (own === 'other') return { found: false, not_available: true, message: NOT_AVAILABLE };
-  const S = scenario(db, sc);
-  const o = db.prepare('SELECT * FROM orders WHERE scenario = ? AND po = ?').get(sc, po);
-  const lines = db.prepare('SELECT line, sku, qty_ordered, qty_accepted, case_price FROM order_lines WHERE scenario = ? AND po = ? ORDER BY line').all(sc, po);
-  const docs = db.prepare('SELECT * FROM documents WHERE scenario = ? AND po = ? AND sent_at <= ? ORDER BY sent_at').all(sc, po, S.clockDate.toISOString());
-  const errors = db.prepare('SELECT e.*, d.reference FROM errors e JOIN documents d ON d.scenario = e.scenario AND d.doc_id = e.doc_id WHERE e.scenario = ? AND d.po = ?').all(sc, po);
-  const sh = db.prepare('SELECT * FROM shipments WHERE scenario = ? AND po = ?').all(sc, po);
-  const conf = db.prepare('SELECT * FROM confirmations WHERE scenario = ? AND po = ?').all(sc, po);
-  const ded = db.prepare('SELECT * FROM deductions WHERE scenario = ? AND po = ?').all(sc, po);
+  const o = db.prepare('SELECT * FROM orders WHERE po = ?').get(po);
+  const locName = (id) => db.prepare('SELECT name FROM locations WHERE id = ?').get(id)?.name || id;
   return {
-    found: true, as_of: fmtET(S.clockDate), po, retailer: 'Northfield Retailer', programme: o.programme, ship_to: (db.prepare('SELECT name FROM locations WHERE id = ?').get(o.ship_to) || { name: o.ship_to }).name,
-    received: fmtET(o.received_at), requested_delivery: o.requested_delivery, order_value: o.order_value, lines,
-    shipments: sh.map((s) => ({ shipment: s.shipment_id, truck_planned: fmtET(s.planned_departure), truck_left: s.departed_at ? fmtET(s.departed_at) : 'Not departed', cartons: s.cartons })),
-    documents: docs.map(docRow), rejections: errors.map((e) => ({ reference: e.reference, cause: e.cause, status: e.status })),
-    outside_confirmations: conf.map((c) => ({ method: c.method, confirmed_by: c.confirmed_by, recorded_by: c.recorded_by, at: fmtET(c.at), scope: c.scope })),
-    deductions: ded.map((d) => ({ case: d.case_id, amount: d.amount, reason: d.reason, decision: d.decision, decided: d.decided_at ? fmtET(d.decided_at) : null })),
+    found: true, po, retailer: 'Northfield Retailer', programme: o.programme, ship_to: locName(o.ship_to),
+    received: fmtET(o.received_at), requested_delivery: o.requested_delivery, order_value: o.order_value, accepted_value: o.accepted_value,
+    lines: db.prepare('SELECT line, sku, qty_original ordered_first, qty_ordered ordered_now, qty_accepted accepted, price, uom, delivery_date FROM order_lines WHERE po = ? ORDER BY line').all(po).map((r) => ({ ...r })),
+    changes: db.prepare('SELECT seq change, line, code, qty, delivery_date, state, sent_at FROM order_changes WHERE po = ? ORDER BY seq, line').all(po).map((c) => ({ ...c, sent_at: fmtET(c.sent_at) })),
+    shipments: db.prepare('SELECT * FROM shipments WHERE po = ? ORDER BY shipped_at').all(po).map((s) => ({ ship_notice: s.shipment_id, sent: fmtET(s.sent_at), truck_left: fmtET(s.shipped_at), cartons: s.cartons, ship_from: locName(s.ship_from), bill_of_lading: s.bol, seal: s.seal })),
+    receipts: db.prepare('SELECT receipt, received_at, line, qty, short FROM receipts WHERE po = ? ORDER BY received_at, line').all(po).map((r) => ({ ...r, received_at: fmtET(r.received_at) })),
+    invoices: db.prepare('SELECT invoice, sent_at, total, status, replaces FROM invoices WHERE po = ? ORDER BY sent_at').all(po).map((i) => ({ ...i, sent_at: fmtET(i.sent_at) })),
+    payments: db.prepare('SELECT * FROM remittance_items WHERE po = ? ORDER BY paid_at').all(po).map((p) => ({ payment: p.payment, paid: fmtET(p.paid_at), invoice: p.invoice, amount: p.paid, invoice_amount: p.invoice_amount })),
+    charges: db.prepare('SELECT * FROM adjustments WHERE po = ? ORDER BY paid_at').all(po).map((a) => ({ payment: a.payment, at: fmtET(a.paid_at), amount: a.amount, reference: a.reference, note: a.note })),
+    documents: db.prepare('SELECT * FROM documents WHERE po = ? ORDER BY sent_at').all(po).map((d) => docRow(db, d)),
+    rejections: db.prepare('SELECT e.cause, e.status, d.reference FROM errors e JOIN documents d ON d.doc_id = e.doc_id WHERE d.po = ?').all(po).map((e) => ({ ...e })),
+    other_records: db.prepare('SELECT at, kind, system, channel, data FROM events WHERE po = ? ORDER BY at').all(po).map((e) => ({ at: fmtET(e.at), record: e.kind, system: e.system, channel: e.channel, ...J(e.data) })),
     link: `order/${encodeURIComponent(po)}`,
   };
 }
 
-export function rules(db, { topic, document } = {}) {
-  let rows = db.prepare('SELECT * FROM rules ORDER BY rule_set DESC, id').all();
-  if (topic) rows = rows.filter((r) => `${r.topic} ${r.statement}`.toLowerCase().includes(topic.toLowerCase()));
-  if (document) rows = rows.filter((r) => (r.doc_type || '').split(',').includes(String(document)));
-  return {
-    retailer: 'Northfield Retailer',
-    rules: rows.map((r) => ({ id: r.id, applies_to: r.rule_set === 'kinross' ? 'Kinross Logistics (3PL)' : 'Northfield Retailer', topic: r.topic, document: r.doc_type, rule: r.statement, window_hours: r.window_hours, limit: r.limit_value, source: r.source })),
-  };
+/** One document with its X12 text. */
+export function document(db, reference) {
+  const ref = reference.trim().toUpperCase();
+  const d = db.prepare('SELECT * FROM documents WHERE upper(doc_id) = ? OR upper(reference) = ? ORDER BY sent_at DESC').get(ref, ref);
+  if (!d) return { found: false, message: `No document ${reference} in Ashby’s records` };
+  if (d.supplier_id !== COMPANY) return { found: false, not_available: true, message: NOT_AVAILABLE };
+  const versions = db.prepare('SELECT doc_id, sent_at, status FROM documents WHERE reference = ? AND doc_type = ? ORDER BY sent_at').all(d.reference, d.doc_type);
+  const body = J(d.body); delete body.lines; delete body.segments;
+  return { found: true, ...docRow(db, d), po: d.po, control_numbers: { interchange: d.isa_ctl, group: d.gs_ctl, transaction_set: d.st_ctl }, file: `build/x12/${d.file}`, versions: versions.map((v) => ({ id: v.doc_id, sent: fmtET(v.sent_at), status: v.status })), x12: d.raw.length > 6000 ? `${d.raw.slice(0, 6000)}\n... (${d.raw.length} characters in the file)` : d.raw };
 }
+
+export function rules(db, { topic, document: doc, id } = {}) {
+  let rows = db.prepare('SELECT * FROM rules ORDER BY rule_set, id').all();
+  if (id) rows = rows.filter((r) => r.id.toLowerCase() === id.toLowerCase() || (r.charge_code || '').toLowerCase() === id.toLowerCase());
+  if (topic) rows = rows.filter((r) => `${r.id} ${r.topic} ${r.statement} ${r.charge_code || ''}`.toLowerCase().includes(topic.toLowerCase()));
+  if (doc) rows = rows.filter((r) => (r.doc_type || '').split(',').includes(String(doc)));
+  return { retailer: 'Northfield Retailer', guide: 'Northfield supplier guide 2026.2', rules: rows.map((r) => ({ id: r.id, applies_to: r.rule_set === 'kinross' ? 'Kinross Logistics (3PL)' : r.rule_set === 'trading-grid' ? 'Trading Grid setting' : 'Northfield Retailer', topic: r.topic, document: r.doc_type, rule: r.statement, window_hours: r.window_hours, limit: r.limit_value, charge_code: r.charge_code, charge: r.charge, source: r.source })) };
+}
+
+/** A deduction case: the charge, its rule, where each piece of evidence sits, and the dispute window. */
+export function deductionCase(db, ref, asOf = storyClock()) {
+  const key = ref.trim().toUpperCase();
+  const opened = db.prepare("SELECT * FROM events WHERE kind = 'case.opened'").all().map((e) => ({ ...e, d: J(e.data) })).find((e) => e.d.case === key || e.d.deduction === key || e.po === normPo(key));
+  if (!opened) return { found: false, message: `No deduction case ${ref} in Ashby’s records` };
+  if (ownsOrder(db, opened.po) !== 'own') return { found: false, not_available: true, message: NOT_AVAILABLE };
+  const c = opened.d; const po = opened.po;
+  const adj = db.prepare('SELECT * FROM adjustments WHERE reference = ? ORDER BY paid_at').all(c.deduction);
+  const taken = adj.find((a) => a.amount < 0); const repaid = adj.find((a) => a.amount > 0);
+  const evs = db.prepare('SELECT * FROM events WHERE po = ? ORDER BY at').all(po).map((e) => ({ ...e, d: J(e.data) }));
+  const kinds = { 'carrier.bill_of_lading': 'Bill of lading with seal', 'carrier.delivery_receipt': 'Proof of delivery', 'wms.load_scan': 'Load scan by SSCC', 'wms.load_tally': 'Load tally by SSCC' };
+  const evidence = Object.entries(kinds).map(([kind, name]) => { const e = evs.filter((x) => x.kind === kind).pop(); return { evidence: name, kind, state: !e ? 'Not found' : e.d.in_case === c.case ? 'In the case' : `Held by ${e.system}`, holder: e ? e.system : null, at: e ? fmtET(e.at) : null }; });
+  const due = taken ? new Date(Date.parse(taken.paid_at) + 60 * 24 * H) : null;
+  return { found: true, case: c.case, po, charge: c.charge, amount: c.amount, line: c.line, cartons: c.cartons, deduction: c.deduction, rule: rule(db, 'SH01'), evidence_rule: rule(db, 'NF-7.4'),
+    withheld_on: taken ? { payment: taken.payment, at: fmtET(taken.paid_at) } : null, dispute_deadline: due ? fmtET(due) : null, dispute_window: due && asOf >= new Date(taken.paid_at) ? timeLeft(due, asOf) : null,
+    evidence, history: evs.filter((e) => e.kind.startsWith('case.') || e.kind === 'erp.receivables_match' || e.kind === 'carrier.claim_filed').map((e) => ({ at: fmtET(e.at), record: e.kind, ...e.d })),
+    repaid_on: repaid ? { payment: repaid.payment, at: fmtET(repaid.paid_at), amount: repaid.amount } : null,
+    other_charges_on_this_order: db.prepare('SELECT * FROM adjustments WHERE po = ? AND reference <> ? ORDER BY paid_at').all(po, c.deduction).map((a) => ({ payment: a.payment, at: fmtET(a.paid_at), amount: a.amount, reference: a.reference, note: a.note })), link: `order/${encodeURIComponent(po)}` };
+}
+
+export function deductions(db, asOf = storyClock()) {
+  const rows = db.prepare("SELECT * FROM events WHERE kind = 'case.opened' AND at <= ? ORDER BY at").all(asOf.toISOString()).map((e) => ({ ...J(e.data), po: e.po, opened: fmtET(e.at) })).filter((c) => ownsOrder(db, c.po) === 'own');
+  return { as_of: fmtET(asOf), cases: rows.map((c) => ({ case: c.case, po: c.po, charge: c.charge, amount: c.amount, opened: c.opened, link: `order/${encodeURIComponent(c.po)}` })) };
+}
+
+export function calendar(db) { return { quarter: 'Sunday 27 September to Saturday 26 December 2026', story_clock: fmtET(storyClock()), moments: db.prepare('SELECT * FROM calendar ORDER BY as_of').all().map((m) => ({ ...m, as_of_eastern: fmtET(m.as_of) })) }; }

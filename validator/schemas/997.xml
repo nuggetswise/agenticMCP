@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema xmlns="http://xlate.io/EDISchema/v4">
+<transaction><sequence><segment type="AK1" minOccurs="1"/><loop code="L1_AK2" minOccurs="0" maxOccurs="999999"><sequence><segment type="AK2" minOccurs="0"/><loop code="L2_AK3" minOccurs="0" maxOccurs="999999"><sequence><segment type="AK3" minOccurs="0"/><segment type="AK4" minOccurs="0" maxOccurs="999999"/></sequence></loop><segment type="AK5" minOccurs="1"/></sequence></loop><segment type="AK9" minOccurs="1"/></sequence></transaction>
+<elementType name="E_ID_2_2" base="identifier" minLength="2" maxLength="2"/>
+<elementType name="E_N_1_9" base="numeric" minLength="1" maxLength="9"/>
+<elementType name="E_ID_3_3" base="identifier" minLength="3" maxLength="3"/>
+<elementType name="E_AN_4_9" base="string" minLength="4" maxLength="9"/>
+<elementType name="E_ID_2_3" base="identifier" minLength="2" maxLength="3"/>
+<elementType name="E_N_1_6" base="numeric" minLength="1" maxLength="6"/>
+<elementType name="E_AN_1_6" base="string" minLength="1" maxLength="6"/>
+<elementType name="E_ID_1_3" base="identifier" minLength="1" maxLength="3"/>
+<elementType name="E_N_1_2" base="numeric" minLength="1" maxLength="2"/>
+<elementType name="E_N_1_4" base="numeric" minLength="1" maxLength="4"/>
+<elementType name="E_AN_1_99" base="string" minLength="1" maxLength="99"/>
+<elementType name="E_ID_1_1" base="identifier" minLength="1" maxLength="1"/>
+<segmentType name="AK1"><sequence><element type="E_ID_2_2" minOccurs="1"/><element type="E_N_1_9" minOccurs="1"/></sequence></segmentType>
+<segmentType name="AK2"><sequence><element type="E_ID_3_3" minOccurs="1"/><element type="E_AN_4_9" minOccurs="1"/></sequence></segmentType>
+<segmentType name="AK3"><sequence><element type="E_ID_2_3" minOccurs="1"/><element type="E_N_1_6" minOccurs="1"/><element type="E_AN_1_6" minOccurs="0"/><element type="E_ID_1_3" minOccurs="0"/></sequence></segmentType>
+<segmentType name="AK4"><sequence><element type="E_N_1_2" minOccurs="1"/><element type="E_N_1_4" minOccurs="0"/><element type="E_ID_1_3" minOccurs="1"/><element type="E_AN_1_99" minOccurs="0"/></sequence></segmentType>
+<segmentType name="AK5"><sequence><element type="E_ID_1_1" minOccurs="1"/><element type="E_ID_1_3" minOccurs="0"/></sequence></segmentType>
+<segmentType name="AK9"><sequence><element type="E_ID_1_1" minOccurs="1"/><element type="E_N_1_6" minOccurs="1"/><element type="E_N_1_6" minOccurs="1"/><element type="E_N_1_6" minOccurs="1"/><element type="E_ID_1_3" minOccurs="0"/></sequence></segmentType>
+</schema>

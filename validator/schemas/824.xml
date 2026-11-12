@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema xmlns="http://xlate.io/EDISchema/v4">
+<transaction><sequence><segment type="BGN" minOccurs="1"/><loop code="L1_OTI" minOccurs="1" maxOccurs="999999"><sequence><segment type="OTI" minOccurs="1"/><loop code="L2_TED" minOccurs="0" maxOccurs="999999"><sequence><segment type="TED" minOccurs="0"/><segment type="NTE" minOccurs="0" maxOccurs="999999"/></sequence></loop></sequence></loop></sequence></transaction>
+<elementType name="E_ID_2_2" base="identifier" minLength="2" maxLength="2"/>
+<elementType name="E_AN_1_30" base="string" minLength="1" maxLength="30"/>
+<elementType name="E_DT_8_8" base="date" minLength="8" maxLength="8"/>
+<elementType name="E_TM_4_8" base="time" minLength="4" maxLength="8"/>
+<elementType name="E_ID_1_2" base="identifier" minLength="1" maxLength="2"/>
+<elementType name="E_ID_2_3" base="identifier" minLength="2" maxLength="3"/>
+<elementType name="E_AN_2_15" base="string" minLength="2" maxLength="15"/>
+<elementType name="E_N_1_9" base="numeric" minLength="1" maxLength="9"/>
+<elementType name="E_AN_4_9" base="string" minLength="4" maxLength="9"/>
+<elementType name="E_ID_3_3" base="identifier" minLength="3" maxLength="3"/>
+<elementType name="E_ID_1_3" base="identifier" minLength="1" maxLength="3"/>
+<elementType name="E_AN_1_60" base="string" minLength="1" maxLength="60"/>
+<elementType name="E_N_1_6" base="numeric" minLength="1" maxLength="6"/>
+<elementType name="E_N_1_2" base="numeric" minLength="1" maxLength="2"/>
+<elementType name="E_N_1_4" base="numeric" minLength="1" maxLength="4"/>
+<elementType name="E_AN_1_99" base="string" minLength="1" maxLength="99"/>
+<elementType name="E_AN_1_80" base="string" minLength="1" maxLength="80"/>
+<segmentType name="BGN"><sequence><element type="E_ID_2_2" minOccurs="1"/><element type="E_AN_1_30" minOccurs="1"/><element type="E_DT_8_8" minOccurs="1"/><element type="E_TM_4_8" minOccurs="0"/></sequence></segmentType>
+<segmentType name="OTI"><sequence><element type="E_ID_1_2" minOccurs="1"/><element type="E_ID_2_3" minOccurs="1"/><element type="E_AN_1_30" minOccurs="1"/><element type="E_AN_2_15" minOccurs="0"/><element type="E_AN_2_15" minOccurs="0"/><element type="E_DT_8_8" minOccurs="0"/><element type="E_TM_4_8" minOccurs="0"/><element type="E_N_1_9" minOccurs="0"/><element type="E_AN_4_9" minOccurs="0"/><element type="E_ID_3_3" minOccurs="0"/></sequence></segmentType>
+<segmentType name="TED"><sequence><element type="E_ID_1_3" minOccurs="1"/><element type="E_AN_1_60" minOccurs="0"/><element type="E_ID_2_3" minOccurs="0"/><element type="E_N_1_6" minOccurs="0"/><element type="E_N_1_2" minOccurs="0"/><element type="E_N_1_4" minOccurs="0"/><element type="E_AN_1_99" minOccurs="0"/></sequence></segmentType>
+<segmentType name="NTE"><sequence><element type="E_ID_3_3" minOccurs="0"/><element type="E_AN_1_80" minOccurs="1"/></sequence></segmentType>
+</schema>

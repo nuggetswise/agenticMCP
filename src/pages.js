@@ -1,5 +1,5 @@
 // Server-rendered pages: order record, admin (scopes and access log), home. Colours from the TG for Retail tokens.
-import { fmtET } from '../data/lib.js';
+import { fmtET } from '../world/lib.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const money = (n) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -24,37 +24,48 @@ label.sc{display:inline-flex;gap:6px;align-items:center;margin-right:16px}code{f
 const shell = (title, body) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>${CSS}</style></head>
 <body><header class="top"><div class="wrap"><span class="mark"><i></i>Trading Grid</span><span class="meta">Ashby Supplier</span></div></header><main class="wrap">${body}</main></body></html>`;
 
-export function recordPage(o, sc) {
+const tbl = (heads, rows) => `<table><thead><tr>${heads.map((h) => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+const statusChip = (s) => (/Rejected|Held/.test(s) ? `<span class="chip red">${esc(s)}</span>` : /Superseded|Corrected/.test(s) ? `<span class="chip">${esc(s)}</span>` : esc(s));
+
+export function recordPage(o) {
   if (!o.found) return shell('Record', `<h1>${esc(o.not_available ? 'Not available to Ashby' : 'Record not found')}</h1><p class="meta">${esc(o.message)}</p>`);
-  const statusChip = (s) => (/Rejected|Held/.test(s) ? `<span class="chip red">${esc(s)}</span>` : /Superseded|Corrected/.test(s) ? `<span class="chip">${esc(s)}</span>` : esc(s));
+  const card = (title, body) => `<div class="card"><h2>${esc(title)}</h2>${body}</div>`;
   return shell(`PO ${o.po}`, `
-<div class="lbl">Order record · as of ${esc(o.as_of)}</div>
-<h1>PO ${esc(o.po)}</h1>
-<div class="meta">Northfield Retailer · ${esc(o.programme)} · ship-to ${esc(o.ship_to)} · received ${esc(o.received)} · requested delivery ${esc(o.requested_delivery)} · ${money(o.order_value)}</div>
-<div class="card"><h2>Lines</h2><table><thead><tr><th>Line</th><th>SKU</th><th>Ordered</th><th>Accepted</th><th>Case price</th></tr></thead><tbody>
-${o.lines.map((l) => `<tr><td>${l.line}</td><td class="mono">${esc(l.sku)}</td><td>${l.qty_ordered}</td><td>${l.qty_accepted ?? 'Not acknowledged'}</td><td>${money(l.case_price)}</td></tr>`).join('')}</tbody></table></div>
-${o.shipments.length ? `<div class="card"><h2>Shipments</h2><table><thead><tr><th>Shipment</th><th>Truck planned</th><th>Truck left</th><th>Cartons</th></tr></thead><tbody>${o.shipments.map((s) => `<tr><td class="mono">${esc(s.shipment)}</td><td>${esc(s.truck_planned)}</td><td>${esc(s.truck_left)}</td><td>${s.cartons}</td></tr>`).join('')}</tbody></table></div>` : ''}
-<div class="card"><h2>Documents</h2><table><thead><tr><th>Sent</th><th>Document</th><th>Reference</th><th>From → To</th><th>Status</th></tr></thead><tbody>
-${Array.isArray(o.documents) ? o.documents.map((d) => `<tr id="${esc(d.doc_id)}"><td>${esc(d.sent)}</td><td>${esc(d.document)}</td><td class="mono">${esc(d.reference)}</td><td>${esc(d.from)} → ${esc(d.to)}</td><td>${statusChip(d.status)}</td></tr>`).join('') : `<tr><td colspan="5">${esc(o.documents)}</td></tr>`}</tbody></table></div>
-${Array.isArray(o.rejections) && o.rejections.length ? `<div class="card"><h2>Rejections</h2><table><thead><tr><th>Document</th><th>Cause</th><th>Status</th></tr></thead><tbody>${o.rejections.map((r) => `<tr><td class="mono">${esc(r.reference)}</td><td>${esc(r.cause)}</td><td>${r.status === 'Open' ? '<span class="chip red">Open</span>' : 'Corrected'}</td></tr>`).join('')}</tbody></table></div>` : ''}
-${o.outside_confirmations.length ? `<div class="card"><h2>Outside confirmations</h2>${o.outside_confirmations.map((c) => `<p>Business acceptance: confirmed by ${esc(c.method.toLowerCase())} · ${esc(c.confirmed_by)} · recorded by ${esc(c.recorded_by)} · ${esc(c.at)}<br><span class="meta">${esc(c.scope)}</span></p>`).join('')}</div>` : ''}
-${o.deductions.length ? `<div class="card"><h2>Deductions</h2><table><thead><tr><th>Case</th><th>Amount</th><th>Reason</th><th>Decision</th></tr></thead><tbody>${o.deductions.map((d) => `<tr><td class="mono">${esc(d.case)}</td><td>${money(d.amount)}</td><td>${esc(d.reason)}</td><td>${esc(d.decision || 'Open')}</td></tr>`).join('')}</tbody></table></div>` : ''}`);
+<div class="lbl">Order record</div><h1>PO ${esc(o.po)}</h1>
+<div class="meta">Northfield Retailer · ${esc(o.programme)} · ship-to ${esc(o.ship_to)} · received ${esc(o.received)} · requested delivery ${esc(o.requested_delivery)} · ${money(o.order_value)}${o.accepted_value != null && o.accepted_value !== o.order_value ? ` · accepted ${money(o.accepted_value)}` : ''}</div>
+${card('Lines', tbl(['Line', 'Item', 'First ordered', 'Ordered now', 'Accepted', 'Price', 'Delivery'], o.lines.map((l) => [l.line, `<span class="mono">${esc(l.sku)}</span>`, l.ordered_first, l.ordered_now, l.accepted ?? 'Not acknowledged', money(l.price), esc(l.delivery_date)])))}
+${o.changes.length ? card('Order changes', tbl(['Change', 'Sent', 'Line', 'Quantity', 'Delivery', 'State'], o.changes.map((c) => [c.change, esc(c.sent_at), c.line, c.qty, esc(c.delivery_date || ''), statusChip(c.state)]))) : ''}
+${o.shipments.length ? card('Shipments', tbl(['Ship notice', 'Sent', 'Truck left', 'Cartons', 'Ship from', 'Bill of lading', 'Seal'], o.shipments.map((s) => [`<span class="mono">${esc(s.ship_notice)}</span>`, esc(s.sent), esc(s.truck_left), s.cartons, esc(s.ship_from), esc(s.bill_of_lading || ''), esc(s.seal || '')]))) : ''}
+${o.receipts.length ? card('Receipts', tbl(['Receiving advice', 'Received', 'Line', 'Quantity', 'Short'], o.receipts.map((r) => [`<span class="mono">${esc(r.receipt)}</span>`, esc(r.received_at), r.line, r.qty, r.short || '']))) : ''}
+${o.invoices.length ? card('Invoices', tbl(['Invoice', 'Sent', 'Total', 'Status', 'Replaces'], o.invoices.map((i) => [`<span class="mono">${esc(i.invoice)}</span>`, esc(i.sent_at), money(i.total), statusChip(i.status), esc(i.replaces || '')]))) : ''}
+${Array.isArray(o.payments) && o.payments.length ? card('Payments and charges', tbl(['Payment', 'Date', 'Invoice', 'Paid', 'Invoice amount'], o.payments.map((p) => [`<span class="mono">${esc(p.payment)}</span>`, esc(p.paid), esc(p.invoice), money(p.amount), money(p.invoice_amount)])) + (Array.isArray(o.charges) && o.charges.length ? tbl(['Payment', 'Date', 'Amount', 'Reference', 'Note'], o.charges.map((c) => [`<span class="mono">${esc(c.payment)}</span>`, esc(c.at), money(c.amount), esc(c.reference), esc(c.note || '')])) : '')) : ''}
+${card('Documents', Array.isArray(o.documents) ? tbl(['Sent', 'Document', 'Reference', 'From → To', 'Status'], o.documents.map((d) => [esc(d.sent), esc(d.document), `<a class="mono" href="/records/${esc(d.link)}">${esc(d.reference)}</a>`, `${esc(d.from)} → ${esc(d.to)}`, statusChip(d.status)])) : esc(o.documents))}
+${Array.isArray(o.rejections) && o.rejections.length ? card('Rejections', tbl(['Document', 'Cause', 'Status'], o.rejections.map((r) => [`<span class="mono">${esc(r.reference)}</span>`, esc(r.cause), r.status === 'Open' ? '<span class="chip red">Open</span>' : 'Corrected']))) : ''}
+${o.other_records.length ? card('Other records', tbl(['Time', 'Record', 'System', 'Channel', 'Detail'], o.other_records.map((e) => { const { at, record, system, channel, ...rest } = e; return [esc(at), `<span class="mono">${esc(record)}</span>`, esc(system), esc(channel), esc(Object.entries(rest).map(([k, v]) => `${k.replace(/_/g, ' ')}: ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(' · '))]; }))) : ''}`);
 }
 
-export function adminPage({ connection, rows, allScopes, token, mcpUrl }) {
-  const labels = { orders: 'Orders', documents: 'Documents', errors: 'Errors', rules: 'Retailer rules' };
+export function documentPage(d) {
+  if (!d.found) return shell('Document', `<h1>${esc(d.not_available ? 'Not available to Ashby' : 'Document not found')}</h1><p class="meta">${esc(d.message)}</p>`);
+  return shell(d.reference, `<div class="lbl">${esc(d.document)}</div><h1>${esc(d.reference)}</h1>
+<div class="meta">${esc(d.from)} → ${esc(d.to)} · sent ${esc(d.sent)} · ${esc(d.status)}${d.po ? ` · <a href="/records/order/${esc(encodeURIComponent(d.po))}">PO ${esc(d.po)}</a>` : ''}</div>
+<div class="card"><h2>Versions</h2>${tbl(['Id', 'Sent', 'Status'], d.versions.map((v) => [`<span class="mono">${esc(v.id)}</span>`, esc(v.sent), statusChip(v.status)]))}</div>
+<div class="card"><h2>X12 as exchanged</h2><pre class="mono" style="white-space:pre-wrap;margin:0">${esc(d.x12)}</pre><p class="meta">Interchange ${d.control_numbers.interchange} · group ${d.control_numbers.group} · ${esc(d.file)}</p></div>`);
+}
+
+export function adminPage({ connection, rows, allScopes, token, mcpUrl, writes, proposals }) {
+  const labels = { orders: 'Orders', documents: 'Documents', errors: 'Errors', rules: 'Retailer rules', deductions: 'Deductions' };
   return shell('Assistant connection', `
-<div class="lbl">Ashby IT admin</div><h1>Company AI assistant connection</h1>
-<div class="meta">Read only · user ${esc(connection.user_name)} · last changed ${esc(fmtET(connection.configured_at))}</div>
+<div class="lbl">Ashby administration</div><h1>Company AI assistant connection</h1>
+<div class="meta">${writes ? 'Reads, and proposals that need approval here' : 'Read only'} · user ${esc(connection.user_name)} · last changed ${esc(fmtET(connection.configured_at))}</div>
 <div class="card"><h2>Read scopes</h2><form method="post" action="/admin/${esc(token)}/scopes">
 ${allScopes.map((s) => `<label class="sc"><input type="checkbox" name="${s}" ${connection.scopes.includes(s) ? 'checked' : ''}> ${labels[s]}</label>`).join('')}
 <p><button type="submit">Save scopes</button></p></form>
 <p class="meta">Connector URL</p><code>${esc(mcpUrl)}</code></div>
+${writes ? `<div class="card"><h2>Proposals · ${proposals.length}</h2>${tbl(['Proposal', 'Created', 'By', 'Action', 'Record', 'State', ''], proposals.map((p) => [`<span class="mono">${esc(p.id)}</span>`, esc(fmtET(p.created_at)), esc(p.created_by), esc(p.action), `<span class="mono">${esc(p.target)}</span>`, p.state === 'Awaiting approval' ? `<span class="chip amb">${esc(p.state)}</span>` : esc(`${p.state} by ${p.decided_by}`), p.state === 'Awaiting approval' ? `<form method="post" action="/admin/${esc(token)}/proposals/${esc(p.id)}/approve" style="display:inline"><button type="submit">Approve</button></form> <form method="post" action="/admin/${esc(token)}/proposals/${esc(p.id)}/reject" style="display:inline"><button class="sec" type="submit">Reject</button></form>` : '']))}</div>` : ''}
 <div class="card"><h2>Access log · ${rows.length} call${rows.length === 1 ? '' : 's'}</h2>
-<table><thead><tr><th>Time</th><th>User</th><th>Tool</th><th>Scopes</th><th>Result</th><th>Records</th></tr></thead><tbody>
-${rows.map((r) => `<tr><td>${esc(fmtET(r.at))}</td><td>${esc(r.user_name)}</td><td class="mono">${esc(r.tool)}</td><td>${esc(JSON.parse(r.scopes_used).join(', '))}</td><td>${/Not available|Scope not granted|Action not available|Invalid/.test(r.result) ? `<span class="chip amb">${esc(r.result)}</span>` : esc(r.result)}</td><td class="mono">${esc(JSON.parse(r.records).slice(0, 8).join(', '))}</td></tr>`).join('') || '<tr><td colspan="6">No calls yet</td></tr>'}
-</tbody></table>
-<form method="post" action="/admin/${esc(token)}/clear-log" style="margin-top:12px"><button class="sec" type="submit">Clear access log</button></form></div>`);
+${tbl(['Time', 'User', 'Tool', 'Scopes', 'Result', 'Records'], rows.map((r) => [esc(fmtET(r.at)), esc(r.user_name), `<span class="mono">${esc(r.tool)}</span>`, esc(JSON.parse(r.scopes_used).join(', ')), /Not available|Scope not granted|Action not available|Invalid|Proposal/.test(r.result) ? `<span class="chip amb">${esc(r.result)}</span>` : esc(r.result), `<span class="mono">${esc(JSON.parse(r.records).slice(0, 8).join(', '))}</span>`]))}
+<form method="post" action="/admin/${esc(token)}/clear-log" style="margin-top:12px;display:inline-block"><button class="sec" type="submit">Clear access log</button></form>
+<form method="post" action="/admin/${esc(token)}/reset" style="margin-top:12px;display:inline-block"><button class="sec" type="submit">Reset to baseline</button></form></div>`);
 }
 
 export function homePage() {

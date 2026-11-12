@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema xmlns="http://xlate.io/EDISchema/v4">
+<transaction><sequence><segment type="BRA" minOccurs="1"/><segment type="REF" minOccurs="0" maxOccurs="999999"/><segment type="DTM" minOccurs="0" maxOccurs="999999"/><segment type="PRF" minOccurs="0"/><loop code="L1_N1" minOccurs="0" maxOccurs="999999"><sequence><segment type="N1" minOccurs="0"/></sequence></loop><loop code="L2_RCD" minOccurs="1" maxOccurs="999999"><sequence><segment type="RCD" minOccurs="1"/><segment type="LIN" minOccurs="0" maxOccurs="999999"/><segment type="MAN" minOccurs="0" maxOccurs="999999"/></sequence></loop></sequence></transaction>
+<elementType name="E_AN_1_30" base="string" minLength="1" maxLength="30"/>
+<elementType name="E_DT_8_8" base="date" minLength="8" maxLength="8"/>
+<elementType name="E_ID_2_2" base="identifier" minLength="2" maxLength="2"/>
+<elementType name="E_ID_1_1" base="identifier" minLength="1" maxLength="1"/>
+<elementType name="E_ID_2_3" base="identifier" minLength="2" maxLength="3"/>
+<elementType name="E_AN_1_80" base="string" minLength="1" maxLength="80"/>
+<elementType name="E_ID_3_3" base="identifier" minLength="3" maxLength="3"/>
+<elementType name="E_TM_4_8" base="time" minLength="4" maxLength="8"/>
+<elementType name="E_AN_1_22" base="string" minLength="1" maxLength="22"/>
+<elementType name="E_AN_1_60" base="string" minLength="1" maxLength="60"/>
+<elementType name="E_ID_1_2" base="identifier" minLength="1" maxLength="2"/>
+<elementType name="E_AN_2_80" base="string" minLength="2" maxLength="80"/>
+<elementType name="E_AN_1_20" base="string" minLength="1" maxLength="20"/>
+<elementType name="E_R_1_9" base="decimal" minLength="1" maxLength="9"/>
+<elementType name="E_AN_1_48" base="string" minLength="1" maxLength="48"/>
+<segmentType name="BRA"><sequence><element type="E_AN_1_30" minOccurs="1"/><element type="E_DT_8_8" minOccurs="1"/><element type="E_ID_2_2" minOccurs="1"/><element type="E_ID_1_1" minOccurs="1"/></sequence></segmentType>
+<segmentType name="REF"><sequence><element type="E_ID_2_3" minOccurs="1"/><element type="E_AN_1_30" minOccurs="0"/><element type="E_AN_1_80" minOccurs="0"/></sequence></segmentType>
+<segmentType name="DTM"><sequence><element type="E_ID_3_3" minOccurs="1"/><element type="E_DT_8_8" minOccurs="0"/><element type="E_TM_4_8" minOccurs="0"/></sequence></segmentType>
+<segmentType name="PRF"><sequence><element type="E_AN_1_22" minOccurs="1"/></sequence></segmentType>
+<segmentType name="N1"><sequence><element type="E_ID_2_3" minOccurs="1"/><element type="E_AN_1_60" minOccurs="0"/><element type="E_ID_1_2" minOccurs="0"/><element type="E_AN_2_80" minOccurs="0"/></sequence></segmentType>
+<segmentType name="RCD"><sequence><element type="E_AN_1_20" minOccurs="0"/><element type="E_R_1_9" minOccurs="0"/><element type="E_ID_2_2" minOccurs="0"/><element type="E_R_1_9" minOccurs="0"/><element type="E_ID_2_2" minOccurs="0"/><element type="E_R_1_9" minOccurs="0"/><element type="E_ID_2_2" minOccurs="0"/><element type="E_ID_2_2" minOccurs="0"/></sequence></segmentType>
+<segmentType name="LIN"><sequence><element type="E_AN_1_20" minOccurs="0"/><element type="E_ID_2_2" minOccurs="1"/><element type="E_AN_1_48" minOccurs="1"/><element type="E_ID_2_2" minOccurs="0"/><element type="E_AN_1_48" minOccurs="0"/><element type="E_ID_2_2" minOccurs="0"/><element type="E_AN_1_48" minOccurs="0"/><element type="E_ID_2_2" minOccurs="0"/><element type="E_AN_1_48" minOccurs="0"/></sequence></segmentType>
+<segmentType name="MAN"><sequence><element type="E_ID_1_2" minOccurs="1"/><element type="E_AN_1_48" minOccurs="1"/></sequence></segmentType>
+</schema>

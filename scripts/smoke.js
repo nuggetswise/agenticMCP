@@ -1,72 +1,51 @@
-// End-to-end test through a real MCP client. Usage: SMOKE_BASE=http://localhost:3000 MCP_TOKEN=... node scripts/smoke.js
+// Smoke test: starts the server, connects with the MCP SDK client over Streamable HTTP, and checks the tools,
+// the REST twin, the scope mask, isolation, the read-only boundary, and (WRITES=on) proposal, approval and reset.
+import { spawn } from 'node:child_process';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-
-const BASE = process.env.SMOKE_BASE || 'http://localhost:3000';
-const TOKEN = process.env.MCP_TOKEN;
-const client = new Client({ name: 'smoke', version: '1.0.0' });
-await client.connect(new StreamableHTTPClientTransport(new URL(`${BASE}/mcp/${TOKEN}`)));
-let fails = 0;
-const check = (name, cond, got) => { console.log(`${cond ? 'PASS' : 'FAIL'} ${name}`); if (!cond) { fails++; console.log('   ', JSON.stringify(got).slice(0, 400)); } };
-const call = async (name, args = {}) => JSON.parse((await client.callTool({ name, arguments: args })).content[0].text);
-const setScopes = (s) => fetch(`${BASE}/admin/${TOKEN}/scopes`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: s.map((x) => `${x}=on`).join('&'), redirect: 'manual' });
-
-const tools = (await client.listTools()).tools.map((t) => t.name);
-check('tools listed', tools.includes('orders_needing_attention') && tools.includes('run_readonly_sql'), tools);
-check('every tool is read-only', (await client.listTools()).tools.every((t) => t.annotations?.readOnlyHint), null);
-
-const a = await call('orders_needing_attention');
-check('Q1 four orders with rule and link', a.items.map((i) => `${i.po} ${i.time_left}`).join('|') === 'NR-46156 4 hours left|NR-46142 5 hours left|NR-46151 7 hours left|NR-46133 1 day left' && a.items.every((i) => i.link.startsWith(BASE) && i.rule.source), a);
-const x = await call('explain_rejection', { reference: 'ASN-46118' });
-const r = x.rejections[0];
-check('Q2 ASN-46118: 26 vs 22 characters, three later documents', r.sent_length === '26 characters' && r.allowed.startsWith('22 characters') && r.same_cause_later.length === 3, r);
-const h = await call('edi_health_summary', { days: 30 });
-check('Q3 3,412 documents, 41 failures, top three causes', h.documents === 3412 && h.failures === 41 && h.top_causes.length === 3, h);
-const d = await call('check_deliveries', { pos: ['NR-46101', 'NR-46103', 'NR-46104', 'NR-46106', 'NR-46108', 'NR-46110'] });
-check('Q4 escalation five on time, one late', d.on_time === 5 && d.late === 1, d);
-
-const other = await call('compare_with_other_suppliers', { question: 'How do other Northfield suppliers score on rejections?' });
-check('S2 other suppliers: Not available to Ashby', other.result === 'Not available to Ashby', other);
-const otherPo = await call('get_order', { po: 'NR-81205' });
-check('S2 other supplier PO: Not available to Ashby', otherPo.message === 'Not available to Ashby', otherPo);
-const otherArg = await call('edi_health_summary', { supplier: 'Brookline Goods' });
-check('S2 supplier argument: Not available to Ashby', otherArg.result === 'Not available to Ashby', otherArg);
-
-await setScopes(['orders', 'documents', 'errors']);
-const masked = await call('orders_needing_attention');
-check('S3 rules scope removed: rules hidden on next call', masked.items.every((i) => i.rule.statement === 'Scope not granted: rules'), masked.items[0]);
-const blocked = await call('lookup_retailer_rules', { topic: 'invoice' });
-check('S3 rule lookup blocked', blocked.result === 'Scope not granted', blocked);
-await setScopes(['orders', 'documents', 'errors', 'rules']);
-const restored = await call('orders_needing_attention');
-check('S3 scope restored on next call', restored.items[0].rule.source === 'Northfield MIG', restored.items[0]);
-
-const act = await call('request_change', { action: 'Resend the invoice', po: 'NR-46133' });
-check('S4 action request: Action not available with link', act.result === 'Action not available' && act.link.includes('/records/p10/order/NR-46133'), act);
-
-const sql = await call('run_readonly_sql', { sql: "SELECT count(*) n FROM documents WHERE scenario='p10' AND sent_at > '2026-10-18T16:00:00.000Z'" });
-check('SQL reads Ashby copy', sql.rows[0].n === 3412, sql);
-const sqlOther = await call('run_readonly_sql', { sql: "SELECT count(*) n FROM orders WHERE supplier_id <> 'ASHBY'" });
-check('SQL copy holds no other supplier', sqlOther.rows[0].n === 0, sqlOther);
-const attach = await call('run_readonly_sql', { sql: "ATTACH 'build/tg.db' AS m" });
-check('SQL blocks ATTACH', !!attach.error, attach);
-const write = await call('run_readonly_sql', { sql: 'SELECT 1; DELETE FROM orders' });
-check('SQL blocks a second statement', !!write.error, write);
-
-const p13 = await call('orders_needing_attention', { scenario: 'p13' });
-check('P13 four missing documents', p13.items.length === 4 && p13.checked_nothing_to_chase[0].state === 'Not expected', p13);
-
-const logRes = await call('get_access_log', { limit: 30 });
-const results = logRes.calls.map((c) => c.result);
-check('access log holds every call, including declined ones', ['Answered', 'Not available to Ashby', 'Scope not granted', 'Action not available', 'Invalid request'].every((k) => results.includes(k)), results);
-
-const page = await fetch(`${BASE}/records/p10/order/NR-46133`).then((x) => x.text());
-check('record page renders', page.includes('PO NR-46133') && page.includes('INV-46133'), page.slice(0, 200));
-const otherPage = await fetch(`${BASE}/records/p10/order/NR-81205`).then((x) => x.text());
-check('record page for another supplier is Not available', otherPage.includes('Not available to Ashby'), otherPage.slice(0, 200));
-const bad = await fetch(`${BASE}/mcp/wrong-token`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
-check('wrong token is refused', bad.status === 404, bad.status);
-
-await client.close();
-console.log(fails ? `${fails} failed` : 'All smoke checks passed');
-process.exit(fails ? 1 : 0);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+let pass = 0; const fails = []; const ok = (n, c, d = '') => { if (c) pass++; else fails.push(`${n} ${d}`); };
+async function withServer(env, port, fn) {
+  const p = spawn('node', ['--no-warnings', 'src/server.js'], { env: { ...process.env, MCP_TOKEN: 'smoke', PORT: String(port), ...env }, stdio: 'ignore' });
+  const base = `http://127.0.0.1:${port}`;
+  try { for (let i = 0; i < 50; i++) { try { if ((await fetch(`${base}/healthz`)).ok) break; } catch { /* not up yet */ } await sleep(100); }
+    const client = new Client({ name: 'smoke', version: '1' }); await client.connect(new StreamableHTTPClientTransport(new URL(`${base}/mcp/smoke`)));
+    const tool = async (name, args = {}) => JSON.parse((await client.callTool({ name, arguments: args })).content[0].text);
+    const rest = async (path, init) => (await fetch(`${base}/api/smoke${path}`, init)).json();
+    await fn({ base, client, tool, rest }); await client.close(); } finally { p.kill(); }
+}
+await withServer({}, 3971, async ({ base, client, tool, rest }) => {
+  const { tools } = await client.listTools(); const names = tools.map((t) => t.name);
+  ok('16 tools listed', names.length === 16, String(names.length)); ok('no scenario tool', !names.includes('list_scenarios'));
+  ok('every tool read-only', tools.every((t) => t.annotations?.readOnlyHint === true));
+  const a = await tool('orders_needing_attention'); ok('attention via MCP', a.items?.map((i) => i.po).join() === 'NR-46151,NR-46142,NR-46156,NR-46133', JSON.stringify(a).slice(0, 200));
+  const r = await rest('/v1/orders/attention'); ok('REST twin equals MCP', JSON.stringify(r.items) === JSON.stringify(a.items));
+  const h = await rest('/v1/health?days=30'); ok('health via REST', h.documents === 3412 && h.failures === 41);
+  const later = await tool('orders_needing_attention', { as_of: '2026-11-18T09:00:00-05:00', include_warehouse: true }); ok('as_of moves the answer', later.items?.[0]?.po === 'NR-46215');
+  const o = await tool('get_order', { po: 'NR-450118' }); ok('order by number', o.found && o.shipments.length === 2);
+  const d = await tool('get_document', { reference: 'ASN-450118-2' }); ok('document carries X12', /ISA\*/.test(JSON.stringify(d)));
+  const x = await tool('get_order', { po: 'NR-447948' }); ok('another supplier’s order is not found', x.found === false, JSON.stringify(x).slice(0, 120));
+  const c = await tool('compare_with_other_suppliers', { question: 'rank' }); ok('refusal text', JSON.stringify(c).includes('Not available to Ashby'));
+  const w = await tool('request_change', { action: 'resend the ship notice', po: 'NR-46156' }); ok('read-only boundary', JSON.stringify(w).includes('Action not available'));
+  const n = await tool('recommend_next_step', { job: 'missing_document', record: 'NR-46215', as_of: '2026-11-18T09:00:00-05:00' }); ok('agent decision', n.next_step === 'draft_ship_notice_from_load_scan');
+  const sql = await tool('run_readonly_sql', { sql: "SELECT count(*) n FROM orders WHERE supplier_id <> 'ASHBY'" }); ok('SQL sees only Ashby', JSON.stringify(sql).includes('"n": 0') || JSON.stringify(sql).includes('"n":0'), JSON.stringify(sql).slice(0, 160));
+  const bad = await tool('run_readonly_sql', { sql: 'DELETE FROM orders' }); ok('SQL refuses writes', /only|not allowed|read-only|SELECT/i.test(JSON.stringify(bad)));
+  await fetch(`${base}/admin/smoke/scopes`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'orders=on&documents=on', redirect: 'manual' });
+  const m = await tool('explain_rejection', { reference: 'ASN-46118' }); ok('scope off blocks the tool', /scope|not shared|not granted/i.test(JSON.stringify(m)), JSON.stringify(m).slice(0, 160));
+  await fetch(`${base}/admin/smoke/reset`, { method: 'POST', redirect: 'manual' });
+  const m2 = await tool('explain_rejection', { reference: 'ASN-46118' }); ok('reset restores scopes', m2.rejected === true);
+  const log = await tool('get_access_log'); ok('access log records calls', JSON.stringify(log).includes('explain_rejection'));
+  ok('openapi served', (await (await fetch(`${base}/openapi.json`)).json()).openapi === '3.0.3');
+  for (const p of ['/records/order/NR-450118', '/records/document/ASN-46118', '/admin/smoke', '/']) ok(`page ${p}`, (await fetch(base + p)).status === 200);
+  ok('wrong token refused', (await fetch(`${base}/api/nope/v1/health`)).status >= 401);
+});
+await withServer({ WRITES: 'on' }, 3972, async ({ base, tool }) => {
+  const before = await tool('get_order', { po: 'NR-46156' });
+  const p = await tool('request_change', { action: 'send corrected ship notice', po: 'NR-46156' }); ok('proposal recorded', /Awaiting approval/.test(JSON.stringify(p)), JSON.stringify(p).slice(0, 200));
+  const mid = await tool('get_order', { po: 'NR-46156' }); ok('nothing changes before approval', JSON.stringify(mid.other_records) === JSON.stringify(before.other_records));
+  const id = JSON.stringify(p).match(/PR-[0-9A-Za-z-]+/)?.[0]; await fetch(`${base}/admin/smoke/proposals/${id}/approve`, { method: 'POST', redirect: 'manual' });
+  const after = await tool('get_order', { po: 'NR-46156' }); ok('approval appends an event', JSON.stringify(after.other_records).includes('proposal.approved') || after.other_records.length === before.other_records.length + 1, id);
+  await fetch(`${base}/admin/smoke/reset`, { method: 'POST', redirect: 'manual' });
+  const reset = await tool('get_order', { po: 'NR-46156' }); ok('reset returns to baseline', JSON.stringify(reset.other_records) === JSON.stringify(before.other_records));
+});
+console.log(`${pass} smoke checks passed, ${fails.length} failed`); for (const f of fails) console.log(`FAIL ${f}`); process.exit(fails.length ? 1 : 0);

@@ -1,0 +1,771 @@
+{
+ "openapi": "3.0.3",
+ "info": {
+  "title": "Trading Grid for Retail: supplier connection (draft)",
+  "version": "0.2.0-draft",
+  "description": "Draft API behind the customer-assistant connection. Generated from the tool list the demo MCP server registers, so the two cannot drift. Every operation is read-only except POST /v1/proposals, which records an approval-gated proposal and changes nothing until an authorized user approves it in Trading Grid. All data is fictional."
+ },
+ "servers": [
+  {
+   "url": "https://tg-retail-demo-mcp.onrender.com/api/{token}",
+   "variables": {
+    "token": {
+     "default": "TOKEN",
+     "description": "Connection token"
+    }
+   }
+  }
+ ],
+ "paths": {
+  "/v1/orders/attention": {
+   "get": {
+    "operationId": "orders_needing_attention",
+    "summary": "Orders needing attention",
+    "description": "Ashby orders with Northfield that need action at a point in time: rejected documents, and required documents not sent as their deadline nears. Each item carries the reason, the Northfield rule and its source, the deadline, the time left and a link to the order record. Set include_warehouse to add the Kinross shipping advice (945). Also lists items checked that need nothing.",
+    "tags": [
+     "Start-of-day triage"
+    ],
+    "x-mcp-tool": "orders_needing_attention",
+    "x-required-scopes": [
+     "orders",
+     "documents"
+    ],
+    "x-optional-scopes": [
+     "errors",
+     "rules"
+    ],
+    "x-read-only": true,
+    "parameters": [
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+      },
+      "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+     },
+     {
+      "name": "include_warehouse",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "description": "Also check the warehouse shipping advice from Kinross"
+      },
+      "description": "Also check the warehouse shipping advice from Kinross"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    }
+   }
+  },
+  "/v1/documents/{reference}/rejection": {
+   "get": {
+    "operationId": "explain_rejection",
+    "summary": "Explain a rejected document",
+    "description": "Why Northfield rejected an Ashby document: the failing field, the value sent and its length, what is allowed, the rule and its source, the root cause where the Supplier ERP records one, whether it was corrected, and later documents that failed for the same cause. Accepts a document reference such as ASN-46118 or a PO number.",
+    "tags": [
+     "Rejection diagnosis"
+    ],
+    "x-mcp-tool": "explain_rejection",
+    "x-required-scopes": [
+     "documents",
+     "errors"
+    ],
+    "x-optional-scopes": [
+     "rules"
+    ],
+    "x-read-only": true,
+    "parameters": [
+     {
+      "name": "reference",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "description": "Document reference (ASN-46118, INV-46133) or PO number"
+      },
+      "description": "Document reference (ASN-46118, INV-46133) or PO number"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    }
+   }
+  },
+  "/v1/health": {
+   "get": {
+    "operationId": "edi_health_summary",
+    "summary": "EDI health summary",
+    "description": "Ashby’s EDI exchange with Northfield over a period: documents by type, failures, failures by channel (application advice 824 or technical acknowledgment 997), open failures and the top causes.",
+    "tags": [
+     "Periodic health review"
+    ],
+    "x-mcp-tool": "edi_health_summary",
+    "x-required-scopes": [
+     "documents"
+    ],
+    "x-optional-scopes": [
+     "errors"
+    ],
+    "x-read-only": true,
+    "parameters": [
+     {
+      "name": "days",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 120,
+       "description": "Days ending at as_of, default 30"
+      },
+      "description": "Days ending at as_of, default 30"
+     },
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+      },
+      "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    }
+   }
+  },
+  "/v1/deliveries/check": {
+   "post": {
+    "operationId": "check_deliveries",
+    "summary": "Check deliveries for POs",
+    "description": "For a list of PO numbers, whether each was delivered on time: the requested delivery date on the purchase order against the date on Northfield’s receiving advice (861), with truck departure, ship notices and receipts. Use it to check a buyer’s claim that orders arrived late.",
+    "tags": [
+     "Escalation check"
+    ],
+    "x-mcp-tool": "check_deliveries",
+    "x-required-scopes": [
+     "orders",
+     "documents"
+    ],
+    "x-optional-scopes": [],
+    "x-read-only": true,
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    },
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "pos": {
+          "type": "array",
+          "items": {
+           "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 50,
+          "description": "PO numbers, for example NR-46101"
+         }
+        },
+        "required": [
+         "pos"
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/orders/{po}": {
+   "get": {
+    "operationId": "get_order",
+    "summary": "Order record",
+    "description": "One Ashby order with Northfield, whole history: lines as first ordered, as now ordered and as accepted; order changes; every document in order with its status; shipments; receipts; invoices; payments; charges; and records from the Supplier ERP, the warehouse, the carrier and the deduction case.",
+    "tags": [
+     "Order lookup"
+    ],
+    "x-mcp-tool": "get_order",
+    "x-required-scopes": [
+     "orders"
+    ],
+    "x-optional-scopes": [
+     "documents",
+     "errors",
+     "deductions"
+    ],
+    "x-read-only": true,
+    "parameters": [
+     {
+      "name": "po",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "description": "PO number, for example NR-450118"
+      },
+      "description": "PO number, for example NR-450118"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    }
+   }
+  },
+  "/v1/documents/{reference}": {
+   "get": {
+    "operationId": "get_document",
+    "summary": "Document with its X12",
+    "description": "One exchanged document by reference: who sent it, when, its status, its control numbers, every version sent under that reference, and the X12 text as exchanged.",
+    "tags": [
+     "Evidence retrieval"
+    ],
+    "x-mcp-tool": "get_document",
+    "x-required-scopes": [
+     "documents"
+    ],
+    "x-optional-scopes": [],
+    "x-read-only": true,
+    "parameters": [
+     {
+      "name": "reference",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "description": "Document reference, for example ASN-450118-2 or RCV-DC2-77355"
+      },
+      "description": "Document reference, for example ASN-450118-2 or RCV-DC2-77355"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    }
+   }
+  },
+  "/v1/rules": {
+   "get": {
+    "operationId": "lookup_retailer_rules",
+    "summary": "Retailer rules",
+    "description": "Northfield’s supplier guide 2026.2 for Ashby (deadlines, field limits, item and location rules, charges, evidence and scorecard rules) and the Kinross warehouse agreement. Filter by rule id or charge code, topic words, or X12 document number.",
+    "tags": [
+     "Requirement lookup"
+    ],
+    "x-mcp-tool": "lookup_retailer_rules",
+    "x-required-scopes": [
+     "rules"
+    ],
+    "x-optional-scopes": [],
+    "x-read-only": true,
+    "parameters": [
+     {
+      "name": "rule_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Rule id or charge code, for example NF-4.2 or AS02"
+      },
+      "description": "Rule id or charge code, for example NF-4.2 or AS02"
+     },
+     {
+      "name": "topic",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Words to match, for example \"ship notice\""
+      },
+      "description": "Words to match, for example \"ship notice\""
+     },
+     {
+      "name": "document",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "X12 set, for example 856"
+      },
+      "description": "X12 set, for example 856"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    }
+   }
+  },
+  "/v1/deductions": {
+   "get": {
+    "operationId": "list_deductions",
+    "summary": "Deduction cases",
+    "description": "Northfield deduction cases opened against Ashby up to a point in time, each with its charge, amount and order.",
+    "tags": [
+     "Deduction triage"
+    ],
+    "x-mcp-tool": "list_deductions",
+    "x-required-scopes": [
+     "deductions"
+    ],
+    "x-optional-scopes": [],
+    "x-read-only": true,
+    "parameters": [
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+      },
+      "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    }
+   }
+  },
+  "/v1/deductions/{case}": {
+   "get": {
+    "operationId": "get_deduction_case",
+    "summary": "Deduction case",
+    "description": "One deduction case: the charge and its rule, the remittance that withheld it, the dispute deadline and time left, where each piece of required evidence sits (in the case, held by another system, or not found), the case history and any repayment.",
+    "tags": [
+     "Deduction triage"
+    ],
+    "x-mcp-tool": "get_deduction_case",
+    "x-required-scopes": [
+     "deductions"
+    ],
+    "x-optional-scopes": [
+     "rules"
+    ],
+    "x-read-only": true,
+    "parameters": [
+     {
+      "name": "case",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "description": "Case id (DC-40877), deduction reference (DM-55102) or PO number"
+      },
+      "description": "Case id (DC-40877), deduction reference (DM-55102) or PO number"
+     },
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+      },
+      "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    }
+   }
+  },
+  "/v1/scorecard": {
+   "get": {
+    "operationId": "get_scorecard",
+    "summary": "Northfield scorecard",
+    "description": "Northfield’s on-time, in-full scorecard for Ashby over the 13-week quarter, recomputed from orders and receiving advice: cases, failing cases, failing lines by reason, and the figures Northfield published.",
+    "tags": [
+     "Performance review"
+    ],
+    "x-mcp-tool": "get_scorecard",
+    "x-required-scopes": [
+     "orders",
+     "documents"
+    ],
+    "x-optional-scopes": [],
+    "x-read-only": true,
+    "parameters": [
+     {
+      "name": "lines",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "description": "Include every failing line"
+      },
+      "description": "Include every failing line"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    }
+   }
+  },
+  "/v1/next-step": {
+   "post": {
+    "operationId": "recommend_next_step",
+    "summary": "Next step for an exception",
+    "description": "For one exception, reads the Supplier ERP, warehouse, carrier and Trading Grid records and returns the next step with the evidence behind it and what a fixed rule would have done. Jobs: missing_document (record: PO), deduction (record: case id), trade_test (record: test ship notice), shelf (record: store number), shipment_risk (record: PO), scorecard (record: \"YYYY-MM-DD to YYYY-MM-DD\", optional). It proposes; it sends and changes nothing.",
+    "tags": [
+     "Exception investigation"
+    ],
+    "x-mcp-tool": "recommend_next_step",
+    "x-required-scopes": [
+     "orders",
+     "documents"
+    ],
+    "x-optional-scopes": [
+     "errors",
+     "rules",
+     "deductions"
+    ],
+    "x-read-only": true,
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    },
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "job": {
+          "type": "string",
+          "enum": [
+           "missing_document",
+           "deduction",
+           "trade_test",
+           "shelf",
+           "shipment_risk",
+           "scorecard"
+          ],
+          "description": "Kind of exception"
+         },
+         "record": {
+          "type": "string",
+          "description": "The record to investigate"
+         },
+         "as_of": {
+          "type": "string",
+          "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+         }
+        },
+        "required": [
+         "job"
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/calendar": {
+   "get": {
+    "operationId": "get_story_calendar",
+    "summary": "Story calendar",
+    "description": "The quarter of trade this connection holds and the moments on it, each with the time to pass as as_of and its anchor record.",
+    "tags": [
+     "Orientation"
+    ],
+    "x-mcp-tool": "get_story_calendar",
+    "x-required-scopes": [],
+    "x-optional-scopes": [],
+    "x-read-only": true,
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    }
+   }
+  },
+  "/v1/suppliers/compare": {
+   "get": {
+    "operationId": "compare_with_other_suppliers",
+    "summary": "Compare with other suppliers",
+    "description": "Requests to compare Ashby with other Northfield suppliers or read their records. Always answers \"Not available to Ashby\".",
+    "tags": [
+     "Boundary"
+    ],
+    "x-mcp-tool": "compare_with_other_suppliers",
+    "x-required-scopes": [],
+    "x-optional-scopes": [],
+    "x-read-only": true,
+    "parameters": [
+     {
+      "name": "question",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "description": "What the user asked about other suppliers"
+      },
+      "description": "What the user asked about other suppliers"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    }
+   }
+  },
+  "/v1/proposals": {
+   "post": {
+    "operationId": "request_change",
+    "summary": "Request a change in Trading Grid",
+    "description": "Use when the user asks to send, resend, correct, approve or change anything. In this release the connection is read-only: it answers \"Action not available\" with the Trading Grid record where an authorized user completes and approves the action. With writes enabled it records an approval-gated proposal instead; nothing changes until Priya Raman approves it in Trading Grid.",
+    "tags": [
+     "Boundary"
+    ],
+    "x-mcp-tool": "request_change",
+    "x-required-scopes": [],
+    "x-optional-scopes": [],
+    "x-read-only": false,
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    },
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "action": {
+          "type": "string",
+          "description": "What the user asked to do"
+         },
+         "po": {
+          "type": "string",
+          "description": "PO number the action concerns"
+         },
+         "document": {
+          "type": "string",
+          "description": "Document reference the action concerns"
+         }
+        },
+        "required": [
+         "action"
+        ]
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}

@@ -65,7 +65,7 @@ const SEG = {
 const L = (...x) => x;
 const SET = {
   850: ['BEG!', 'REF!+', 'DTM!+', L('N1!+'), L('PO1!+'), 'CTT'],
-  855: ['BAK!', L('PO1!+', L('ACK+')), 'CTT!'],
+  855: ['BAK!', L('PO1!+', L('ACK+')), 'CTT'],
   860: ['BCH!', L('POC!+', 'DTM+'), 'CTT'],
   865: ['BCA!', 'REF+', L('POC!+', L('ACK+')), 'CTT'],
   856: ['BSN!', L('HL!+', 'LIN', 'SN1', 'PRF', 'TD1+', 'TD5+', 'REF+', 'MAN+', 'DTM+', L('N1+')), 'CTT'],

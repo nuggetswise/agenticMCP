@@ -102,7 +102,7 @@ ok('isolation.main_db_holds_others', n("SELECT count(*) n FROM orders WHERE supp
 const a10 = D.attention(ash, D.storyClock(), {});
 eq('p10.attention', a10.items.map((i) => [i.po, i.time_left]), [['NR-46151', '40 minutes left'], ['NR-46142', '5 hours left'], ['NR-46156', '19 hours left'], ['NR-46133', '1 day left']]);
 const h = D.health(ash, 30, D.storyClock());
-eq('p10.health', [h.documents, h.failures, h.top_causes.map((c) => c.failures), h.rejected_by], [3412, 41, [11, 6, 4], { application_advice_824: 29, technical_acknowledgment_997: 12 }]);
+eq('p10.health', [h.documents, h.failures, h.top_causes.map((c) => c.failures), h.rejected_by], [3412, 41, [11, 6, 4], { application_advice_824: 31, technical_acknowledgment_997: 10 }]);
 const rj = D.explainRejection(ash, 'ASN-46118').rejections[0];
 eq('p10.rejection', [rj.sent_value, rj.sent_length, rj.allowed.slice(0, 13), rj.rule.id, rj.same_cause_later.map((x) => x.reference)], ['NR-46118-ASHBY-WHSL-REL-02', '26 characters', '22 characters', 'NF-4.10', ['ASN-46124', 'ASN-46129', 'INV-46133']]);
 const dl = D.deliveries(ash, ['NR-46101', 'NR-46102', 'NR-46103', 'NR-46104', 'NR-46105', 'NR-46108']);

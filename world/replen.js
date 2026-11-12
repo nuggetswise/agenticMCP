@@ -91,7 +91,7 @@ export function replenDocs(L, W, G) {
   const plan = [
     ...Array(6).fill(['asn', 'IID']), ...Array(4).fill(['inv', 'IID']), ...Array(6).fill(['asn', 'LOC']),
     ...Array(3).fill(['asn', 'CTN']), ...Array(3).fill(['inv', 'TOT']), ...Array(3).fill(['asn', 'UOM']), ...Array(3).fill(['asn', 'DTE']),
-    ['ack', 'missing_segment'], ['ack', 'missing_segment'], ['asn', 'invalid_date'], ['asn', 'invalid_date'], ['asn', 'se_count'], ['inv', 'se_count'], ['asn', 'too_long'], ['asn', 'too_long'],
+    ['ack', 'no_ctt'], ['ack', 'no_ctt'], ['asn', 'invalid_date'], ['asn', 'invalid_date'], ['asn', 'se_count'], ['inv', 'se_count'], ['asn', 'too_long'], ['asn', 'too_long'],
   ];
   const failOf = new Map();
   for (const f of plan) failOf.set(take(inWin).n, f);
@@ -108,7 +108,7 @@ export function replenDocs(L, W, G) {
     const ackFault = fail && fail[0] === 'ack' ? fail[1] : null;
     let ship = Object.fromEntries(O.lines.map((l) => [l.line, O.shipQty?.[l.line] ?? l.qty]));
     const ackOpt = O.allocCut ? { codes: Object.fromEntries(O.lines.map((l) => [l.line, ship[l.line] < l.qty ? 'IQ' : 'IA'])), qty: ship } : {};
-    const ack = D.ack(L, O, O.ackAt, ackOpt); if (ackFault) { ack.fault = ackFault; D.ack(L, O, addH(O.ackAt, U(0.5, 1.2)), ackOpt); }
+    const ack = D.ack(L, O, O.ackAt, ackOpt); if (ackFault) { ack.fault = ackFault; if (ackFault === 'no_ctt') reject824(ack, 'TTL', { seg: 'CTT', elem: null, bad: null, allowed: 'A CTT segment with the number of lines' }, addH(O.ackAt, 8 / 60)); D.ack(L, O, addH(O.ackAt, U(0.5, 1.2)), ackOpt); }
     if (s.change) {
       D.change(L, O, s.change.at, 1, [{ line: 1, code: 'QD', qty: 12, qty_left: 12 }]);
       D.changeAck(L, O, s.change.ackAt, 1, `CHA-${id}`, [{ line: 1, code: 'IA', qty: 12 }]);

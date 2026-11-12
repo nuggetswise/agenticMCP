@@ -36,7 +36,7 @@ check(`each of the ${rejected.length} rejections is faulted for the reason its 9
 // 2. Injected faults on clean documents.
 const clean = (type) => db.prepare("SELECT raw FROM documents WHERE doc_type = ? AND status = 'Delivered' AND supplier_id = 'ASHBY' ORDER BY sent_at LIMIT 1 OFFSET 40").get(type).raw;
 const INJECT = [
-  ['missing mandatory segment (855 without CTT)', '855', FAULTS.missing_segment.apply, 'MANDATORY_SEGMENT_MISSING'],
+  ['missing mandatory segment (855 without BAK)', '855', (t) => { const n = Number(t.match(/\nSE\*(\d+)\*/)[1]); return t.replace(/\nBAK\*[^~]*~/, '').replace(/\nSE\*\d+\*/, `\nSE*${n - 1}*`); }, 'MANDATORY_SEGMENT_MISSING'],
   ['invalid date (856 DTM02)', '856', FAULTS.invalid_date.apply, 'INVALID_DATE'],
   ['segment count wrong (856 SE01)', '856', FAULTS.se_count.apply, 'CONTROL_COUNT_DOES_NOT_MATCH_ACTUAL_COUNT'],
   ['element too long (856 N102)', '856', FAULTS.too_long.apply, 'DATA_ELEMENT_TOO_LONG'],

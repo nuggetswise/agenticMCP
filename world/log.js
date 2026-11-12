@@ -8,6 +8,8 @@ const LOC = Object.fromEntries(locations.map((l) => [l.id, l]));
 
 /** Syntax faults: each changes the X12 text so the file really carries the fault the 997 reports. */
 export const FAULTS = {
+  // Standard X12 makes CTT optional on an 855, so its absence is not a syntax error: Northfield accepts the file and rejects it on an 824.
+  no_ctt: { accept: true, apply: (t) => { const n = Number(t.match(/\nSE\*(\d+)\*/)[1]); return t.replace(/\nCTT\*[^~]*~/, '').replace(/\nSE\*\d+\*/, `\nSE*${n - 1}*`); } },
   missing_segment: { apply: (t) => { const n = Number(t.match(/\nSE\*(\d+)\*/)[1]); return t.replace(/\nCTT\*[^~]*~/, '').replace(/\nSE\*\d+\*/, `\nSE*${n - 1}*`); }, ak: (t) => ({ seg_errors: [{ seg: 'CTT', pos: segPos(t, 'SE'), code: '3' }], set_code: '5' }) },
   invalid_date: { apply: (t) => t.replace(/\nDTM\*011\*\d{8}/, '\nDTM*011*20261340'), ak: (t) => ({ seg_errors: [{ seg: 'DTM', pos: segPos(t, 'DTM'), code: '8' }], elem_errors: [{ pos: 2, ref: '373', code: '8', bad: '20261340' }], set_code: '5' }) },
   se_count: { apply: (t) => t.replace(/\nSE\*(\d+)\*/, (m, n) => `\nSE*${Number(n) + 1}*`), ak: () => ({ set_code: '4' }) },
@@ -42,7 +44,7 @@ export class Log {
       if (d.no_ack) continue;
       // The receiver's technical acknowledgment, 2 to 9 minutes later.
       const at = iso(new Date(Date.parse(d.at) + d.ackDelay * 60000));
-      acks.push({ d, fa: { type: '997', from: d.to, to: d.from, at, group_id: text.match(/\nGS\*([A-Z]{2})\*/)[1], group_ctl: d.ctl, set_id: d.type, set_ctl: '0001', result: fault ? 'R' : 'A', ...(fault ? fault.ak(text, d) : {}) } });
+      acks.push({ d, fa: { type: '997', from: d.to, to: d.from, at, group_id: text.match(/\nGS\*([A-Z]{2})\*/)[1], group_ctl: d.ctl, set_id: d.type, set_ctl: '0001', result: fault && !fault.accept ? 'R' : 'A', ...(fault && !fault.accept ? fault.ak(text, d) : {}) } });
     }
     // Acknowledgment control numbers are allocated in the order the acknowledgments are sent.
     acks.sort((x, y) => (x.fa.at < y.fa.at ? -1 : x.fa.at > y.fa.at ? 1 : x.d._n - y.d._n));

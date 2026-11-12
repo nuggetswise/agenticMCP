@@ -25,12 +25,21 @@ known.misc = (v) => has("SELECT 1 FROM events WHERE data LIKE ?", `%${v}%`) || !
 known.rule = (v) => !!db.prepare('SELECT 1 FROM rules WHERE id = ? OR charge_code = ?').get(v, v);
 const PATTERNS = [[/\bNR-\d{5,6}\b/g, 'po'], [/\b(?:ASN|INV|RCV|ACK)-[0-9][0-9A-Z-]*\b/g, 'doc'], [/\bPMT-\d+\b/g, 'pay'], [/\b(?:DC|DM|BOL|CR|CI-NF|SL)-[0-9][0-9A-Z-]*\b/g, 'misc'], [/\bNF-\d+\.\d+\b/g, 'rule'], [/\b00?0614141\d{9,10}\b/g, 'sscc']];
 const WRONG = [/Sam Whitaker/, /Maya [A-Z]\w+/, /Northfield Stores/, /Northfield Retail Group/, /Ashby Home\w*/, /Ashby Supply\b/, /ASHBYSUPPLY/, /before the truck leaves/i, /\b[A-Z][a-z]+ (?:Okafor|Nguyen|Patel|Garcia|Kim|Lopez|Brooks|Reyes|Chen|Morgan|Diaz|Shah)\b/];
+// Names: only Priya Raman and Jordan Ellis may be named. Two nets: a list of common first names, and any capitalised
+// pair that follows a cue such as "Awaiting" or "Approved by". Style blocks are ignored. A name outside both nets passes.
+const FIRST = 'Sam|Rae|Kim|Dana|Maya|Marcus|Elena|Tom|Theo|Alex|Chris|Pat|Lee|Morgan|Taylor|Jamie|Casey|Riley|Avery|Quinn|Drew|Robin|Noah|Liam|Emma|Olivia|Ava|Mia|Zoe|Ian|Omar|Nina|Lena|Ravi|Anil|Wei|Mei|Sara|Sarah|Laura|Linda|Mark|Paul|Peter|John|James|David|Maria|Ana|Luis|Carlos|Diego|Sofia|Grace|Hannah|Ethan|Lucas|Owen|Ruth|Nora|Hugo|Felix|Jonas|Ben|Dan|Joe|Tim|Jim|Bob|Amy|Eva|Ivy|Kai|Leo|Eli|Ada|Uma|Tara|Asha|Devi|Arun|Kofi|Tariq|Layla|Yusuf|Aisha|Hana|Kenji|Yuki|Andre|Nadia|Irene|Victor|Monica|Rachel|Kevin|Brian|Eric|Greg|Jeff|Scott|Sean|Todd|Troy|Wade|Neil|Carl|Dale|Earl|Gary|Glen|Hank|Jack|Kent|Kurt|Lars|Luke|Matt|Nick|Phil|Rick|Ross|Seth|Ted|Walt|Zack|Anna|Kate|Jane|Mary|Lisa|Emily|Susan|Karen|Helen|Priya|Jordan';
+const NOT_PEOPLE = /^(Northfield|Ashby|Kinross|Lakeline|Trading|Scout|Claim|Pace|Watch|Shelf|Vet|Test|Reuse|Supplier|Warehouse|Master|NetSuite|Order|Ship|Purchase|Sales|Item|Technical|Receiving|Application|Customer|Retail|Wholesale|Marketplace|Drop|Your|The|This|Its|Line|Version|Carton|Store|Week|Rule|Rules|Priya Raman|Jordan Ellis)\b/;
+function otherNames(src) { const t = src.replace(/<style[\s\S]*?<\/style>/g, ' '); const out = new Set();
+  for (const m of t.matchAll(new RegExp(`\\b(?:${FIRST})\\b(?:[’']s)?(?: [A-Z][a-z]{2,})?`, 'g'))) { const v = m[0].replace(/[’']s$/, ''); if (!/^(Priya|Jordan)( Raman| Ellis)?$/.test(v) && !/^(Mark|Pat|Dale|Grace|May|Will|Bill|Ray|Dan|Jack|Ross|Kent|Glen|Earl|Ivy|Ada|Ted|Rick) (?![A-Z])/.test(m[0] + ' ') || /^(Priya|Jordan) (?!Raman|Ellis)[A-Z]/.test(v)) out.add(v); }
+  for (const m of t.matchAll(/\b(?:Awaiting|Waiting for|Approved by|Accepted by|Activated by|Sent by|Confirmed by|Rejected by|Owned by|delegate|Contact|Dear|Thanks,|Regards,)\s+([A-Z][a-z]+ [A-Z][a-z]+)/g)) if (!NOT_PEOPLE.test(m[1])) out.add(m[1]);
+  return [...out]; }
 const report = {}; let bad = 0;
 for (const [id, c] of Object.entries(CLAIMS)) {
   const f = join(DIR, `${id}.html`); if (!existsSync(f)) { report[id] = { screen: 'not fetched' }; bad++; continue; }
   const src = readFileSync(f, 'utf8'); const r = { unknown_records: [], wrong_names: [], numbers: [] };
   for (const [re, kind] of PATTERNS) for (const v of new Set(src.match(re) || [])) { if ((c.ignore || []).some((x) => v.startsWith(x))) continue; if (!known[kind](v)) r.unknown_records.push(v); }
   for (const re of WRONG) for (const v of new Set(src.match(new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g')) || [])) if (!['Priya Raman', 'Jordan Ellis'].includes(v)) r.wrong_names.push(v);
+  for (const v of otherNames(src)) if (!r.wrong_names.includes(v)) r.wrong_names.push(v);
   for (const n of c.numbers || []) { const got = db.prepare(n.sql).get(); const world = String(Object.values(got || { v: null })[0]); const shown = src.includes(n.shown); if (!shown || world !== String(n.world)) r.numbers.push({ claim: n.name, on_screen: shown ? n.shown : `"${n.shown}" not on screen`, world }); }
   if (c.engine === 'money-in-motion') {
     const at = src.search(/\bFX\s*=\s*\{/); let m = null;

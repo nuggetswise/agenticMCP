@@ -74,6 +74,7 @@ const R = (id, topic, doc_type, statement, o = {}) => ({ id, rule_set: 'northfie
 export const rules = [
   R('NF-1.1', 'orders', '850,860', 'The current PO revision is the commitment; a change counts only on an order change'),
   R('NF-1.4', 'acknowledgment', '855', 'Send the order acknowledgment within 24 hours of the purchase order', { window: 24 }),
+  R('NF-1.7', 'acknowledgment', '855', 'The order acknowledgment carries the transaction totals segment (CTT) with the number of lines; the X12 standard leaves it optional'),
   R('NF-1.5', 'acceptance', '997', 'Northfield returns a technical acknowledgment (997) to an acknowledgment or change response and sends no business acceptance; a quantity change is accepted only on a matching order change'),
   R('NF-1.6', 'orders', '860,865', 'Change requests go to the buyer, who issues the order change; answer an order change within 24 hours of the latest change', { window: 24 }),
   R('NF-2.1', 'fulfilment', '856', 'No backorders: a short line is cancelled and the shipped quantity reported', { code: 'OT01', charge: '3% of cost of goods, quarterly; months under $1,000 waived', basis: 'public', pub: [pub('walmart', 'In-full misses are charged about 3% of the cost of goods on the affected portion')] }),
@@ -130,6 +131,7 @@ export const RULE = Object.fromEntries(rules.map((r) => [r.id, r]));
 
 /** Application advice (824) error codes Northfield uses, each tied to one rule. */
 export const TED = {
+  TTL: { rule: 'NF-1.7', cause: 'Transaction totals segment missing' },
   IID: { rule: 'NF-4.11', cause: 'Item not on Northfield item list' },
   LOC: { rule: 'NF-4.12', cause: 'Ship-to location not recognized' },
   CTN: { rule: 'NF-4.13', cause: 'Carton count does not match cartons listed' },

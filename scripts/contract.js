@@ -7,7 +7,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import { MAIN_DB } from '../world/build.js';
-import { buyerFixture, normOrder } from '../src/score.js';
+import { buyerFixture, normOrder, inFull } from '../src/score.js';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DIR = process.env.SCREENS || join(ROOT, 'contract', 'screens');
 const db = new DatabaseSync(MAIN_DB, { readOnly: true });
@@ -61,7 +61,7 @@ for (const [id, c] of Object.entries(CLAIMS)) {
   for (const [re, kind] of PATTERNS) for (const v of new Set(src.match(re) || [])) { if ((c.ignore || []).some((x) => v.startsWith(x))) continue; if (!known[kind](v)) r.unknown_records.push(v); }
   for (const re of WRONG) for (const v of new Set(src.match(new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g')) || [])) if (!['Priya Raman', 'Jordan Ellis'].includes(v)) r.wrong_names.push(v);
   for (const v of otherNames(src)) if (!r.wrong_names.includes(v)) r.wrong_names.push(v);
-  for (const n of c.numbers || []) { const got = db.prepare(n.sql).get(); const world = String(Object.values(got || { v: null })[0]); const shown = src.includes(n.shown); if (!shown || world !== String(n.world)) r.numbers.push({ claim: n.name, on_screen: shown ? n.shown : `"${n.shown}" not on screen`, world }); }
+  for (const n of c.numbers || []) { const got = n.fn ? { v: inFull(db)[n.fn] } : db.prepare(n.sql).get(); const world = String(Object.values(got || { v: null })[0]); const shown = src.includes(n.shown); if (!shown || world !== String(n.world)) r.numbers.push({ claim: n.name, on_screen: shown ? n.shown : `"${n.shown}" not on screen`, world }); }
   if (c.engine === 'money-in-motion') {
     const at = src.search(/\bFX\s*=\s*\{/); let m = null;
     if (at >= 0) { const st = src.indexOf('{', at); let d = 0, i = st, q = false; for (; i < src.length; i++) { const ch = src[i]; if (q) { if (ch === '\\') i++; else if (ch === '"') q = false; } else if (ch === '"') q = true; else if (ch === '{') d++; else if (ch === '}' && --d === 0) break; } m = [null, src.slice(st, i + 1)]; }

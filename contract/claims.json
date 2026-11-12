@@ -1,1 +1,30 @@
-{"P1": {}, "P2": {}, "P4": {}, "P5": {}, "P6": {}, "P7": {}, "P8": {"engine": "money-in-motion", "today": "2026-11-08"}, "P9": {}, "NS": {}, "ERP": {}}
+{
+"P1": {},
+"P2": {},
+"P4": {},
+"P5": {},
+"P6": {},
+"P7": {
+"numbers": [
+{
+"name": "In Full",
+"fn": "pct",
+"world": "94.63%",
+"shown": "94.63%"
+},
+{
+"name": "In Full charge (OT01)",
+"fn": "ot01",
+"world": "$3,356",
+"shown": "$3,356"
+}
+]
+},
+"P8": {
+"engine": "money-in-motion",
+"today": "2026-11-08"
+},
+"P9": {},
+"NS": {},
+"ERP": {}
+}

@@ -26,6 +26,15 @@ export function scorecard(db, { from = QUARTER.start, to = QUARTER.end } = {}) {
   return { period: `${from} to ${to}`, definition: 'OTIF-2026.2: compliant cases over all cases, per order line', programme: 'DC replenishment', cases, failing_cases: failing, compliant_cases: cases - failing, score: `${((1 - failing / cases) * 100).toFixed(1)}%`, failing_lines: rows.length, by_reason: Object.values(by).sort((a, b) => b.cases - a.cases), northfield_published: pub ? J(pub.data) : null, lines: rows.sort((a, b) => b.cases - a.cases) };
 }
 
+/** In-full component and its OT01 charge (NF-8.2, NF-2.1): 3% of the goods value of in-full failing cases, by month of delivery, months under $1,000 waived. */
+export function inFull(db, opts = {}) {
+  const s = scorecard(db, opts); const IN = ['Short shipped, remainder cancelled', 'Received below ship notice', 'Allocation cut'];
+  const bad = s.lines.filter((l) => IN.includes(l.reason)); const failing = bad.reduce((t, l) => t + l.cases, 0);
+  const month = {}; for (const l of bad) { const p = db.prepare('SELECT price FROM order_lines WHERE po = ? AND line = ?').get(l.po, l.line).price; const m = db.prepare('SELECT requested_delivery d FROM orders WHERE po = ?').get(l.po).d.slice(0, 7); month[m] = (month[m] || 0) + p * l.cases * 0.03; }
+  const billed = Object.values(month).filter((v) => v >= 1000).reduce((a, b) => a + b, 0);
+  return { pct: `${((1 - failing / s.cases) * 100).toFixed(2)}%`, failing_cases: failing, ot01_by_month: month, ot01: `$${Math.round(billed).toLocaleString('en-US')}` };
+}
+
 /** Rebuilds the Money in Motion order records from the world, in that prototype's fixture shape, for the contract test. */
 export function buyerFixture(db, pos, T = '2026-11-08') {
   const day = (iso) => Math.round((Date.parse(`${etDay(new Date(iso))}T00:00:00Z`) - Date.parse(`${T}T00:00:00Z`)) / 86400000);

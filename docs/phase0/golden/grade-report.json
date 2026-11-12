@@ -1,0 +1,165 @@
+{
+ "run1.json": {
+  "S1": {
+   "pass": true
+  },
+  "S2": {
+   "pass": true
+  },
+  "A1": {
+   "pass": true
+  },
+  "D1": {
+   "pass": true
+  },
+  "D2": {
+   "pass": true
+  },
+  "D3": {
+   "pass": true
+  },
+  "D4": {
+   "pass": true
+  },
+  "A2": {
+   "pass": true
+  },
+  "A3": {
+   "pass": true
+  },
+  "A4": {
+   "pass": true
+  }
+ },
+ "run2.json": {
+  "S1": {
+   "pass": true
+  },
+  "S2": {
+   "pass": true
+  },
+  "A1": {
+   "pass": true
+  },
+  "D1": {
+   "pass": true
+  },
+  "D2": {
+   "pass": true
+  },
+  "D3": {
+   "pass": true
+  },
+  "D4": {
+   "pass": true
+  },
+  "A2": {
+   "pass": true
+  },
+  "A3": {
+   "pass": true
+  },
+  "A4": {
+   "pass": true
+  }
+ },
+ "run3.json": {
+  "S1": {
+   "pass": true
+  },
+  "S2": {
+   "pass": true
+  },
+  "A1": {
+   "pass": true
+  },
+  "D1": {
+   "pass": true
+  },
+  "D2": {
+   "pass": true
+  },
+  "D3": {
+   "pass": true
+  },
+  "D4": {
+   "pass": true
+  },
+  "A2": {
+   "pass": true
+  },
+  "A3": {
+   "pass": true
+  },
+  "A4": {
+   "pass": true
+  }
+ },
+ "run4.json": {
+  "S1": {
+   "pass": true
+  },
+  "S2": {
+   "pass": true
+  },
+  "A1": {
+   "pass": true
+  },
+  "D1": {
+   "pass": true
+  },
+  "D2": {
+   "pass": false,
+   "missing": [
+    "586.80"
+   ]
+  },
+  "D3": {
+   "pass": true
+  },
+  "D4": {
+   "pass": true
+  },
+  "A2": {
+   "pass": true
+  },
+  "A3": {
+   "pass": true
+  },
+  "A4": {
+   "pass": true
+  }
+ },
+ "run5.json": {
+  "S1": {
+   "pass": true
+  },
+  "S2": {
+   "pass": true
+  },
+  "A1": {
+   "pass": true
+  },
+  "D1": {
+   "pass": true
+  },
+  "D2": {
+   "pass": true
+  },
+  "D3": {
+   "pass": true
+  },
+  "D4": {
+   "pass": true
+  },
+  "A2": {
+   "pass": true
+  },
+  "A3": {
+   "pass": true
+  },
+  "A4": {
+   "pass": true
+  }
+ }
+}

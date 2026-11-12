@@ -2,7 +2,7 @@
 // Screen sources are fetched from the published prototypes into contract/screens/<id>.html (not committed);
 // curated numbers per prototype live in contract/claims.json. Reports per prototype; exit 1 on any difference.
 import { DatabaseSync } from 'node:sqlite';
-import { readFileSync, existsSync, writeFileSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
@@ -33,6 +33,27 @@ function otherNames(src) { const t = src.replace(/<style[\s\S]*?<\/style>/g, ' '
   for (const m of t.matchAll(new RegExp(`\\b(?:${FIRST})\\b(?:[’']s)?(?: [A-Z][a-z]{2,})?`, 'g'))) { const v = m[0].replace(/[’']s$/, ''); if (!/^(Priya|Jordan)( Raman| Ellis)?$/.test(v) && !/^(Mark|Pat|Dale|Grace|May|Will|Bill|Ray|Dan|Jack|Ross|Kent|Glen|Earl|Ivy|Ada|Ted|Rick) (?![A-Z])/.test(m[0] + ' ') || /^(Priya|Jordan) (?!Raman|Ellis)[A-Z]/.test(v)) out.add(v); }
   for (const m of t.matchAll(/\b(?:Awaiting|Waiting for|Approved by|Accepted by|Activated by|Sent by|Confirmed by|Rejected by|Owned by|delegate|Contact|Dear|Thanks,|Regards,)\s+([A-Z][a-z]+ [A-Z][a-z]+)/g)) if (!NOT_PEOPLE.test(m[1])) out.add(m[1]);
   return [...out]; }
+// Dates and rule wording (Phase 0 decisions, 12 Nov). Read from the rendered text of a headless walk when TEXTS is set
+// (TEXTS/<id>/*.txt, one file per frame); otherwise from the source. The rule catalogue is the EDI Review Pack snapshot.
+const TEXTS = process.env.TEXTS; const PACK = JSON.parse(readFileSync(join(ROOT, 'docs', 'phase0', 'pack-catalogue.json'), 'utf8')).rules;
+const CAT = new Map(PACK.map((r) => [r.id, r]));
+const MON = 'Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?';
+const DATE_RES = [new RegExp(`\\b\\d{1,2} (?:${MON})(?: 20\\d\\d)?\\b`, 'g'), new RegExp(`\\b(?:${MON}) \\d{1,2}(?:, 20\\d\\d)?\\b`, 'g'), /\b20\d\d-\d\d-\d\d\b/g, /\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)(?:day)?,? \d{1,2}\b/g];
+const X12_LINE = /^[A-Z][A-Z0-9]{1,2}\*.*~$/;
+function renderedText(id) { if (!TEXTS) return null; const d = join(TEXTS, id); if (!existsSync(d)) return null;
+  const lines = new Set(); for (const f of readdirSync(d).filter((x) => x.endsWith('.txt'))) for (const l of readFileSync(join(d, f), 'utf8').split('\n').slice(2)) if (l.trim()) lines.add(l.trim()); return [...lines]; }
+function datesIn(lines) { const out = new Set(); for (const l of lines) { if (X12_LINE.test(l)) continue; for (const re of DATE_RES) for (const m of l.matchAll(re)) out.add(m[0]); } return [...out]; }
+const norm = (t) => t.toLowerCase().replace(/[’']/g, "'").replace(/[^a-z0-9$%.'\s]/g, ' ').replace(/\s+/g, ' ').trim();
+const NUMS = (t) => (t.match(/\$[\d,]+(?:\.\d+)?|\b\d+(?:\.\d+)?%|\b\d+ (?:hours?|days?|months?|minutes?|weeks?)\b/g) || []).map((x) => x.replace(/,/g, '').replace(/\.00$/, ''));
+function ruleWording(lines) { const out = []; const ID = /\b(?:NF-\d+\.\d+|AP-\d+\.\d+|AM-\d+|KX-945|TG-TOL|SP-[A-Z]{2}-\d+)\b/g;
+  for (const l of lines) { if (X12_LINE.test(l)) continue; const ids = [...new Set(l.match(ID) || [])]; if (!ids.length) continue;
+    for (const id of ids) { const r = CAT.get(id); if (!r) { out.push({ rule: id, problem: 'not in the catalogue', line: l.slice(0, 160) }); continue; }
+      const cat = norm(`${r.statement} ${r.charge}`); const rest = norm(l.replace(ID, ' '));
+      const extra = NUMS(l).filter((n) => !cat.includes(norm(n)));
+      if (extra.length) out.push({ rule: id, problem: `threshold ${extra.join(', ')} not in the catalogue`, line: l.slice(0, 160) });
+      const cites = ids.length > 1 || new RegExp(`\\([^)]*${id.replace('.', '\\.')}[^)]*\\)`).test(l);
+      if (!cites && rest.split(' ').length >= 8 && !rest.includes(norm(r.statement)) && !norm(r.statement).includes(rest)) out.push({ rule: id, problem: 'wording differs from the catalogue', line: l.slice(0, 160), catalogue: r.statement }); } }
+  return out; }
 const report = {}; let bad = 0;
 for (const [id, c] of Object.entries(CLAIMS)) {
   const f = join(DIR, `${id}.html`); if (!existsSync(f)) { report[id] = { screen: 'not fetched' }; bad++; continue; }
@@ -49,8 +70,11 @@ for (const [id, c] of Object.entries(CLAIMS)) {
       const mine = buyerFixture(db, fx.pos.map((p) => p.id), c.today); const norm = normOrder; const diff = fx.pos.filter((p, i) => norm(p) !== norm(mine[i])).map((p) => p.id);
       r.engine = { orders: fx.pos.length, identical_to_world: fx.pos.length - diff.length, differ: diff.slice(0, 12) }; if (diff.length) r.numbers.push({ claim: 'order records', on_screen: `${diff.length} orders differ`, world: diff.slice(0, 6).join(', ') }); }
   }
-  r.pass = !r.unknown_records.length && !r.wrong_names.length && !r.numbers.length; if (!r.pass) bad++; report[id] = r;
+  const srcLines = src.replace(/<style[\s\S]*?<\/style>/g, ' ').replace(/<[^>]+>/g, '\n').split(/\n|(?<=['"`]),(?=\s*['"`\[])/).map((x) => x.trim().replace(/^[\[\('"`]+|[\]\)'"`,;]+$/g, '')).filter(Boolean);
+  const lines = renderedText(id) || src.replace(/<style[\s\S]*?<\/style>/g, ' ').replace(/<[^>]+>/g, '\n').split('\n').map((x) => x.trim()).filter(Boolean);
+  r.text_from = renderedText(id) ? 'walk frames' : 'source'; r.dates = datesIn(lines); r.rule_wording = ruleWording(lines);
+  r.pass = !r.unknown_records.length && !r.wrong_names.length && !r.numbers.length && !r.dates.length && !r.rule_wording.length; if (!r.pass) bad++; report[id] = r;
 }
 writeFileSync(join(ROOT, 'build', 'contract-report.json'), JSON.stringify(report, null, 1));
-for (const [id, r] of Object.entries(report)) console.log(`${r.pass ? 'PASS' : 'FAIL'} ${id}${r.pass ? '' : ` · unknown records ${r.unknown_records?.length ?? '-'}: ${(r.unknown_records || []).slice(0, 8).join(' ')} · names ${(r.wrong_names || []).join(', ')} · numbers ${(r.numbers || []).map((n) => `${n.claim} [${n.on_screen} vs ${n.world}]`).join('; ')}`}`);
+for (const [id, r] of Object.entries(report)) console.log(`${r.pass ? 'PASS' : 'FAIL'} ${id}${r.pass ? '' : ` · unknown records ${r.unknown_records?.length ?? '-'}: ${(r.unknown_records || []).slice(0, 8).join(' ')} · names ${(r.wrong_names || []).join(', ')} · numbers ${(r.numbers || []).map((n) => `${n.claim} [${n.on_screen} vs ${n.world}]`).join('; ')} · dates ${(r.dates || []).length}: ${(r.dates || []).slice(0, 6).join(' | ')} · rule wording ${(r.rule_wording || []).length}`}`);
 process.exit(bad ? 1 : 0);

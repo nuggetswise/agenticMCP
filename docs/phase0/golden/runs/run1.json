@@ -1,0 +1,19 @@
+{
+  "S1": "Northfield published OTIF-2026.2 (cases per order line, DC replenishment), 13 weeks to 26 Dec 2026: official score 91.0% (0.91); 48,000 cases measured; 43,680 compliant (4,320 failing); 108 failing lines. Network view 92.4%; corrective plan rule NF-9.2, due in 30 days.",
+  "S2": "31 lines (1,794 cases) were 'Short shipped, remainder cancelled'. Most come from ASH-MUG-12 at Kinross Joliet: 24 lines, 1,363 cases (77% of the short-shipped lines). Others: ASH-MUG-12 at Kinross Groveport 3 lines/217 cases; ASH-NAP-4 at Groveport 2/93; ASH-HNY-340 at Joliet 2/121.",
+  "A1": "Yes, one dominant cause: ASH-MUG-12 at Kinross Joliet (24 of 31 short-shipped lines, 1,363 cases, 77%). Cause: stock below the available-to-promise figure. next_step: draft_corrective_task - correct the available-to-promise feed and have Kinross check stock before picking. Confirmed by Northfield's next published scorecard on the same definition; Priya Raman approves before anything is sent.",
+  "D1": "0 - no deduction cases opened as of 17 Nov 2026 11:00 ET (the first, DC-40877, opened 20 Nov 2026).",
+  "D2": "5 cases, total $586.80, all SH01: DC-40877 (NR-450118) $88.40; DC-40931 (NR-450415) $208.00; DC-41102 (NR-46229) $96.80; DC-41118 (NR-46237) $96.80; DC-41131 (NR-46244) $96.80.",
+  "D3": "SH01 shortage charge (invoice cost of each short carton plus $50), line 2, 1 carton, $88.40, deduction reference DM-55102, withheld on payment PMT-990412 (1 Dec 2026). Dispute deadline: 30 Jan 2027 08:00 ET.",
+  "D4": "SH01 $88.40: disputed 2 Dec 2026 with bill of lading, delivery receipt and load scan; Reversed on 5 Dec 2026 (load scan shows carton 006141410000003006 loaded before the seal). A separate AS02 charge of $151 (CI-NF-2611-0418, withheld on PMT-990877 15 Dec 2026) was disputed 16 Dec and Upheld on 21 Dec 2026 (receiving advice stands at 119 until revised, NF-5.5). Repayment: $88.40 on payment PMT-991204 (5 Jan 2027), matched to DM-55102 in receivables 6 Jan 2027; the $151 was not repaid.",
+  "A2": "next_step: attach_load_tally_and_dispute. DC-41118 (PO NR-46237, SH01, $96.80, DM-55655): bill of lading with seal is in the case, proof of delivery held by Lakeline Freight, no load scan, but Kinross warehouse system holds a load tally by SSCC (26 Nov 2026 14:39 ET). Under NF-5.3 the receiving count on a sealed trailer stands unless the supplier proves loading with a load scan or load tally by SSCC, so the tally supports a dispute (fixed rule would accept and give up $96.80). Deduction not yet withheld as of 10 Dec (withheld on PMT-990157 26 Dec 2026; dispute deadline 24 Feb 2027 08:00 ET). Priya Raman approves before anything is sent.",
+  "A3": "No - do not dispute. next_step: recommend_accept_and_file_carrier_claim. DC-40931 (SH01, $208, 2 cartons, DM-55140): the delivery receipt notes damage in transit (2 cartons crushed); no load scan or load tally exists. Under NF-10.2 on prepaid freight the supplier files loss/damage claims with its carrier (at least 9 months to file, 2 years to sue). Records show Ashby accepted the charge on 2 Dec 2026 and filed carrier claim CR-2026-031 for $108 (goods cost of 2 cartons) on 3 Dec 2026. Dispute window 50 days left (deadline 30 Jan 2027).",
+  "A4": "Yes. Load scan shows 659 of 660 cartons; carton 006141410006005172 is staged but not loaded; Supplier ERP fulfilment not posted; no departure scan; 2 order changes. Trailer seals in 40 minutes; exposure estimate $451; rules at risk NF-4.5, NF-4.7, NF-4.8. next_step: send_load_task_to_kinross (Priya Raman approves before sending; confirmed by Northfield 861 matching the ship notice).",
+  "tools_used": [
+    "mcp__RetailStrategy__get_scorecard",
+    "mcp__RetailStrategy__get_story_calendar",
+    "mcp__RetailStrategy__list_deductions",
+    "mcp__RetailStrategy__recommend_next_step",
+    "mcp__RetailStrategy__get_deduction_case"
+  ]
+}

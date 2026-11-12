@@ -1,0 +1,10 @@
+S1: On Northfield's published quarterly on-time in-full scorecard for Ashby (13 weeks to 26 Dec 2026), what was the official score, how many cases were measured, how many were compliant, and how many lines failed?
+S2: Across the quarter, how many Ashby order lines were short shipped with the remainder cancelled, and which item at which Kinross warehouse accounts for most of them (lines and cases)?
+A1: Ashby's scorecard fell last quarter. What should the next step be: is there one dominant cause among the short shipments, and if so what is it?
+D1: As of the demo's default story clock (Tuesday 17 November 2026, 11:00 Eastern), how many deduction cases has Northfield opened against Ashby?
+D2: As of 10 December 2026, list Northfield's deduction cases against Ashby: how many are there and what is their total amount?
+D3: For deduction case DC-40877: what charge was taken, for how much, under which deduction reference, and by when must Ashby dispute it?
+D4: How did case DC-40877 end: what did Northfield decide on each charge, and was any money repaid to Ashby (amount and payment)?
+A2: As of 10 December 2026, what should Ashby do next on deduction case DC-41118, and why?
+A3: For deduction case DC-40931 (PO NR-450415), should Ashby dispute the charge? What does the evidence say and what is the next step?
+A4: At 17:12 Eastern on Tuesday 8 December 2026, is shipment PO NR-460207 about to break a Northfield rule? What do the records show and what is the next step?

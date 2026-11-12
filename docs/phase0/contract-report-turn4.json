@@ -1,0 +1,244 @@
+{
+ "P1": {
+  "unknown_records": [
+   "ASN-450118-A"
+  ],
+  "wrong_names": [],
+  "numbers": [],
+  "text_from": "walk frames",
+  "dates": [
+   "2026-11-02",
+   "2026-11-03",
+   "2026-11-07",
+   "2026-11-06"
+  ],
+  "rule_wording": [],
+  "pass": false
+ },
+ "P2": {
+  "unknown_records": [],
+  "wrong_names": [],
+  "numbers": [],
+  "text_from": "walk frames",
+  "dates": [],
+  "rule_wording": [],
+  "pass": true
+ },
+ "P4": {
+  "unknown_records": [],
+  "wrong_names": [],
+  "numbers": [],
+  "text_from": "walk frames",
+  "dates": [],
+  "rule_wording": [],
+  "pass": true
+ },
+ "P5": {
+  "unknown_records": [],
+  "wrong_names": [],
+  "numbers": [],
+  "text_from": "walk frames",
+  "dates": [],
+  "rule_wording": [
+   {
+    "rule": "AP-2027.1",
+    "problem": "not in the catalogue",
+    "line": "Policy AP-2027.1"
+   },
+   {
+    "rule": "AP-2027.1",
+    "problem": "not in the catalogue",
+    "line": "Policy AP-2027.1 · Priya Raman"
+   },
+   {
+    "rule": "NF-1.5",
+    "problem": "wording differs from the catalogue",
+    "line": "NF-1.5\tNorthfield returns a technical acknowledgment to an order acknowledgment · a quantity change is accepted only on a matching order change",
+    "catalogue": "Northfield returns a technical acknowledgment (997) to an acknowledgment or change response and sends no business acceptance; a quantity change is accepted only on a matching order change"
+   },
+   {
+    "rule": "NF-1.6",
+    "problem": "wording differs from the catalogue",
+    "line": "NF-1.6\tChange requests go to the buyer, who issues the order change · answer within 24 hours",
+    "catalogue": "Change requests go to the buyer, who issues the order change; answer an order change within 24 hours of the latest change"
+   },
+   {
+    "rule": "NF-2.1",
+    "problem": "wording differs from the catalogue",
+    "line": "NF-2.1\tNo backorders · cancel the remainder and report the shipped quantity",
+    "catalogue": "No backorders: a short line is cancelled and the shipped quantity reported"
+   },
+   {
+    "rule": "NF-3.2",
+    "problem": "wording differs from the catalogue",
+    "line": "NF-3.2\tCollect: routing request by 11:00 DC local, two business days before ready",
+    "catalogue": "Collect freight: routing request by 11:00 DC local time, two business days before the ready date"
+   },
+   {
+    "rule": "NF-3.3",
+    "problem": "wording differs from the catalogue",
+    "line": "NF-3.3\tNorthfield returns routing instructions with carrier and pickup window",
+    "catalogue": "Northfield returns routing instructions with the carrier and pickup window"
+   },
+   {
+    "rule": "NF-4.1",
+    "problem": "wording differs from the catalogue",
+    "line": "NF-4.1\tGS1-128 labels · no SSCC reuse within 18 months",
+    "catalogue": "GS1-128 label on every carton; an SSCC is not reused within 18 months"
+   },
+   {
+    "rule": "NF-7.8",
+    "problem": "wording differs from the catalogue",
+    "line": "NF-7.8\tInvoice bills the shipped quantity at the accepted PO price, per line",
+    "catalogue": "The invoice bills the shipped quantity at the accepted PO price; an invoice that bills more is held"
+   },
+   {
+    "rule": "AP-2027.1",
+    "problem": "not in the catalogue",
+    "line": "ALLOCATION POLICY AP-2027.1"
+   }
+  ],
+  "pass": false
+ },
+ "P6": {
+  "unknown_records": [],
+  "wrong_names": [],
+  "numbers": [],
+  "text_from": "walk frames",
+  "dates": [],
+  "rule_wording": [
+   {
+    "rule": "NF-4.5",
+    "problem": "wording differs from the catalogue",
+    "line": "NF-4.5\tShip notice matches the shipment carton for carton\tClaim",
+    "catalogue": "The ship notice matches the shipment carton for carton"
+   },
+   {
+    "rule": "NF-5.3",
+    "problem": "wording differs from the catalogue",
+    "line": "NF-5.3\tOn a sealed shipper-load-and-count trailer, the receiving count stands unless the supplier proves the carton was loaded: a load tally or load scan by SSC",
+    "catalogue": "On a sealed trailer the receiving count stands unless the supplier proves the carton was loaded with a load scan or a load tally by SSCC; the delivery receipt proves the seal, not the count"
+   },
+   {
+    "rule": "NF-5.5",
+    "problem": "wording differs from the catalogue",
+    "line": "NF-5.5\tNorthfield may correct a receipt after investigation with a revised receiving advice; a deduction reversal alone does not change the receipt\tClaim",
+    "catalogue": "A receipt changes only through a revised receiving advice; a deduction reversal alone does not change it"
+   },
+   {
+    "rule": "NF-7.3",
+    "problem": "wording differs from the catalogue",
+    "line": "NF-7.3\tDispute within 60 days of the remittance date, once per deduction, through the deduction case\tClaim, Vet",
+    "catalogue": "Dispute once per deduction, within 60 days of the remittance date, in the deduction case"
+   },
+   {
+    "rule": "NF-7.4",
+    "problem": "wording differs from the catalogue",
+    "line": "NF-7.4\tRequired evidence · shortage: bill of lading with seal, proof of delivery, load tally or load scan by SSCC · ship notice charges: transmission timestamps",
+    "catalogue": "Shortage evidence: bill of lading with seal, proof of delivery, and a load scan or load tally by SSCC"
+   },
+   {
+    "rule": "NF-7.5",
+    "problem": "wording differs from the catalogue",
+    "line": "NF-7.5\tA dispute without the required evidence is charged ID01 and is not reviewed\tClaim, Vet",
+    "catalogue": "A dispute without the required evidence is not reviewed"
+   },
+   {
+    "rule": "NF-7.6",
+    "problem": "wording differs from the catalogue",
+    "line": "NF-7.6\tA reversed deduction is repaid as a positive adjustment on a later remittance, referencing the original deduction\tClaim, Vet",
+    "catalogue": "A reversed deduction is repaid on a later remittance, referencing the original deduction"
+   },
+   {
+    "rule": "NF-10.2",
+    "problem": "wording differs from the catalogue",
+    "line": "NF-10.2\tOn prepaid freight the supplier files loss or damage claims with its carrier: at least 9 months to file, 2 years to sue from written disallowance\tClaim",
+    "catalogue": "On prepaid freight the supplier files loss or damage claims with its carrier: at least 9 months to file and 2 years to sue"
+   }
+  ],
+  "pass": false
+ },
+ "P7": {
+  "unknown_records": [
+   "NR-461182",
+   "NR-461207",
+   "NR-461233"
+  ],
+  "wrong_names": [],
+  "numbers": [],
+  "text_from": "walk frames",
+  "dates": [],
+  "rule_wording": [
+   {
+    "rule": "NF-8.2",
+    "problem": "wording differs from the catalogue",
+    "line": "NF-8.2\tIn full: cases received against cases ordered per PO line, against the PO revision current at shipment. A cancelled remainder counts as not received\tNort",
+    "catalogue": "In full: cases received against cases ordered per PO line, on the PO revision current at shipment; a cancelled remainder counts as not received"
+   },
+   {
+    "rule": "NF-8.6",
+    "problem": "wording differs from the catalogue",
+    "line": "NF-8.6\tMeasured monthly; rolling 13-week scorecard; OT01 and OT02 billed quarterly\tNorthfield\tRetailer-confirmed",
+    "catalogue": "Measured monthly on a rolling 13-week scorecard; OT01 and OT02 are billed quarterly"
+   },
+   {
+    "rule": "NF-9.2",
+    "problem": "wording differs from the catalogue",
+    "line": "NF-9.2\tBelow an OTIF target two months running: agree a corrective action plan within 30 days\tNorthfield\tRetailer-confirmed",
+    "catalogue": "Below a target two months running: agree a corrective action plan within 30 days"
+   }
+  ],
+  "pass": false
+ },
+ "P8": {
+  "unknown_records": [],
+  "wrong_names": [],
+  "numbers": [],
+  "engine": {
+   "orders": 340,
+   "identical_to_world": 340,
+   "differ": []
+  },
+  "text_from": "walk frames",
+  "dates": [],
+  "rule_wording": [],
+  "pass": true
+ },
+ "P9": {
+  "unknown_records": [],
+  "wrong_names": [],
+  "numbers": [],
+  "text_from": "walk frames",
+  "dates": [],
+  "rule_wording": [],
+  "pass": true
+ },
+ "NS": {
+  "unknown_records": [
+   "ASN-78452",
+   "INV-55201",
+   "ASN-78431",
+   "DC-104",
+   "DC-140"
+  ],
+  "wrong_names": [],
+  "numbers": [],
+  "text_from": "walk frames",
+  "dates": [],
+  "rule_wording": [],
+  "pass": false
+ },
+ "ERP": {
+  "unknown_records": [
+   "ASN-450118-A"
+  ],
+  "wrong_names": [
+   "Sam Whitaker"
+  ],
+  "numbers": [],
+  "text_from": "walk frames",
+  "dates": [],
+  "rule_wording": [],
+  "pass": false
+ }
+}

@@ -1,0 +1,74 @@
+{
+ "S1": [
+  {
+   "official": 0.91,
+   "cases": 48000,
+   "compliant": 43680,
+   "failing_lines": 108
+  }
+ ],
+ "S2": [
+  {
+   "total": 31,
+   "sku": "ASH-MUG-12",
+   "site": "KIN-JOL",
+   "lines": 24,
+   "cases": 1363
+  }
+ ],
+ "A1": [
+  {
+   "sku": "ASH-MUG-12",
+   "site": "KIN-JOL",
+   "n": 24,
+   "t": 31,
+   "next_step": "draft_corrective_task"
+  }
+ ],
+ "D1": [
+  {
+   "n": 0
+  }
+ ],
+ "D2": [
+  {
+   "n": 5,
+   "total": 586.8
+  }
+ ],
+ "D3": [
+  {
+   "charge": "SH01",
+   "amount": 88.4,
+   "deduction": "DM-55102",
+   "deadline": "2027-01-30"
+  }
+ ],
+ "D4": [
+  {
+   "decisions": "SH01:Reversed;AS02:Upheld",
+   "repaid": 88.4,
+   "payment": "PMT-991204"
+  }
+ ],
+ "A2": [
+  {
+   "evidence_state": "tally_only",
+   "next_step": "attach_load_tally_and_dispute"
+  }
+ ],
+ "A3": [
+  {
+   "delivery_exception": "2 cartons crushed",
+   "next_step": "recommend_accept_and_file_carrier_claim"
+  }
+ ],
+ "A4": [
+  {
+   "loaded": 659,
+   "expected": 660,
+   "departures": 0,
+   "next_step": "send_load_task_to_kinross"
+  }
+ ]
+}

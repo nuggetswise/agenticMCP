@@ -250,3 +250,47 @@ Notes are in `/tmp/claude-0/-home-claude/981b805a-7776-5e15-a493-e976e4d285e7/sc
 - Pack only: NF-7.11, AP-1.1 to AP-7.1 (18 Ashby), AM-1.
 - Wording differs: KX-945 (pack adds "Ashby's" and an agreement sentence).
 - World has no Owner field; basis classes agree on every shared rule.
+
+### Scripted walks (headless Chrome, reduced motion; scripts in docs/phase0/walks/, frames not committed)
+Walker: least-clicked action first, fills selects, waits for agent timers (up to 90 s), switches workspace for P2. Sources read live 12 Nov: P1 1794412824 (= baseline, old NR-450118 story), P2 1794507902, P4 1794502959, P5 1794507904, P6 1794507945, P7 1794507905, P8 1794451717, P9 1794451627, NS 1794504796, ERP 1793979601. No script errors on any walk.
+- P1 live: manual 7 actions to "What Northfield received" (Use match path); 11 actions on the Leave-unmatched path; EDI workspace path 7 actions. The earlier loop at match-confirm does not recur. Prepared copy: 7 actions to end.
+- P5 manual: all six queue items worked (hero both replays, invoice, collect routing, allocation, labels, phone change), 71 actions. P5 agent: needs the agent to finish ranking before a row is opened (clicking a row mid-run leaves "Scout Agent works this load next" with nothing to press for 90 s: BREAK candidate, confirm by hand). Started cleanly, 120 actions, all six items reached.
+- P6 agent: 24 actions to outcome, replays with and without load scan. Hand: 80 actions, three records (shortage, invoice correction, linked charge), both replays. Outcome card computed from the decisions taken.
+- P7 manual pattern B: 13 actions to outcome (91.1%, $3,434.40 est., pattern 44 to 21). Agent pattern A: 15 actions to "Send result to Northfield". Manual pattern A with second options (6 weeks, DC 2 only, score rises) stalls: fields stay Missing with no reason shown (walker may not have set the selects; confirm by hand).
+- P2: 7 supplier actions, switch to Jordan, Approve, Activate: Drop-ship Active. P4 12, P9 8, NS 6, ERP 8: all reach outcome. P8 view only.
+
+### A1 result beat (end frames)
+- Result shown with a world number: P4 (invoice $8,323.20, remaining receipt and payment), P5 (receipt 660 of 660, RCV-DC2-81420), P6 (withheld $239.40, repaid, net, unresolved $0.00), P7 (91.1%, 44 to 21 lines), P9 (31 pairs sold, 9 on hand).
+- Result with no number or no confirming business record: P1 and ERP ("What Northfield received": documents delivered, technically acknowledged only), P2 (Drop-ship Active; no first trade), NS (version 2 technically acknowledged; no receiving advice).
+### A5 repeats beyond the first frame (text count, confirmed on screenshots P5-11, P6-16)
+- P5: "660" seven times in one view (header, route map three times, load scan, ship notice, receipt); "Priya Raman" under every one of 8 steps.
+- P6: "$88.40" in title, map, plan, summary row and draft; "120" nine times.
+- NS: "48" eleven times, "12 of 12" repeated across cards. P9: store "114" ten times in the end view. P4: "12" nine times (checks). Lower in P2, P7, ERP.
+### A3 agency on the prototypes
+- P6 now offers "Replay without the load scan": agent path changes from Approve dispute to Approve acceptance. Computed from the evidence list (meets()). Verdict moves from partly to yes for the shortage case.
+- P5 replays (carton loaded / misses the trailer) change the next steps (Correct to match vs Ship without it / cancel remainder). P7 pattern A vs B changes the week-6 step. P9 unchanged (fixture plus editable thresholds).
+
+### Contract test extended (scripts/contract.js): dates and rule wording
+- Dates: human-readable and ISO dates in rendered walk text (TEXTS=<dir>/<id>/*.txt) or source; X12 segment lines skipped.
+- Rule wording: every rule id on screen must exist in docs/phase0/pack-catalogue.json; money, percentages and periods next to it must appear in its catalogue statement or charge; a line that states one rule (not a citation in brackets, not a chip list) must carry the catalogue statement.
+- Result on live sources plus walk frames and each Rules view: PASS P2, P4, P8, P9. FAIL P1 (dates 2026-11-02, 03, 06, 07; ASN-450118-A), P5 (7 paraphrased rule statements; AP-2027.1 not in catalogue), P6 (8 paraphrased statements incl. NF-5.5 reworded as "Northfield may correct a receipt after investigation", NF-5.3 "shipper-load-and-count", NF-7.4 adds ship-notice evidence; SP-CL-01), P7 (NR-461182/207/233; NF-8.2, NF-8.6, NF-9.2 paraphrased), NS (5 records), ERP (Sam Whitaker, ASN-450118-A). Report: docs/phase0/contract-report-turn4.json.
+- Still not checked: rule text shown without an id (NS rules drawer, P9 agent rules), amounts not tied to a rule id, raw X12 panels, route-map partner labels, the film.
+
+### Golden questions: agent, scorecard, deductions (docs/phase0/golden/)
+- 10 questions; expected answers from SQL alone (expected.json), parity with live run_readonly_sql checked. Five no-context Claude agents through the Claude connector (SQL tool barred). Graded by grade.mjs: 49 of 50. Miss: run 4 summed D2 as $586.40 (list_deductions returns no total). No question needed the REST token.
+- Server findings from the runs: get_deduction_case returns history after as_of (as_of 1 Dec shows 2 and 3 Dec events; as_of 20 Nov shows January repayment) and computes days left from the query date: as_of leak. run_readonly_sql description lists tables that do not exist (scenarios, confirmations, deductions, scorecards) and says "always filter by scenario". Two Bad Gateway retries (Render free tier).
+
+### Partners
+- Orderful 3PL (docs.orderful.com, fetched 12 Nov): Orderful's NetSuite connector implements 940 out and 945 in ("Currently implemented: 940 (Outbound), 945 (Inbound)"; 943/944 pages also exist). The 945 keeps carton detail: one LX loop per carton, SSCC-18 required, carton records on the item fulfilment; item quantities are summed on the fulfilment line, so the per-carton split lives in the carton records. The 3PL sends no 856; the connector builds the 856 from the NetSuite carton records. The brief's "856 unsupported, 945 flattens cartons" is wrong on flattening and right only in that the 3PL does not send the 856. Page last modified 24 Feb 2026.
+- Retail Direction section 9 (v1794327966): lists ShipHero as a partner (out per decision; reaches us through Pipe17), Vori and ReverseLogix (not in scope), no ShipHawk (in scope). Pipe17 shown under Connect "Retailer marketplace connection" and "Retailer programme EDI ... alongside its order layer": conflicts with ecosystem-only, warehouse side only, and with Pipe17's own managed EDI. Vividly "Permitted invoice and remittance evidence" to Vividly: not found (as on the Partner Map). Kanmon "introduction route where customers consent": hosted referral not found; "capital, underwriting, servicing and collections stay with Kanmon": not stated on kanmon.com/integration. Salsify "retailer-specific validation and syndication before first trade": documented (Readiness Reports, Syndication).
+- Partner briefs (docx in the project): not reachable from this chat (outside the project). NOT DONE.
+
+### Link scan for retired pages
+- Prototype Briefs (BjyjMiau9EswzHhn5d7cXp), slide "Prototype 4": presenter link to retired P4 Marketplace (BKP1moSkyhJr77aMiFKyy5). Same deck: Tom, Kim, Dana in presenter notes; P7 slide has "[P7 link]" placeholder; 72.6%, 25,000+, ~40 days, 450+ are research figures.
+- Prove Value Prototype Plan (now titled "Deprecated · ..."): text links only to current P5, P6, P7, the Northfield guide, V8 amendments and the Visible Agency study. Contains Tom Hale and Kim (deprecated doc).
+- Field guide (both tabs): no claude.ai links in text. Marketing deck: 1 of 10 slides read (no links); deck.json has no links. Links held only as link marks (not in text) are not found by the doc search.
+- Agentic Retail Trade's five figures trace to the Prototype Briefs research (72.6% chargeback share, Ulta 25,000+ disputes, 90% of Catalogue suppliers emailing attributes); none is a world number.
+
+### Other
+- The Prototype Plan doc (Ux8ZjNd7BTj6mdH7e5rJ2S) shows in the gallery as "SPS MAX and TrueCommerce AI: Threat Ranking" (version 1794449438) while its doc name is "TG for Retail · Prototype Plan", and reads as written by others. Not touched.
+- P6 live still labels Lakeline "Carrier · collect freight" (screenshot P6-16).

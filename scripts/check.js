@@ -119,7 +119,7 @@ eq('scorecard.lines', [sc.failing_lines, sc.by_reason.map((r) => [r.lines, r.cas
 const st = D.lifecycle(ash, 'NR-450118');
 eq('story.two_shipments', st.shipments.map((s) => [s.ship_notice, s.cartons]), [['ASN-450118-1', 350], ['ASN-450118-2', 120]]);
 { const adj = db.prepare("SELECT reference, amount FROM adjustments WHERE payee_id = 'ASHBY' ORDER BY paid_at, reference").all();
-  eq('story.remittance', adj.filter((x) => ['DM-55102', 'DM-55118'].includes(x.reference) && x.amount < 0).map((x) => x.amount), [-88.4, -208]);
+  eq('story.remittance', adj.filter((x) => ['DM-55102', 'DM-55140'].includes(x.reference) && x.amount < 0).map((x) => x.amount), [-88.4, -208]);
   ok('story.repayment_matches_reversed_shortage', adj.some((x) => x.amount === 88.4), JSON.stringify(adj)); }
 eq('p6.invoice_exception', db.prepare("SELECT invoice, status, replaces FROM invoices WHERE po = 'NR-450390' ORDER BY sent_at").all().map((r) => r.invoice), ['INV-7790', 'INV-7790C']);
 eq('p6.carton_case', D.deductionCase(ash, 'DC-40931', T('2026-12-01T09:00:00-05:00')).amount, 208);

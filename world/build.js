@@ -27,7 +27,7 @@ export const CALENDAR = (A) => [
   { id: 'P13', week: 8, moment: 'Silent order watch', seen_by: 'Priya Raman', prototype: 'P13 Silent order watch', as_of: '2026-11-18T14:00:00.000Z', anchor: 'NR-46210 to NR-46231' },
   { id: 'NS', week: 9, moment: 'A test ship notice fails the pack rule', seen_by: 'Priya Raman', prototype: 'NetSuite Ship Notice Exception', as_of: '2026-11-23T15:10:00.000Z', anchor: 'ASN-78214' },
   { id: 'P6', week: 10, moment: 'Deductions and an invoice exception', seen_by: 'Priya Raman, then Jordan Ellis', prototype: 'P6 Charge Resolution', as_of: '2026-12-01T14:00:00.000Z', anchor: 'NR-450118, NR-450390, NR-450415' },
-  { id: 'P5', week: 11, moment: 'Six fulfilment risks before the truck leaves', seen_by: 'Priya Raman', prototype: 'P5 Scout Shipment Watch', as_of: '2026-12-08T22:12:00.000Z', anchor: 'NR-460207 to NR-460274' },
+  { id: 'P5', week: 11, moment: 'Six fulfilment risks before departure', seen_by: 'Priya Raman', prototype: 'P5 Scout Shipment Watch', as_of: '2026-12-08T22:12:00.000Z', anchor: 'NR-460207 to NR-460274' },
   { id: 'P7', week: 14, moment: 'Scorecard 91.0% and the corrective plan', seen_by: 'Priya Raman, then Jordan Ellis', prototype: 'P7 Performance Improvement', as_of: '2026-12-28T14:00:00.000Z', anchor: '108 failing lines' },
 ];
 

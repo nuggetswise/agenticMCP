@@ -138,14 +138,14 @@ export function anchors(L, W) {
     D.invoice(L, O, addH(dep, 1.2), { ref: 'INV-7768' });
     ev(L, day('2026-11-14', '07:05'), 'carrier.delivery_receipt', O.po, 'Lakeline Freight', 'LAKELINE', 'Scanned document', { shipment: 'SHP-450415', delivered: 60, exceptions: '2 cartons crushed', in_case: 'DC-40931' });
     D.receipt(L, O, day('2026-11-14', '07:40'), { ref: 'RCV-DC2-77590', asnRef: 'ASN-450415', qty: { 1: 58 }, short: { 1: 2 }, notScanned: { 1: c.slice(-2).map((x) => x.sscc) } });
-    ev(L, day('2026-11-21', '09:00'), 'case.opened', O.po, 'Northfield deduction case', 'NORTHFIELD', 'API', { case: 'DC-40931', charge: 'SH01', amount: 208, line: 1, cartons: 2, deduction: 'DM-55118', dispute_deadline: '2027-01-30' });
+    ev(L, day('2026-11-21', '09:00'), 'case.opened', O.po, 'Northfield deduction case', 'NORTHFIELD', 'API', { case: 'DC-40931', charge: 'SH01', amount: 208, line: 1, cartons: 2, deduction: 'DM-55140', dispute_deadline: '2027-01-30' });
     ev(L, day('2026-12-02', '11:00'), 'case.accepted', O.po, 'Northfield deduction case', 'ASHBY', 'API', { case: 'DC-40931', charge: 'SH01', amount: 208, approved_by: 'Priya Raman', reason: 'Damage in transit on prepaid freight; Northfield charges the supplier (NF-10.2)' });
     ev(L, day('2026-12-03', '09:30'), 'carrier.claim_filed', O.po, 'Lakeline Freight', 'ASHBY', 'API', { claim: 'CR-2026-031', amount: 108, basis: 'Goods cost of 2 cartons' });
   }
   // Remittances that carry the charges.
   W.remit.push({ at: day('2026-12-01', '08:00'), ref: 'PMT-990412', items: [
     { invoice: 'INV-7731C', po: 'NR-450118', paid: 22843.6, invoice_amount: 22932, adjustments: [{ amount: -88.4, reason: '04', ref: 'DM-55102', note: 'SH01 shortage, PO NR-450118 line 2, 1 carton, case DC-40877' }] },
-    { invoice: 'INV-7768', po: 'NR-450415', paid: 3032, invoice_amount: 3240, adjustments: [{ amount: -208, reason: '04', ref: 'DM-55118', note: 'SH01 shortage, PO NR-450415 line 1, 2 cartons, case DC-40931' }] },
+    { invoice: 'INV-7768', po: 'NR-450415', paid: 3032, invoice_amount: 3240, adjustments: [{ amount: -208, reason: '04', ref: 'DM-55140', note: 'SH01 shortage, PO NR-450415 line 1, 2 cartons, case DC-40931' }] },
   ] });
   W.compliance = [{ amount: -151, reason: '06', ref: 'CI-NF-2611-0418', note: 'AS02 ship notice does not match receipt, PO NR-450118, case DC-40877' }, { amount: -100, reason: '06', ref: 'CI-NF-2611-0418', note: 'IV01 invoice above shipped quantity, PO NR-450390, INV-7790' }];
   W.repay = { at: day('2027-01-05', '08:00'), ref: 'PMT-991204', adjustments: [{ amount: 88.4, reason: '04', ref: 'DM-55102', note: 'Reversal of SH01, case DC-40877' }] };
@@ -162,6 +162,7 @@ export function anchors(L, W) {
     t(day('2026-11-24', '11:20'), 'test.correction', { po: 'PO-104731', record: 'Ship notice map', change: 'Read item pack quantity instead of purchase unit', approved_by: 'Priya Raman' });
     t(day('2026-11-24', '11:45'), 'test.ship_notice', { po: 'PO-104731', document: 'ASN-78231', item_fulfillment: 'IF-55432', attempt: 2, item: 'AHP-8830', pack_sent: 6, pack_required: 6, netsuite_item_pack: 6, map_field: 'Item pack quantity', result: 'Passed', delivered_to_northfield: true });
     t(day('2026-11-24', '15:00'), 'programme.activated', { system: 'Northfield supplier programme', party: 'NORTHFIELD', programme: 'Wholesale, item AHP-8820', approved_by: 'Jordan Ellis', tests: 'Passed' });
+    t(day('2026-11-30', '10:15'), 'erp.first_live_order', { po: 'PO-104912', system: 'Supplier ERP (NetSuite)', sales_order: 'SO-108955', item_fulfillment: 'IF-55498', document: 'ASN-78260', item: 'AHP-8820', pack_sent: 6, pack_required: 6, result: 'Delivered; receiving advice matched' });
   }
 
   // ---------- Week 11: six fulfilment risks before the truck leaves (P5), Tuesday 8 December 17:12 ----------

@@ -55,13 +55,13 @@ A record lookup returns the whole history of the record. A question about "now" 
 
 ## Rules
 
-The rule catalogue is the Northfield supplier guide 2026.2, plus the Ashby warehouse agreement with Kinross. It holds 42 rules. Each rule states its basis and its sources, and the rule lookup tool returns both.
+The rule catalogue is the Northfield supplier guide 2026.2, plus the Ashby warehouse agreement with Kinross. It holds 53 rules. Each rule states its basis and its sources, and the rule lookup tool returns both.
 
 | Basis | Rules | Meaning |
 | --- | --- | --- |
 | Public | 7 | The rule as written appears in a public retailer guide, a standard or a statute |
 | Adapted | 5 | A public rule with a number or window changed to fit the story |
-| Invented | 30 | Written for the demo. Marked as invented wherever it is shown. |
+| Invented | 41 | Written for the demo. Marked as invented wherever it is shown. |
 
 | Rule | Statement | Basis and source |
 | --- | --- | --- |
@@ -128,7 +128,7 @@ Each proof is a program or an outside reader, not a judgement. The table says wh
 | Proof | Result | What it does not prove |
 | --- | --- | --- |
 | Independent X12 check: StAEDI 1.26.7, published 8 November 2026, reads all 2,676 files | The only files it faults are the 14 that carry the 15 rejections Northfield made on a 997, each for the stated reason. Ten faults injected into clean files are each rejected for the stated reason. | The validator is independent; the schemas are not. Element types and lengths follow X12 004010, but which segments are mandatory was written here for the invented Northfield guide. |
-| Invariants over every record, on every build | 30 properties hold: quantities (shipped, received, invoiced, cartons), time order (order, acknowledgment, departure, ship notice, receipt, invoice, payment, 997 timing, control numbers), money (order values, invoice totals, remittance arithmetic) and rule citations | Properties are checked on the one generated quarter, not on random worlds |
+| Invariants over every record, on every build | 32 properties hold: quantities (shipped, received, invoiced, cartons), time order (order, acknowledgment, departure, ship notice, receipt, invoice, payment, 997 timing, control numbers), money (order values, invoice totals, remittance arithmetic) and rule citations | Properties are checked on the one generated quarter, not on random worlds |
 | Fixed values | P10's four orders and time left, the rejection, 3,412 documents and 41 failures, five of six on time; P13's queue; the scorecard at 48,000 cases, 4,320 failing, 91.0%, 108 lines | — |
 | Agent decision tests | 24 records across six agents return their stated next step from the same code, and no record number appears in the decision code | Failure states, such as a warehouse that cannot be reached, are not records and are not tested here |
 | Money in Motion round trip | The 340 order records, written as X12, read back and rebuilt, equal the records the screen computes from | 18 ship notice numbers the screen reuses across orders are renamed in the world, so numbers are compared and those identifiers are not |

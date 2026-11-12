@@ -146,7 +146,7 @@ AHP-8820 | Pour-over coffee maker in the NetSuite journey | Case of 6 required b
 
 ### Northfield rules 2026.2
 
-The catalogue holds 42 rules. Seven are public, five are adapted from public guides and 30 are invented; each rule says which. The rules a builder meets most:
+The catalogue holds 53 rules. Seven are public, five are adapted from public guides and 41 are invented; each rule says which. The rules a builder meets most:
 
 Rule | Statement | Basis | 
 NF-1.4 | Order acknowledgment within 24 hours of the purchase order | Invented | 
@@ -190,7 +190,7 @@ Prototype and task | Agency | Customer-agent access | ERP placement |
 P1: turn an emailed order into EDI and a sales order | Rule-based. Every step is a match against saved item and location mappings; an unmatched value stops for Priya. Reverses if layouts change so often that matching needs judgement on each order. | Supplier: order lookup after posting. Retailer: not applicable, Northfield receives ordinary EDI. | Approve and post on the Supplier ERP sales order | 
 P2: reuse approved setup and track readiness for Drop-ship | Rule-based. Each readiness item is a sourced status; no evidence is weighed. Reverses if readiness sources disagree. | Not applicable: one-time setup with no recurring job. Reverses if a retailer runs programme status across many suppliers. | None | 
 P4: carry setup from Marketplace to Wholesale; resolve the item conflict | Rule-based. The carry-forward classes and the GTIN check are fixed comparisons. Reverses if conflicts need a choice between plausible matches. | Supplier: order lookup across programmes. Retailer: inventory read by API, already in the journey. | Inventory stays in the Supplier ERP and is read, never sent | 
-P5: find shipments about to break a rule and act before departure | Agent, Scout Agent. Seven records lead to six different first moves, because the record that is wrong differs. The rule flags the breach and leaves Priya to find the wrong record. | Supplier: which shipments break a rule before their cutoff. Retailer: not applicable, pre-shipment records are Ashby's. | Invoice and sales-order corrections are approved on the Supplier ERP record | 
+P5: find shipments about to break a rule and act before departure | Agent, Scout Agent. Seven records lead to seven different first moves, because the record that is wrong differs. The rule flags the breach and leaves Priya to find the wrong record. | Supplier: which shipments break a rule before their cutoff. Retailer: not applicable, pre-shipment records are Ashby's. | Invoice and sales-order corrections are approved on the Supplier ERP record | 
 P6: recover or accept a deduction | Agent, Claim Agent. Where the proof sits decides the step: in the case, held by Kinross, replaceable by a tally, absent, or a carrier matter. The rule disputes only when proof is already in the case. | Supplier: deduction triage with proof present, proof missing and days left. Retailer: Vet Agent reads the evidence pack for Jordan and changes nothing. | Priya approves the dispute on the deduction item in the Supplier ERP; the repayment is matched there | 
 P6: correct an invoice Northfield held | Rule-based. The 824 names the line and the quantity; one correction follows. | Supplier: rejection diagnosis. | The corrected invoice is posted from the Supplier ERP | 
 P7: explain a falling scorecard and draft the corrective plan | Agent, Pace Agent. Short shipments either share one cause or split across warehouses; the split needs a question before any task. The rule drafts a task for the largest reason code. | Supplier: performance review by reason. Retailer: Jordan reads the same scorecard in Northfield's own tools. | None | 
@@ -388,7 +388,7 @@ Measure. Sources Priya checks herself per missing ship notice: three in the rule
 - Command Center Integration Monitor does not alert on missing, out-of-order or late documents today. Owner unassigned; needs a leader and a quarter.
 - Expected-document rules come from Trading Partner Kits; document history from Trading Grid Intelligence.
 - Competitor: SPS shows alerts for missing, out-of-order and late documents on some connections; MAX Monitor flags and the user decides. Watch Agent goes further: it finds out why, drafts from the source record, follows up with the warehouse and confirms with the receiving advice.
-- Customer-agent access: the same queue is available to Ashby's assistant through list_missing_documents in P10.
+- Customer-agent access: the same queue is available to Ashby's assistant through orders_needing_attention in P10.
 
 ## Build brief 3: P6 Charge Resolution, evidence acquisition
 
@@ -460,13 +460,13 @@ Kinross cannot be reached | A failure state, not a record | Retries, tells Priya
 ### Acceptance tests
 
 - The base run ends in the stated end state.
-- In p6_retrievable and p6_tally, the dispute goes out with a complete pack, from the same code as the base run.
-- In p6_no_proof, no dispute is sent.
+- For DC-41102 and DC-41118, the dispute goes out with a complete pack, from the same code as the base run.
+- For DC-41131, no dispute is sent.
 - The case closes only after the repayment matches in receivables.
 - Switching Priya's dispute rule to without asking sends the dispute in the base run without an approval step, and the audit record says so.
 - Vet Agent changes no record.
 
-Measure. Dollars disputed with complete proof on cases the rule baseline accepts: $239.40 in each of p6_retrievable and p6_tally.
+Measure. Dollars disputed with complete proof on cases the rule baseline accepts: $239.40 on each of DC-41102 and DC-41118.
 
 ### Presenter notes
 
@@ -538,7 +538,7 @@ The retest cannot run | A failure state, not a record | Holds; tells Priya; no a
 ### Acceptance tests
 
 - The base run ends in the stated end state.
-- In nt_map, no NetSuite record changes, and the map correction is proposed instead, from the same code.
+- For ASN-78231, no NetSuite record changes, and the map correction is proposed instead, from the same code.
 - A failed attempt is never delivered to Northfield.
 - Activation is requested only after every test passes, and only Jordan approves it.
 - A 997 alone never closes the journey; the receiving advice on the first live shipment does.

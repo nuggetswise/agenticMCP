@@ -170,7 +170,7 @@ if (existsSync(docDir) && readdirSync(docDir).length) {
   for (const [k, text] of Object.entries(doc)) {
     ok(`docs.${k} present`, text.length > 2000);
     eq(`docs.${k} names only the two people and the two companies`, (text.match(NAMES) || []).slice(0, 3), []);
-    eq(`docs.${k} holds no scenario keys or retired tools`, (text.match(/list_scenarios|scenario key|scenario=|\bscn\b/gi) || []).slice(0, 3), []);
+    eq(`docs.${k} holds no scenario keys or retired tools`, (text.match(/list_scenarios|scenario key|scenario=|\bscn\b|\b(?:p\d+|nt)_[a-z_]+\b|list_missing_documents|get_document_trail/gi) || []).slice(0, 3), []);
   }
   for (const t of serverTools) ok(`docs.server names tool ${t}`, doc.server.includes(t));
   eq('docs.server names no tool the server lacks', [...new Set(doc.server.match(/\b[a-z]+(?:_[a-z]+){1,4}\b/g) || [])].filter((w) => /^(get|list|explain|check|lookup|recommend|request|compare|orders|edi|run)_/.test(w) && !serverTools.has(w) && !/^(get|run)_(started|time)$/.test(w)), []);

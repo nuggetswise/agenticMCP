@@ -9,22 +9,19 @@ Phase 0 (read-only audit across every prototype) is not complete. Findings, and 
 - How to tell from outside: `lookup_retailer_rules` for document 855 returns rule NF-1.7, and `edi_health_summary` splits failures 31 on the 824 and 10 on the 997. The previous build returns no NF-1.7 and 29 / 12.
 - `/healthz` reports version 0.2.0 for every commit, so it cannot show which commit is deployed.
 
-## Remaining Phase 0 items
+## Remaining Phase 0 items (after turn 4, 12 Nov)
 
-1. Scripted end-to-end walks for P1, P5, P6 and P7 (the generic walker stops at choice steps; P1 loops at the match-confirm step).
-2. A1 (problem, turn, result) and A5 (repeats within a screen) beyond the first frame for every screen, and at all for P2, P8, NetSuite Chargeback Avoidance and ERP-native Activation. Screenshots taken so far are first frames only.
-3. A6 and A8 confirmed on screen (current verdicts come from source).
-4. Partner claim rows from Retail Direction section 9, the partner briefs (docx in the project) and every prototype route map. Only the Partner Map was checked.
-5. The Orderful 3PL connector article (fetch was refused once; not retried).
-6. Golden questions for agent decisions, the scorecard and deductions, five no-context runs through the live server, graded by SQL. Blocked on the live token.
-7. The non-Claude MCP client against the live URL. Blocked on the token.
-8. Film frames of "TG for Retail in Two Minutes" for A7.
-9. Link check for retired pages in the Prove Value Prototype Plan, Prototype Briefs, field guide and decks.
+Done in turn 4: scripted walks for every screen prototype, A1 and A5 past the first frame, Retail Direction section 9, the Orderful 3PL article, the link scan (partial, see FINDINGS), contract test for dates and rule wording, agent/scorecard/deduction goldens (49 of 50). Non-Claude client test dropped by Mandip.
 
-## Known doc drift (docs frozen until approval)
+Still open:
+1. Partner briefs (docx in the Claude project): not reachable from a chat outside the project.
+2. Marketing deck: 9 of 10 slides not read for links.
+3. Film frames of "TG for Retail in Two Minutes" (A7).
+4. Two walk results to confirm by hand: P5 agent row opened mid-ranking; P7 manual pattern A with second choices.
 
-- The three working docs still say 29 failures on the 824 and 12 on the 997; the world now has 31 and 10.
-- They still give 24,130 transaction sets, 8,115 other records, 1,946 orders and 53 rules; the world now has 23,930, 8,111, 1,945 and 54 (NF-1.7 added).
+## Doc state
+
+Docs (artifacts and repo copies) now show 31/10, 3,412 and 41, 23,930 transaction sets, 8,111 other records, 1,945 orders and 54 rules. The EDI Review Pack holds 74 rules with NF-1.7 on the 855.
 
 ## Prepared P1 copy (not published)
 

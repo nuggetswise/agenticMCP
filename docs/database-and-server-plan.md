@@ -13,7 +13,7 @@ This document owns the world, the database, the server, the tool list and the pr
 | Item | State |
 | --- | --- |
 | Repository | nuggetswise/agenticMCP. Node 22, built-in SQLite, no other services. |
-| World | Builds in about 9 seconds: 24,130 transaction sets in 2,676 X12 files, 8,115 other records, 1,946 orders. |
+| World | Builds in about 9 seconds: 23,930 transaction sets in 2,676 X12 files, 8,111 other records, 1,945 orders. |
 | Build gate | Invariants, fixed values, agent decision tests and the registry check run on every build. A failure stops the deploy. |
 | Independent X12 check | StAEDI 1.26.7 reads every file. Its recorded report must match the files the build wrote. |
 | Server | 16 tools over MCP, 14 of them also over REST, with an OpenAPI draft generated from the same list. |
@@ -55,13 +55,13 @@ A record lookup returns the whole history of the record. A question about "now" 
 
 ## Rules
 
-The rule catalogue is the Northfield supplier guide 2026.2, plus the Ashby warehouse agreement with Kinross. It holds 53 rules. Each rule states its basis and its sources, and the rule lookup tool returns both.
+The rule catalogue is the Northfield supplier guide 2026.2, plus the Ashby warehouse agreement with Kinross. It holds 54 rules. Each rule states its basis and its sources, and the rule lookup tool returns both.
 
 | Basis | Rules | Meaning |
 | --- | --- | --- |
 | Public | 7 | The rule as written appears in a public retailer guide, a standard or a statute |
 | Adapted | 5 | A public rule with a number or window changed to fit the story |
-| Invented | 41 | Written for the demo. Marked as invented wherever it is shown. |
+| Invented | 42 | Written for the demo. Marked as invented wherever it is shown. |
 
 | Rule | Statement | Basis and source |
 | --- | --- | --- |

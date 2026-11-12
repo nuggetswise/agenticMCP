@@ -146,7 +146,7 @@ AHP-8820 | Pour-over coffee maker in the NetSuite journey | Case of 6 required b
 
 ### Northfield rules 2026.2
 
-The catalogue holds 53 rules. Seven are public, five are adapted from public guides and 41 are invented; each rule says which. The rules a builder meets most:
+The catalogue holds 54 rules. Seven are public, five are adapted from public guides and 42 are invented; each rule says which. The rules a builder meets most:
 
 Rule | Statement | Basis | 
 NF-1.4 | Order acknowledgment within 24 hours of the purchase order | Invented | 
@@ -255,7 +255,7 @@ NR-46142 | Order acknowledgment not sent | NF-1.4 | 5 hours |
 NR-46156 | Ship notice ASN-46156 rejected: item not on Northfield's item list | NF-4.11 | 19 hours, before the shipment reaches the DC | 
 NR-46133 | Invoice INV-46133 rejected: PO reference longer than 22 characters | NF-4.10 | 1 day |
 
-EDI health, last 30 days: 3,412 documents and 41 failures. Northfield reported 29 failures on an application advice (824) and 12 on a technical acknowledgment (997).
+EDI health, last 30 days: 3,412 documents and 41 failures. Northfield reported 31 failures on an application advice (824) and 10 on a technical acknowledgment (997).
 
 - Item not on Northfield's item list: 11
 - Ship-to location not recognized: 6

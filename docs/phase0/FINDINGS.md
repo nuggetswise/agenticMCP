@@ -231,3 +231,22 @@ Phase 0 is still not complete. The three changes you asked for are applied; the 
 - The non-Claude client and the remaining golden questions, both waiting on the token.
 
 Notes are in `/tmp/claude-0/-home-claude/981b805a-7776-5e15-a493-e976e4d285e7/scratchpad/phase0/FINDINGS.md`.
+
+---
+
+## Turn 4 (12 Nov, continuing Phase 0)
+
+### Live server
+- Serves the 7c277e2 build: `lookup_retailer_rules` 855 returns NF-1.7; `edi_health_summary` = 3,412 documents, 41 failures, 31 on the 824 and 10 on the 997. Claude connector tool list refreshed this session: get_scorecard, list_deductions, get_deduction_case, recommend_next_step, get_story_calendar, get_document now present, so agent/scorecard/deduction goldens run without the REST token.
+
+### NF-1.7 decision (applied)
+- Mandip's note said CTT optional "in the 856" and asked to renumber NF-4.16 (ship notice rules). The three faults are on 855 acknowledgments. Asked; Mandip chose: keep on the 855 as NF-1.7.
+- EDI Review Pack v1794510474: NF-1.7 added (Northfield, Invented, wording equal to world/ref.js); counts now 74 rules, 51 Northfield, 50 invented.
+- Docs (artifacts and repo copies): 23,930 transaction sets, 8,111 other records, 1,945 orders; 54 rules (7 public, 5 adapted, 42 invented); 31 on the 824 and 10 on the 997. 3,412 and 41 were already right. Prototype Plan had none of the stale figures. Gate 346/346.
+- Pack catalogue snapshot for tests: `docs/phase0/pack-catalogue.json`.
+
+### Pack vs world catalogue (input to the mirror decision)
+- World only: TG-TOL (to become NF-7.11; pack wording "Invoice line prices within 0.5% of the acknowledged order price are paid without review; beyond that the line is held").
+- Pack only: NF-7.11, AP-1.1 to AP-7.1 (18 Ashby), AM-1.
+- Wording differs: KX-945 (pack adds "Ashby's" and an agreement sentence).
+- World has no Owner field; basis classes agree on every shared rule.

@@ -11,3 +11,5 @@ services:
         value: "22"
       - key: MCP_TOKEN
         generateValue: true
+      - key: NF_TOKEN
+        generateValue: true

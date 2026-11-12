@@ -256,3 +256,13 @@ Compare detection, the explanation, who approves and the evidence kept. P5 shoul
 - TechIntelPro on TrueCommerce agentic mapping
 - G2 TrueCommerce reviews
 - Internal: TG for Retail and CPG Latest (slides 32 and 37); TG for Retail Feature Requirements v8; prototypes P1, P2, P5, P6, P7, Money in Motion and Agentic Retail Trade, read from their published pages
+## Retailer-side prototypes on Northfield's connection
+
+Two new prototypes run on Northfield's connection for Jordan Ellis and follow the three beats.
+
+| Prototype | Week | Problem | Turn | Result |
+| --- | --- | --- | --- | --- |
+| P14 Invoice Variance | 7 | INV-7731 bills 300 cases on a line where 270 shipped | Match Agent finds the origin and fetches the record that settles it | The corrected invoice INV-7731C is matched; payment approval stays in accounts payable |
+| P15 Rule Replay | 14 | Draft rule NFD-1 (ship notice within 30 minutes) would change 493 ship notices from passing to failing | The draft is replayed against the quarter's X12 before publishing | Jordan Ellis publishes, revises or drops it with the exposure in front of him |
+
+P6 now runs on both connections: Claim Agent for Priya Raman and Review Agent for Jordan Ellis on the same case.

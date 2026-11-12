@@ -4,6 +4,7 @@ import { z } from 'zod';
 import * as D from './domain.js';
 import * as A from './agents.js';
 import { scorecard } from './score.js';
+import * as NR from './retailer.js';
 
 const asOf = z.string().optional().describe('Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern.');
 const t = (v) => D.asOfDate(v);
@@ -51,4 +52,56 @@ export const TOOLS = [
 export const BOUNDARY = [
   { name: 'compare_with_other_suppliers', title: 'Compare with other suppliers', rest: ['GET', '/v1/suppliers/compare'], description: 'Requests to compare Ashby with other Northfield suppliers or read their records. Always answers "Not available to Ashby".', input: { question: z.string().describe('What the user asked about other suppliers') } },
   { name: 'request_change', title: 'Request a change in Trading Grid', rest: ['POST', '/v1/proposals'], description: 'Use when the user asks to send, resend, correct, approve or change anything. In this release the connection is read-only: it answers "Action not available" with the Trading Grid record where an authorized user completes and approves the action. With writes enabled it records an approval-gated proposal instead; nothing changes until Priya Raman approves it in Trading Grid.', input: { action: z.string().describe('What the user asked to do'), po: z.string().optional().describe('PO number the action concerns'), document: z.string().optional().describe('Document reference the action concerns') } },
+];
+
+/** Ashby's writes beyond request_change. Each records a proposal a person approves, except AP-4.1's exception. */
+export const ASHBY_WRITES = [
+  { name: 'submit_dispute', title: 'Dispute a deduction', rule: 'AP-4.1', description: 'Disputes one charge in a Northfield deduction case with the evidence named. Under AP-4.1 Claim Agent may submit without asking only when the NF-7.4 evidence is already in the case and the amount is under $250; otherwise this records a proposal and Priya Raman decides between dispute and write-off in Trading Grid. The dispute lands in the shared case and in both companies’ access logs.',
+    input: { case: z.string().describe('Case id, for example DC-41118'), charge: z.string().optional().describe('Charge code, default the case charge'), evidence: z.array(z.string()).optional().describe('Evidence to put in the case, for example "Load tally by SSCC"'), as_of: asOf } },
+  { name: 'release_ship_notice', title: 'Release a held ship notice', rule: 'AP-1.3', description: 'Asks to release a held ship notice. Under AP-1.3 only a person releases a held ship notice, after every failure on it is fixed: this always records a proposal for Priya Raman and never sends anything itself.',
+    input: { document: z.string().describe('Ship notice reference'), po: z.string().optional() } },
+];
+export const ASHBY_REFUSALS = [
+  { name: 'read_retailer_records', title: 'Northfield’s own records', description: 'Requests to read Northfield’s accounts payable, draft rules, claims reviewer notes or internal systems. Always answers "Not available to Ashby": those records belong to Northfield Retailer.', input: { question: z.string().describe('What the user asked to see') } },
+];
+
+const sup = z.string().optional().describe('Supplier name or id, for example Ashby Supplier');
+/** Northfield's connection for Jordan Ellis's own assistant, on the same world. */
+export const NF_SCOPES = ['suppliers', 'documents', 'errors', 'rules', 'deductions', 'payables', 'rule_drafts'];
+export const NF_TOOLS = [
+  { name: 'supplier_document_trail', title: 'Supplier document trail', job: 'Supplier exchange review', required: ['suppliers', 'documents'], optional: ['errors'],
+    description: 'Every document Northfield exchanged with a supplier on one PO, in order, with rejections, receipts and invoices; or a supplier’s exchange over a period with failures by channel. Shared records only: the supplier’s ERP, warehouse, carrier and agent records are not shown.',
+    input: { po: z.string().optional().describe('PO number, for example NR-450118'), supplier: sup, days: z.number().int().min(1).max(120).optional(), as_of: asOf }, run: (db, a) => NR.trail(db, { po: a.po, supplier: a.supplier, days: a.days || 30, asOf: t(a.as_of) }) },
+  { name: 'get_document', title: 'Document with its X12', job: 'Evidence retrieval', required: ['documents'], optional: [],
+    description: 'One document Northfield sent or received, with the X12 as exchanged. The same X12 the supplier sees. Documents between a supplier and its own warehouse are not Northfield’s.',
+    input: { reference: z.string().describe('Document reference, for example ASN-450118-2') }, run: (db, a) => NR.documentNF(db, a.reference) },
+  { name: 'supplier_scorecard', title: 'Supplier scorecard', job: 'Performance review', required: ['suppliers'], optional: [],
+    description: 'The on-time, in-full scorecard Northfield publishes for a supplier over the 13-week quarter: cases, failing cases, failing lines by reason and the published figures.', input: { supplier: sup }, run: (db, a) => NR.scorecardNF(db, a.supplier) },
+  { name: 'list_deduction_cases', title: 'Deduction cases', job: 'Claims queue', required: ['deductions'], optional: [],
+    description: 'Deduction cases Northfield has opened against its suppliers up to a point in time, with count and total.', input: { as_of: asOf }, run: (db, a) => NR.casesNF(db, t(a.as_of)) },
+  { name: 'review_deduction_case', title: 'Review a deduction case', job: 'Claims review', required: ['deductions'], optional: ['rules'],
+    description: 'One deduction case from Northfield’s side: the charges withheld, what the supplier put in the case, what NF-7.4 requires, the claims reviewer’s notes, the decisions so far, and Review Agent’s recommendation for the next undecided charge. Jordan Ellis decides each charge (NF-7.7); the agent only recommends.',
+    input: { case: z.string().describe('Case id, deduction reference or PO number'), as_of: asOf }, run: (db, a) => NR.caseNF(db, a.case, t(a.as_of)) },
+  { name: 'three_way_match', title: 'Three-way match variance', job: 'Payables exception', required: ['payables', 'documents'], optional: ['rules'],
+    description: 'Purchase order, receiving advice and invoice for one invoice or PO: line by line ordered, accepted, shipped, received and billed; where any variance comes from (quantity, price, a missed correction; promotion and tax where present); and the record that settles it. Payment approval stays in Northfield accounts payable.',
+    input: { reference: z.string().describe('Invoice number (INV-7731) or PO number'), as_of: asOf }, run: (db, a) => NR.threeWayMatch(db, a.reference, t(a.as_of)) },
+  { name: 'list_draft_rules', title: 'Draft rules', job: 'Rule authoring', required: ['rule_drafts'], optional: [], description: 'Northfield’s draft supplier rules not yet published, with what each checks.', input: {}, run: (db) => NR.draftRules(db) },
+  { name: 'replay_draft_rule', title: 'Replay a draft rule against the quarter', job: 'Rule authoring', required: ['rule_drafts', 'documents'], optional: [],
+    description: `Applies a draft rule to every document exchanged in the quarter and shows which suppliers would fail, how many documents, and the charge exposure, against the rule in force. Pass a draft id (NFD-1) or a check and value. Checks: ${Object.keys(NR.REPLAY_CHECKS).join(', ')}. Publishing a rule needs a replay on record.`,
+    input: { draft: z.string().optional(), check: z.enum(Object.keys(NR.REPLAY_CHECKS)).optional(), value: z.number().optional(), charge: z.number().optional().describe('Charge per failure in dollars, default 150') }, run: (db, a) => NR.replayRule(db, a), records_replay: true },
+  { name: 'lookup_rules', title: 'Supplier guide rules', job: 'Requirement lookup', required: ['rules'], optional: [],
+    description: 'Northfield’s supplier guide 2026.2 with the industry and legal rules it relies on, each with owner, basis and source, and the precedence statement. Suppliers’ own policies are theirs and are not shown.',
+    input: { rule_id: z.string().optional(), topic: z.string().optional(), document: z.string().optional() }, run: (db, a) => D.rules(db, { id: a.rule_id, topic: a.topic, document: a.document, viewer: 'NORTHFIELD' }) },
+  { name: 'get_story_calendar', title: 'Story calendar', job: 'Orientation', required: [], optional: [], description: 'The quarter this connection holds and its moments, each with the time to pass as as_of.', input: {}, run: (db) => D.calendar(db) },
+];
+export const NF_WRITES = [
+  { name: 'decide_charge', title: 'Decide a charge in a deduction case', rule: 'NF-7.7', description: 'Drafts Northfield’s decision on one disputed charge (reverse or uphold) with its reason. Under NF-7.7 the claims reviewer decides: this records a proposal and Jordan Ellis decides it in Trading Grid. The decision lands in the shared case and in both companies’ access logs.',
+    input: { case: z.string(), charge: z.string(), decision: z.enum(['Reversed', 'Upheld']), reason: z.string().optional(), as_of: asOf } },
+  { name: 'publish_rule', title: 'Publish a draft rule', rule: 'NFD', description: 'Asks to publish a draft rule to suppliers. Refused unless the draft has been replayed against the quarter on this connection; otherwise records a proposal Jordan Ellis approves. Publishing is recorded for every supplier it binds.',
+    input: { draft: z.string().describe('Draft rule id, for example NFD-1') } },
+  { name: 'request_change', title: 'Request a change in Trading Grid', description: 'Use when the user asks to send, correct or change anything else, for example a revised receiving advice. Records a proposal; nothing changes until Jordan Ellis approves it in Trading Grid.',
+    input: { action: z.string(), po: z.string().optional(), document: z.string().optional() } },
+];
+export const NF_REFUSALS = [
+  { name: 'read_supplier_records', title: 'A supplier’s own records', description: 'Requests to read a supplier’s ERP, warehouse, carrier or agent records, its warehouse documents (940, 945) or its internal policies. Always answers "Not available to Northfield": those records belong to the supplier unless it shares them into a case or on a document.', input: { question: z.string().describe('What the user asked to see'), supplier: sup } },
 ];

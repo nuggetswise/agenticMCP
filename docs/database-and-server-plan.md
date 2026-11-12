@@ -173,3 +173,32 @@ Render deploys from the repository on the free tier. The service spins down afte
 - [Amazon vendor shipment manual](https://images-na.ssl-images-amazon.com/images/I/A1CGEzPx85L.pdf), [Gordmans guide](https://mimage.opentext.com/alt_content/binary/businessnetwork/gordmans/Gordmans-Guide-2-14-18.pdf), [DXL vendor manual](https://images.dxl.com/is/content/CasualMale/PDF/Branded_Vendor_manual_032825.pdf)
 - [TG for Retail · Prototype Plan](https://claude.ai/artifact/Ux8ZjNd7BTj6mdH7e5rJ2S)
 - Internal: TG for Retail Feature Requirements v8; the nine built prototypes, read from their published pages
+
+## Northfield connection: the retailer's assistant on the same world
+
+Jordan Ellis's own assistant connects to the same world as Ashby's, on its own token (`/mcp/<NF_TOKEN>`; REST at `/api/<token>/tools/<name>`). Both connections read one timeline, so the X12 both companies exchanged is the same on both sides; private records stay with their owner.
+
+| Records | Ashby's connection | Northfield's connection |
+| --- | --- | --- |
+| Documents both companies exchanged (850, 855, 856, 810, 860, 865, 861, 824, 997, 820, 852) and the X12 | Its own | Every supplier's |
+| Deduction cases: charges, disputes, decisions, evidence put in the case | Its own cases | Every case |
+| Ashby's Supplier ERP, Kinross warehouse, Lakeline carrier and agent records; the 940 and 945; Ashby's policies and agreements | Yes | Not available to Northfield |
+| Northfield's accounts payable match, draft rules, claims reviewer notes | Not available to Ashby | Yes |
+
+Each side has its own refusal text ("Not available to Ashby", "Not available to Northfield") and every refusal is written to that connection's access log. Northfield's read-only SQL runs over a copy without the 940, the 945, Ashby's system records or Ashby's policies; Ashby's copy has no reviewer notes, draft rules or replays.
+
+Northfield's tools: supplier_document_trail, get_document, supplier_scorecard, list_deduction_cases, review_deduction_case, three_way_match, list_draft_rules, replay_draft_rule, lookup_rules, get_story_calendar, decide_charge, publish_rule, request_change, read_supplier_records, run_readonly_sql, get_access_log.
+
+Ashby's tools added for writes and refusals: submit_dispute, release_ship_notice, read_retailer_records.
+
+### Writes follow the rule catalogue
+
+| Write | Who drafts | Who approves | Rule |
+| --- | --- | --- | --- |
+| submit_dispute | Claim Agent | Priya Raman; without asking only when the NF-7.4 evidence is already in the case and the amount is under $250 | AP-3.2, AP-4.1 |
+| release_ship_notice | Priya's assistant | Always Priya Raman | AP-1.3 |
+| decide_charge | Jordan's assistant, with Review Agent's recommendation | Always Jordan Ellis | NF-7.7 |
+| publish_rule | Jordan's assistant | Jordan Ellis, and only after replay_draft_rule ran on that draft | Draft rule replay |
+| request_change | Either assistant | The connection's person | AP-3.2 |
+
+A proposal changes nothing until its person approves it in Trading Grid (the connection's admin page). Approval appends the record it describes: a dispute or a decision lands in the shared case with who drafted, who approved and who decided, and is written to both companies' access logs. Reset returns both connections to baseline. WRITES=off makes both read-only.

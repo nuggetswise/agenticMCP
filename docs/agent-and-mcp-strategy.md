@@ -646,3 +646,10 @@ The world in the repository is the source for every fixture; the registry check 
 - Tediware: MCP documentation
 - Pipe17: AI page
 - TrueCommerce: press release of 7 April 2026
+## Two assistants, one deduction case
+
+Ashby's Claim Agent and Northfield's Review Agent work the same case from opposite sides, and the case records who decided what. On case DC-41118 (SH01, $96.80), Claim Agent reads that no load scan exists but Kinross holds a load tally by SSCC: next step attach_load_tally_and_dispute. The tally is not in the case, so AP-4.1 does not let it dispute without asking; Priya Raman approves the dispute. On Northfield's side, Review Agent checks the case against NF-7.4: seal, delivery receipt and a load tally by SSCC are present, so it recommends recommend_reverse under NF-5.3. Jordan Ellis decides the charge (NF-7.7). The case then shows the dispute drafted by Claim Agent and approved by Priya Raman, and the decision recommended by Review Agent and made by Jordan Ellis; both access logs record the other side's write.
+
+## Match Agent: where an invoice variance comes from
+
+Match Agent works for Jordan Ellis in Northfield's accounts payable. It reads the purchase order, the ship notices, the receiving advice and the invoice, and finds where a variance comes from, because each origin needs a different record. On INV-7731 at 09:00 on 10 November it bills 300 cases on line 1 against 270 shipped: next step hold_and_request_corrected_invoice (NF-7.8). After the corrected invoice INV-7731C arrives, the same check on INV-7731 finds the correction on file: next step match_corrected_invoice (NF-7.2). A received quantity below the billed one points to the receiving advice instead (NF-5.5). The simplest rule holds every unmatched invoice and leaves a clerk to find why. Payment approval stays with Jordan Ellis.

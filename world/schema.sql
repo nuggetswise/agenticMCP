@@ -32,7 +32,11 @@ CREATE TABLE events (id INTEGER PRIMARY KEY, at TEXT NOT NULL, kind TEXT NOT NUL
 -- Access: one connection per company, scopes picked by its admin. Proposals hold approval-gated writes (off in this release).
 CREATE TABLE connections (id TEXT PRIMARY KEY, company_id TEXT NOT NULL, user_name TEXT NOT NULL, scopes TEXT NOT NULL, read_only INTEGER NOT NULL, configured_by TEXT NOT NULL, configured_at TEXT NOT NULL);
 CREATE TABLE access_log (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, connection_id TEXT NOT NULL, user_name TEXT NOT NULL, tool TEXT NOT NULL, scopes_used TEXT NOT NULL, arguments TEXT NOT NULL, result TEXT NOT NULL, records TEXT NOT NULL);
-CREATE TABLE proposals (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, created_by TEXT NOT NULL, action TEXT NOT NULL, target TEXT NOT NULL, payload TEXT NOT NULL, state TEXT NOT NULL, decided_by TEXT, decided_at TEXT, result_event INTEGER);
+CREATE TABLE proposals (id TEXT PRIMARY KEY, connection_id TEXT NOT NULL DEFAULT 'ashby-assistant', kind TEXT NOT NULL DEFAULT 'change', approver TEXT NOT NULL DEFAULT 'Priya Raman', rule_id TEXT, created_at TEXT NOT NULL, created_by TEXT NOT NULL, action TEXT NOT NULL, target TEXT NOT NULL, payload TEXT NOT NULL, state TEXT NOT NULL, decided_by TEXT, decided_at TEXT, result_event INTEGER);
+-- Northfield's own records: reviewer notes on deduction cases, draft rules and their replays. Not shared with suppliers.
+CREATE TABLE review_notes (id INTEGER PRIMARY KEY, case_id TEXT NOT NULL, charge TEXT NOT NULL, at TEXT NOT NULL, author TEXT NOT NULL, note TEXT NOT NULL);
+CREATE TABLE draft_rules (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, author TEXT NOT NULL, statement TEXT NOT NULL, check_kind TEXT NOT NULL, value REAL NOT NULL, charge REAL, state TEXT NOT NULL);
+CREATE TABLE rule_replays (id INTEGER PRIMARY KEY AUTOINCREMENT, draft_id TEXT, at TEXT NOT NULL, by_connection TEXT NOT NULL, result TEXT NOT NULL);
 
 CREATE INDEX ix_docs_po ON documents(po); CREATE INDEX ix_docs_ref ON documents(reference); CREATE INDEX ix_docs_time ON documents(supplier_id, partner_id, sent_at);
 CREATE INDEX ix_err_doc ON errors(doc_id); CREATE INDEX ix_events_po ON events(po, at); CREATE INDEX ix_events_kind ON events(kind, at);

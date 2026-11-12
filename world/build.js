@@ -13,6 +13,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const BUILD = join(ROOT, 'build');
 export const MAIN_DB = join(BUILD, 'tg.db');
 export const ASHBY_DB = join(BUILD, 'ashby.db');
+export const NORTHFIELD_DB = join(BUILD, 'northfield.db');
 export const X12_DIR = join(BUILD, 'x12');
 
 /** The story calendar: each prototype is a moment on the one timeline, seen by one person. */
@@ -28,6 +29,8 @@ export const CALENDAR = (A) => [
   { id: 'NS', week: 9, moment: 'A test ship notice fails the pack rule', seen_by: 'Priya Raman', prototype: 'NetSuite Ship Notice Exception', as_of: '2026-11-23T15:10:00.000Z', anchor: 'ASN-78214' },
   { id: 'P6', week: 10, moment: 'Deductions and an invoice exception', seen_by: 'Priya Raman, then Jordan Ellis', prototype: 'P6 Charge Resolution', as_of: '2026-12-01T14:00:00.000Z', anchor: 'NR-450118, NR-450390, NR-450415' },
   { id: 'P5', week: 11, moment: 'Six fulfilment risks before departure', seen_by: 'Priya Raman', prototype: 'P5 Scout Shipment Watch', as_of: '2026-12-08T22:12:00.000Z', anchor: 'NR-460207 to NR-460274' },
+  { id: 'P14', week: 7, moment: 'An invoice that does not match its order and receipt', seen_by: 'Jordan Ellis', prototype: 'P14 Invoice Variance', as_of: '2026-11-10T14:00:00.000Z', anchor: 'INV-7731' },
+  { id: 'P15', week: 14, moment: 'A draft rule replayed against the quarter before publishing', seen_by: 'Jordan Ellis', prototype: 'P15 Rule Replay', as_of: '2026-12-28T16:00:00.000Z', anchor: 'NFD-1' },
   { id: 'P7', week: 14, moment: 'Scorecard 91.0% and the corrective plan', seen_by: 'Priya Raman, then Jordan Ellis', prototype: 'P7 Performance Improvement', as_of: '2026-12-28T14:00:00.000Z', anchor: '108 failing lines' },
 ];
 
@@ -167,7 +170,7 @@ export function derive(files, events) {
 
 export function buildWorld({ quiet = false } = {}) {
   mkdirSync(BUILD, { recursive: true });
-  for (const f of [MAIN_DB, ASHBY_DB]) if (existsSync(f)) rmSync(f);
+  for (const f of [MAIN_DB, ASHBY_DB, NORTHFIELD_DB]) if (existsSync(f)) rmSync(f);
   const tuning = existsSync(join(ROOT, 'world', 'tuning.json')) ? JSON.parse(readFileSync(join(ROOT, 'world', 'tuning.json'), 'utf8')) : null;
   const g = generate(tuning);
   if (!tuning || tuning.nPre !== g.nPre || tuning.jitter !== g.jitter) writeFileSync(join(ROOT, 'world', 'tuning.json'), JSON.stringify({ nPre: g.nPre, jitter: g.jitter }) + '\n');
@@ -182,9 +185,17 @@ export function buildWorld({ quiet = false } = {}) {
   insert(db, 'rules', ref.rules.map((r) => ({ id: r.id, owner: r.owner, implements: r.implements, params: r.params ? JSON.stringify(r.params) : null, rule_set: r.rule_set, topic: r.topic, doc_type: r.doc_type, statement: r.statement, window_hours: r.window_hours, limit_value: r.limit_value, charge_code: r.charge_code, charge: r.charge, source: r.source, basis: r.basis, public_sources: r.public_sources })));
   insert(db, 'calendar', CALENDAR(g.W.anchor));
   for (const [t, rows] of Object.entries(T)) insert(db, t, rows);
-  insert(db, 'connections', [{ id: 'ashby-assistant', company_id: 'ASHBY', user_name: 'Priya Raman', scopes: JSON.stringify(['orders', 'documents', 'errors', 'rules', 'deductions']), read_only: 1, configured_by: 'Priya Raman', configured_at: '2026-11-17T15:00:00.000Z' }]);
+  insert(db, 'connections', [{ id: 'ashby-assistant', company_id: 'ASHBY', user_name: 'Priya Raman', scopes: JSON.stringify(['orders', 'documents', 'errors', 'rules', 'deductions']), read_only: 1, configured_by: 'Priya Raman', configured_at: '2026-11-17T15:00:00.000Z' },
+    { id: 'northfield-assistant', company_id: 'NORTHFIELD', user_name: 'Jordan Ellis', scopes: JSON.stringify(['suppliers', 'documents', 'errors', 'rules', 'deductions', 'payables', 'rule_drafts']), read_only: 1, configured_by: 'Jordan Ellis', configured_at: '2026-11-17T15:00:00.000Z' }]);
+  // Northfield's private records: the claims reviewer's notes on decided charges, and two draft rules not yet published.
+  const dec = T.events.filter((e) => e.kind === 'case.decision');
+  insert(db, 'review_notes', dec.map((e) => { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; return { case_id: d.case, charge: d.charge, at: new Date(Date.parse(e.at) - 3600000).toISOString(), author: 'Jordan Ellis',
+    note: d.decision === 'Reversed' ? 'Load scan time is before the seal time on the bill of lading; seal intact at DC 2. Reverse the shortage. Receipt stays as recorded until receiving revises it.' : 'Ship notice still differs from the receiving advice on record. No revised receiving advice. Uphold.' }; }));
+  insert(db, 'draft_rules', [
+    { id: 'NFD-1', created_at: '2026-11-10T15:00:00.000Z', author: 'Jordan Ellis', statement: 'Send the ship notice within 30 minutes of departure', check_kind: 'ship_notice_minutes', value: 30, charge: 150, state: 'Draft' },
+    { id: 'NFD-2', created_at: '2026-11-10T15:30:00.000Z', author: 'Jordan Ellis', statement: 'Invoice line prices within 0.25% of the purchase order price', check_kind: 'price_tolerance_pct', value: 0.25, charge: 100, state: 'Draft' }]);
   db.exec('COMMIT'); db.close();
-  buildAshbyView();
+  buildAshbyView(); buildNorthfieldView();
   const facts = { tuning: { nPre: g.nPre, jitter: g.jitter }, anchor: g.W.anchor, slots: g.W.slots, claimCases: g.W.claimCases, files: files.length, documents: T.documents.length, events: T.events.length };
   writeFileSync(join(BUILD, 'facts.json'), JSON.stringify(facts, null, 1));
   if (!quiet) console.log(`World built: ${T.documents.length} transaction sets in ${files.length} X12 files, ${T.events.length} other records, ${T.orders.length} orders`);
@@ -212,7 +223,30 @@ function buildAshbyView() {
     INSERT INTO warehouse_orders SELECT * FROM m.warehouse_orders; INSERT INTO store_activity SELECT * FROM m.store_activity;
     INSERT INTO events SELECT * FROM m.events WHERE po IS NULL OR po IN ${own} OR po NOT LIKE 'NR-%';
     COMMIT;`);
-  db.exec('DETACH DATABASE m'); db.exec('DROP TABLE connections; DROP TABLE access_log; DROP TABLE proposals;'); db.exec('VACUUM'); db.close();
+  db.exec('DETACH DATABASE m'); db.exec('DROP TABLE connections; DROP TABLE access_log; DROP TABLE proposals; DROP TABLE review_notes; DROP TABLE draft_rules; DROP TABLE rule_replays;'); db.exec('VACUUM'); db.close();
+}
+
+/** A copy holding only what Northfield may read, for read-only SQL: every supplier's exchanged documents and the
+ * records they carry, Northfield's own systems, the deduction cases, and evidence a supplier shared into a case.
+ * Ashby's ERP, warehouse, carrier and agent records, the 940 and 945, and Ashby's policies are left out. */
+function buildNorthfieldView() {
+  const db = new DatabaseSync(NORTHFIELD_DB);
+  db.exec(readFileSync(join(ROOT, 'world', 'schema.sql'), 'utf8'));
+  db.exec(`ATTACH DATABASE '${MAIN_DB.replace(/'/g, "''")}' AS m`);
+  db.exec(`BEGIN;
+    INSERT INTO parties SELECT * FROM m.parties WHERE kind IN ('Retailer','Supplier');
+    INSERT INTO people SELECT * FROM m.people; INSERT INTO locations SELECT * FROM m.locations; INSERT INTO items SELECT * FROM m.items;
+    INSERT INTO rules SELECT * FROM m.rules WHERE owner NOT LIKE 'Ashby%'; INSERT INTO calendar SELECT * FROM m.calendar;
+    INSERT INTO documents SELECT * FROM m.documents WHERE doc_type NOT IN ('940','945');
+    INSERT INTO orders SELECT * FROM m.orders; INSERT INTO order_lines SELECT * FROM m.order_lines; INSERT INTO order_changes SELECT * FROM m.order_changes;
+    INSERT INTO shipments SELECT * FROM m.shipments; INSERT INTO shipment_lines SELECT * FROM m.shipment_lines; INSERT INTO cartons SELECT * FROM m.cartons;
+    INSERT INTO receipts SELECT * FROM m.receipts; INSERT INTO invoices SELECT * FROM m.invoices; INSERT INTO invoice_lines SELECT * FROM m.invoice_lines;
+    INSERT INTO remittance_items SELECT * FROM m.remittance_items; INSERT INTO adjustments SELECT * FROM m.adjustments;
+    INSERT INTO errors SELECT * FROM m.errors; INSERT INTO store_activity SELECT * FROM m.store_activity;
+    INSERT INTO events SELECT * FROM m.events WHERE party = 'NORTHFIELD' OR system = 'Northfield deduction case' OR json_extract(data, '$.in_case') IS NOT NULL;
+    INSERT INTO review_notes SELECT * FROM m.review_notes; INSERT INTO draft_rules SELECT * FROM m.draft_rules;
+    COMMIT;`);
+  db.exec('DETACH DATABASE m'); db.exec('DROP TABLE connections; DROP TABLE access_log; DROP TABLE proposals; DROP TABLE warehouse_orders; DROP TABLE rule_replays;'); db.exec('VACUUM'); db.close();
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) buildWorld();

@@ -1,6 +1,6 @@
 {
   "name": "tg-retail-demo-mcp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "One Ashby and Northfield demo world behind every TG for Retail prototype: X12 files, a derived database, and a read-only MCP and REST server. All data is fictional.",
   "type": "module",

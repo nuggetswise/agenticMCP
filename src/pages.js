@@ -21,8 +21,8 @@ td{padding:7px 8px;border-bottom:1px solid var(--divider);vertical-align:top}tr:
 button{font:inherit;background:var(--action);color:#FFFFFF;border:0;border-radius:9px;height:36px;padding:0 16px;font-weight:600;cursor:pointer}button.sec{background:var(--card);color:var(--action);border:1px solid var(--action)}
 label.sc{display:inline-flex;gap:6px;align-items:center;margin-right:16px}code{font-size:12px;overflow-wrap:anywhere}`;
 
-const shell = (title, body) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>${CSS}</style></head>
-<body><header class="top"><div class="wrap"><span class="mark"><i></i>Trading Grid</span><span class="meta">Ashby Supplier</span></div></header><main class="wrap">${body}</main></body></html>`;
+const shell = (title, body, who = 'Ashby Supplier') => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>${CSS}</style></head>
+<body><header class="top"><div class="wrap"><span class="mark"><i></i>Trading Grid</span><span class="meta">${esc(who)}</span></div></header><main class="wrap">${body}</main></body></html>`;
 
 const tbl = (heads, rows) => `<table><thead><tr>${heads.map((h) => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
 const statusChip = (s) => (/Rejected|Held/.test(s) ? `<span class="chip red">${esc(s)}</span>` : /Superseded|Corrected/.test(s) ? `<span class="chip">${esc(s)}</span>` : esc(s));
@@ -52,20 +52,29 @@ export function documentPage(d) {
 <div class="card"><h2>X12 as exchanged</h2><pre class="mono" style="white-space:pre-wrap;margin:0">${esc(d.x12)}</pre><p class="meta">Interchange ${d.control_numbers.interchange} · group ${d.control_numbers.group} · ${esc(d.file)}</p></div>`);
 }
 
-export function adminPage({ connection, rows, allScopes, token, mcpUrl, writes, proposals }) {
-  const labels = { orders: 'Orders', documents: 'Documents', errors: 'Errors', rules: 'Retailer rules', deductions: 'Deductions' };
+export function adminPage({ connection, side, rows, allScopes, token, mcpUrl, writes, proposals }) {
+  const labels = { orders: 'Orders', documents: 'Documents', errors: 'Errors', rules: 'Rules', deductions: 'Deductions', suppliers: 'Suppliers', payables: 'Accounts payable', rule_drafts: 'Draft rules' };
   return shell('Assistant connection', `
-<div class="lbl">Ashby administration</div><h1>Company AI assistant connection</h1>
+<div class="lbl">${esc(side.company)} administration</div><h1>Company AI assistant connection</h1>
 <div class="meta">${writes ? 'Reads, and proposals that need approval here' : 'Read only'} · user ${esc(connection.user_name)} · last changed ${esc(fmtET(connection.configured_at))}</div>
 <div class="card"><h2>Read scopes</h2><form method="post" action="/admin/${esc(token)}/scopes">
 ${allScopes.map((s) => `<label class="sc"><input type="checkbox" name="${s}" ${connection.scopes.includes(s) ? 'checked' : ''}> ${labels[s]}</label>`).join('')}
 <p><button type="submit">Save scopes</button></p></form>
 <p class="meta">Connector URL</p><code>${esc(mcpUrl)}</code></div>
-${writes ? `<div class="card"><h2>Proposals · ${proposals.length}</h2>${tbl(['Proposal', 'Created', 'By', 'Action', 'Record', 'State', ''], proposals.map((p) => [`<span class="mono">${esc(p.id)}</span>`, esc(fmtET(p.created_at)), esc(p.created_by), esc(p.action), `<span class="mono">${esc(p.target)}</span>`, p.state === 'Awaiting approval' ? `<span class="chip amb">${esc(p.state)}</span>` : esc(`${p.state} by ${p.decided_by}`), p.state === 'Awaiting approval' ? `<form method="post" action="/admin/${esc(token)}/proposals/${esc(p.id)}/approve" style="display:inline"><button type="submit">Approve</button></form> <form method="post" action="/admin/${esc(token)}/proposals/${esc(p.id)}/reject" style="display:inline"><button class="sec" type="submit">Reject</button></form>` : '']))}</div>` : ''}
+${writes ? `<div class="card"><h2>Proposals · ${proposals.length}</h2>${tbl(['Proposal', 'Created', 'Drafted by', 'Action', 'Rule', 'Record', 'State', ''], proposals.map((p) => [`<span class="mono">${esc(p.id)}</span>`, esc(fmtET(p.created_at)), esc(p.created_by), esc(p.action), esc(p.rule_id || ''), `<span class="mono">${esc(p.target)}</span>`, p.state === 'Awaiting approval' ? `<span class="chip amb">${esc(p.state)}</span>` : esc(`${p.state} by ${p.decided_by}`), p.state === 'Awaiting approval' ? `<form method="post" action="/admin/${esc(token)}/proposals/${esc(p.id)}/approve" style="display:inline"><button type="submit">Approve</button></form> <form method="post" action="/admin/${esc(token)}/proposals/${esc(p.id)}/reject" style="display:inline"><button class="sec" type="submit">Reject</button></form>` : '']))}</div>` : ''}
 <div class="card"><h2>Access log · ${rows.length} call${rows.length === 1 ? '' : 's'}</h2>
 ${tbl(['Time', 'User', 'Tool', 'Scopes', 'Result', 'Records'], rows.map((r) => [esc(fmtET(r.at)), esc(r.user_name), `<span class="mono">${esc(r.tool)}</span>`, esc(JSON.parse(r.scopes_used).join(', ')), /Not available|Scope not granted|Action not available|Invalid|Proposal/.test(r.result) ? `<span class="chip amb">${esc(r.result)}</span>` : esc(r.result), `<span class="mono">${esc(JSON.parse(r.records).slice(0, 8).join(', '))}</span>`]))}
 <form method="post" action="/admin/${esc(token)}/clear-log" style="margin-top:12px;display:inline-block"><button class="sec" type="submit">Clear access log</button></form>
-<form method="post" action="/admin/${esc(token)}/reset" style="margin-top:12px;display:inline-block"><button class="sec" type="submit">Reset to baseline</button></form></div>`);
+<form method="post" action="/admin/${esc(token)}/reset" style="margin-top:12px;display:inline-block"><button class="sec" type="submit">Reset to baseline</button></form></div>`, side.company);
+}
+
+export function nfOrderPage(t) {
+  if (!t.found) return shell('Record', `<h1>${esc(t.not_available ? 'Not available to Northfield' : 'Record not found')}</h1><p class="meta">${esc(t.message)}</p>`, 'Northfield Retailer');
+  return shell(`PO ${t.po}`, `<div class="lbl">Order record · shared documents</div><h1>PO ${esc(t.po)}</h1><div class="meta">${esc(t.supplier)} · ${money(t.order_value)} · requested delivery ${esc(t.requested_delivery)}</div>
+<div class="card"><h2>Documents</h2>${tbl(['Sent', 'Set', 'Document', 'Reference', 'From', 'Status'], t.documents.map((d) => [esc(d.sent), esc(d.set), esc(d.document), `<a class="mono" href="/records/northfield/document/${esc(encodeURIComponent(d.reference))}">${esc(d.reference)}</a>`, esc(d.from), statusChip(d.status)]))}</div>
+${t.receipts.length ? `<div class="card"><h2>Receipts</h2>${tbl(['Receipt', 'Received', 'Line', 'Quantity', 'Short'], t.receipts.map((r) => [esc(r.receipt), esc(r.received_at), r.line, r.qty, r.short || '']))}</div>` : ''}
+${t.invoices.length ? `<div class="card"><h2>Invoices</h2>${tbl(['Invoice', 'Sent', 'Total', 'Status', 'Replaces'], t.invoices.map((i) => [esc(i.invoice), esc(i.sent_at), money(i.total), statusChip(i.status), esc(i.replaces || '')]))}</div>` : ''}
+<p class="meta">${esc(t.not_shown)}</p>`, 'Northfield Retailer');
 }
 
 export function homePage() {

@@ -9,8 +9,9 @@ import { MAIN_DB, ASHBY_DB, X12_DIR } from '../world/build.js';
 import { parseX12 } from '../world/x12.js';
 import * as D from '../src/domain.js';
 import * as A from '../src/agents.js';
+import * as NR from '../src/retailer.js';
 import { scorecard, buyerFixture, normOrder } from '../src/score.js';
-import { TOOLS, BOUNDARY } from '../src/tools.js';
+import { TOOLS, BOUNDARY, ASHBY_WRITES, ASHBY_REFUSALS, NF_TOOLS, NF_WRITES, NF_REFUSALS } from '../src/tools.js';
 import { corpusHash } from './corpus.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -148,24 +149,43 @@ ok('p9.store_activity', n("SELECT count(*) n FROM store_activity WHERE store = '
 // ── Mutation tests: the same code, two records, different next steps ───────────────────────────────────────────────
 for (const p of REG.prototypes) {
   if (!p.decisions.length) continue; const job = p.agency.job; const steps = new Set();
-  for (const d of p.decisions) { const r = A.JOBS[job](ash, d.record, T(d.as_of)); steps.add(r.next_step); eq(`mutation ${p.id} ${d.record} @ ${d.as_of}`, r.next_step, d.next_step); ok(`mutation ${p.id} ${d.record} cites evidence`, r.evidence && Object.keys(r.evidence).length >= 2 && !!r.rule_baseline); }
+  for (const d of p.decisions) { const r = A.JOBS[job] ? A.JOBS[job](ash, d.record, T(d.as_of)) : NR.JOBS[job](db, d.record, T(d.as_of)); steps.add(r.next_step); eq(`mutation ${p.id} ${d.record} @ ${d.as_of}`, r.next_step, d.next_step); ok(`mutation ${p.id} ${d.record} cites evidence`, r.evidence && Object.keys(r.evidence).length >= 2 && !!r.rule_baseline); }
   ok(`agent.${job}`, steps.size >= 2, `${steps.size} distinct next steps`);
 }
 // The server holds no branch on a record id: no anchor PO or case id appears in the decision code.
 { const src = readFileSync(join(ROOT, 'src', 'agents.js'), 'utf8') + readFileSync(join(ROOT, 'src', 'domain.js'), 'utf8'); const ids = src.match(/NR-\d{5,6}|DC-\d{5}|ASN-\d{5}|INV-\d{4}/g) || [];
   eq('mutation.no_record_ids_in_decision_code', ids, []); }
 
+// ── Northfield scope: answers computed from shared records ─────────────────────────────────────────────────────────
+{ const m1 = NR.threeWayMatch(db, 'INV-7731', D.asOfDate('2026-11-10T09:00:00-05:00')); const m2 = NR.threeWayMatch(db, 'INV-7731', D.asOfDate('2026-12-30'));
+  results['nf.match.quantity'] = m1.found && m1.variance_origin.startsWith('quantity'); results['nf.match.correction'] = m2.found && m2.variance_origin.startsWith('missed correction');
+  const r = NR.replayRule(db, { draft: 'NFD-1' }); const byHand = db.prepare("SELECT d.body, d.sent_at FROM documents d WHERE d.doc_type = '856' AND d.status <> 'Superseded'").all().filter((d) => { const b = JSON.parse(d.body); return b.shipped_at && (Date.parse(d.sent_at) - Date.parse(b.shipped_at)) / 60000 > 30; }).length;
+  results['nf.replay.nfd1'] = r.found && r.failing_with_draft === byHand && r.failing_with_draft > r.failing_now;
+  results['nf.publish_needs_replay'] = true;
+  const ashbyHealth = D.health(db, 30), nfView = NR.trail(db, { supplier: 'ASHBY', days: 30 });
+  eq('nf.shared_documents_agree_with_ashby', [nfView.documents, nfView.failures, nfView.rejected_by.application_advice_824], [ashbyHealth.documents, ashbyHealth.failures, ashbyHealth.rejected_by.application_advice_824]);
+  for (const k of ['nf.match.quantity', 'nf.match.correction', 'nf.replay.nfd1']) ok(k, results[k]);
+  eq('nf.match.status_as_of', [m1.invoice_status, m2.invoice_status.startsWith('Held, then replaced')], ['Held', true]);
+  { const nfdb0 = new DatabaseSync(join(ROOT, 'build', 'northfield.db'), { readOnly: true }); const c1 = NR.caseNF(nfdb0, 'DC-40877', D.asOfDate('2026-12-30')), c2 = NR.caseNF(nfdb0, 'DC-40877', D.asOfDate('2027-01-06'));
+    eq('nf.case.repaid_from_own_remittance', [c1.repaid.length, c2.repaid.map((r) => [r.payment, r.amount])], [0, [['PMT-991204', 88.4]]]); }
+  const nfdb = new DatabaseSync(join(ROOT, 'build', 'northfield.db'), { readOnly: true });
+  eq('nf.view_holds_no_supplier_private_records', [nfdb.prepare("SELECT count(*) n FROM documents WHERE doc_type IN ('940','945')").get().n, nfdb.prepare("SELECT count(*) n FROM events WHERE system IN ('Supplier ERP','Kinross warehouse system','Lakeline Freight') AND json_extract(data,'$.in_case') IS NULL").get().n, nfdb.prepare("SELECT count(*) n FROM rules WHERE owner LIKE 'Ashby%'").get().n], [0, 0, 0]);
+  const asdb = new DatabaseSync(ASHBY_DB, { readOnly: true }); eq('ashby.view_holds_no_northfield_private_tables', asdb.prepare("SELECT count(*) n FROM sqlite_master WHERE name IN ('review_notes','draft_rules','rule_replays')").get().n, 0);
+}
 // ── Registry sync: registry, server and the three docs say the same thing ─────────────────────────────────────────
-const serverTools = new Set([...TOOLS, ...BOUNDARY].map((t) => t.name).concat(['run_readonly_sql', 'get_access_log']));
-const regTools = new Set(REG.prototypes.flatMap((p) => p.tools));
+const serverTools = new Set([...TOOLS, ...BOUNDARY, ...ASHBY_WRITES, ...ASHBY_REFUSALS].map((t) => t.name).concat(['run_readonly_sql', 'get_access_log']));
+const nfTools = new Set([...NF_TOOLS, ...NF_WRITES, ...NF_REFUSALS].map((t) => t.name).concat(['run_readonly_sql', 'get_access_log']));
+const regTools = new Set(REG.prototypes.flatMap((p) => p.tools)); const regNf = new Set(REG.prototypes.flatMap((p) => p.tools_northfield || []));
 eq('registry.tools_exist_on_server', [...regTools].filter((t) => !serverTools.has(t)), []);
 eq('registry.every_server_tool_has_a_job', [...serverTools].filter((t) => !regTools.has(t)), []);
+eq('registry.northfield_tools_exist_on_server', [...regNf].filter((t) => !nfTools.has(t)), []);
+eq('registry.every_northfield_tool_has_a_job', [...nfTools].filter((t) => !regNf.has(t)), []);
 const cal = Object.fromEntries(db.prepare('SELECT * FROM calendar').all().map((c) => [c.id, c]));
 for (const p of REG.prototypes) {
   ok(`registry ${p.id} calendar moment`, !!cal[p.calendar], p.calendar);
   if (cal[p.calendar]) ok(`registry ${p.id} seen_by`, p.seen_by.startsWith(cal[p.calendar].seen_by.split(',')[0]), `${p.seen_by} vs ${cal[p.calendar].seen_by}`);
   ok(`registry ${p.id} capability status`, REG.capability_status_values.includes(p.capability_status));
-  ok(`registry ${p.id} agent job`, p.agency.verdict !== 'agent' || (!!A.JOBS[p.agency.job] && p.decisions.length >= 2));
+  ok(`registry ${p.id} agent job`, p.agency.verdict !== 'agent' || ((!!A.JOBS[p.agency.job] || !!NR.JOBS[p.agency.job]) && p.decisions.length >= 2));
   for (const an of p.anchors) { const [k, v0] = an.split(':'); const v = v0.startsWith('$') ? facts.anchor[v0.slice(1)] : v0;
     const hit = k === 'order' ? n('SELECT count(*) n FROM orders WHERE po = ?', v) : k === 'document' ? n('SELECT count(*) n FROM documents WHERE reference = ?', v) : n('SELECT count(*) n FROM events WHERE kind = ?', v);
     ok(`registry ${p.id} anchor ${an}`, hit > 0); }
@@ -182,7 +202,7 @@ if (existsSync(docDir) && readdirSync(docDir).length) {
     eq(`docs.${k} holds no scenario keys or retired tools`, (text.match(/list_scenarios|scenario key|scenario=|\bscn\b|\b(?:p\d+|nt)_[a-z_]+\b|list_missing_documents|get_document_trail/gi) || []).slice(0, 3), []);
   }
   for (const t of serverTools) ok(`docs.server names tool ${t}`, doc.server.includes(t));
-  eq('docs.server names no tool the server lacks', [...new Set(doc.server.match(/\b[a-z]+(?:_[a-z]+){1,4}\b/g) || [])].filter((w) => /^(get|list|explain|check|lookup|recommend|request|compare|orders|edi|run)_/.test(w) && !serverTools.has(w) && !/^(get|run)_(started|time)$/.test(w)), []);
+  eq('docs.server names no tool the server lacks', [...new Set(doc.server.match(/\b[a-z]+(?:_[a-z]+){1,4}\b/g) || [])].filter((w) => /^(get|list|explain|check|lookup|recommend|request|compare|orders|edi|run)_/.test(w) && !serverTools.has(w) && !nfTools.has(w) && !/^(get|run)_(started|time)$/.test(w)), []);
   for (const p of REG.prototypes) {
     ok(`docs.plan names ${p.id}`, doc.plan.includes(p.name.split(' ')[0] === 'NetSuite' ? 'NetSuite' : p.id));
     if (p.agency.agent) { ok(`docs.strategy names ${p.agency.agent}`, doc.strategy.includes(p.agency.agent));

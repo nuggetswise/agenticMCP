@@ -1,0 +1,655 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>P1 Long-tail</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Colours: OpenText TG Retail Design System tokens; dark values derived. Motion: skill tokens only. */
+:root{
+  --bg:#F4F6F5;--card:#FFFFFF;--subtle:#FBFBFC;--ink:#0F1B2D;--body:#373848;--muted:#66677B;--divider:#E7E9EC;--track:#D3D7DD;
+  --brand:#00008A;--action:#1968FF;--action-h:#00008A;--soft-action:#E8F0FF;--panel:#001C50;--on-panel:#FFFFFF;
+  --gfrom:#00008B;--gto:#1A6AFF;--gold:#E1BB35;--soft-gold:#FAF1D2;--amber:#E6C766;--amber-ink:#8A6D1F;--soft-amber:#FBEFD0;--red:#C0392B;--soft-red:#FBEAEA;
+  --paper:var(--card);--paper-ink:var(--ink);--paper-rule:var(--divider);
+  --line-set:color-mix(in srgb,var(--brand) 45%,var(--card));--line-rest:color-mix(in srgb,var(--muted) 35%,var(--card));
+  --f-ui:"Inter","Helvetica Neue",Arial,sans-serif;--f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --dur-fast:150ms;--dur-ui:220ms;--dur-fold:340ms;--dur-settle:600ms;--stagger:30ms;
+  --ease-ui:cubic-bezier(0.23,1,0.32,1);--ease-travel:cubic-bezier(0.45,0,0.2,1);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0B1220;--card:#131E33;--subtle:#17233A;--ink:#E7EAEF;--body:#C9CFD9;--muted:#9AA6B8;--divider:#2B3A52;--track:#22304A;
+  --brand:#9A9CFF;--action:#5C93FF;--action-h:#8FB4FF;--soft-action:#12264A;--panel:#0E2350;--on-panel:#FFFFFF;
+  --gold:#E8C65A;--soft-gold:#3A3214;--amber:#E3BE52;--amber-ink:#E3BE52;--soft-amber:#3A2E12;--red:#F07167;--soft-red:#3A1A18;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B1220;--card:#131E33;--subtle:#17233A;--ink:#E7EAEF;--body:#C9CFD9;--muted:#9AA6B8;--divider:#2B3A52;--track:#22304A;
+  --brand:#9A9CFF;--action:#5C93FF;--action-h:#8FB4FF;--soft-action:#12264A;--panel:#0E2350;--on-panel:#FFFFFF;
+  --gold:#E8C65A;--soft-gold:#3A3214;--amber:#E3BE52;--amber-ink:#E3BE52;--soft-amber:#3A2E12;--red:#F07167;--soft-red:#3A1A18;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--body);font-family:var(--f-ui);font-size:13.5px;line-height:1.45;font-variant-numeric:tabular-nums}
+button,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--action);outline-offset:2px}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1120px;margin:0 auto}
+.mono{font-family:var(--f-mono);font-size:12px}
+.lbl{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);font-weight:600}
+.muted{color:var(--muted)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+.band{border-bottom:1px solid var(--divider);background:var(--bg)}
+.band .wrap{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-block:12px}
+.mark{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;color:var(--ink)}
+.ws{font-size:12.5px;color:var(--muted)}
+.band .sp{flex:1}
+.hbtn{background:var(--card);border:1px solid var(--divider);color:var(--ink);border-radius:10px;height:32px;padding:0 12px;cursor:pointer}
+.hbtn:hover{border-color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--divider);border-radius:10px;background:var(--card);padding:2px;gap:2px}
+.seg button{border:0;background:transparent;border-radius:8px;height:26px;padding:0 12px;cursor:pointer;color:var(--muted);font-size:12.5px}
+.seg button[aria-selected="true"]{background:var(--soft-action);color:var(--action);font-weight:600}
+select.hbtn{padding:0 8px}
+
+.rec{padding-block:16px 6px;display:grid;gap:6px}
+.rec .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.rec h1{font-size:22px;font-weight:700;margin:0;color:var(--ink);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.meta{color:var(--muted);font-size:12.5px}
+.goal{font-size:15px;font-weight:600;color:var(--ink)}
+.chip{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-size:11.5px;font-weight:500;border:1px solid var(--divider);background:var(--card);white-space:nowrap;color:var(--ink)}
+.chip.pop{animation:enter var(--dur-ui) var(--ease-ui) 1}
+.chip.amb{background:var(--soft-amber);border-color:var(--amber)}
+.chip.type{background:var(--brand);color:var(--card);border-color:transparent;animation:enter var(--dur-ui) var(--ease-ui) 1}
+.chip.ai{background:var(--soft-action);color:var(--action);border-color:transparent;height:18px;padding:0 7px;font-size:10px;font-weight:700;letter-spacing:.04em}
+
+.route{position:sticky;top:0;z-index:8;background:var(--card);border:1px solid var(--divider);border-radius:14px;padding:8px 10px 6px;margin-block:10px 14px}
+@media (max-width:1079px){.route{position:static}}
+.route svg{display:block;width:100%;height:auto}
+.route svg.wide{max-height:160px}
+.route svg.compact{max-width:420px;margin-inline:auto;overflow:visible}
+.node .box{fill:var(--card);stroke:var(--divider);stroke-width:1.2;transition:stroke var(--dur-fast) var(--ease-ui)}
+.node.hub .box{fill:url(#hubgrad);stroke:transparent}
+.node.act .box{stroke:var(--action);stroke-width:2.5}
+.node .t{font:700 13.5px var(--f-ui);fill:var(--brand)}
+.node .s{font:500 11px var(--f-ui);fill:var(--muted)}
+.node .r{font:600 11px var(--f-ui);fill:var(--ink)}
+.node.hub .t,.node.hub .r{fill:var(--on-panel)}
+.node.hub .s{fill:var(--on-panel);opacity:.8}
+.conn{fill:none;stroke-width:2.5;stroke-linecap:round;transition:stroke var(--dur-settle) var(--ease-travel)}
+.conn.rest{stroke:var(--line-rest)}
+.conn.set{stroke:var(--line-set)}
+.lead{stroke:var(--line-rest);stroke-width:1}
+.ah{fill:var(--brand);transition:opacity var(--dur-settle) var(--ease-travel)}
+.lt{fill:none;stroke:var(--action);stroke-linecap:round;pointer-events:none}
+.clabel{font:600 11px var(--f-ui);fill:var(--muted);paint-order:stroke;stroke:var(--card);stroke-width:5px;stroke-linejoin:round;transition:opacity var(--dur-fast) var(--ease-ui)}
+.clabel.ok{fill:var(--brand)}
+.clabel.hide{opacity:0}
+.marker rect{fill:var(--panel)}
+.marker text{font:700 11px var(--f-ui);fill:var(--on-panel)}
+
+.flow{display:grid;gap:12px;padding-bottom:60px}
+.card{background:var(--card);border:1px solid color-mix(in srgb,var(--divider) 80%,var(--card));border-radius:12px;min-width:0;scroll-margin-top:200px}
+@media (max-width:1079px){.card{scroll-margin-top:16px}}
+.card.enter{animation:enter var(--dur-ui) var(--ease-ui) both}
+@keyframes enter{from{opacity:0;transform:translateY(4px) scale(.98)}to{opacity:1;transform:none}}
+.card>.hd{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px}
+.card.now>.hd{border-bottom:1px solid var(--divider)}
+.card h2{font-size:14px;font-weight:600;margin:0;color:var(--ink);outline:none}
+.card .n{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
+.card.now .n{background:var(--card);color:var(--action);box-shadow:inset 0 0 0 2px var(--action)}
+.card.next{border-style:dashed;border-color:var(--track);background:transparent}
+.card.next .n{border:1.5px solid var(--track);color:var(--muted)}
+.card.next h2{color:var(--muted);font-weight:500}
+.card.done .mk{width:12px;height:12px;border-radius:50%;background:var(--brand);flex:none}
+.card.done .out{display:flex;gap:8px;flex-wrap:wrap;align-items:baseline;min-width:0}
+.card.done .out b{font-weight:600;color:var(--ink)}
+.card.done .out span{color:var(--muted);font-size:12.5px}
+.card .sp{flex:1}
+.fold{display:grid;grid-template-rows:1fr;transition:grid-template-rows var(--dur-fold) var(--ease-ui),opacity var(--dur-fold) var(--ease-ui)}
+.fold.closing{grid-template-rows:0fr;opacity:0}
+.fold-in{overflow:hidden;min-height:0}
+.bd{padding:14px 16px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.bd>*{min-width:0}
+.erp-strip{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--muted);border-bottom:1px solid var(--divider);padding-bottom:8px}
+.erp-strip b{color:var(--ink);font-weight:600}
+.tag{font-size:10.5px;color:var(--muted);border:1px solid var(--divider);border-radius:999px;padding:0 7px;white-space:nowrap}
+.rtag{font-size:11px;color:var(--muted);border:1px solid var(--divider);border-radius:6px;padding:2px 8px;white-space:nowrap}
+.lnk{background:none;border:0;padding:0;color:var(--action);font-size:12.5px;cursor:pointer}
+.lnk:hover{color:var(--action-h)}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+.fact{border:1px solid var(--divider);border-radius:10px;padding:8px 12px;display:grid;gap:2px;font-size:12.5px}
+.fact small{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.fact b{font-weight:600;color:var(--ink);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.fact.amb{border-color:var(--amber);background:var(--soft-amber)}
+.intel{border:1px solid var(--divider);border-radius:10px;background:var(--subtle);padding:10px 12px;display:grid;gap:8px}
+.intel .hdr{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.intel .hdr b{color:var(--ink);font-size:12.5px}
+.intel .facts{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.intel .fact{background:var(--card)}
+.intel .sp{flex:1}
+.agent{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.agent b{color:var(--ink);font-weight:600}
+.find{border:1px solid var(--divider);border-radius:10px;background:var(--card);padding:10px 12px;display:grid;gap:8px}
+.find.open{border-color:var(--amber)}
+.find .fh{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.find .fh b{color:var(--ink);font-size:13px}
+.find .fh .sp{flex:1}
+.find dl{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:6px 14px;margin:0;font-size:12.5px}
+.find dt{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;padding-top:2px}
+.find dd{margin:0;min-width:0}
+@media (max-width:559px){.find dl{grid-template-columns:minmax(0,1fr);gap:2px}.find dd{margin-bottom:6px}}
+.evid{display:grid;gap:4px;margin:0;padding:0;list-style:none}
+.evid li{display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}
+.vsteps{display:flex;flex-wrap:wrap;gap:6px 14px}
+.vsteps span{display:inline-flex;gap:6px;align-items:center}
+.vsteps .off{color:var(--muted)}
+.fld{height:34px;border:1px solid var(--divider);border-radius:8px;padding:0 10px;background:var(--card);color:var(--ink);font:inherit;width:140px;font-family:var(--f-mono)}
+.fld[aria-invalid="true"]{border-color:var(--red)}
+.err{color:var(--red);font-size:12px;margin:0}
+.risk .tscroll{padding:0 8px 8px}
+.risk tr.cur td{background:var(--soft-action)}
+.sw{width:36px;height:20px;border-radius:999px;border:0;background:var(--track);position:relative;cursor:pointer;flex:none;padding:0;transition:background var(--dur-fast) var(--ease-ui)}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--card);transition:transform var(--dur-fast) var(--ease-ui)}
+.sw[aria-checked="true"]{background:var(--action)}
+.sw[aria-checked="true"]::after{transform:translateX(16px)}
+.sendlbl{font-size:12px;color:var(--muted);white-space:nowrap}
+@media (max-width:719px){.sendlbl{display:none}}
+.dsec{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);font-weight:600;margin:6px 0 0}
+.ok-i{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block;background:var(--brand)}
+.dl-i{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block;border:1.5px solid var(--muted)}
+.amb-dot{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block;background:var(--amber)}
+.red-dot{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block;background:var(--red)}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{text-align:left;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--divider);white-space:nowrap}
+td{padding:7px 8px;border-bottom:1px solid var(--divider);vertical-align:top}
+tr:last-child td{border-bottom:0}
+.num{text-align:right}
+.tscroll{overflow-x:auto}
+.sub2{font-size:11.5px;color:var(--muted)}
+.btn{height:38px;border-radius:10px;padding:0 16px;border:1px solid var(--divider);background:var(--card);cursor:pointer;font-weight:600;color:var(--ink)}
+.btn.pri{background:var(--action);color:var(--on-panel);border-color:var(--action);transition:background var(--dur-fast) var(--ease-ui),transform 120ms var(--ease-ui)}
+.btn.pri:hover:not([disabled]){background:var(--action-h);border-color:var(--action-h)}
+.btn.pri:active:not([disabled]){transform:scale(.97)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.sm{height:30px;padding:0 12px;font-size:12.5px}
+.actrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.working{display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--muted)}
+.prog{height:3px;border-radius:2px;background:var(--divider);overflow:hidden}
+.prog i{display:block;height:100%;background:var(--action);transform-origin:left;transform:scaleX(0);animation:prog 900ms var(--ease-travel) forwards}
+@keyframes prog{to{transform:scaleX(1)}}
+details.more{border:1px solid var(--divider);border-radius:10px}
+details.more>summary{cursor:pointer;padding:8px 12px;font-size:12.5px;font-weight:600;list-style:none;display:flex;gap:8px;align-items:center;color:var(--ink)}
+details.more>summary::-webkit-details-marker{display:none}
+details.more>summary::before{content:"›";display:inline-block;transition:transform var(--dur-fast) var(--ease-ui);color:var(--muted)}
+details.more[open]>summary::before{transform:rotate(90deg)}
+details.more .in{padding:0 12px 12px;display:grid;gap:8px}
+.tabs{display:flex;gap:2px;flex-wrap:wrap}
+.tab{border:0;background:transparent;padding:5px 10px;border-radius:8px;cursor:pointer;font-size:12px;color:var(--muted)}
+.tab[aria-selected="true"]{background:var(--soft-action);color:var(--action);font-weight:600}
+.ids{display:flex;gap:6px;flex-wrap:wrap}
+pre.code{margin:0;max-height:260px;overflow:auto;font-family:var(--f-mono);font-size:11.5px;line-height:1.55;white-space:pre;background:var(--bg);border-radius:8px;padding:10px;color:var(--ink)}
+.doc{border:1px solid var(--divider);border-radius:12px;overflow:hidden;perspective:900px}
+.doc .dh{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 12px;background:var(--bg);font-size:12.5px}
+.doc .dh b{font-size:13px;color:var(--ink)}
+.doc .dh .sp{flex:1}
+.doc .face{padding:10px 12px;transform-origin:center top}
+.doc .face.flip{animation:flipin var(--dur-ui) var(--ease-ui) 1}
+@keyframes flipin{from{transform:rotateX(90deg);opacity:.2}to{transform:none;opacity:1}}
+.doc pre.code{max-height:170px}
+.review{border:1px solid var(--amber);background:var(--soft-amber);border-radius:12px;padding:12px 14px;display:grid;gap:10px;animation:enter var(--dur-ui) var(--ease-ui)}
+.review .q{font-weight:600;font-size:13.5px;margin:0;color:var(--ink)}
+.review .meta2{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted)}
+.review.done{border-color:var(--divider);background:var(--card);padding:8px 12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12.5px;animation:none}
+.review.done .sp{flex:1}
+.closing{border:1px solid var(--brand);border-radius:12px;padding:12px 14px;display:grid;gap:4px}
+.closing b{font-size:14px;color:var(--ink)}
+/* email */
+.email{border:1px solid var(--divider);border-radius:12px;padding:16px 18px;display:grid;gap:12px;max-width:720px}
+.email .subj{font-size:17px;font-weight:600;margin:0;color:var(--ink)}
+.email .from{display:flex;gap:10px;align-items:center}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--ink);color:var(--card);display:grid;place-items:center;font-size:11.5px;font-weight:700;flex:none}
+.email .from b{font-size:13px;color:var(--ink)}
+.email .from .sub2{display:block}
+.email .body{font-size:13px;line-height:1.6;margin:0;white-space:pre-line}
+.email hr{border:0;border-top:1px solid var(--divider);margin:0}
+.attach{display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap}
+.ficon{display:grid;justify-items:center;gap:4px;font-size:11px;color:var(--muted)}
+.ficon svg{display:block}
+.ficon.cur{color:var(--ink);font-weight:600}
+.ficon.dim{opacity:.55}
+.accepts{display:grid;gap:6px}
+.fmts{display:flex;gap:12px;flex-wrap:wrap}
+/* PDF */
+.read{display:grid;grid-template-columns:4fr 8fr;gap:14px;align-items:start}
+@media (max-width:859px){.read{grid-template-columns:1fr}}
+.paperwrap{background:var(--bg);border-radius:10px;padding:12px;position:relative;overflow:hidden}
+.paper{background:var(--paper);border-radius:2px;box-shadow:0 1px 2px color-mix(in srgb,var(--panel) 18%,transparent)}
+.paper svg{display:block;width:100%;height:auto}
+.ptext{font-family:var(--f-ui);fill:var(--paper-ink)}
+.hlbox{fill:var(--soft-gold);opacity:0;transition:opacity var(--dur-fast) var(--ease-ui)}
+.hlbox.on{opacity:.95}
+.sweep{position:absolute;left:0;right:0;height:64px;top:-64px;background:linear-gradient(to bottom,transparent,color-mix(in srgb,var(--action) 12%,transparent) 60%,var(--action) 61%,transparent 63%);pointer-events:none;animation:sweep 900ms var(--ease-travel) forwards}
+@keyframes sweep{to{top:100%}}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.tile{border:1px solid var(--divider);border-radius:10px;padding:8px 10px;display:grid;gap:2px}
+.tile small{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.val{background:transparent;border:0;border-bottom:1px dashed var(--action);padding:0;cursor:pointer;color:inherit;text-align:inherit;font-weight:600}
+.val:hover,.val.sel{background:var(--soft-action)}
+.arw{display:inline-block;width:22px;height:2px;background:var(--action);position:relative;vertical-align:middle;transform-origin:left;transform:scaleX(0)}
+.arw::after{content:"";position:absolute;right:-1px;top:-3px;border:4px solid transparent;border-left-color:var(--action);border-right:0}
+.arw.on{transform:scaleX(1);transition:transform var(--dur-ui) var(--ease-ui)}
+.basis{font-size:11.5px;color:var(--muted);display:inline-flex;gap:6px;align-items:center;white-space:nowrap}
+.basis.amb{color:var(--amber-ink);font-weight:600}
+.checks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (max-width:759px){.checks{grid-template-columns:1fr}}
+.check{border:1px solid var(--divider);border-radius:10px;padding:10px 12px;display:grid;gap:4px;align-content:start}
+.check .h{display:flex;gap:8px;align-items:center;font-weight:600;font-size:13px;color:var(--ink)}
+.check p{margin:0;font-size:12px;color:var(--muted)}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);background:var(--card);border-left:1px solid var(--divider);box-shadow:-8px 0 24px color-mix(in srgb,var(--panel) 22%,transparent);z-index:20;display:flex;flex-direction:column}
+.drawer .hd{display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--divider)}
+.drawer .hd h2{margin:0;font-size:15px;flex:1;color:var(--ink)}
+.drawer .bd{overflow:auto;align-content:start}
+.ev{border-left:2px solid var(--divider);padding:2px 0 2px 10px;font-size:12.5px;display:grid;gap:2px}
+.ev b{color:var(--ink)}
+.ev .t{font-size:11px;color:var(--muted)}
+.rrow{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;border-bottom:1px solid var(--divider);padding-bottom:8px}
+.rrow .sp{flex:1}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="band">
+  <div class="wrap">
+    <div class="mark"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><defs><linearGradient id="markgrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--gfrom)"/><stop offset="1" stop-color="var(--gto)"/></linearGradient></defs><rect x="1" y="1" width="20" height="20" rx="5" fill="url(#markgrad)"/><path d="M6 8h10M6 11h10M6 14h6" stroke="var(--on-panel)" stroke-width="1.8" stroke-linecap="round"/></svg>Trading Grid</div>
+    <div class="ws" id="ws"></div>
+    <div class="sp"></div>
+    <span class="sendlbl" id="sendlbl">Northfield sends</span><div class="seg" role="tablist" aria-label="Northfield sends">
+      <button type="button" role="tab" id="t-email" data-ws="email" aria-selected="true">Email (PDF)</button>
+      <button type="button" role="tab" id="t-edi" data-ws="edi" aria-selected="false">EDI</button>
+    </div>
+    <select class="hbtn" id="scenario" aria-label="Scenario"><option value="one">One email</option><option value="twice">Sent twice</option></select>
+    <button class="hbtn" id="b-history" type="button">History</button>
+    <button class="hbtn" id="b-rules" type="button">Rules</button>
+    <button class="hbtn" id="b-restart" type="button">Start again</button>
+  </div>
+</header>
+<main class="wrap">
+  <section class="rec" aria-label="Record">
+    <div class="top"><h1 id="title">PO NR-449512</h1><span id="chip"></span></div>
+    <div class="meta" id="meta"></div>
+    <div class="goal" id="goal"></div>
+  </section>
+  <section class="route" aria-label="Route map">
+    <svg id="route" role="img" aria-labelledby="route-sum"></svg>
+    <p class="sr" id="route-sum"></p>
+  </section>
+  <div class="flow" id="flow"></div>
+  <div class="sr" aria-live="polite" id="live"></div>
+</main>
+<aside class="drawer" id="d-history" hidden aria-label="History"><div class="hd"><h2>History</h2><button class="btn sm" type="button" data-close="d-history">Close</button></div><div class="bd" id="hist"></div></aside>
+<aside class="drawer" id="d-rules" hidden aria-label="Rules"><div class="hd"><h2>Rules</h2><button class="btn sm" type="button" data-close="d-rules">Close</button></div><div class="bd" id="rules"></div></aside>
+
+<script>
+const MOTION={fast:150,ui:220,fold:340,settle:600,stagger:30,beat:450,read:900};
+const reduce=()=>!!(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+const WIDE=()=>window.innerWidth>=1080;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const money=n=>n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const wait=ms=>new Promise(r=>setTimeout(r,reduce()?0:ms));
+
+/* ---------- Fixtures (Demonstration Inputs: P1 branch, Email and EDI) ---------- */
+const ADDR="ashby.orders@tradinggrid.example",INBOX="orders@ashby.example",BUYER="buying@northfield.example";
+const RCV1="2026-11-02 09:12 ET",RCV2="2026-11-02 09:40 ET",DUE="2026-11-03 09:12 ET",NT="Time not supplied";
+const LINES=[
+  {l:1,item:"448120",desc:"Stoneware mug 12 oz",qty:300,price:54.00,sku:"ASH-MUG-12",gtin:"10614141000125",box:[42,220,520,28]},
+  {l:2,item:"448121",desc:"Linen napkin 4-pack",qty:120,price:38.40,sku:"ASH-NAP-4",gtin:"10614141000132",box:[42,248,520,28]},
+  {l:3,item:"448122",desc:"Wildflower honey 340 g",qty:80,price:46.80,sku:"ASH-HNY-340",gtin:"10614141000149",box:[42,276,520,28]}];
+const TOTAL=24552.00;
+const HEAD=[{k:"PO number",v:"NR-449512",box:[42,64,180,22]},{k:"Retailer",v:"Northfield Retailer",box:[42,30,250,24]},{k:"Ship to",v:"Northfield DC 2",box:[42,105,240,22]},{k:"Delivery date",v:"2026-11-07",box:[370,105,170,22]},{k:"Order total",v:"$24,552.00",box:[400,322,162,24]}];
+const RULES={
+ email:[["Required fields: PO, retailer, ship-to, lines, quantity, unit, delivery date","Northfield order rules"],["Acknowledge within 24 hours of order receipt","Northfield order rules"],["Ashby sells these items in cases (CA)","Supplier ERP"],["Items and locations match approved Northfield mappings","Trading Grid"],["A new item mapping needs supplier confirmation before posting","Trading Grid"],["Line amounts equal the order total","Trading Grid"],["Duplicate key: retailer, programme, PO, document type, revision","Trading Grid"],["Carton count and contents are confirmed by the supplier","Trading Grid"],["Invoice quantities equal the confirmed shipment","Trading Grid"],["Invoice prices and total equal the acknowledged order","Trading Grid"]]};
+
+function sscc(n){const b="0"+"0614141"+String(n).padStart(9,"0");let t=0;for(let i=0;i<b.length;i++){t+=(+b[b.length-1-i])*(i%2===0?3:1);}return b+((10-t%10)%10);}
+const lineFor=n=>n<=300?LINES[0]:(n<=420?LINES[1]:LINES[2]);
+const X12={
+ x850:()=>["ST*850*0001~","BEG*00*SA*NR-449512**~","REF*IA*ASH0042~","N1*BY*Northfield Retailer*UL*0614141000050~","N1*ST*Northfield DC 2*UL*0614141002061~","N1*VN*Ashby Supplier*UL*0614141002085~",
+  "PO1*1*300*CA*54.00*PE*IN*448120*VN*ASH-MUG-12*UK*10614141000125~","PO1*2*120*CA*38.40*PE*IN*448121*VN*ASH-NAP-4*UK*10614141000132~","PO1*3*80*CA*46.80*PE*IN*448122*VN*ASH-HNY-340*UK*10614141000149~","CTT*3*500~","SE*11*0001~"].join("\n"),
+ x855:()=>["ST*855*0001~","BAK*00*AD*NR-449512*~","PO1*1*300*CA*54.00*PE*IN*448120*VN*ASH-MUG-12*UK*10614141000125~","ACK*IA*300*CA~","PO1*2*120*CA*38.40*PE*IN*448121*VN*ASH-NAP-4*UK*10614141000132~","ACK*IA*120*CA~",
+  "PO1*3*80*CA*46.80*PE*IN*448122*VN*ASH-HNY-340*UK*10614141000149~","ACK*IA*80*CA~","CTT*3~","SE*10*0001~"].join("\n"),
+ x856:(scac)=>{const s=["ST*856*0001~","BSN*00*ASN-449512-A**~","HL*1**S~","TD1*CTN*500~"].concat(scac?["TD5**2*"+scac+"~"]:[]).concat(["N1*ST*Northfield DC 2*UL*0614141002061~","N1*SF*Ashby Supplier*UL*0614141002085~","HL*2*1*O~","PRF*NR-449512~"]);
+  let h=2;for(let n=1;n<=500;n++){const L=lineFor(n);h++;const p=h;s.push("HL*"+p+"*2*P~","MAN*GM*"+sscc(n)+"~");h++;s.push("HL*"+h+"*"+p+"*I~","LIN**IN*"+L.item+"*VN*"+L.sku+"*UK*"+L.gtin+"~","SN1**1*CA~");}
+  s.push("CTT*"+h+"~");s.push("SE*"+(s.length+1)+"*0001~");return s.join("\n");},
+ x810:()=>["ST*810*0001~","BIG**INV-7702**NR-449512~","N1*BY*Northfield Retailer*UL*0614141000050~","N1*VN*Ashby Supplier*UL*0614141002085~",
+  "IT1*1*300*CA*54.00**IN*448120*VN*ASH-MUG-12*UK*10614141000125~","IT1*2*120*CA*38.40**IN*448121*VN*ASH-NAP-4*UK*10614141000132~","IT1*3*80*CA*46.80**IN*448122*VN*ASH-HNY-340*UK*10614141000149~","TDS*2455200~","CTT*3~","SE*10*0001~"].join("\n"),
+ x997:(set,grp)=>["ST*997*0001~","AK1*"+(set==="856"?"SH":"IN")+"*"+grp+"~","AK2*"+set+"*0001~","AK5*A~","AK9*A*1*1*1~","SE*6*0001~"].join("\n")};
+const API={
+ soReq:src=>JSON.stringify({customer_po:"NR-449512",customer:"Northfield Retailer",ship_to_gln:"0614141002061",lines:LINES.map(L=>({line:L.l,sku:L.sku,quantity:L.qty,unit:"CA",price:L.price})),source:src},null,2),
+ soRes:()=>JSON.stringify({sales_order:"SO-118842",status:"created"},null,2),
+ shp:code=>JSON.stringify({shipment:"SHP-449512",sales_order:"SO-118842",ship_to:"Northfield DC 2",cartons:500,carrier:"Ashby fleet",carrier_code:code||null},null,2)};
+
+/* ---------- State: one per tab ---------- */
+let CUR="email";const RUN={email:0,edi:0};const SEEN=new Set();let T={};
+function freshEmail(sc,src){return {k:src||"email",sc,stage:0,busy:false,arrived:false,second:false,reading:false,cls:false,matched:false,l3:null,approved:false,created:false,erp:false,
+ ack:{go:false,out:false},ship:{go:false,out:false},inv:{pull:false,read:false,go:false,out:false,fa:false},flip:null,flipBack:null,sel:null,tab:{},open:{},exp:{},hist:[],focus:null,
+ line:{email:{set:false,at:null,lab:"Purchase order · email"},erp:{set:false,at:null,lab:"Supplier ERP · API"},edi:{set:false,at:null,lab:"Documents · EDI"}}};}
+const S=()=>T[CUR];
+function log(t,actor,text,src,time){t.hist.push({actor,text,src,time:time||NT});if(t.k===CUR)renderMeta();}
+function setLine(t,k,lab,at){t.line[k]={set:true,at,lab};if(t.k===CUR)updateMap();}
+
+/* ---------- Route map ---------- */
+const SVGNS="http://www.w3.org/2000/svg";let G=null;
+const NODE={erp:["Supplier ERP","Ashby Supplier"],tg:["Trading Grid","B2B Integration · Essentials"],nf:["Northfield Retailer",""]};
+function geo(){
+ const em=CUR==="email";
+ if(WIDE()){const y=14,h=92;
+  const L={erp:{d:"M216 60 L400 60",lx:308,ly:50,a:"middle"}};
+  if(em){L.email={d:"M784 42 L600 42",lx:692,ly:32,a:"middle"};L.edi={d:"M600 80 L784 80",lx:692,ly:98,a:"middle"};}
+  else L.edi={d:"M600 60 L784 60",lx:692,ly:50,a:"middle"};
+  return {v:false,vb:"0 0 1000 120",N:{erp:{x:16,y,w:200,h},tg:{x:400,y,w:200,h,hub:true},nf:{x:784,y,w:200,h}},L};}
+ const box=$("route").parentElement,cw=Math.max(260,Math.min(420,Math.floor(box.clientWidth-20)));
+ const x=4,w=cw-8,h=66,gap1=em?120:96,nfY=6,tgY=nfY+h+gap1,erpY=tgY+h+96,nfB=nfY+h,tgB=tgY+h;
+ const L={erp:{d:`M40 ${erpY} L40 ${tgB}`,lx:70,ly:tgB+52,a:"start",lane:40}};
+ if(em){L.email={d:`M32 ${nfB} L32 ${tgY}`,lx:70,ly:nfB+40,a:"start",lane:32};L.edi={d:`M56 ${tgY} L56 ${nfB}`,lx:70,ly:nfB+84,a:"start",lane:56};}
+ else L.edi={d:`M40 ${tgY} L40 ${nfB}`,lx:70,ly:nfB+52,a:"start",lane:40};
+ return {v:true,vb:`0 0 ${cw} ${erpY+h+6}`,N:{nf:{x,y:nfY,w,h},tg:{x,y:tgY,w,h,hub:true},erp:{x,y:erpY,w,h}},L};
+}
+function drawMap(){
+ G=geo();const svg=$("route");svg.setAttribute("viewBox",G.vb);svg.setAttribute("class",G.v?"compact":"wide");
+ NODE.nf[1]=CUR==="email"?"Emails orders · receives EDI":"Sends and receives EDI";
+ let h=`<defs><linearGradient id="hubgrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--gfrom)"/><stop offset="1" stop-color="var(--gto)"/></linearGradient></defs>`;
+ for(const k in G.L){h+=`<path id="p-${k}" class="conn rest" d="${G.L[k].d}"/><path id="ah-${k}" class="ah" d="" style="opacity:0"/>`;
+  if(G.v&&G.L[k].lane!==undefined)h+=`<line class="lead" x1="${G.L[k].lane+4}" y1="${G.L[k].ly-4}" x2="${G.L[k].lx-6}" y2="${G.L[k].ly-4}"/>`;}
+ for(const n in G.N){const b=G.N[n];h+=`<g class="node${b.hub?" hub":""}" id="n-${n}"><rect class="box" x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="12"/><text class="t" x="${b.x+14}" y="${b.y+22}">${esc(NODE[n][0])}</text><text class="s" x="${b.x+14}" y="${b.y+38}">${esc(NODE[n][1])}</text><text class="r" id="r-${n}" x="${b.x+14}" y="${b.y+(G.v?56:72)}"></text></g>`;}
+ for(const k in G.L)h+=`<text class="clabel" id="l-${k}" x="${G.L[k].lx}" y="${G.L[k].ly}" text-anchor="${G.L[k].a}"></text>`;
+ h+=`<g id="markers"></g>`;svg.innerHTML=h;AHD={};updateMap();
+}
+let AHD={};
+function arrowD(p,atEnd){const L=p.getTotalLength(),tip=p.getPointAtLength(atEnd?L-1.5:1.5),back=p.getPointAtLength(atEnd?L-5:5);
+ let ux=tip.x-back.x,uy=tip.y-back.y;const n=Math.hypot(ux,uy)||1;ux/=n;uy/=n;const bx=tip.x-ux*9,by=tip.y-uy*9,px=-uy*4.5,py=ux*4.5,f=v=>v.toFixed(1);
+ return `M${f(tip.x)},${f(tip.y)} L${f(bx+px)},${f(by+py)} L${f(bx-px)},${f(by-py)} Z`;}
+function nodeRec(n){const t=S();
+ if(n==="erp")return t.inv.read?"Invoice":(t.erp?"Sales order":"Sales order pending");
+ if(n==="tg")return t.ship.out?"500 carton labels":(t.arrived?"Purchase order received":(t.k==="email"?"Ashby's intake address":"Connection live"));
+ return [t.ack.out,t.ship.out,t.inv.out].filter(Boolean).length+" of 3 documents received";}
+function updateMap(){
+ if(!G)return;const t=S();
+ for(const k in G.L){const st=t.line[k],p=$("p-"+k),a=$("ah-"+k),l=$("l-"+k);if(!p||!st)continue;
+  p.setAttribute("class","conn "+(st.set?"set":"rest"));l.textContent=st.lab;l.classList.toggle("ok",st.set);
+  const d=st.set&&st.at?arrowD(p,st.at==="end"):"";
+  if(AHD[k]!==d){AHD[k]=d;a.setAttribute("d",d);a.style.opacity="0";if(d){if(reduce())a.style.opacity="1";else requestAnimationFrame(()=>requestAnimationFrame(()=>{a.style.opacity="1";}));}}}
+ for(const n of ["erp","tg","nf"]){const r=$("r-"+n);if(r)r.textContent=nodeRec(n);}
+ const parts=[];if(t.line.email)parts.push("Northfield Retailer to Trading Grid by email: "+t.line.email.lab);
+ parts.push("Supplier ERP and Trading Grid by API: "+t.line.erp.lab);parts.push("Trading Grid and Northfield Retailer by EDI: "+t.line.edi.lab);
+ $("route-sum").textContent="Route between Supplier ERP, Trading Grid and Northfield Retailer. "+parts.join(". ")+".";
+}
+function bez(x1,y1,x2,y2){const cx=3*x1,bx=3*(x2-x1)-cx,ax=1-cx-bx,cy=3*y1,by=3*(y2-y1)-cy,ay=1-cy-by;const X=t=>((ax*t+bx)*t+cx)*t,Y=t=>((ay*t+by)*t+cy)*t,dX=t=>(3*ax*t+2*bx)*t+cx;
+ return x=>{if(x<=0)return 0;if(x>=1)return 1;let t=x;for(let i=0;i<8;i++){const e=X(t)-x,d=dX(t);if(Math.abs(e)<1e-5||Math.abs(d)<1e-6)break;t-=e/d;}return Y(Math.min(1,Math.max(0,t)));};}
+const EASE=bez(.45,0,.2,1);
+/* canonical directions: email Northfield → Trading Grid; erp Supplier ERP → Trading Grid; edi Trading Grid → Northfield */
+const DEST={email:["tg","nf"],erp:["tg","erp"],edi:["nf","tg"]};
+function revPath(d){const m=d.match(/M([\d.]+) ([\d.]+) L([\d.]+) ([\d.]+)/);return `M${m[3]} ${m[4]} L${m[1]} ${m[2]}`;}
+function hop(t,k,label,rev){
+ const run=RUN[t.k];const alive=()=>run===RUN[t.k];
+ if(reduce()||t.k!==CUR||!G||!G.L[k])return Promise.resolve(alive());
+ const g=$("markers"),lab=$("l-"+k);if(!g)return Promise.resolve(alive());
+ const d=rev?revPath(G.L[k].d):G.L[k].d;
+ const mk=w=>{const e=document.createElementNS(SVGNS,"path");e.setAttribute("d",d);e.setAttribute("class","lt");e.setAttribute("stroke-width",w);e.style.opacity=0;g.appendChild(e);return e;};
+ const tail=mk(2),head=mk(3),L=head.getTotalLength(),dur=Math.min(1400,1050+0.6*L);
+ tail.setAttribute("stroke-dasharray",`120 ${L+240}`);head.setAttribute("stroke-dasharray",`22 ${L+240}`);
+ const pill=document.createElementNS(SVGNS,"g"),pw=Math.max(80,label.length*6.8+24);
+ pill.setAttribute("class","marker");pill.style.opacity=0;
+ pill.innerHTML=`<rect x="${-pw/2}" y="-11" width="${pw}" height="22" rx="11"/><text x="0" y="4" text-anchor="middle">${esc(label)}</text>`;g.appendChild(pill);
+ if(lab)lab.classList.add("hide");const nd=$("n-"+DEST[k][rev?1:0]);if(nd)nd.classList.add("act");
+ const done=()=>{tail.remove();head.remove();pill.remove();if(lab)lab.classList.remove("hide");if(nd)nd.classList.remove("act");};
+ return new Promise(res=>{const t0=performance.now();const f=now=>{
+  if(!alive()||reduce()||!head.isConnected||t.k!==CUR){done();return res(alive());}
+  const raw=Math.min(1,(now-t0)/dur),pos=EASE(raw)*L,op=raw<.1?raw/.1:(raw>5/6?(1-raw)*6:1);
+  head.setAttribute("stroke-dashoffset",22-pos);tail.setAttribute("stroke-dashoffset",120-pos);head.style.opacity=op;tail.style.opacity=.35*op;pill.style.opacity=Math.min(1,op*1.6);
+  const pt=head.getPointAtLength(Math.min(L,pos));pill.setAttribute("transform",`translate(${pt.x.toFixed(1)},${pt.y.toFixed(1)})`);
+  if(raw<1)requestAnimationFrame(f);else{done();res(alive());}};requestAnimationFrame(f);});
+}
+async function foldThenNext(t,i){const run=RUN[t.k];
+ const el=t.k===CUR?document.querySelector(`#c-${i} .fold`):null;
+ if(el&&!reduce()){el.classList.add("closing");await wait(MOTION.fold);if(run!==RUN[t.k])return false;}
+ t.stage=i+1;t.focus=i+1;if(t.k===CUR)render();await wait(180);return run===RUN[t.k];}
+async function flipDoc(t,key){const run=RUN[t.k];t.flip=key;if(t.k===CUR)render();await wait(MOTION.ui*3);if(run!==RUN[t.k])return false;t.flip=null;t.flipBack=key;if(t.k===CUR)render();t.flipBack=null;await wait(MOTION.ui);return run===RUN[t.k];}
+const R=t=>{if(t.k===CUR)render();};
+
+/* ---------- Email orders: actions ---------- */
+async function startEmail(sc){RUN.email++;const t=T.email=freshEmail(sc,"email");const run=RUN.email;t.busy=true;if(CUR==="email"){drawMap();render();}
+ await wait(MOTION.ui);if(run!==RUN.email)return;
+ if(!await hop(t,"email","Purchase order"))return;
+ t.arrived=true;setLine(t,"email","Purchase order · email","end");
+ log(t,"Northfield Retailer","Email with NR-449512.pdf received at Ashby's Trading Grid address","Email · "+BUYER+" → "+ADDR,RCV1);
+ log(t,"Trading Grid","Source file kept; duplicate check: first copy of this order","AI",NT);R(t);
+ if(sc==="twice"){await wait(MOTION.read);if(run!==RUN[t.k])return;
+  if(!await hop(t,"email","Purchase order"))return;
+  t.second=true;log(t,"Northfield Retailer","Northfield sent the same email again","Email · "+BUYER+" → "+ADDR,RCV2);
+  log(t,"Trading Grid","Second copy matched the duplicate key and was linked to the first intake; no second sales order, purchase order or acknowledgment","AI",NT);R(t);}
+ await wait(MOTION.read);if(run!==RUN[t.k])return;
+ if(!await foldThenNext(t,0))return;
+ t.reading=true;R(t);await wait(MOTION.read);if(run!==RUN[t.k])return;
+ t.reading=false;t.cls=true;log(t,"Trading Grid","NR-449512.pdf classified as a purchase order","AI",NT);R(t);
+ await wait(MOTION.beat);if(run!==RUN[t.k])return;
+ t.matched=true;R(t);lightMatches();
+ log(t,"Trading Grid","Read 5 header fields and 3 lines from the PDF","AI",NT);
+ log(t,"Trading Grid","Matched DC 2 and 2 of 3 items to approved mappings; line 3 needs confirmation","AI and rules",NT);
+ log(t,"Trading Grid","All Northfield checks passed","Rules",NT);
+ log(t,"Trading Grid","Notice to "+INBOX+": PO NR-449512 ready for review, 1 value to confirm","Email · "+ADDR+" → "+INBOX,NT);
+ t.busy=false;R(t);}
+function lightMatches(){const go=()=>document.querySelectorAll(".arw").forEach(el=>el.classList.add("on"));if(reduce()){go();return;}
+ document.querySelectorAll("#c-1 tbody tr").forEach((tr,i)=>setTimeout(()=>tr.querySelectorAll(".arw").forEach(el=>el.classList.add("on")),i*MOTION.stagger+MOTION.fast));}
+function doL3(v){const t=T[CUR];if(t.busy||t.approved)return;if(v==="reset"&&Date.now()-(t.l3At||0)<500)return;t.l3At=Date.now();
+ if(v==="use"){t.l3="yes";log(t,"Priya Raman","Confirmed line 3: Northfield item 448122 to Ashby item ASH-HNY-340 by GTIN 10614141000149; mapping saved","Trading Grid",NT);}
+ else if(v==="leave"){t.l3="no";log(t,"Priya Raman","Left line 3 unmatched; approval locked","Trading Grid",NT);}else t.l3=null;
+ R(t);if(t.l3==="yes")lightMatches();}
+async function doApprove(){const t=T[CUR];if(t.busy||t.approved||t.l3!=="yes")return;const run=RUN[t.k];t.busy=true;t.approved=true;
+ log(t,"Priya Raman","Approved PO NR-449512 and created the sales order","Trading Grid",NT);if(t.k==="email")log(t,"Trading Grid","Purchase order built as EDI from the approved values","EDI 850",NT);R(t);
+ if(!await hop(t,"erp","Sales order",true))return;t.created=true;setLine(t,"erp","Create sales order · API","start");
+ if(!await hop(t,"erp","Sales order"))return;t.erp=true;setLine(t,"erp","Sales order created · API","end");
+ log(t,"Supplier ERP","Sales order SO-118842 created for PO NR-449512","API response",NT);
+ log(t,"Trading Grid","Notice to "+INBOX+": acknowledgment for PO NR-449512 ready for approval","Email · "+ADDR+" → "+INBOX,NT);R(t);
+ await wait(MOTION.beat);if(run!==RUN[t.k])return;if(!await foldThenNext(t,1))return;t.busy=false;R(t);}
+async function doAckE(){const t=T[CUR];if(t.busy||t.ack.go||t.stage!==2)return;const run=RUN[t.k];t.busy=true;t.ack.go=true;
+ log(t,"Priya Raman","Approved the order acknowledgment: every line accepted as ordered","Trading Grid",NT);R(t);
+ if(!await flipDoc(t,"855"))return;log(t,"Trading Grid","Order acknowledgment checked against Northfield rules: passed; converted to EDI","EDI 855",NT);
+ if(!await hop(t,"edi","Order acknowledgment"))return;t.ack.out=true;setLine(t,"edi","Order acknowledgment · EDI","end");
+ log(t,"Trading Grid","Order acknowledgment delivered to Northfield","EDI 855",NT);log(t,"Trading Grid","Notice to "+INBOX+": PO NR-449512 ready to ship","Email · "+ADDR+" → "+INBOX,NT);R(t);
+ await wait(MOTION.beat);if(run!==RUN[t.k])return;if(!await foldThenNext(t,2))return;t.busy=false;R(t);}
+async function doShipE(){const t=T[CUR];if(t.busy||t.ship.go||t.stage!==3)return;const run=RUN[t.k];t.busy=true;t.ship.go=true;
+ log(t,"Priya Raman","Confirmed 500 single-product cartons (L1 300, L2 120, L3 80) and approved the ship notice for Northfield DC 2","Trading Grid",NT);
+ log(t,"Trading Grid","500 carton labels created with SSCCs that match the ship notice","Trading Grid",NT);R(t);
+ if(!await flipDoc(t,"856"))return;log(t,"Trading Grid","Ship notice checked against Northfield rules: passed; converted to EDI","EDI 856",NT);
+ if(!await hop(t,"edi","Ship notice"))return;t.ship.out=true;setLine(t,"edi","Ship notice · EDI","end");
+ log(t,"Trading Grid","Ship notice delivered to Northfield","EDI 856",NT);log(t,"Trading Grid","Notice to "+INBOX+": ship notice delivered; invoice next","Email · "+ADDR+" → "+INBOX,NT);R(t);
+ await wait(MOTION.beat);if(run!==RUN[t.k])return;if(!await foldThenNext(t,3))return;t.busy=false;R(t);}
+async function doPullE(){const t=T[CUR];if(t.busy||t.inv.pull||t.stage!==4)return;t.busy=true;t.inv.pull=true;
+ log(t,"Priya Raman","Read the invoice for PO NR-449512 from Supplier ERP","Trading Grid",NT);R(t);
+ if(!await hop(t,"erp","Invoice"))return;t.inv.read=true;setLine(t,"erp","Invoice read · API","end");
+ log(t,"Supplier ERP","Invoice INV-7702 read for sales order SO-118842: $24,552.00","API response",NT);
+ log(t,"Trading Grid","Invoice checked against Northfield rules: quantities equal the confirmed cartons; prices and total equal the acknowledged order","Rules",NT);t.busy=false;R(t);}
+async function doInvE(){const t=T[CUR];if(t.busy||t.inv.go||!t.inv.read)return;const run=RUN[t.k];t.busy=true;t.inv.go=true;
+ log(t,"Priya Raman","Approved the invoice","Trading Grid",NT);R(t);
+ if(!await flipDoc(t,"810"))return;log(t,"Trading Grid","Invoice converted to EDI","EDI 810",NT);
+ if(!await hop(t,"edi","Invoice"))return;t.inv.out=true;setLine(t,"edi","Invoice · EDI","end");log(t,"Trading Grid","Invoice delivered to Northfield","EDI 810",NT);t.busy=false;R(t);
+ await wait(MOTION.beat);if(run!==RUN[t.k])return;
+ if(!await hop(t,"edi","Technical acknowledgment",true))return;t.inv.fa=true;setLine(t,"edi","Technical acknowledgment · EDI","start");
+ log(t,"Northfield Retailer","Technical acknowledgment received for the invoice","EDI 997",NT);R(t);}
+async function doCloseE(){const t=T[CUR];if(t.busy||!t.inv.fa||t.stage!==4)return;t.busy=true;if(!await foldThenNext(t,4))return;t.busy=false;R(t);}
+
+async function startEdi(){RUN.edi++;const t=T.edi=freshEmail("one","edi");const run=RUN.edi;t.busy=true;if(CUR==="edi"){drawMap();render();}
+ await wait(MOTION.ui);if(run!==RUN.edi)return;
+ if(!await hop(t,"edi","Purchase order",true))return;
+ t.arrived=true;setLine(t,"edi","Purchase order · EDI","start");
+ log(t,"Northfield Retailer","Purchase order NR-449512 received by Trading Grid for Ashby","EDI 850",RCV1);
+ log(t,"Trading Grid","Duplicate check: first copy of this purchase order","Rules",NT);R(t);
+ await wait(MOTION.read);if(run!==RUN.edi)return;
+ if(!await foldThenNext(t,0))return;
+ t.cls=true;await wait(MOTION.beat);if(run!==RUN.edi)return;
+ t.matched=true;R(t);lightMatches();
+ log(t,"Trading Grid","Read 5 header fields and 3 lines from the EDI 850","EDI 850",NT);
+ log(t,"Trading Grid","Matched DC 2 and 2 of 3 items to approved mappings; line 3 needs confirmation","Rules",NT);
+ log(t,"Trading Grid","All Northfield checks passed","Rules",NT);
+ log(t,"Trading Grid","Notice to "+INBOX+": PO NR-449512 ready for review, 1 value to confirm","Email · "+ADDR+" → "+INBOX,NT);
+ t.busy=false;R(t);}
+
+/* ---------- Render helpers ---------- */
+const table=(cols,rows)=>`<div class="tscroll"><table><thead><tr>${cols.map(c=>`<th${c.n?' class="num"':""}>${c.t}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td${cols[i].n?' class="num"':""}>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+const item=L=>`<span class="mono">${L.sku}</span><div class="sub2">${esc(L.desc)}</div>`;
+const fact=(k,v,cls)=>`<div class="fact${cls?" "+cls:""}"><small>${esc(k)}</small><b>${v}</b></div>`;
+const working=s=>`<div class="working">${esc(s)}</div>`;
+const code=s=>`<pre class="code">${esc(s)}</pre>`;
+function details(t,key,label,ids,tabs){const cur=t.tab[key]||tabs[0][0],open=!!t.open[key];
+ return `<details class="more" data-key="${key}"${open?" open":""}><summary>${esc(label)}</summary><div class="in"><div class="ids">${ids.map(i=>`<span class="tag">${esc(i)}</span>`).join("")}</div>
+ ${tabs.length>1?`<div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button class="tab" role="tab" type="button" aria-selected="${k===cur}" data-tab="${key}:${k}">${esc(l)}</button>`).join("")}</div>`:""}${tabs.find(x=>x[0]===cur)[2]()}</div></details>`;}
+function docBlock(t,key,title,readable,raw){const f=t.flip===key,back=t.flipBack===key;
+ const face=f?`<div class="face flip"><pre class="code">${esc(raw().split("\n").slice(0,12).join("\n"))}</pre></div>`:`<div class="face${back?" flip":""}">${readable}</div>`;
+ return `<div class="doc"><div class="dh"><b>${esc(title)}</b><span class="sp"></span><span class="tag">${f?"Converted to EDI":"To Northfield"}</span></div>${face}</div>`;}
+const btn=(t,act,label,dis,extra)=>`<div class="actrow"><button class="btn pri" type="button" data-act="${act}"${t.busy||dis?" disabled":""}>${esc(label)}</button>${extra||""}</div>`;
+function fileIcon(label,size){const w=size||34,h=Math.round(w*1.25);
+ return `<svg width="${w}" height="${h}" viewBox="0 0 34 42" aria-hidden="true"><path d="M3 2h20l8 8v29a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" fill="var(--card)" stroke="var(--muted)" stroke-width="1.4"/><path d="M23 2v8h8" fill="none" stroke="var(--muted)" stroke-width="1.4"/><rect x="2" y="25" width="29" height="12" fill="var(--panel)"/><text x="16.5" y="34" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="7.5" font-weight="700" fill="var(--on-panel)">${label}</text></svg>`;}
+const FORMATS=[["XLSX","Excel"],["CSV","CSV"],["JPG","Scanned image"],["TXT","Email text"]];
+function pdfSvg(t){
+ const tx=(x,y,s,o={})=>`<text class="ptext" x="${x}" y="${y}" font-size="${o.fs||11}" font-weight="${o.fw||400}" ${o.a?`text-anchor="${o.a}"`:""}>${esc(s)}</text>`;
+ let h=`<svg viewBox="0 0 612 420" role="img" aria-label="PDF purchase order NR-449512"><rect width="612" height="420" fill="var(--paper)"/>`;
+ const boxes=[];HEAD.forEach((f,i)=>boxes.push(["h"+i,f.box]));LINES.forEach(L=>boxes.push(["l"+L.l,L.box]));
+ boxes.forEach(([id,b])=>{h+=`<rect class="hlbox${t.sel===id?" on":""}" x="${b[0]}" y="${b[1]}" width="${b[2]}" height="${b[3]}" rx="2"/>`;});
+ h+=tx(48,47,"Northfield Retailer",{fs:16,fw:700})+tx(564,47,"Purchase order",{fs:13,fw:600,a:"end"});
+ h+=`<line x1="42" y1="56" x2="570" y2="56" stroke="var(--paper-ink)" stroke-width=".8"/>`;
+ h+=tx(48,79,"PO NR-449512",{fs:12,fw:700});
+ h+=tx(48,120,"Ship to: Northfield DC 2",{fs:11.5})+tx(376,120,"Deliver: 2026-11-07",{fs:11.5});
+ h+=tx(48,140,"GLN 0614141002061",{fs:9.5});
+ h+=tx(48,168,"Supplier: Ashby Supplier",{fs:10.5})+tx(48,182,"Contact: "+BUYER,{fs:9.5});
+ h+=`<line x1="42" y1="200" x2="570" y2="200" stroke="var(--paper-ink)" stroke-width=".6"/>`;
+ [["Item",48],["Description",110],["Qty",315],["Unit",352],["Price",420],["Amount",510]].forEach(([s,x])=>h+=tx(x,213,s,{fs:9.5,fw:700}));
+ LINES.forEach((L,i)=>{const y=238+i*28;h+=tx(48,y,L.item)+tx(110,y,L.desc)+tx(338,y,String(L.qty),{a:"end"})+tx(352,y,"CS")+tx(450,y,money(L.price),{a:"end"})+tx(560,y,money(L.qty*L.price),{a:"end"});
+  h+=`<line x1="42" y1="${y+10}" x2="570" y2="${y+10}" stroke="var(--paper-rule)" stroke-width=".5"/>`;});
+ h+=tx(470,339,"Order total",{fs:10.5,fw:700,a:"end"})+tx(560,339,money(TOTAL),{fs:11,fw:700,a:"end"});
+ h+=tx(48,380,"Currency USD. Quantities in cases.",{fs:9})+tx(48,404,"Page 1 of 1",{fs:9});
+ return h+`</svg>`;}
+const valBtn=(t,id,text)=>t.k==="edi"?`<span>${esc(text)}</span>`:`<button class="val${t.sel===id?" sel":""}" type="button" data-sel="${id}">${esc(text)}</button>`;
+const check=(icon,title,body,tags)=>`<div class="check"><div class="h"><span class="${icon}"></span>${esc(title)}</div><p>${body}</p><div class="ids">${tags}</div></div>`;
+const ruleRow=(ok)=>fact("Northfield rules",ok?`<span class="ok-i" aria-hidden="true"></span>Passed`:"Checking");
+
+/* ---------- Email orders: stages ---------- */
+const SE=[
+ {t:"Order email",done:"Order received by Trading Grid",d:()=>T.email.second?"2 copies · 1 linked as duplicate":"First copy · source file kept",body:t=>{
+   if(!t.arrived)return working("Waiting for Northfield's email");
+   const mail=(n)=>`<article class="email" aria-label="Email from Northfield Retailer"><p class="subj">PO NR-449512</p>
+    <div class="from"><span class="avatar">NR</span><span><b>Northfield buying</b> <span class="sub2">${BUYER} · to ${ADDR} · ${n?RCV2:RCV1}</span></span></div>
+    ${n?"":`<p class="body">Hi Ashby team,\nPlease find purchase order NR-449512 attached for delivery to DC 2.\nThank you,\nNorthfield buying</p><hr>`}
+    <div class="attach"><span class="ficon cur">${fileIcon("PDF",n?30:40)}NR-449512.pdf</span>${n?"":`<span class="accepts"><span class="lbl">Trading Grid also reads</span><span class="fmts">${FORMATS.map(f=>`<span class="ficon dim">${fileIcon(f[0],22)}${f[1]}</span>`).join("")}</span></span>`}</div></article>`;
+   let b=mail(0)+`<div class="facts">${fact("Received by Trading Grid",RCV1)}${fact("Duplicate check",`First copy <span class="chip ai">AI</span>`)}</div>`;
+   if(t.second)b+=mail(1)+`<div class="facts">${fact("Second copy",RCV2)}${fact("Duplicate check",`Linked to the first intake <span class="chip ai">AI</span>`,"amb")}</div>`;
+   return b;}},
+ {t:"Purchase order",done:"Sales order created in Supplier ERP",d:()=>"3 lines · $24,552.00",body:t=>{
+   const tiles=`<div class="tiles">`+HEAD.map((f,i)=>`<div class="tile"><small>${f.k}</small><span>${valBtn(t,"h"+i,f.v)}</span></div>`).join("")+`</div>`;
+   const on=t.matched&&SEEN.has("matched")?" on":"";if(t.matched)setTimeout(()=>SEEN.add("matched"),0);
+   const lines=table([{t:"Line"},{t:"GTIN"},{t:"Northfield item"},{t:'<span class="sr">Match</span>'},{t:"Ashby item"},{t:"Basis"},{t:"Qty",n:1},{t:"Unit"},{t:"Amount",n:1}],
+    LINES.map(L=>{const pend=L.l===3&&t.l3!=="yes";
+     return ["L"+L.l,`<span class="mono">${L.gtin}</span>`,valBtn(t,"l"+L.l,L.item)+`<div class="sub2">${esc(L.desc)}</div>`,pend?"":`<span class="arw${on}" aria-hidden="true"></span>`,`<span class="mono">${L.sku}</span>`,
+      !t.matched?"":(L.l<3?`<span class="basis">Approved mapping</span>`:(pend?`<span class="basis amb"><span class="amb-dot" aria-hidden="true"></span>Confirm match</span>`:`<span class="basis">GTIN · confirmed by Priya Raman</span>`)),String(L.qty),"Cases",money(L.qty*L.price)];}));
+   const checks=`<div class="checks">`+(t.k==="edi"?check("ok-i","Received as EDI","5 header fields · 3 lines",`<span class="tag">EDI 850</span>`):check("ok-i","Read correctly","5 header fields · 3 lines",`<span class="chip ai">AI</span>`))+
+    (t.l3==="yes"?check("ok-i","Matched to approved data","DC 2 · 3 of 3 items",`<span class="tag">Trading Grid</span><span class="tag">Supplier ERP</span>`):check("amb-dot","Matched to approved data","DC 2 · 2 of 3 items · L3 to confirm",`<span class="tag">Trading Grid</span><span class="tag">Supplier ERP</span>`))+
+    check("ok-i","Passed Northfield checks","Required fields · Units · Total $24,552.00",`<span class="tag">Northfield order rules</span>`)+`</div>`;
+   let b=t.k==="edi"?`<div style="display:grid;gap:12px;min-width:0">${tiles}${t.matched?lines:working("Reading the purchase order")}</div>`:(t.reading&&!reduce()?'<div class="prog" aria-hidden="true"><i></i></div>':'')+`<div class="read"><div class="paperwrap"><div class="paper">${pdfSvg(t)}</div>${t.reading&&!reduce()?'<div class="sweep"></div>':""}</div><div style="display:grid;gap:12px;min-width:0">${tiles}${t.matched?lines:working("Reading the purchase order")}</div></div>`;
+   if(!t.matched)return b;b+=checks;
+   if(t.l3==="yes")b+=`<div class="review done"><span class="ok-i"></span><span><b>Line 3 confirmed</b> · 448122 to ASH-HNY-340</span><span class="sp"></span><span class="tag">Mapping saved</span>${t.approved?"":`<button class="btn sm" type="button" data-l3="reset">Change</button>`}</div>`;
+   else if(t.l3==="no")b+=`<div class="review done"><span class="amb-dot"></span><span><b>Line 3 unmatched</b></span><span class="sp"></span><span class="rtag">Approval locked</span><button class="btn sm" type="button" data-l3="reset">Change</button></div>`;
+   else b+=`<div class="review" role="group" aria-label="Line 3 item to confirm"><p class="q">Line 3: Northfield item 448122 matches GTIN 10614141000149. Use Ashby item ASH-HNY-340?</p><div class="meta2">${t.k==="edi"?"":`<span class="chip ai">AI</span>`}<span>Mapping: Missing</span></div><div class="actrow"><button class="btn pri" type="button" data-l3="use"${t.busy?" disabled":""}>Use ASH-HNY-340</button><button class="btn" type="button" data-l3="leave"${t.busy?" disabled":""}>Leave unmatched</button></div></div>`;
+   if(!t.approved)b+=btn(t,"approve","Approve and create sales order",t.l3!=="yes");
+   else b+=t.erp?`<div class="facts">${fact("Approved by","Priya Raman")}${fact("Supplier ERP",`<span class="ok-i" aria-hidden="true"></span>Sales order created`)}</div>`:working("Creating the sales order in Supplier ERP");
+   b+=details(t,"order","Purchase order details",(t.k==="edi"?["EDI 850 from Northfield"].concat(t.erp?["Sales order SO-118842"]:[]):(t.erp?["EDI 850","Built from approved values","Sales order SO-118842"]:["Source: NR-449512.pdf"])),[["read","Readable",()=>table([{t:"Line"},{t:"Item"},{t:"Qty",n:1},{t:"Price",n:1}],LINES.map(L=>["L"+L.l,item(L),L.qty+" cases",money(L.price)]))]].concat(t.k==="edi"?[]:[["src","Reading",()=>`<div class="ids"><span class="tag">Confidence: High on every value</span><span class="tag">CS on the page → cases (CA)</span><span class="tag">Unit rule: Supplier ERP</span></div>`]]).concat(t.approved||t.k==="edi"?[["raw","Raw X12",()=>code(X12.x850())],["req","API request",()=>code(API.soReq("Approved by Priya Raman"))]]:[]).concat(t.erp?[["res","API response",()=>code(API.soRes())]]:[]));
+   return b;}},
+ {t:"Order acknowledgment",done:"Acknowledgment delivered to Northfield",d:()=>"Every line as ordered",body:t=>{
+   let b=docBlock(t,"855","Order acknowledgment",table([{t:"Line"},{t:"Item"},{t:"Ordered",n:1},{t:"Acknowledged",n:1}],LINES.map(L=>["L"+L.l,item(L),L.qty+" cases",L.qty+" cases"])),X12.x855);
+   if(!t.ack.go)b+=btn(t,"ackE","Approve and send acknowledgment",false,`<span class="rtag">24-hour rule</span>`);
+   else b+=t.ack.out?`<div class="facts">${ruleRow(true)}${fact("Delivery",`<span class="dl-i" aria-hidden="true"></span>Delivered to Northfield`)}${fact("Business acceptance","Not required · order is the accepted position")}</div>`:working(t.flip?"Converting to EDI":"Sending to Northfield");
+   b+=details(t,"855","Document details",["EDI 855","PO acknowledgment"],[["read","Readable",()=>table([{t:"Line"},{t:"Decision"},{t:"Qty",n:1}],LINES.map(L=>["L"+L.l,"Accept",L.qty+" cases"]))+`<div class="ids"><span class="tag">Order value $24,552.00</span></div>`],["raw","Raw X12",()=>code(X12.x855())]]);
+   return b;}},
+ {t:"Ship notice",done:"Ship notice delivered to Northfield",d:()=>"500 cartons · 500 labels",body:t=>{
+   const conf=t.ship.go;
+   let b=docBlock(t,"856","Ship notice",table([{t:"Line"},{t:"Item"},{t:"Ordered",n:1},{t:"Cartons",n:1},{t:"Contents"}],LINES.map(L=>["L"+L.l,item(L),L.qty+" cases",String(L.qty),conf?"Confirmed by supplier":`<span class="sub2">Not confirmed · order quantity</span>`])),()=>X12.x856(null));
+   b+=`<div class="facts">${fact("Cartons","500 · 1 case per carton")}${fact("Ship date","2026-11-06")}${fact("Destination","Northfield DC 2")}</div>`;
+   if(!t.ship.go)b+=btn(t,"shipE","Confirm cartons and send ship notice",false,`<span class="rtag">Supplier confirms cartons</span>`);
+   else b+=t.ship.out?`<div class="facts">${ruleRow(true)}${fact("Carton labels","500 · SSCC matches the ship notice")}${fact("Delivery",`<span class="dl-i" aria-hidden="true"></span>Delivered to Northfield`)}</div>`:working(t.flip?"Converting to EDI":"Sending to Northfield");
+   b+=details(t,"856","Document details",["EDI 856","Ship notice ASN-449512-A","Contents: confirmed by Priya Raman"],[["read","Readable",()=>table([{t:"Line"},{t:"Cartons",n:1},{t:"First label"}],LINES.map((L,i)=>["L"+L.l,String(L.qty),`<span class="mono">${sscc([1,301,421][i])}</span>`]))],["raw","Raw X12",()=>code(X12.x856(null))]]);
+   return b;}},
+ {t:"Invoice",done:"Invoice delivered to Northfield",d:()=>"Technically acknowledged · $24,552.00",body:t=>{
+   let b="";
+   if(!t.inv.pull)b+=`<div class="facts">${fact("Supplier ERP invoice","Not read")}</div>`+btn(t,"pullE","Read invoice from Supplier ERP");
+   else if(!t.inv.read)b+=working("Reading the invoice from Supplier ERP");
+   else{b+=docBlock(t,"810","Invoice",table([{t:"Line"},{t:"Item"},{t:"Qty",n:1},{t:"Price",n:1},{t:"Amount",n:1}],LINES.map(L=>["L"+L.l,item(L),L.qty+" cases",money(L.price),money(L.qty*L.price)])).replace("</tbody>",`<tr><td></td><td><b>Total</b></td><td></td><td></td><td class="num"><b>${money(TOTAL)}</b></td></tr></tbody>`),X12.x810);
+    b+=`<div class="checks">`+check("ok-i","Quantities match the ship notice","300 · 120 · 80 cases",`<span class="tag">Trading Grid</span>`)+check("ok-i","Prices match the acknowledged order","Total $24,552.00",`<span class="tag">Trading Grid</span>`)+check("ok-i","Northfield rules","Passed",`<span class="tag">Northfield order rules</span>`)+`</div>`;}
+   if(t.inv.read&&!t.inv.go)b+=btn(t,"invE","Approve and send invoice");
+   if(t.inv.go)b+=t.inv.out?`<div class="facts">${fact("Delivery",`<span class="dl-i" aria-hidden="true"></span>Delivered to Northfield`)}${fact("Technical acknowledgment",t.inv.fa?"Technically acknowledged":"Waiting for Northfield")}</div>`:working(t.flip?"Converting to EDI":"Sending to Northfield");
+   if(t.inv.read)b+=details(t,"810","Document details",["EDI 810","Invoice INV-7702","Sales order SO-118842"].concat(t.inv.fa?["EDI 997 received"]:[]),[["read","Readable",()=>table([{t:"Line"},{t:"Qty",n:1},{t:"Amount",n:1}],LINES.map(L=>["L"+L.l,L.qty+" cases",money(L.qty*L.price)]))],["raw","Raw X12",()=>code(X12.x810())]].concat(t.inv.fa?[["fa","Technical acknowledgment",()=>code(X12.x997("810","7712"))]]:[]));
+   if(t.inv.fa)b+=btn(t,"closeE","View what Northfield received");
+   return b;}},
+ {t:"What Northfield received",body:t=>{
+   let b=`<div class="closing"><b>Northfield received EDI for Ashby's responses.</b><span class="muted">${t.k==="edi"?"Northfield sent the order as EDI; Ashby never handled EDI and approved it in Trading Grid.":"Northfield emailed the order; Ashby approved it in Trading Grid."}</span></div>`;
+   b+=table([{t:"Document"},{t:"Format"},{t:"Result"}],[["Order acknowledgment","EDI","Delivered · business acceptance not required"],["Ship notice","EDI","Delivered · 500 labelled cartons"],["Invoice","EDI","Delivered · technically acknowledged"]].map(r=>[`<b>${r[0]}</b>`,r[1],r[2]]));
+   b+=`<div class="facts">${fact("Purchase order",t.k==="edi"?"Sent by Northfield as EDI 850":"Emailed by Northfield to "+ADDR)}${fact("Sales order","Created in Supplier ERP after approval")}</div>`;return b;}}];
+
+const SD=[{t:"Purchase order received",done:"Purchase order received by Trading Grid",d:()=>"EDI 850 · first copy",body:t=>{
+   if(!t.arrived)return working("Waiting for Northfield's purchase order");
+   return `<div class="facts">${fact("Purchase order","NR-449512 · EDI 850")}${fact("Received by Trading Grid",RCV1)}${fact("Duplicate check","First copy")}</div>`+details(t,"raw850","EDI 850",["From Northfield"],[["raw","Raw X12",()=>code(X12.x850())]]);}}].concat(SE.slice(1));
+function chipText(t){
+ if(t.stage===5)return "Responses delivered";if(t.inv.fa)return "Technically acknowledged";if(t.inv.out)return "Invoice sent";if(t.ship.out)return "Ship notice sent";if(t.ack.out)return "Acknowledgment sent";
+ if(t.erp)return "Sales order created";if(t.approved)return "Creating sales order";if(t.matched)return t.l3==="yes"?"Ready for approval":(t.l3==="no"?"Line 3 unmatched":"1 match to confirm");if(t.cls||t.reading)return "Reading order";if(t.arrived)return "Order received";return t.k==="email"?"Waiting for email":"Waiting for order";}
+function renderMeta(){const t=S();const n=t.hist.length;
+ const ev=`<button class="lnk" type="button" id="b-events">${(n=>n+(n===1?" notice":" notices"))(t.hist.filter(e=>e.text.startsWith("Notice to")).length)}</button>`;
+ $("meta").innerHTML=`Northfield Retailer → Ashby Supplier · ${t.k==="email"?"Email PDF to "+ADDR:"EDI 850"} · Received ${RCV1} · Acknowledgment due ${DUE} · ${ev}`;}
+function card(t,list,i){const st=list[i],last=list.length-1,done=i<t.stage,now=i===t.stage;
+ if(done&&i<last){const open=!!t.exp[i];return `<section class="card done" id="c-${i}" aria-labelledby="h-${i}"><div class="hd"><span class="mk" aria-hidden="true"></span><div class="out"><b id="h-${i}" tabindex="-1">${esc(st.done)}</b><span>${esc(st.d())}</span></div><span class="sp"></span><button class="lnk" type="button" data-exp="${i}" aria-expanded="${open}">${open?"Hide":"Show"}</button></div>${open?`<div class="bd">${st.body(t)}</div>`:""}</section>`;}
+ const tag=st.erp?`<span class="sp"></span><span class="tag">Supplier ERP</span>`:"";
+ if(!now)return `<section class="card next" id="c-${i}" aria-labelledby="h-${i}"><div class="hd"><span class="n">${i+1}</span><h2 id="h-${i}">${esc(st.t)}</h2>${tag}</div></section>`;
+ return `<section class="card now" id="c-${i}" aria-labelledby="h-${i}"><div class="hd">${i<last?`<span class="n">${i+1}</span>`:""}<h2 id="h-${i}" tabindex="-1">${esc(st.t)}</h2>${tag}</div><div class="fold"><div class="fold-in"><div class="bd">${st.body(t)}</div></div></div></section>`;}
+function render(){const t=S(),list=t.k==="email"?SE:SD;
+ updateMap();
+ const c=chipText(t),key="chip:"+t.k+":"+c;$("chip").innerHTML=`<span class="chip${/fix|confirm|unmatched/.test(c)?" amb":""}${SEEN.has(key)?"":" pop"}">${esc(c)}</span>`;if(!SEEN.has(key)){$("live").textContent=c;SEEN.add(key);}
+ $("title").innerHTML="PO NR-449512"+((t.cls||t.approved)?`<span class="chip type"${SEEN.has("type")?' style="animation:none"':""}>Purchase order</span>`:"");if(t.cls)SEEN.add("type");
+ $("goal").textContent=t.k==="email"?"Trade with Northfield from emailed orders, with EDI back.":"Trade with Northfield in EDI without handling EDI.";
+ $("ws").textContent="B2B Integration · Essentials · Ashby Supplier · Priya Raman";
+ $("scenario").hidden=t.k!=="email";$("scenario").value=T.email.sc;
+ document.querySelectorAll("[data-ws]").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.ws===t.k)));
+ renderMeta();
+ const f=$("flow");f.innerHTML=list.map((_,i)=>card(t,list,i)).join("");
+ f.querySelectorAll(".card.now").forEach(cd=>{const k="card:"+t.k+":"+cd.id;if(!SEEN.has(k)){SEEN.add(k);if(!reduce())cd.classList.add("enter");}});
+ if(t.focus!==null){const i=t.focus;t.focus=null;const cd=$("c-"+i);if(cd)requestAnimationFrame(()=>{cd.scrollIntoView({behavior:reduce()?"auto":"smooth",block:"nearest"});const h=$("h-"+i);if(h)h.focus({preventScroll:true});});}
+ if(!$("d-history").hidden)renderHist();if(!$("d-rules").hidden)renderRules();}
+function renderHist(){$("hist").innerHTML=S().hist.map(e=>`<div class="ev"><b>${esc(e.actor)}</b><span>${esc(e.text)}</span><span class="t">${e.time?esc(e.time)+" · ":""}${esc(e.src)}</span></div>`).join("");}
+function renderRules(){$("rules").innerHTML=RULES.email.map(r=>`<div class="rrow"><span>${esc(r[0])}</span><span class="sp"></span><span class="tag">${esc(r[1])}</span></div>`).join("")+`<p class="sub2">Precedence: Northfield order rules, then Supplier ERP, then Trading Grid.</p>`;}
+function switchTo(k){if(k===CUR)return;CUR=k;if(k==="edi"&&!T.edi){startEdi();return;}drawMap();render();}
+
+/* ---------- Events ---------- */
+const ACT={approve:doApprove,ackE:doAckE,shipE:doShipE,pullE:doPullE,invE:doInvE,closeE:doCloseE};
+document.addEventListener("click",e=>{
+ const w=e.target.closest("[data-ws]");if(w){switchTo(w.dataset.ws);return;}
+ const a=e.target.closest("[data-act]");if(a){if(a.disabled)return;ACT[a.dataset.act]();return;}
+ const q=e.target.closest("[data-l3]");if(q){if(q.disabled)return;doL3(q.dataset.l3);return;}
+ const x=e.target.closest("[data-exp]");if(x){const t=S();const i=+x.dataset.exp;t.exp[i]=!t.exp[i];render();return;}
+ const s=e.target.closest("[data-sel]");if(s){const t=S();t.sel=t.sel===s.dataset.sel?null:s.dataset.sel;render();return;}
+ const tb=e.target.closest("[data-tab]");if(tb){const t=S();const [k,v]=tb.dataset.tab.split(":");t.tab[k]=v;t.open[k]=true;render();return;}
+ const c=e.target.closest("[data-close]");if(c){$(c.dataset.close).hidden=true;return;}
+ if(e.target.closest("#b-events")){openHist();return;}
+});
+document.addEventListener("keydown",e=>{const w=e.target.closest&&e.target.closest("[data-ws]");if(w&&(e.key==="ArrowRight"||e.key==="ArrowLeft")){const k=CUR==="email"?"edi":"email";switchTo(k);$("t-"+k).focus();}
+ if(e.key==="Escape"){$("d-history").hidden=true;$("d-rules").hidden=true;}});
+document.addEventListener("toggle",e=>{const d=e.target;if(d.matches&&d.matches("details.more"))S().open[d.dataset.key]=d.open;},true);
+const openHist=()=>{$("d-rules").hidden=true;renderHist();$("d-history").hidden=false;};
+$("b-history").addEventListener("click",openHist);
+$("b-rules").addEventListener("click",()=>{$("d-history").hidden=true;renderRules();$("d-rules").hidden=false;});
+$("b-restart").addEventListener("click",()=>{if(CUR==="email")startEmail(T.email.sc);else startEdi();window.scrollTo({top:0,behavior:reduce()?"auto":"smooth"});});
+$("scenario").addEventListener("change",e=>{startEmail(e.target.value);});
+let RZ=0,lastW=window.innerWidth;
+/* a width change redraws the map; in-flight travel ends early, the workflow continues */
+window.addEventListener("resize",()=>{if(window.innerWidth===lastW)return;lastW=window.innerWidth;clearTimeout(RZ);RZ=setTimeout(()=>{drawMap();render();},120);});
+startEmail("one");
+</script>
+</body>
+</html>
+
+</body></html>

@@ -146,7 +146,7 @@ AHP-8820 | Pour-over coffee maker in the NetSuite journey | Case of 6 required b
 
 ### Northfield rules 2026.2
 
-The catalogue holds 54 rules. Seven are public, five are adapted from public guides and 42 are invented; each rule says which. The rules a builder meets most:
+The catalogue holds 74 rules, the same as the EDI Review Pack: 51 Northfield, 18 Ashby policies, 3 Ashby agreements, 1 industry standard and 1 US law. Seven are public, 18 are adapted from published sources and 49 are invented; each rule says which. The rules a builder meets most:
 
 Rule | Statement | Basis | 
 NF-1.4 | Order acknowledgment within 24 hours of the purchase order | Invented | 

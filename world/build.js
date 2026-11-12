@@ -179,7 +179,7 @@ export function buildWorld({ quiet = false } = {}) {
   db.exec('BEGIN');
   insert(db, 'parties', ref.parties.map((p) => ({ id: p.id, name: p.name, kind: p.kind, gln: p.gln, isa: p.isa })));
   insert(db, 'people', ref.people); insert(db, 'locations', ref.locations); insert(db, 'items', ref.items);
-  insert(db, 'rules', ref.rules.map((r) => ({ id: r.id, rule_set: r.rule_set, topic: r.topic, doc_type: r.doc_type, statement: r.statement, window_hours: r.window_hours, limit_value: r.limit_value, charge_code: r.charge_code, charge: r.charge, source: r.source, basis: r.basis, public_sources: r.public_sources })));
+  insert(db, 'rules', ref.rules.map((r) => ({ id: r.id, owner: r.owner, implements: r.implements, params: r.params ? JSON.stringify(r.params) : null, rule_set: r.rule_set, topic: r.topic, doc_type: r.doc_type, statement: r.statement, window_hours: r.window_hours, limit_value: r.limit_value, charge_code: r.charge_code, charge: r.charge, source: r.source, basis: r.basis, public_sources: r.public_sources })));
   insert(db, 'calendar', CALENDAR(g.W.anchor));
   for (const [t, rows] of Object.entries(T)) insert(db, t, rows);
   insert(db, 'connections', [{ id: 'ashby-assistant', company_id: 'ASHBY', user_name: 'Priya Raman', scopes: JSON.stringify(['orders', 'documents', 'errors', 'rules', 'deductions']), read_only: 1, configured_by: 'Priya Raman', configured_at: '2026-11-17T15:00:00.000Z' }]);

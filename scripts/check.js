@@ -82,6 +82,15 @@ none('money.invoice_paid_once', 'SELECT invoice FROM remittance_items WHERE invo
 // ── Rules and rejections ───────────────────────────────────────────────────────────────────────────────────────────
 none('rules.every_824_error_cites_a_rule', "SELECT error_id FROM errors WHERE channel LIKE '%824%' AND (rule_id IS NULL OR rule_id NOT IN (SELECT id FROM rules))");
 none('rules.every_error_points_at_documents', 'SELECT error_id FROM errors WHERE doc_id NOT IN (SELECT doc_id FROM documents) OR reported_by NOT IN (SELECT doc_id FROM documents)');
+{ const pack = JSON.parse(readFileSync(join(ROOT, 'registry', 'catalogue-pack.json'), 'utf8')); const world = db.prepare('SELECT * FROM rules').all();
+  const W = new Map(world.map((r) => [r.id, r])); const diff = [];
+  for (const p of pack.rules) { const w = W.get(p.id); if (!w) { diff.push(`${p.id} missing`); continue; }
+    if (w.statement !== p.statement) diff.push(`${p.id} wording`); if (w.owner !== p.owner) diff.push(`${p.id} owner`); if (w.basis !== p.basis.split(',')[0].toLowerCase()) diff.push(`${p.id} basis`);
+    if ((w.implements || '') !== p.implements.join(',')) diff.push(`${p.id} implements`); }
+  for (const w of world) if (!pack.rules.some((p) => p.id === w.id)) diff.push(`${w.id} not in pack`);
+  eq('rules.catalogue_equals_review_pack', diff.slice(0, 8), []); eq('rules.count_equals_review_pack', world.length, pack.rules.length); }
+{ const src = readFileSync(join(ROOT, 'src', 'agents.js'), 'utf8').replace(/\/\/.*$|\/\*[\s\S]*?\*\//gm, '');
+  eq('agents.thresholds_come_from_catalogue', (src.match(/\b(?:pairs|keep_weeks|exposure_estimate|max_amount|carton)\s*:\s*\d+/g) || []).concat(src.match(/>=\s*12\b|median\s*\/\s*2|\b8\s*\*/g) || []), []); }
 none('rules.basis_declared', "SELECT id FROM rules WHERE basis NOT IN ('public', 'adapted', 'invented') OR (basis <> 'invented' AND public_sources IN ('', '[]'))");
 none('rules.po_reference_over_22_always_rejected', "SELECT doc_id FROM documents WHERE doc_type IN ('856', '810') AND length(json_extract(body, '$.po_ref')) > 22 AND doc_id NOT IN (SELECT doc_id FROM errors)");
 

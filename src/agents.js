@@ -1,7 +1,7 @@
 // Agent decisions as pure functions over the timeline. Each reads records, matches one row of its decision table and
 // returns the next step, the evidence it used and what the simplest rule would have done. Nothing here sends or changes anything.
 import { fmtET } from '../world/lib.js';
-import { normPo, rule, deductionCase, storyClock } from './domain.js';
+import { normPo, rule, deductionCase, storyClock, param, chargeOf } from './domain.js';
 
 const J = (s) => (s ? JSON.parse(s) : {});
 const H = 3600000;
@@ -41,7 +41,9 @@ export function claimDecision(db, ref, asOf = storyClock()) {
   else if (tally && tally !== 'Not found') { row = 'No load scan; the warehouse holds a load tally by SSCC'; next = 'attach_load_tally_and_dispute'; detail = { accepted_by: rule(db, 'NF-5.3') }; }
   else { row = 'No load scan or load tally anywhere'; next = 'recommend_accept'; detail = { reason: 'A dispute without the required evidence is not reviewed and draws ID01 $150', rule: rule(db, 'NF-7.5') }; }
   const baseline = scan === 'In the case' ? 'Dispute' : 'Accept the charge';
-  return out('deduction', 'Claim Agent', c.case, asOf, { po: c.po, charge: c.charge, amount: c.amount, dispute_window: c.dispute_window, evidence: Object.fromEntries(c.evidence.map((v) => [v.evidence, v.state])), decision_row: row, next_step: next, ...detail, rule_baseline: baseline, dollars_the_rule_gives_up: baseline === 'Accept the charge' && next !== 'recommend_accept' && !next.startsWith('recommend_accept_and') ? c.amount : 0, confirmed_by: 'The repayment matched in Ashby’s receivables' });
+  const onHand = scan === 'In the case' || tally === 'In the case'; const limit = param(db, 'AP-4.1', 'max_amount');
+  const authority = next === 'dispute_now' && onHand && c.amount < limit ? `Claim Agent may dispute without asking: the NF-7.4 evidence is in the case and $${c.amount.toFixed(2)} is under $${limit} (AP-4.1)` : next.startsWith('recommend_accept') ? 'Priya Raman decides whether to accept or write off (AP-4.2)' : 'Priya Raman decides between dispute and write-off (AP-4.1)';
+  return out('deduction', 'Claim Agent', c.case, asOf, { authority, policy: rule(db, 'AP-4.1'), po: c.po, charge: c.charge, amount: c.amount, dispute_window: c.dispute_window, evidence: Object.fromEntries(c.evidence.map((v) => [v.evidence, v.state])), decision_row: row, next_step: next, ...detail, rule_baseline: baseline, dollars_the_rule_gives_up: baseline === 'Accept the charge' && next !== 'recommend_accept' && !next.startsWith('recommend_accept_and') ? c.amount : 0, confirmed_by: 'The repayment matched in Ashby’s receivables' });
 }
 
 /** Test Agent: a test ship notice failed the pack rule. Is the Supplier ERP record wrong, or the map? */
@@ -69,9 +71,11 @@ export function shelfDecision(db, store, asOf = storyClock()) {
   const weeks = wk.sold ? wk.on_hand / wk.sold : Infinity;
   const evidence = { week_ending: wk.period_end, sold: wk.sold, on_hand: wk.on_hand, chain_median_sold: median, weeks_of_supply: Number.isFinite(weeks) ? Math.round(weeks * 10) / 10 : null, ship_notice_in_transit: transit ? transit.shipment_id : 'None', ashby_available: stock ? J(stock.data).available : 'Not read' };
   let row, next, detail = {};
-  if (wk.on_hand === 0 && transit) { row = 'Empty shelf, and a ship notice to this store is already in transit'; next = 'wait_for_goods_in_transit'; detail = { in_transit: transit.shipment_id }; }
-  else if (wk.on_hand === 0) { row = 'Empty shelf, nothing in transit, Ashby has stock'; next = 'recommend_new_order'; detail = { to: 'Jordan Ellis', pairs: 40 }; }
-  else if (weeks >= 12 && wk.sold < median / 2) { row = 'Slow sell-through with more than 12 weeks of supply'; next = 'recommend_transfer'; detail = { pairs: wk.on_hand - Math.round(8 * wk.sold), keep_weeks: 8 }; }
+  const minAvg = param(db, 'AP-6.1', 'min_weekly_avg'), slowWeeks = param(db, 'AP-6.2', 'min_weeks_supply'), slowPct = param(db, 'AP-6.2', 'pct_of_median') / 100, keep = param(db, 'AP-6.3', 'keep_weeks'), carton = param(db, 'AP-6.4', 'carton');
+  if (wk.on_hand === 0 && wk.sold < minAvg) { row = 'Empty shelf below the minimum weekly sales'; next = 'nothing_to_do'; }
+  else if (wk.on_hand === 0 && transit) { row = 'Empty shelf, and a ship notice to this store is already in transit'; next = 'wait_for_goods_in_transit'; detail = { in_transit: transit.shipment_id }; }
+  else if (wk.on_hand === 0) { row = 'Empty shelf, nothing in transit, Ashby has stock'; next = 'recommend_new_order'; detail = { to: 'Jordan Ellis', pairs: Math.max(carton, Math.ceil(wk.sold / carton) * carton), rules: ['AP-6.1', 'AP-6.4'] }; }
+  else if (weeks >= slowWeeks && wk.sold < median * slowPct) { row = `Slow sell-through with ${slowWeeks} or more weeks of supply`; next = 'recommend_transfer'; detail = { pairs: wk.on_hand - Math.round(keep * wk.sold), keep_weeks: keep, rules: ['AP-6.2', 'AP-6.3'] }; }
   else { row = 'Selling and in stock'; next = 'nothing_to_do'; }
   return out('shelf', 'Shelf Agent', `Store ${s}`, asOf, { evidence, decision_row: row, next_step: next, ...detail, authority: 'Priya Raman approves the recommendation; Jordan Ellis decides the order', rule_baseline: 'Flags the empty shelf and recommends a carton multiple', confirmed_by: 'The next week’s product activity (852)' });
 }
@@ -86,11 +90,11 @@ export function scoutDecision(db, poIn, asOf = storyClock()) {
   const evidence = { load_scan: load ? `${load.d.cartons_loaded} of ${load.d.cartons_expected}${load.d.trailer_state ? `; ${load.d.trailer_state}` : ''}${load.d.missing_state ? `; one carton ${load.d.missing_state.toLowerCase()}` : ''}` : 'None', supplier_erp_fulfilment: fulfil ? `Posted ${fmtET(fulfil.at)}` : 'Not posted', departure_scan: dep ? fmtET(dep.at) : 'None', order_changes: change };
   let row, next, detail = {};
   if (fulfil && !dep && load && /not departed/i.test(load.d.trailer_state || '')) { row = 'The Supplier ERP says shipped and the Kinross load scan says not departed'; next = 'check_departure_scan_and_ask_kinross'; detail = { before: 'Any ship notice is built', flag: 'Fulfilment posted before departure' }; }
-  else if (load && load.d.cartons_loaded < load.d.cartons_expected && !dep) { row = 'A carton is staged but not on the trailer'; next = 'send_load_task_to_kinross'; detail = { carton: load.d.missing, cutoff: `Trailer seals in ${load.d.seals_in_minutes} minutes`, exposure_estimate: 451, rules: ['NF-4.5', 'NF-4.7', 'NF-4.8'] }; }
-  else if (inv && inv.d.billed > inv.d.shipped) { row = 'The invoice draft bills more than shipped'; next = 'propose_invoice_correction_in_supplier_erp'; detail = { billed: inv.d.billed, shipped: inv.d.shipped, exposure_estimate: 100, rule: rule(db, 'NF-7.8') }; }
-  else if (route && route.d.state === 'Missing') { row = 'No routing request for collect freight'; next = 'draft_routing_request'; detail = { exposure_estimate: 150, rule: rule(db, 'NF-3.2') }; }
+  else if (load && load.d.cartons_loaded < load.d.cartons_expected && !dep) { row = 'A carton is staged but not on the trailer'; next = 'send_load_task_to_kinross'; detail = { carton: load.d.missing, cutoff: `Trailer seals in ${load.d.seals_in_minutes} minutes`, exposure_estimate: chargeOf(db, 'AS02', 1) + chargeOf(db, 'AS03') + chargeOf(db, 'AS04'), rules: ['NF-4.5', 'NF-4.7', 'NF-4.8'] }; }
+  else if (inv && inv.d.billed > inv.d.shipped) { row = 'The invoice draft bills more than shipped'; next = 'propose_invoice_correction_in_supplier_erp'; detail = { billed: inv.d.billed, shipped: inv.d.shipped, exposure_estimate: chargeOf(db, 'IV01'), rule: rule(db, 'NF-7.8') }; }
+  else if (route && route.d.state === 'Missing') { row = 'No routing request for collect freight'; next = 'draft_routing_request'; detail = { exposure_estimate: chargeOf(db, 'RT01'), rule: rule(db, 'NF-3.2') }; }
   else if (stock && stock.d.available < stock.d.ordered_across_orders) { row = 'The warehouse has less stock than the orders need'; next = 'ask_priya_which_order_ships_short'; detail = { available: stock.d.available, ordered: stock.d.ordered_across_orders, rule: rule(db, 'NF-2.1') }; }
-  else if (label && label.d.reused_sscc) { row = 'Cartons carry SSCCs already used'; next = 'send_relabel_task_to_kinross'; detail = { cartons: label.d.reused_sscc, exposure_estimate: 162, rule: rule(db, 'NF-4.1') }; }
+  else if (label && label.d.reused_sscc) { row = 'Cartons carry SSCCs already used'; next = 'send_relabel_task_to_kinross'; detail = { cartons: label.d.reused_sscc, exposure_estimate: chargeOf(db, 'LB01', Array.isArray(label.d.reused_sscc) ? label.d.reused_sscc.length : label.d.reused_sscc), rule: rule(db, 'NF-4.1') }; }
   else if (phone && !change) { row = 'A quantity agreed by phone is not on an order change'; next = 'ask_buyer_for_order_change'; detail = { to: 'Jordan Ellis', rule: rule(db, 'NF-1.1') }; }
   else { row = 'Records agree'; next = 'nothing_to_do'; }
   return out('shipment_risk', 'Scout Agent', po, asOf, { evidence, decision_row: row, next_step: next, ...detail, rule_baseline: 'Flags the rule that would break; Priya works out which record is wrong and who must act', confirmed_by: 'Northfield receiving advice (861) matching the ship notice' });

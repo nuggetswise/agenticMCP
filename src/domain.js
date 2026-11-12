@@ -1,5 +1,6 @@
 // Answer logic shared by the MCP tools, the record pages and the checks.
 // One timeline. Record lookups return the record's whole history; questions about "now" take an as-of time.
+import { PRECEDENCE } from '../world/ref.js';
 import { fmtET, et } from '../world/lib.js';
 
 export const COMPANY = 'ASHBY';
@@ -18,7 +19,11 @@ export function timeLeft(deadline, clock) {
   return `${Math.max(1, Math.round(ms / 60000))} minutes left`;
 }
 const J = (s) => (s ? JSON.parse(s) : null);
-export const rule = (db, id) => { if (!id) return null; const r = db.prepare('SELECT id, statement, source, basis FROM rules WHERE id = ?').get(id); return r ? { ...r } : null; };
+/** A threshold from the rule catalogue. Agents read their numbers here, never from their own constants. */
+export const param = (db, id, key) => { const r = db.prepare('SELECT params FROM rules WHERE id = ?').get(id); const p = r && r.params ? JSON.parse(r.params) : {}; if (!(key in p)) throw new Error(`Rule ${id} has no parameter ${key}`); return p[key]; };
+/** The charge a rule carries, in dollars, for a number of cartons: "$150", "$150 plus $1 per carton". */
+export const chargeOf = (db, code, cartons = 0) => { const r = db.prepare('SELECT charge FROM rules WHERE charge_code = ? AND charge IS NOT NULL ORDER BY id').get(code); if (!r) throw new Error(`No charge ${code}`); const m = r.charge.match(/\$(\d+(?:\.\d+)?)(?: plus \$(\d+(?:\.\d+)?) per carton)?/); if (!m) throw new Error(`Charge ${code} is not a fixed amount`); return Number(m[1]) + (m[2] ? Number(m[2]) * cartons : 0); };
+export const rule = (db, id) => { if (!id) return null; const r = db.prepare('SELECT id, owner, statement, source, basis FROM rules WHERE id = ?').get(id); return r ? { ...r } : null; };
 const nameOf = (db, id) => db.prepare('SELECT name FROM parties WHERE id = ?').get(id)?.name || id;
 const docRow = (db, d) => ({ reference: d.reference, document: `${d.name} (${d.doc_type})`, sent: fmtET(d.sent_at), from: nameOf(db, d.sender_id), to: nameOf(db, d.receiver_id), status: d.status, link: `document/${encodeURIComponent(d.doc_id)}` });
 export const normPo = (raw) => String(raw).trim().toUpperCase().replace(/^PO\s*/, '').replace(/^(\d)/, 'NR-$1');
@@ -183,24 +188,28 @@ export function document(db, reference) {
   return { found: true, ...docRow(db, d), po: d.po, control_numbers: { interchange: d.isa_ctl, group: d.gs_ctl, transaction_set: d.st_ctl }, file: `build/x12/${d.file}`, versions: versions.map((v) => ({ id: v.doc_id, sent: fmtET(v.sent_at), status: v.status })), x12: d.raw.length > 6000 ? `${d.raw.slice(0, 6000)}\n... (${d.raw.length} characters in the file)` : d.raw };
 }
 
-export function rules(db, { topic, document: doc, id } = {}) {
+export function rules(db, { topic, document: doc, id, viewer = 'ASHBY' } = {}) {
   let rows = db.prepare('SELECT * FROM rules ORDER BY rule_set, id').all();
+  // Ashby's policies and agreements are Ashby's own records; Northfield sees its guide, industry rules and law.
+  if (viewer === 'NORTHFIELD') rows = rows.filter((r) => !/^Ashby/.test(r.owner));
   if (id) rows = rows.filter((r) => r.id.toLowerCase() === id.toLowerCase() || (r.charge_code || '').toLowerCase() === id.toLowerCase());
   if (topic) rows = rows.filter((r) => `${r.id} ${r.topic} ${r.statement} ${r.charge_code || ''}`.toLowerCase().includes(topic.toLowerCase()));
   if (doc) rows = rows.filter((r) => (r.doc_type || '').split(',').includes(String(doc)));
-  return { retailer: 'Northfield Retailer', guide: 'Northfield supplier guide 2026.2', rules: rows.map((r) => ({ id: r.id, applies_to: r.rule_set === 'kinross' ? 'Kinross Logistics (3PL)' : r.rule_set === 'trading-grid' ? 'Trading Grid setting' : 'Northfield Retailer', topic: r.topic, document: r.doc_type, rule: r.statement, window_hours: r.window_hours, limit: r.limit_value, charge_code: r.charge_code, charge: r.charge, source: r.source })) };
+  return { catalogue: 'Northfield supplier guide 2026.2, industry and legal rules' + (viewer === 'NORTHFIELD' ? '' : ', and Ashby’s own policies and agreements'), precedence: PRECEDENCE, count: rows.length,
+    rules: rows.map((r) => ({ id: r.id, owner: r.owner, implements: r.implements ? r.implements.split(',') : [], topic: r.topic, document: r.doc_type, rule: r.statement, window_hours: r.window_hours, limit: r.limit_value, charge_code: r.charge_code, charge: r.charge, basis: r.basis, source: r.source })) };
 }
 
-/** A deduction case: the charge, its rule, where each piece of evidence sits, and the dispute window. */
 export function deductionCase(db, ref, asOf = storyClock()) {
   const key = ref.trim().toUpperCase();
   const opened = db.prepare("SELECT * FROM events WHERE kind = 'case.opened'").all().map((e) => ({ ...e, d: J(e.data) })).find((e) => e.d.case === key || e.d.deduction === key || e.po === normPo(key));
   if (!opened) return { found: false, message: `No deduction case ${ref} in Ashby’s records` };
   if (ownsOrder(db, opened.po) !== 'own') return { found: false, not_available: true, message: NOT_AVAILABLE };
+  if (opened.at > asOf.toISOString()) return { found: false, message: `Case ${opened.d.case} was not yet opened at ${fmtET(asOf)}` };
+  const T = asOf.toISOString();
   const c = opened.d; const po = opened.po;
-  const adj = db.prepare('SELECT * FROM adjustments WHERE reference = ? ORDER BY paid_at').all(c.deduction);
+  const adj = db.prepare('SELECT * FROM adjustments WHERE reference = ? AND paid_at <= ? ORDER BY paid_at').all(c.deduction, T);
   const taken = adj.find((a) => a.amount < 0); const repaid = adj.find((a) => a.amount > 0);
-  const evs = db.prepare('SELECT * FROM events WHERE po = ? ORDER BY at').all(po).map((e) => ({ ...e, d: J(e.data) }));
+  const evs = db.prepare('SELECT * FROM events WHERE po = ? AND at <= ? ORDER BY at').all(po, T).map((e) => ({ ...e, d: J(e.data) }));
   const kinds = { 'carrier.bill_of_lading': 'Bill of lading with seal', 'carrier.delivery_receipt': 'Proof of delivery', 'wms.load_scan': 'Load scan by SSCC', 'wms.load_tally': 'Load tally by SSCC' };
   const evidence = Object.entries(kinds).map(([kind, name]) => { const e = evs.filter((x) => x.kind === kind).pop(); return { evidence: name, kind, state: !e ? 'Not found' : e.d.in_case === c.case ? 'In the case' : `Held by ${e.system}`, holder: e ? e.system : null, at: e ? fmtET(e.at) : null }; });
   const due = taken ? new Date(Date.parse(taken.paid_at) + 60 * 24 * H) : null;
@@ -208,12 +217,13 @@ export function deductionCase(db, ref, asOf = storyClock()) {
     withheld_on: taken ? { payment: taken.payment, at: fmtET(taken.paid_at) } : null, dispute_deadline: due ? fmtET(due) : null, dispute_window: due && asOf >= new Date(taken.paid_at) ? timeLeft(due, asOf) : null,
     evidence, history: evs.filter((e) => e.kind.startsWith('case.') || e.kind === 'erp.receivables_match' || e.kind === 'carrier.claim_filed').map((e) => ({ at: fmtET(e.at), record: e.kind, ...e.d })),
     repaid_on: repaid ? { payment: repaid.payment, at: fmtET(repaid.paid_at), amount: repaid.amount } : null,
-    other_charges_on_this_order: db.prepare('SELECT * FROM adjustments WHERE po = ? AND reference <> ? ORDER BY paid_at').all(po, c.deduction).map((a) => ({ payment: a.payment, at: fmtET(a.paid_at), amount: a.amount, reference: a.reference, note: a.note })), link: `order/${encodeURIComponent(po)}` };
+    as_of: fmtET(asOf), other_charges_on_this_order: db.prepare('SELECT * FROM adjustments WHERE po = ? AND reference <> ? AND paid_at <= ? ORDER BY paid_at').all(po, c.deduction, T).map((a) => ({ payment: a.payment, at: fmtET(a.paid_at), amount: a.amount, reference: a.reference, note: a.note })), link: `order/${encodeURIComponent(po)}` };
 }
 
 export function deductions(db, asOf = storyClock()) {
   const rows = db.prepare("SELECT * FROM events WHERE kind = 'case.opened' AND at <= ? ORDER BY at").all(asOf.toISOString()).map((e) => ({ ...J(e.data), po: e.po, opened: fmtET(e.at) })).filter((c) => ownsOrder(db, c.po) === 'own');
-  return { as_of: fmtET(asOf), cases: rows.map((c) => ({ case: c.case, po: c.po, charge: c.charge, amount: c.amount, opened: c.opened, link: `order/${encodeURIComponent(c.po)}` })) };
+  const total = Math.round(rows.reduce((t, c) => t + c.amount, 0) * 100) / 100;
+  return { as_of: fmtET(asOf), count: rows.length, total_amount: total, cases: rows.map((c) => ({ case: c.case, po: c.po, charge: c.charge, amount: c.amount, opened: c.opened, link: `order/${encodeURIComponent(c.po)}` })) };
 }
 
 export function calendar(db) { return { quarter: 'Sunday 27 September to Saturday 26 December 2026', story_clock: fmtET(storyClock()), moments: db.prepare('SELECT * FROM calendar ORDER BY as_of').all().map((m) => ({ ...m, as_of_eastern: fmtET(m.as_of) })) }; }

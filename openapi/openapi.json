@@ -345,7 +345,7 @@
    "get": {
     "operationId": "lookup_retailer_rules",
     "summary": "Retailer rules",
-    "description": "Northfield’s supplier guide 2026.2 for Ashby (deadlines, field limits, item and location rules, charges, evidence and scorecard rules) and the Kinross warehouse agreement. Filter by rule id or charge code, topic words, or X12 document number.",
+    "description": "The rule catalogue Ashby works under, each rule with its owner (Industry standard, US law, Northfield, Ashby, Ashby agreement), the Northfield rule an Ashby rule implements, its basis and source, and the precedence statement saying which rule wins. Covers Northfield’s supplier guide 2026.2 (deadlines, field limits, item and location rules, charges, evidence and scorecard rules), Ashby’s own policies and its Kinross and marketplace agreements. Filter by rule id or charge code, topic words, or X12 document number.",
     "tags": [
      "Requirement lookup"
     ],

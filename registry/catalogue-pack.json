@@ -1,0 +1,960 @@
+{
+ "source": "EDI Review Pack https://claude.ai/artifact/8BgJyjrA6nYLF32n9F9pxd",
+ "version": "1794514253-b214",
+ "precedence": "Industry standards bind both sides. On a Northfield order, Northfield’s rule governs; a signed vendor agreement overrides the guide where it speaks. Ashby’s policy applies where Northfield is silent, and may be stricter than Northfield but never looser. An Ashby agreement with Kinross or the marketplace binds Ashby, but is no defence against a Northfield charge (NF-10.1). Most Ashby rules exist to meet a Northfield rule; the Implements column names it.",
+ "rules": [
+  {
+   "id": "NF-4.10",
+   "owner": "Industry standard",
+   "statement": "The PO reference (ship notice PRF01, invoice BIG04) is the Northfield PO number, at most 22 characters",
+   "implements": [],
+   "charge": "",
+   "basis": "Public",
+   "source": "ASC X12 004010 data element 324, Purchase Order Number, AN 1/22",
+   "links": []
+  },
+  {
+   "id": "NF-10.2",
+   "owner": "US law",
+   "statement": "On prepaid freight the supplier files loss or damage claims with its carrier: at least 9 months to file and 2 years to sue",
+   "implements": [],
+   "charge": "",
+   "basis": "Public",
+   "source": "49 U.S.C. 14706 (Carmack Amendment): minimum periods for filing claims and bringing suit",
+   "links": [
+    {
+     "title": "49 U.S.C. 14706 (Carmack Amendment): minimum periods for filing claims and bringing suit",
+     "url": "https://www.law.cornell.edu/uscode/text/49/14706"
+    }
+   ]
+  },
+  {
+   "id": "NF-1.1",
+   "owner": "Northfield",
+   "statement": "The current PO revision is the commitment; a change counts only on an order change",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-1.4",
+   "owner": "Northfield",
+   "statement": "Send the order acknowledgment within 24 hours of the purchase order",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-1.5",
+   "owner": "Northfield",
+   "statement": "Northfield returns a technical acknowledgment (997) to an acknowledgment or change response and sends no business acceptance; a quantity change is accepted only on a matching order change",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-1.6",
+   "owner": "Northfield",
+   "statement": "Change requests go to the buyer, who issues the order change; answer an order change within 24 hours of the latest change",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-1.7",
+   "owner": "Northfield",
+   "statement": "The order acknowledgment carries the transaction totals segment (CTT) with the number of lines; the X12 standard leaves it optional",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-2.1",
+   "owner": "Northfield",
+   "statement": "No backorders: a short line is cancelled and the shipped quantity reported",
+   "implements": [],
+   "charge": "OT01 3% of cost of goods, quarterly; months under $1,000 waived",
+   "basis": "Public, third-party summary",
+   "source": "Summary of Walmart supplier compliance and OTIF rules",
+   "links": [
+    {
+     "title": "Summary of Walmart supplier compliance and OTIF rules",
+     "url": "https://www.shipcalm.com/blog/walmart-vendor-compliance-guide/"
+    }
+   ]
+  },
+  {
+   "id": "NF-2.2",
+   "owner": "Northfield",
+   "statement": "One PO ships from one location",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-3.2",
+   "owner": "Northfield",
+   "statement": "Collect freight: routing request by 11:00 DC local time, two business days before the ready date",
+   "implements": [],
+   "charge": "RT01 $150",
+   "basis": "Adapted",
+   "source": "Summary of the Dick’s Sporting Goods Domestic Vendor Routing and Supply Chain Guide (February 2025); DXL Group Branded and Footwear Vendor Manual, 28 March 2025; Specialty Retailers (Gordmans) Vendor Routing and Compliance Manual, effective 1 March 2018",
+   "links": [
+    {
+     "title": "Summary of the Dick’s Sporting Goods Domestic Vendor Routing and Supply Chain Guide (February 2025)",
+     "url": "https://getproductiv.com/dicks-sporting-goods-compliance"
+    },
+    {
+     "title": "DXL Group Branded and Footwear Vendor Manual, 28 March 2025",
+     "url": "https://images.dxl.com/is/content/CasualMale/PDF/Branded_Vendor_manual_032825.pdf"
+    },
+    {
+     "title": "Specialty Retailers (Gordmans) Vendor Routing and Compliance Manual, effective 1 March 2018",
+     "url": "https://mimage.opentext.com/alt_content/binary/businessnetwork/gordmans/Gordmans-Guide-2-14-18.pdf"
+    }
+   ]
+  },
+  {
+   "id": "NF-3.3",
+   "owner": "Northfield",
+   "statement": "Northfield returns routing instructions with the carrier and pickup window",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-3.4",
+   "owner": "Northfield",
+   "statement": "Collect readiness is measured at the assigned pickup",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-3.6",
+   "owner": "Northfield",
+   "statement": "A collect shipment not ready at the assigned pickup is charged RT01",
+   "implements": [],
+   "charge": "RT01 $150",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-4.1",
+   "owner": "Northfield",
+   "statement": "GS1-128 label on every carton; an SSCC is not reused within 18 months",
+   "implements": [],
+   "charge": "LB01 $150 plus $1 per carton",
+   "basis": "Adapted",
+   "source": "Amazon North American Vendor Shipment Preparation and Transportation Manual, 2016 Q2; Summary of Walmart supplier compliance and OTIF rules",
+   "links": [
+    {
+     "title": "Amazon North American Vendor Shipment Preparation and Transportation Manual, 2016 Q2",
+     "url": "https://images-na.ssl-images-amazon.com/images/I/A1CGEzPx85L.pdf"
+    },
+    {
+     "title": "Summary of Walmart supplier compliance and OTIF rules",
+     "url": "https://www.shipcalm.com/blog/walmart-vendor-compliance-guide/"
+    }
+   ]
+  },
+  {
+   "id": "NF-4.2",
+   "owner": "Northfield",
+   "statement": "Send the ship notice within 1 hour of departure; a corrected ship notice must be received before the shipment reaches the DC",
+   "implements": [],
+   "charge": "",
+   "basis": "Public, third-party summary",
+   "source": "Summary of the Dick’s Sporting Goods Domestic Vendor Routing and Supply Chain Guide (February 2025); Amazon North American Vendor Shipment Preparation and Transportation Manual, 2016 Q2; Specialty Retailers (Gordmans) Vendor Routing and Compliance Manual, effective 1 March 2018; DXL Group Branded and Footwear Vendor Manual, 28 March 2025",
+   "links": [
+    {
+     "title": "Summary of the Dick’s Sporting Goods Domestic Vendor Routing and Supply Chain Guide (February 2025)",
+     "url": "https://getproductiv.com/dicks-sporting-goods-compliance"
+    },
+    {
+     "title": "Amazon North American Vendor Shipment Preparation and Transportation Manual, 2016 Q2",
+     "url": "https://images-na.ssl-images-amazon.com/images/I/A1CGEzPx85L.pdf"
+    },
+    {
+     "title": "Specialty Retailers (Gordmans) Vendor Routing and Compliance Manual, effective 1 March 2018",
+     "url": "https://mimage.opentext.com/alt_content/binary/businessnetwork/gordmans/Gordmans-Guide-2-14-18.pdf"
+    },
+    {
+     "title": "DXL Group Branded and Footwear Vendor Manual, 28 March 2025",
+     "url": "https://images.dxl.com/is/content/CasualMale/PDF/Branded_Vendor_manual_032825.pdf"
+    }
+   ]
+  },
+  {
+   "id": "NF-4.3",
+   "owner": "Northfield",
+   "statement": "SSCC on every carton, reported in the ship notice hierarchy",
+   "implements": [],
+   "charge": "",
+   "basis": "Public",
+   "source": "Amazon North American Vendor Shipment Preparation and Transportation Manual, 2016 Q2; Summary of the Dick’s Sporting Goods Domestic Vendor Routing and Supply Chain Guide (February 2025)",
+   "links": [
+    {
+     "title": "Amazon North American Vendor Shipment Preparation and Transportation Manual, 2016 Q2",
+     "url": "https://images-na.ssl-images-amazon.com/images/I/A1CGEzPx85L.pdf"
+    },
+    {
+     "title": "Summary of the Dick’s Sporting Goods Domestic Vendor Routing and Supply Chain Guide (February 2025)",
+     "url": "https://getproductiv.com/dicks-sporting-goods-compliance"
+    }
+   ]
+  },
+  {
+   "id": "NF-4.5",
+   "owner": "Northfield",
+   "statement": "The ship notice matches the shipment carton for carton",
+   "implements": [],
+   "charge": "AS02 $150 plus $1 per carton",
+   "basis": "Adapted",
+   "source": "DXL Group Branded and Footwear Vendor Manual, 28 March 2025",
+   "links": [
+    {
+     "title": "DXL Group Branded and Footwear Vendor Manual, 28 March 2025",
+     "url": "https://images.dxl.com/is/content/CasualMale/PDF/Branded_Vendor_manual_032825.pdf"
+    }
+   ]
+  },
+  {
+   "id": "NF-4.7",
+   "owner": "Northfield",
+   "statement": "Ship-to matches the current PO",
+   "implements": [],
+   "charge": "AS03 $150",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-4.8",
+   "owner": "Northfield",
+   "statement": "Line numbers match the current PO",
+   "implements": [],
+   "charge": "AS04 $150",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-4.9",
+   "owner": "Northfield",
+   "statement": "Units per case match Northfield’s item setup",
+   "implements": [],
+   "charge": "$150 per ship notice",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-4.11",
+   "owner": "Northfield",
+   "statement": "Every item is on Northfield’s item list for the supplier; a substitute needs the buyer’s approval first",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-4.12",
+   "owner": "Northfield",
+   "statement": "The ship-to GLN is an active Northfield location",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-4.13",
+   "owner": "Northfield",
+   "statement": "The carton count in the ship notice equals the cartons listed under it",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-4.14",
+   "owner": "Northfield",
+   "statement": "Quantities are in cases (CA)",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-4.15",
+   "owner": "Northfield",
+   "statement": "The ship date is on or before the delivery date",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-5.1",
+   "owner": "Northfield",
+   "statement": "Full truckloads are shipper load and count, sealed at origin",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-5.2",
+   "owner": "Northfield",
+   "statement": "Northfield records the seal number and its condition at arrival",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-5.3",
+   "owner": "Northfield",
+   "statement": "On a sealed trailer the receiving count stands unless the supplier proves the carton was loaded with a load scan or a load tally by SSCC; the delivery receipt proves the seal, not the count",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-5.5",
+   "owner": "Northfield",
+   "statement": "A receipt changes only through a revised receiving advice; a deduction reversal alone does not change it",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-7.1",
+   "owner": "Northfield",
+   "statement": "Deductions are taken on the remittance with a reason code and deduction reference; detail sits in the deduction case",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-7.2",
+   "owner": "Northfield",
+   "statement": "Northfield sends no debit memos; supplier corrections travel as a credit memo or corrected invoice",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-7.3",
+   "owner": "Northfield",
+   "statement": "Dispute once per deduction, within 60 days of the remittance date, in the deduction case",
+   "implements": [],
+   "charge": "",
+   "basis": "Adapted",
+   "source": "Specialty Retailers (Gordmans) Vendor Routing and Compliance Manual, effective 1 March 2018; Summary of Walmart supplier compliance and OTIF rules",
+   "links": [
+    {
+     "title": "Specialty Retailers (Gordmans) Vendor Routing and Compliance Manual, effective 1 March 2018",
+     "url": "https://mimage.opentext.com/alt_content/binary/businessnetwork/gordmans/Gordmans-Guide-2-14-18.pdf"
+    },
+    {
+     "title": "Summary of Walmart supplier compliance and OTIF rules",
+     "url": "https://www.shipcalm.com/blog/walmart-vendor-compliance-guide/"
+    }
+   ]
+  },
+  {
+   "id": "NF-7.4",
+   "owner": "Northfield",
+   "statement": "Shortage evidence: bill of lading with seal, proof of delivery, and a load scan or load tally by SSCC",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-7.5",
+   "owner": "Northfield",
+   "statement": "A dispute without the required evidence is not reviewed",
+   "implements": [],
+   "charge": "ID01 $150",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-7.6",
+   "owner": "Northfield",
+   "statement": "A reversed deduction is repaid on a later remittance, referencing the original deduction",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-7.7",
+   "owner": "Northfield",
+   "statement": "Northfield’s claims reviewer decides each charge in the case; settlement and write-off are the supplier’s own authorities",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-7.8",
+   "owner": "Northfield",
+   "statement": "The invoice bills the shipped quantity at the accepted PO price; an invoice that bills more is held",
+   "implements": [],
+   "charge": "IV01 $100",
+   "basis": "Public",
+   "source": "DXL Group Branded and Footwear Vendor Manual, 28 March 2025",
+   "links": [
+    {
+     "title": "DXL Group Branded and Footwear Vendor Manual, 28 March 2025",
+     "url": "https://images.dxl.com/is/content/CasualMale/PDF/Branded_Vendor_manual_032825.pdf"
+    }
+   ]
+  },
+  {
+   "id": "NF-7.9",
+   "owner": "Northfield",
+   "statement": "Send the invoice within 2 days of shipment",
+   "implements": [],
+   "charge": "",
+   "basis": "Adapted",
+   "source": "Specialty Retailers (Gordmans) Vendor Routing and Compliance Manual, effective 1 March 2018; Summary of the Dick’s Sporting Goods Domestic Vendor Routing and Supply Chain Guide (February 2025)",
+   "links": [
+    {
+     "title": "Specialty Retailers (Gordmans) Vendor Routing and Compliance Manual, effective 1 March 2018",
+     "url": "https://mimage.opentext.com/alt_content/binary/businessnetwork/gordmans/Gordmans-Guide-2-14-18.pdf"
+    },
+    {
+     "title": "Summary of the Dick’s Sporting Goods Domestic Vendor Routing and Supply Chain Guide (February 2025)",
+     "url": "https://getproductiv.com/dicks-sporting-goods-compliance"
+    }
+   ]
+  },
+  {
+   "id": "NF-7.10",
+   "owner": "Northfield",
+   "statement": "The invoice total equals the sum of its line amounts",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-7.11",
+   "owner": "Northfield",
+   "statement": "Invoice line prices within 0.5% of the acknowledged order price are paid without review; beyond that the line is held",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-8.1",
+   "owner": "Northfield",
+   "statement": "On time. Prepaid: DC arrival inside the must-arrive-by window. Collect: freight ready by the assigned pickup",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-8.2",
+   "owner": "Northfield",
+   "statement": "In full: cases received against cases ordered per PO line, on the PO revision current at shipment; a cancelled remainder counts as not received",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-8.3",
+   "owner": "Northfield",
+   "statement": "Counting unit: cases. Score is compliant cases over all cases in the period",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-8.4",
+   "owner": "Northfield",
+   "statement": "Targets: prepaid on time 90%, collect ready 98%, in full 95%",
+   "implements": [],
+   "charge": "",
+   "basis": "Public, third-party summary",
+   "source": "Summary of Walmart supplier compliance and OTIF rules",
+   "links": [
+    {
+     "title": "Summary of Walmart supplier compliance and OTIF rules",
+     "url": "https://www.shipcalm.com/blog/walmart-vendor-compliance-guide/"
+    }
+   ]
+  },
+  {
+   "id": "NF-8.5",
+   "owner": "Northfield",
+   "statement": "Exclusions: Northfield’s routed carrier late on collect freight; DC refusal or closure; a PO changed after the routing request",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-8.6",
+   "owner": "Northfield",
+   "statement": "Measured monthly on a rolling 13-week scorecard; OT01 and OT02 are billed quarterly",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-9.1",
+   "owner": "Northfield",
+   "statement": "Scorecard published monthly as a file, with definition version, period and counting unit",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-9.2",
+   "owner": "Northfield",
+   "statement": "Below a target two months running: agree a corrective action plan within 30 days",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-9.3",
+   "owner": "Northfield",
+   "statement": "The supplier’s plan states the cause, actions with owners and timing, baseline, definition, comparison population, minimum observations and required evidence. Northfield accepts it and keeps it with the scorecard",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-9.4",
+   "owner": "Northfield",
+   "statement": "Minimum observations: 30 baseline failing PO lines and an equal comparison period on the same DC set",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-10.1",
+   "owner": "Northfield",
+   "statement": "Northfield charges the supplier for shortage and compliance, whoever handled the freight",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-10.3",
+   "owner": "Northfield",
+   "statement": "The claimant shows good condition at origin, loss or damage at delivery, and the amount",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "SH01",
+   "owner": "Northfield",
+   "statement": "Shortage: invoice cost of each short carton plus $50",
+   "implements": [],
+   "charge": "SH01 Carton cost plus $50",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "AP-1.1",
+   "owner": "Ashby",
+   "statement": "Acknowledge the quantity Ashby can ship, not the quantity ordered",
+   "implements": [
+    "NF-1.4",
+    "NF-2.1"
+   ],
+   "charge": "",
+   "basis": "Adapted",
+   "source": "Ship-notice hold prototype. Racklify, How suppliers should send a PO acknowledgment (per-line change with new quantity)",
+   "links": [
+    {
+     "title": "Racklify, How suppliers should send a PO acknowledgment (per-line change with new quantity)",
+     "url": "https://racklify.com/encyclopedia/how-suppliers-should-send-a-po-acknowledgment-best-practices-for-retail/"
+    }
+   ]
+  },
+  {
+   "id": "AP-1.2",
+   "owner": "Ashby",
+   "statement": "A ship notice whose quantity differs from the acknowledged quantity is held before sending",
+   "implements": [
+    "NF-1.5",
+    "NF-4.5"
+   ],
+   "charge": "",
+   "basis": "Adapted",
+   "source": "Ship-notice hold prototype. SPS Commerce, Walmart ASN validation, June 2024 (ASN quantity must match the physical shipment; fix and resend before arrival)",
+   "links": [
+    {
+     "title": "SPS Commerce, Walmart ASN validation, June 2024 (ASN quantity must match the physical shipment; fix and resend before arrival)",
+     "url": "https://www.spscommerce.com/community/articles/what-is-an-asn-walmart-validation-process"
+    }
+   ]
+  },
+  {
+   "id": "AP-1.3",
+   "owner": "Ashby",
+   "statement": "A held ship notice is released only by a person, after every failure on it is fixed; each release creates a new version",
+   "implements": [
+    "NF-4.2"
+   ],
+   "charge": "",
+   "basis": "Invented",
+   "source": "Ship-notice hold prototype. No published source. Resending a corrected ship notice before arrival is published (Walmart); a person releasing it is Ashby’s choice. SPS Commerce, Walmart ASN validation, June 2024 (ASN quantity must match the physical shipment; fix and resend before arrival)",
+   "links": [
+    {
+     "title": "SPS Commerce, Walmart ASN validation, June 2024 (ASN quantity must match the physical shipment; fix and resend before arrival)",
+     "url": "https://www.spscommerce.com/community/articles/what-is-an-asn-walmart-validation-process"
+    }
+   ]
+  },
+  {
+   "id": "AP-1.4",
+   "owner": "Ashby",
+   "statement": "Never edit a ship notice to match the order; correct the shipment or ask the buyer for an order change",
+   "implements": [
+    "NF-1.6",
+    "NF-4.5"
+   ],
+   "charge": "",
+   "basis": "Adapted",
+   "source": "Order watch prototype. SPS Commerce, Walmart ASN validation, June 2024 (ASN quantity must match the physical shipment; fix and resend before arrival); Racklify, ASN best practices (generate the ASN after packing and scanning)",
+   "links": [
+    {
+     "title": "SPS Commerce, Walmart ASN validation, June 2024 (ASN quantity must match the physical shipment; fix and resend before arrival)",
+     "url": "https://www.spscommerce.com/community/articles/what-is-an-asn-walmart-validation-process"
+    },
+    {
+     "title": "Racklify, ASN best practices (generate the ASN after packing and scanning)",
+     "url": "https://racklify.com/encyclopedia/asn-best-practices-and-common-mistakes-to-avoid/"
+    }
+   ]
+  },
+  {
+   "id": "AP-2.1",
+   "owner": "Ashby",
+   "statement": "Pack configuration AHP-8820-C6 holds units per case exactly as set up in Northfield’s item record",
+   "implements": [
+    "NF-4.9"
+   ],
+   "charge": "",
+   "basis": "Adapted",
+   "source": "Ship-notice hold prototype. SPS Commerce, Why item setup matters, May 2026 (shipments rejected when case quantity differs from the item file)",
+   "links": [
+    {
+     "title": "SPS Commerce, Why item setup matters, May 2026 (shipments rejected when case quantity differs from the item file)",
+     "url": "https://www.spscommerce.com/community/articles/why-item-setup-matters-a-guide-for-new-retail-suppliers"
+    }
+   ]
+  },
+  {
+   "id": "AP-2.2",
+   "owner": "Ashby",
+   "statement": "Every carton has an SSCC and the ship-to is read from the current PO revision before a ship notice is built",
+   "implements": [
+    "NF-4.3",
+    "NF-4.7"
+   ],
+   "charge": "",
+   "basis": "Adapted",
+   "source": "Ship-notice hold prototype. GS1 Logistic Label Guideline 1.2 (unique SSCC per logistic unit, assigned by the party creating it); SPS Commerce, Walmart ASN validation, June 2024 (ASN quantity must match the physical shipment; fix and resend before arrival)",
+   "links": [
+    {
+     "title": "GS1 Logistic Label Guideline 1.2 (unique SSCC per logistic unit, assigned by the party creating it)",
+     "url": "https://ref.gs1.org/guidelines/logistic-label/1.2.0/"
+    },
+    {
+     "title": "SPS Commerce, Walmart ASN validation, June 2024 (ASN quantity must match the physical shipment; fix and resend before arrival)",
+     "url": "https://www.spscommerce.com/community/articles/what-is-an-asn-walmart-validation-process"
+    }
+   ]
+  },
+  {
+   "id": "AP-2.3",
+   "owner": "Ashby",
+   "statement": "An item mapping change takes effect only after Priya Raman confirms it",
+   "implements": [
+    "NF-4.11"
+   ],
+   "charge": "",
+   "basis": "Invented",
+   "source": "Item onboarding prototype. No published source found. An internal control choice.",
+   "links": []
+  },
+  {
+   "id": "AP-2.4",
+   "owner": "Ashby",
+   "statement": "A shipment that has left with no ship notice is raised as an exception before the NF-4.2 window closes",
+   "implements": [
+    "NF-4.2"
+   ],
+   "charge": "",
+   "basis": "Adapted",
+   "source": "Missing ship notice prototype. SPS Commerce, Preventing Amazon ASN chargebacks, June 2026 (ASN within 30 minutes of departure)",
+   "links": [
+    {
+     "title": "SPS Commerce, Preventing Amazon ASN chargebacks, June 2026 (ASN within 30 minutes of departure)",
+     "url": "https://www.spscommerce.com/community/articles/how-to-prevent-amazon-asn-chargebacks"
+    }
+   ]
+  },
+  {
+   "id": "AP-3.1",
+   "owner": "Ashby",
+   "statement": "Open exceptions are worked earliest cutoff first, then largest charge at risk",
+   "implements": [],
+   "charge": "",
+   "basis": "Adapted",
+   "source": "Order watch prototype. SPS Commerce, Deduction dispute prioritization, Oct 2026 (deadline first, then value; dispute when evidence is on hand)",
+   "links": [
+    {
+     "title": "SPS Commerce, Deduction dispute prioritization, Oct 2026 (deadline first, then value; dispute when evidence is on hand)",
+     "url": "https://www.spscommerce.com/community/articles/deduction-dispute-prioritization-a-peak-season-triage-framework"
+    }
+   ]
+  },
+  {
+   "id": "AP-3.2",
+   "owner": "Ashby",
+   "statement": "Warehouse tasks, ERP writes, EDI to Northfield and email to Northfield need a person’s approval",
+   "implements": [],
+   "charge": "",
+   "basis": "Adapted",
+   "source": "Order watch prototype. CIO.com, Five things an AI agent should not do without a second approval, Sep 2026",
+   "links": [
+    {
+     "title": "CIO.com, Five things an AI agent should not do without a second approval, Sep 2026",
+     "url": "https://www.cio.com/article/4227762/5-things-i-would-never-let-an-ai-agent-do-without-a-second-approval.html"
+    }
+   ]
+  },
+  {
+   "id": "AP-3.3",
+   "owner": "Ashby",
+   "statement": "A charge is reported as avoided only when Northfield’s own record confirms it, never on a technical acknowledgment (997) alone",
+   "implements": [
+    "NF-1.5"
+   ],
+   "charge": "",
+   "basis": "Invented",
+   "source": "Order watch prototype. No published source found.",
+   "links": []
+  },
+  {
+   "id": "AP-4.1",
+   "owner": "Ashby",
+   "statement": "Dispute a deduction without asking only when the NF-7.4 evidence is already on hand and the amount is under $250; otherwise Priya Raman decides between dispute and write-off",
+   "implements": [
+    "NF-7.3",
+    "NF-7.4"
+   ],
+   "charge": "",
+   "basis": "Adapted",
+   "source": "Deduction claim prototype. SPS Commerce, Deduction dispute prioritization, Oct 2026 (deadline first, then value; dispute when evidence is on hand); Clarkston Consulting, Deduction management, 2017 (write-offs need approval; small deductions often cost more to fight). Practice differs on the threshold: published examples write off small deductions (under $100 or $500) rather than dispute them; disputing small ones fits only when the evidence is already on hand.",
+   "links": [
+    {
+     "title": "SPS Commerce, Deduction dispute prioritization, Oct 2026 (deadline first, then value; dispute when evidence is on hand)",
+     "url": "https://www.spscommerce.com/community/articles/deduction-dispute-prioritization-a-peak-season-triage-framework"
+    },
+    {
+     "title": "Clarkston Consulting, Deduction management, 2017 (write-offs need approval; small deductions often cost more to fight)",
+     "url": "https://clarkstonconsulting.com/insights/deduction-management/"
+    }
+   ]
+  },
+  {
+   "id": "AP-4.2",
+   "owner": "Ashby",
+   "statement": "Accepting a deduction, settling it or writing it off needs a person’s approval",
+   "implements": [
+    "NF-7.7"
+   ],
+   "charge": "",
+   "basis": "Adapted",
+   "source": "Deduction claim prototype. Clarkston Consulting, Deduction management, 2017 (write-offs need approval; small deductions often cost more to fight); CIO.com, Five things an AI agent should not do without a second approval, Sep 2026",
+   "links": [
+    {
+     "title": "Clarkston Consulting, Deduction management, 2017 (write-offs need approval; small deductions often cost more to fight)",
+     "url": "https://clarkstonconsulting.com/insights/deduction-management/"
+    },
+    {
+     "title": "CIO.com, Five things an AI agent should not do without a second approval, Sep 2026",
+     "url": "https://www.cio.com/article/4227762/5-things-i-would-never-let-an-ai-agent-do-without-a-second-approval.html"
+    }
+   ]
+  },
+  {
+   "id": "AP-5.1",
+   "owner": "Ashby",
+   "statement": "In a peak shortage, allocate to each customer in proportion to its share of prior volume; every allocation plan needs a person’s approval",
+   "implements": [
+    "NF-8.2"
+   ],
+   "charge": "",
+   "basis": "Adapted",
+   "source": "Peak allocation prototype. HIDA, What allocation means (orders limited to a share of each customer’s prior volume)",
+   "links": [
+    {
+     "title": "HIDA, What allocation means (orders limited to a share of each customer’s prior volume)",
+     "url": "https://www.hida.org/uploadedfiles/resources/healthcare-supply-chain/allocation.pdf"
+    }
+   ]
+  },
+  {
+   "id": "AP-6.1",
+   "owner": "Ashby",
+   "statement": "Empty shelf: zero on hand and a weekly average of at least 1 pair",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "Shelf recovery prototype. No published source found; thresholds are demo choices.",
+   "links": []
+  },
+  {
+   "id": "AP-6.2",
+   "owner": "Ashby",
+   "statement": "Slow sell-through: 12 or more weeks of supply and sales below 50% of the median store",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "Shelf recovery prototype. No published source found; thresholds are demo choices.",
+   "links": []
+  },
+  {
+   "id": "AP-6.3",
+   "owner": "Ashby",
+   "statement": "A store-to-store transfer leaves 8 weeks of supply at the sending store",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "Shelf recovery prototype. No published source found. Retail systems make the kept quantity a parameter, with no common value.",
+   "links": []
+  },
+  {
+   "id": "AP-6.4",
+   "owner": "Ashby",
+   "statement": "Replenish in whole cartons of 40 pairs, sized from the 4-week average",
+   "implements": [],
+   "charge": "",
+   "basis": "Adapted",
+   "source": "Shelf recovery prototype. Racklify, Using case pack quantity in replenishment, Oct 2026 (round orders up to whole cases)",
+   "links": [
+    {
+     "title": "Racklify, Using case pack quantity in replenishment, Oct 2026 (round orders up to whole cases)",
+     "url": "https://racklify.com/encyclopedia/using-case-pack-quantity-to-improve-replenishment-and-purchase-orders/"
+    }
+   ]
+  },
+  {
+   "id": "AM-1",
+   "owner": "Ashby agreement",
+   "statement": "Confirm shipment to the marketplace within 2 business days of the order",
+   "implements": [],
+   "charge": "",
+   "basis": "Adapted",
+   "source": "Marketplace prototype. Seller Labs, Late shipment rate, Oct 2026 (confirm by the expected ship date, which is order time plus the seller’s handling time; target under 4%). The 2 business days is Ashby’s handling-time setting, not a marketplace rule.",
+   "links": [
+    {
+     "title": "Seller Labs, Late shipment rate, Oct 2026 (confirm by the expected ship date, which is order time plus the seller’s handling time; target under 4%)",
+     "url": "https://www.sellerlabs.com/knowledge-base/late-shipment-rate-and-pre-fulfillment-cancel-rate-for-fbm-sellers/"
+    }
+   ]
+  },
+  {
+   "id": "AP-7.1",
+   "owner": "Ashby agreement",
+   "statement": "Never change a Kinross record without Kinross accepting the change",
+   "implements": [
+    "KX-945"
+   ],
+   "charge": "",
+   "basis": "Invented",
+   "source": "Order watch prototype. No published source found.",
+   "links": []
+  },
+  {
+   "id": "KX-945",
+   "owner": "Ashby agreement",
+   "statement": "Kinross returns the warehouse shipping advice (945) within 24 hours of Ashby’s warehouse shipping order (940). Agreement between Ashby and its warehouse, Kinross",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "Searched; no standard 945 turnaround is published. SPS Commerce, 3PL selection checklist, Sep 2026 (get a written service level; no standard turnaround)",
+   "links": [
+    {
+     "title": "SPS Commerce, 3PL selection checklist, Sep 2026 (get a written service level; no standard turnaround)",
+     "url": "https://www.spscommerce.com/community/articles/3pl-selection-checklist-what-new-brands-need-to-score-before-signing"
+    }
+   ]
+  }
+ ]
+}

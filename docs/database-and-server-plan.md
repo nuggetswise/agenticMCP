@@ -55,13 +55,13 @@ A record lookup returns the whole history of the record. A question about "now" 
 
 ## Rules
 
-The rule catalogue is the Northfield supplier guide 2026.2, plus the Ashby warehouse agreement with Kinross. It holds 54 rules. Each rule states its basis and its sources, and the rule lookup tool returns both.
+The rule catalogue mirrors the EDI Review Pack, which is its source of truth. It holds 74 rules, each with one owner: 1 industry standard, 1 US law, 51 Northfield (supplier guide 2026.2), 18 Ashby policies and 3 Ashby agreements (Kinross and the marketplace). The pack's precedence statement says which rule wins, and every agent reads its thresholds from these rules. Each rule states its basis and its sources, and the rule lookup tool returns both.
 
 | Basis | Rules | Meaning |
 | --- | --- | --- |
 | Public | 7 | The rule as written appears in a public retailer guide, a standard or a statute |
-| Adapted | 5 | A public rule with a number or window changed to fit the story |
-| Invented | 42 | Written for the demo. Marked as invented wherever it is shown. |
+| Adapted | 18 | A public rule with a number or window changed to fit the story |
+| Invented | 49 | Written for the demo. Marked as invented wherever it is shown. |
 
 | Rule | Statement | Basis and source |
 | --- | --- | --- |

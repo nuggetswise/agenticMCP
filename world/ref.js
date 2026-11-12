@@ -69,7 +69,17 @@ const SRC = {
   carmack: { title: '49 U.S.C. 14706 (Carmack Amendment): minimum periods for filing claims and bringing suit', url: 'https://www.law.cornell.edu/uscode/text/49/14706', kind: 'Statute' },
 };
 const pub = (k, says) => ({ ...SRC[k], says });
-const R = (id, topic, doc_type, statement, o = {}) => ({ id, rule_set: 'northfield-2026.2', topic, doc_type, statement, window_hours: o.window ?? null, limit_value: o.limit ?? null, charge_code: o.code ?? null, charge: o.charge ?? null, check: o.check ?? null, source: `Northfield supplier guide 2026.2, rule ${id}`, basis: o.basis || 'invented', public_sources: o.pub || [] });
+const R = (id, topic, doc_type, statement, o = {}) => ({ id, owner: o.owner || 'Northfield', implements: null, params: o.params || null, rule_set: 'northfield-2026.2', topic, doc_type, statement, window_hours: o.window ?? null, limit_value: o.limit ?? null, charge_code: o.code ?? null, charge: o.charge ?? null, check: o.check ?? null, source: `Northfield supplier guide 2026.2, rule ${id}`, basis: o.basis || 'invented', public_sources: o.pub || [] });
+
+// Ashby's own policies and agreements (owner Ashby, Ashby agreement). Suppliers publish no policies, so none is Public.
+// Mirrored from the EDI Review Pack (registry/catalogue-pack.json), which is the source of truth for rule wording,
+// owner, basis and sources. Thresholds the agents read sit in params.
+const PACK = JSON.parse(readFileSync(new URL('../registry/catalogue-pack.json', import.meta.url), 'utf8'));
+const ASHBY_PARAMS = { 'AP-4.1': { max_amount: 250 }, 'AP-6.1': { min_weekly_avg: 1 }, 'AP-6.2': { min_weeks_supply: 12, pct_of_median: 50 }, 'AP-6.3': { keep_weeks: 8 }, 'AP-6.4': { carton: 40, avg_weeks: 4 }, 'AM-1': { business_days: 2 } };
+const ASHBY_RULES = PACK.rules.filter((r) => /^A[PM]-/.test(r.id)).map((r) => ({ id: r.id, owner: r.owner, implements: r.implements.length ? r.implements.join(',') : null, params: ASHBY_PARAMS[r.id] || null, rule_set: r.owner === 'Ashby' ? 'ashby-policy' : 'ashby-agreement', topic: 'policy', doc_type: null, statement: r.statement, window_hours: null, limit_value: null, charge_code: null, charge: null, check: null, source: r.source, basis: r.basis.split(',')[0].toLowerCase(), public_sources: r.links.map((l) => ({ title: l.title, url: l.url, kind: 'Published practice' })) }));
+
+/** Who owns a rule, and which one wins (EDI Review Pack). */
+export const PRECEDENCE = 'Industry standards bind both sides. On a Northfield order, Northfield’s rule governs; a signed vendor agreement overrides the guide where it speaks. Ashby’s policy applies where Northfield is silent, and may be stricter than Northfield but never looser. An Ashby agreement with Kinross or the marketplace binds Ashby, but is no defence against a Northfield charge (NF-10.1). Most Ashby rules exist to meet a Northfield rule; the Implements column names it.';
 
 export const rules = [
   R('NF-1.1', 'orders', '850,860', 'The current PO revision is the commitment; a change counts only on an order change'),
@@ -89,7 +99,7 @@ export const rules = [
   R('NF-4.7', 'ship notice', '856', 'Ship-to matches the current PO', { code: 'AS03', charge: '$150' }),
   R('NF-4.8', 'ship notice', '856', 'Line numbers match the current PO', { code: 'AS04', charge: '$150' }),
   R('NF-4.9', 'item', '856', 'Units per case match Northfield’s item setup', { charge: '$150 per ship notice' }),
-  R('NF-4.10', 'reference', '856,810', 'The PO reference (ship notice PRF01, invoice BIG04) is the Northfield PO number, at most 22 characters', { limit: '22 characters', check: 'po_reference', basis: 'public', pub: [pub('x12', 'Element 324 is at most 22 characters, so a longer value fails syntax and is rejected on the 997')] }),
+  R('NF-4.10', 'reference', '856,810', 'The PO reference (ship notice PRF01, invoice BIG04) is the Northfield PO number, at most 22 characters', { owner: 'Industry standard', limit: '22 characters', check: 'po_reference', basis: 'public', pub: [pub('x12', 'Element 324 is at most 22 characters, so a longer value fails syntax and is rejected on the 997')] }),
   R('NF-4.11', 'item', '856,810', 'Every item is on Northfield’s item list for the supplier; a substitute needs the buyer’s approval first', { check: 'item_on_list' }),
   R('NF-4.12', 'location', '856', 'The ship-to GLN is an active Northfield location', { check: 'ship_to_active' }),
   R('NF-4.13', 'ship notice', '856', 'The carton count in the ship notice equals the cartons listed under it', { check: 'carton_count' }),
@@ -100,15 +110,15 @@ export const rules = [
   R('NF-5.3', 'receiving', '861', 'On a sealed trailer the receiving count stands unless the supplier proves the carton was loaded with a load scan or a load tally by SSCC; the delivery receipt proves the seal, not the count'),
   R('NF-5.5', 'receiving', '861', 'A receipt changes only through a revised receiving advice; a deduction reversal alone does not change it'),
   R('NF-7.1', 'deductions', '820', 'Deductions are taken on the remittance with a reason code and deduction reference; detail sits in the deduction case'),
-  R('NF-7.3', 'deductions', '820', 'Dispute once per deduction, within 60 days of the remittance date, in the deduction case', { window: 60 * 24, basis: 'adapted', pub: [pub('gordmans', 'Disputes older than 6 months are not reviewed (p. 8)'), pub('walmart', 'Disputes are filed within 15 to 30 days of the deduction')] }),
+  R('NF-7.3', 'deductions', '820', 'Dispute once per deduction, within 60 days of the remittance date, in the deduction case', { window: 60 * 24, params: { days: 60 }, basis: 'adapted', pub: [pub('gordmans', 'Disputes older than 6 months are not reviewed (p. 8)'), pub('walmart', 'Disputes are filed within 15 to 30 days of the deduction')] }),
   R('NF-7.4', 'deductions', null, 'Shortage evidence: bill of lading with seal, proof of delivery, and a load scan or load tally by SSCC'),
-  R('NF-7.5', 'deductions', null, 'A dispute without the required evidence is not reviewed', { code: 'ID01', charge: '$150' }),
+  R('NF-7.5', 'deductions', null, 'A dispute without the required evidence is not reviewed', { code: 'ID01', charge: '$150', params: { charge: 150 } }),
   R('NF-7.6', 'deductions', '820', 'A reversed deduction is repaid on a later remittance, referencing the original deduction'),
   R('NF-7.8', 'invoice', '810', 'The invoice bills the shipped quantity at the accepted PO price; an invoice that bills more is held', { code: 'IV01', charge: '$100', check: 'invoice_quantity', basis: 'public', pub: [pub('dxl', 'An 810 transmitted with errors is charged $100 per invoice')] }),
   R('NF-7.9', 'invoice', '810', 'Send the invoice within 2 days of shipment', { window: 48, basis: 'adapted', pub: [pub('gordmans', '810 within 24 hours of pickup (p. 10)'), pub('dsg', 'EDI 810 within 1 hour of the shipment leaving')] }),
   R('NF-7.10', 'invoice', '810', 'The invoice total equals the sum of its line amounts', { check: 'invoice_total' }),
   R('NF-8.2', 'scorecard', null, 'In full: cases received against cases ordered per PO line, on the PO revision current at shipment; a cancelled remainder counts as not received'),
-  R('NF-8.4', 'scorecard', null, 'Targets: prepaid on time 90%, collect ready 98%, in full 95%', { basis: 'public', pub: [pub('walmart', 'Prepaid suppliers: 90% on time, 95% in full, 98% collect ready')] }),
+  R('NF-8.4', 'scorecard', null, 'Targets: prepaid on time 90%, collect ready 98%, in full 95%', { params: { on_time: 0.9, collect_ready: 0.98, in_full: 0.95 }, basis: 'public', pub: [pub('walmart', 'Prepaid suppliers: 90% on time, 95% in full, 98% collect ready')] }),
   R('NF-8.6', 'scorecard', null, 'Measured monthly on a rolling 13-week scorecard; OT01 and OT02 are billed quarterly'),
   R('NF-7.2', 'deductions', null, "Northfield sends no debit memos; supplier corrections travel as a credit memo or corrected invoice"),
   R('NF-7.7', 'deductions', null, "Northfield’s claims reviewer decides each charge in the case; settlement and write-off are the supplier’s own authorities"),
@@ -122,10 +132,11 @@ export const rules = [
   R('NF-10.3', 'claims', null, "The claimant shows good condition at origin, loss or damage at delivery, and the amount"),
   R('NF-3.6', 'routing', null, 'A collect shipment not ready at the assigned pickup is charged RT01', { code: 'RT01', charge: '$150' }),
   R('NF-9.2', 'scorecard', null, 'Below a target two months running: agree a corrective action plan within 30 days'),
-  R('NF-10.2', 'claims', null, 'On prepaid freight the supplier files loss or damage claims with its carrier: at least 9 months to file and 2 years to sue', { basis: 'public', pub: [pub('carmack', 'A carrier may not set less than 9 months to file a claim or 2 years to bring suit')] }),
+  R('NF-10.2', 'claims', null, 'On prepaid freight the supplier files loss or damage claims with its carrier: at least 9 months to file and 2 years to sue', { owner: 'US law', basis: 'public', pub: [pub('carmack', 'A carrier may not set less than 9 months to file a claim or 2 years to bring suit')] }),
   R('SH01', 'charges', '861,820', 'Shortage: invoice cost of each short carton plus $50', { code: 'SH01', charge: 'Carton cost plus $50' }),
-  { id: 'KX-945', rule_set: 'kinross', topic: 'warehouse', doc_type: '945', statement: 'Kinross returns the warehouse shipping advice (945) within 24 hours of the warehouse shipping order (940)', window_hours: 24, limit_value: null, charge_code: null, charge: null, check: null, source: 'Ashby warehouse agreement with Kinross', basis: 'invented', public_sources: [] },
-  { id: 'TG-TOL', rule_set: 'trading-grid', topic: 'invoice', doc_type: '810', statement: 'Invoice prices within 0.5% of the acknowledged order price per line', window_hours: null, limit_value: '0.5%', charge_code: null, charge: null, check: null, source: 'Trading Grid tolerance setting', basis: 'invented', public_sources: [] },
+  { id: 'KX-945', owner: 'Ashby agreement', implements: null, params: { hours: 24 }, rule_set: 'kinross', topic: 'warehouse', doc_type: '945', statement: "Kinross returns the warehouse shipping advice (945) within 24 hours of Ashby’s warehouse shipping order (940). Agreement between Ashby and its warehouse, Kinross", window_hours: 24, limit_value: null, charge_code: null, charge: null, check: null, source: 'Ashby warehouse agreement with Kinross. Searched; no standard 945 turnaround is published. SPS Commerce, 3PL selection checklist, Sep 2026 (get a written service level; no standard turnaround)', basis: 'invented', public_sources: [] },
+  R('NF-7.11', 'invoice', '810', "Invoice line prices within 0.5% of the acknowledged order price are paid without review; beyond that the line is held", { limit: '0.5%', params: { tolerance: 0.005 } }),
+  ...ASHBY_RULES,
 ];
 export const RULE = Object.fromEntries(rules.map((r) => [r.id, r]));
 

@@ -35,7 +35,7 @@ function otherNames(src) { const t = src.replace(/<style[\s\S]*?<\/style>/g, ' '
   return [...out]; }
 // Dates and rule wording (Phase 0 decisions, 12 Nov). Read from the rendered text of a headless walk when TEXTS is set
 // (TEXTS/<id>/*.txt, one file per frame); otherwise from the source. The rule catalogue is the EDI Review Pack snapshot.
-const TEXTS = process.env.TEXTS; const PACK = JSON.parse(readFileSync(join(ROOT, 'docs', 'phase0', 'pack-catalogue.json'), 'utf8')).rules;
+const TEXTS = process.env.TEXTS; const PACK = JSON.parse(readFileSync(join(ROOT, 'registry', 'catalogue-pack.json'), 'utf8')).rules;
 const CAT = new Map(PACK.map((r) => [r.id, r]));
 const MON = 'Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?';
 const DATE_RES = [new RegExp(`\\b\\d{1,2} (?:${MON})(?: 20\\d\\d)?\\b`, 'g'), new RegExp(`\\b(?:${MON}) \\d{1,2}(?:, 20\\d\\d)?\\b`, 'g'), /\b20\d\d-\d\d-\d\d\b/g, /\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)(?:day)?,? \d{1,2}\b/g];

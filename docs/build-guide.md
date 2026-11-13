@@ -353,7 +353,7 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T0.5 | P7 | Confirm manual pattern A by hand | — | `docs/phase0/FINDINGS.md`, turn 4 walks | FINDINGS records it as a defect or as a walker limit | Open |
 | T0.6 | Partners | ShipHawk's partner-only questions and journey moment, from ShipHawk's own documentation; partner nodes on every route map | — | Partner checks; Partner diligence tab | The Partner checks table has no Not done or Partly row | Open |
 | T0.7 | FILM | Read the film's frames | — | FILM link in Inventory | The FILM A7 cell reads Done | Open |
-| T0.8 | World | Find the ship notice timing rule in a retailer's own published EDI guide | — | D23; NF-4.2 in the EDI Review Pack | FINDINGS records the guide's link and wording, or that no published guide states it | Open |
+| T0.8 | World | Find the ship notice timing rule in a retailer's own published EDI guide | — | D23; NF-4.2 in the EDI Review Pack | Evidence: no openly published retailer guide states it; FINDINGS, T0.8 section; CALLS 37 | Done |
 
 ### Phase 1 · World
 
@@ -480,7 +480,7 @@ The gate and smoke tests pass at commit 356e2c7. Two of the plan's proofs have n
 | --- | --- | --- |
 | No EDI practitioner has reviewed the documents or the rule catalogue | Owner, by naming a practitioner | The review is logged in CALLS |
 | SPS Commerce publishes no MCP tool list | Nobody: a known limit | SPS publishes a tool list or schema |
-| The ship notice timing rule is cited from a third-party summary, not a retailer's guide | Builder, T0.8 | FINDINGS holds the guide or records none |
+| The ship notice timing rule rests on third-party reports of one retailer's guide, which sits behind that retailer's vendor portal (FINDINGS, T0.8) | Owner, with vendor-portal access | The portal guide's wording is recorded |
 | Whether a published prototype can read the server live; prototypes carry their fixtures inline | Builder, T2.10 | The test page result is committed |
 | A shipment with a ship notice and no receipt exists only for other suppliers | Owner, T1.4 | CALLS 8 is confirmed |
 | Raw X12 panels inside built screens are not generated from the world | Builder, T1.5 | The contract test compares them |

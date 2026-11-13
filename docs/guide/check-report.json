@@ -1,6 +1,6 @@
 {
  "file": "/home/claude/agenticmcp/docs/build-guide.md",
- "ran_at_head": "af86c60",
+ "ran_at_head": "a9bc9ae",
  "results": [
   {
    "name": "as_of_commit_current",
@@ -27,7 +27,7 @@
    "name": "calls_refs_exist",
    "ok": true,
    "problems": [],
-   "info": "36 calls logged"
+   "info": "37 calls logged"
   },
   {
    "name": "inventory_and_grid_complete",
@@ -69,7 +69,7 @@
      ]
     },
     "docs/database-and-server-plan.md": {
-     "shared_8word_passages": 126,
+     "shared_8word_passages": 125,
      "sample": [
       "a field that needs it reads scope not",
       "field that needs it reads scope not granted",
@@ -96,7 +96,7 @@
    "name": "tasks_have_ids_and_done_when",
    "ok": true,
    "problems": [],
-   "info": "52 tasks: 5 done, 6 blocked"
+   "info": "52 tasks: 6 done, 6 blocked"
   }
  ]
 }

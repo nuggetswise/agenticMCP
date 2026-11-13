@@ -294,3 +294,17 @@ Walker: least-clicked action first, fills selects, waits for agent timers (up to
 ### Other
 - The Prototype Plan doc (Ux8ZjNd7BTj6mdH7e5rJ2S) shows in the gallery as "SPS MAX and TrueCommerce AI: Threat Ranking" (version 1794449438) while its doc name is "TG for Retail · Prototype Plan", and reads as written by others. Not touched.
 - P6 live still labels Lakeline "Carrier · collect freight" (screenshot P6-16).
+
+## T0.8 Ship notice timing rule in a retailer's own guide (13 Nov 2026)
+Question: does any retailer's own published EDI or routing guide state NF-4.2's wording, the ship notice within 1 hour of departure?
+- Not found in a guide that can be opened without a vendor login. The rule traces to Dick's Sporting Goods, whose routing guide sits on its vendor portal (dsgfreight.com; section 9 covers EDI per the SPS onboarding checklist). The portal copy was not read.
+- Third parties that report the Dick's rule, independently of the summary the catalogue cites:
+  - SPS Commerce, "Required EDI Documents for Dick's Sporting Goods Vendors" (updated 28 July 2025): the ASN goes within one hour after the shipment closes and leaves the facility and must arrive while the freight is in transit. https://www.spscommerce.com/community/articles/required-edi-documents-for-dicks-sporting-goods-vendors
+  - SupplyPike SupplierWiki, same title, same rule. https://supplierwiki.supplypike.com/articles/required-edi-documents-for-dicks-sporting-goods-vendors
+  - Pipe17's Dick's integration page attributes the same window to EDI providers. https://pipe17.com/integration/dicks-sporting-goods-edi
+- Retailers' own published guides that could be opened state other timings, none of them one hour after departure:
+  - Canadian Tire EC Implementation Guide, 856: the ASN must arrive at least one hour before the shipment arrives. https://edi.jobisez.com/edi-igs/Canadian%20Tire%20Corp/EDI%20Map%20Doc%203-6%20ASN.pdf (a mirror of the retailer's guide, dated 2004 to 2010)
+  - JD Finish Line Vendor Compliance Manual: transmitted and accepted within 24 hours of leaving the vendor's dock or before arrival, whichever is sooner. https://vendor.finishline.com/vendor-compliance-manual
+  - CVS Supply Chain Performance Program Instructions, version 4: transmitted the calendar day before the approved delivery. https://cvssuppliers.com/sites/launch/files/2024-08/CVS%20Supply%20Chain%20Performance%20Program%20Instructions%20-%20version%204.pdf
+- Result: NF-4.2 stays a rule reported by third parties for one named retailer. It is realistic and stricter than the openly published guides. The catalogue's basis line ("Public, third-party summary") is accurate; the two extra sources above could be added to the EDI Review Pack by its owner. Reading the Dick's guide itself needs vendor-portal access.
+- Not checked: the DXL and Gordmans manuals already cited in the catalogue (the DXL link could not be fetched from this session).

@@ -273,7 +273,7 @@
         "get_document",
         "get_access_log"
       ],
-      "ends_at": "Jordan Ellis's decision and, where the charge is reversed, the repayment matched in Supplier ERP"
+      "ends_at": "The charge is settled for both sides: Jordan Ellis decides from a recommendation and the reversal shows on Northfield's remittance"
     },
     {
       "id": "P7",
@@ -323,7 +323,7 @@
       "tools_northfield": [
         "supplier_scorecard"
       ],
-      "ends_at": "Northfield's next scorecard on the same definition"
+      "ends_at": "Supplier and retailer hold the same account of the score and what drives it"
     },
     {
       "id": "P8",
@@ -361,7 +361,7 @@
         "get_document",
         "run_readonly_sql"
       ],
-      "ends_at": "The view itself; no record is created"
+      "ends_at": "Each leader can say what is due and what can be released; no record is created"
     },
     {
       "id": "P9",
@@ -464,7 +464,7 @@
       "capability_status": "planned",
       "owner": "Unassigned",
       "tools_northfield": [],
-      "ends_at": "Northfield's receiving advice matching the corrected ship notice"
+      "ends_at": "The charge never arises: Northfield's record of the load matches the corrected ship notice"
     },
     {
       "id": "P10",

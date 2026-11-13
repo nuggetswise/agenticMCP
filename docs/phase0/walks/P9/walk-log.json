@@ -1,0 +1,73 @@
+{
+ "errs": [],
+ "log": [
+  {
+   "i": 1,
+   "click": "Open store view",
+   "ds": "act=open",
+   "options": [
+    "Open store view"
+   ]
+  },
+  {
+   "i": 2,
+   "click": "Review both stores",
+   "ds": "act=find",
+   "options": [
+    "Review both stores"
+   ]
+  },
+  {
+   "i": 3,
+   "click": "Check Ashby stock",
+   "ds": "act=stock",
+   "options": [
+    "Check Ashby stock"
+   ]
+  },
+  {
+   "i": 4,
+   "click": "Prepare recommendation",
+   "ds": "act=cause",
+   "options": [
+    "Prepare recommendation"
+   ]
+  },
+  {
+   "i": 5,
+   "click": "Approve and send",
+   "ds": "act=send",
+   "options": [
+    "Approve and send"
+   ]
+  },
+  {
+   "i": 6,
+   "click": "Create sales order",
+   "ds": "act=so",
+   "options": [
+    "Create sales order"
+   ]
+  },
+  {
+   "i": 7,
+   "click": "Send ship notice",
+   "ds": "act=asn",
+   "options": [
+    "Send ship notice"
+   ]
+  },
+  {
+   "i": 8,
+   "click": "Advance to next week",
+   "ds": "act=w2",
+   "options": [
+    "Advance to next week"
+   ]
+  },
+  {
+   "i": 9,
+   "stop": "no actions"
+  }
+ ]
+}

@@ -225,6 +225,7 @@ The owner approved change items 1 to 14 on 12 November. Two are done, four are p
 4. P7's charge on screen differs from the charge the world computes (`contract/claims.json`). Should the screen or the world change?
 5. Which verified partner capabilities enter the timeline: Orderful's carton-level 945, ShipHawk's package data, or none?
 6. Nine pages may be retired (listed in `docs/phase0/HANDOFF.md`). Keep or retire each?
+7. Is the retailer catalogue connector in your Claude session P16, and what is its URL? It is connected as a real retailer and lists real brands, which R04 rules out.
 
 ## Inventory
 
@@ -283,12 +284,12 @@ Phase 0 is closed only when no cell reads Not done or Partly. A cell records whe
 | P9 | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done | Partly |
 | P11 | Done | N/A | N/A | Done | Done | Done | Done | Done | Done | Done | Not done |
 | P12 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
-| P10 Ashby | Not done | Not done | Done | Done | N/A | Not done | N/A | Not done | Done | N/A | Done |
-| P10 Northfield | Not done | Not done | Not done | Done | N/A | Not done | N/A | Not done | Done | N/A | Done |
+| P10 Ashby | Done | Done | Done | Done | N/A | Done | N/A | Done | Done | N/A | Done |
+| P10 Northfield | Done | Done | Done | Done | N/A | Done | N/A | Done | Done | N/A | Done |
 | P13, P14, P15 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
 | ART | N/A | N/A | N/A | N/A | N/A | N/A | Done | N/A | N/A | N/A | N/A |
 | FILM | N/A | N/A | N/A | N/A | N/A | N/A | Partly | N/A | N/A | N/A | N/A |
-| P16 | Not done | Not done | Not done | Not done | Not done | Not done | Not done | Not done | Not done | Not done | Not done |
+| P16 | Not done | Not done | Not done | Done | Not done | Not done | Not done | Not done | Not done | Not done | Not done |
 
 **Why a cell is N/A**
 
@@ -350,7 +351,7 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T0.17 | P9 | Complete P9's grid row; C1 remains, needing two more golden questions (`docs/phase0/P9-grid.md`) | — | P9 link in Inventory | Every P9 cell reads Done or N/A | Open |
 | T0.18 | P11 | Complete P11's grid row; C1 waits for its records to enter the world (`docs/phase0/P11-grid.md`) | — | P11 link in Inventory | Every P11 cell reads Done or N/A | Open |
 | T0.19 | P12 | Complete P12's grid row | — | P12 link in Inventory | Evidence: P12 retired by the owner, CALLS 32 | Done |
-| T0.2 | P10 Ashby, P10 Northfield, P16 | Audit the two server scopes and the retailer catalogue connector as prototypes | — | Server reference; `docs/phase2/` | Their grid rows are complete and P16's link is in Inventory | Open |
+| T0.2 | P10 Ashby, P10 Northfield, P16 | Audit the two server scopes and the retailer catalogue connector as prototypes; both server rows are done (`docs/phase0/P10-P16-audit.md`) | Open question 7 | Server reference; `docs/phase2/` | Their grid rows are complete and P16's link is in Inventory | Blocked |
 | T0.3 | P1, P2, P4, P5, P8, P9, P11 | Golden questions: new sets for P2, P8 and P11, more for the other four | — | `docs/phase0/golden/` | Each has at least three questions with five graded runs | Open |
 | T0.4 | World | Restore the X12 check against bots-grammars as a committed script | — | `validator/` | Script and report sit in `validator/`, and it rejects each injected fault for the stated reason | Open |
 | T0.5 | P7 | Confirm manual pattern A by hand | — | `docs/phase0/FINDINGS.md`, turn 4 walks | Evidence: a walker limit, not a defect; `docs/phase0/P7-grid.md`; CALLS 43 | Done |
@@ -488,6 +489,7 @@ The gate and smoke tests pass at commit badd34e. Two of the plan's proofs have n
 | A shipment with a ship notice and no receipt exists only for other suppliers | Owner, T1.4 | CALLS 8 is confirmed |
 | Raw X12 panels inside built screens are not generated from the world | Builder, T1.5 | The contract test compares them |
 | Where the live server's writes-off setting comes from | Owner, in the Render dashboard | The setting is recorded under Hosting |
+| A third of first calls to the live server return nothing and answer on retry | Owner, by deciding on a paid Render plan | Calls answer first time |
 
 **How this guide stays current**
 

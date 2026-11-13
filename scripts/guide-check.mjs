@@ -52,15 +52,15 @@ const tables = (s) => { const out = []; let cur = null; for (const l of s.split(
 // 6. Inventory covers the registry; grid covers the inventory; no blank or unknown cell
 { const reg = JSON.parse(readFileSync(join(ROOT, 'registry/registry.json'), 'utf8')).prototypes.map((x) => x.id);
   const inv = tables(section('Inventory'))[0]; const grid = tables(section('Coverage grid'))[0]; const p = [];
-  const invIds = inv.rows.map((r) => r[0]); const gridIds = grid.rows.flatMap((r) => r[0].split(/,\s*/));
-  for (const id of reg) if (!invIds.includes(id)) p.push(`registry ${id} missing from Inventory`);
+  const invIds = inv.rows.map((r) => r[0]); const regIdOf = (x) => x.split(' ')[0]; const gridIds = grid.rows.flatMap((r) => r[0].split(/,\s*/));
+  for (const id of reg) if (!invIds.map(regIdOf).includes(id)) p.push(`registry ${id} missing from Inventory`);
   for (const id of invIds) if (!gridIds.includes(id)) p.push(`inventory ${id} missing from grid`);
   const words = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
   const stated = section('Inventory').match(/has (\w+) items/); if (!stated || words.indexOf(stated[1]) !== inv.rows.length) p.push(`Inventory says ${stated && stated[1]} items, table has ${inv.rows.length}`);
   const allowed = new Set(['Done', 'Partly', 'Not done', 'N/A']);
   for (const r of grid.rows) { if (r.length !== grid.head.length) p.push(`grid row ${r[0]} has ${r.length} cells`); r.slice(1).forEach((c, i) => { if (!allowed.has(c)) p.push(`grid ${r[0]} ${grid.head[i + 1]}: "${c}"`); }); }
   const regStatus = Object.fromEntries(JSON.parse(readFileSync(join(ROOT, 'registry/registry.json'), 'utf8')).prototypes.map((x) => [x.id, x.status]));
-  for (const r of inv.rows) if (regStatus[r[0]] && regStatus[r[0]] !== r[3]) p.push(`${r[0]} registry status ${regStatus[r[0]]}, guide ${r[3]}`);
+  for (const r of inv.rows) if (regStatus[regIdOf(r[0])] && regStatus[regIdOf(r[0])] !== r[3]) p.push(`${r[0]} registry status ${regStatus[r[0]]}, guide ${r[3]}`);
   check('inventory_and_grid_complete', p, `${inv.rows.length} inventory rows, ${grid.rows.length} grid rows`); }
 
 // 7. No copied world values: money, percentages, thousands, long numbers (outside IDs, the GS1 prefix and years)
@@ -82,9 +82,9 @@ const tables = (s) => { const out = []; let cur = null; for (const l of s.split(
   const p = [...new Set([...md.matchAll(/claude\.ai\/artifact\/([A-Za-z0-9]+)/g)].map((m) => m[1]))].filter((s) => !v[s]); check('artifact_links_verified', p); }
 
 // 10. Redundancy inside the guide: no 8-word passage appears twice (status-only grid cells ignored)
-const words = (t) => t.replace(/\|\s*(Done|Partly|Not done|N\/A)\s*(?=\|)/g, '|').replace(/[`*#>\[\]()|_]/g, ' ').replace(/https?:\/\/\S+/g, ' ').toLowerCase().match(/[a-z0-9][a-z0-9.\-']*/g) || [];
+const words = (t) => t.replace(/\|\s*(Done|Partly|Not done|N\/A|Open|Blocked)\s*(?=\|)/g, '|').replace(/[`*#>\[\]()|_]/g, ' ').replace(/https?:\/\/\S+/g, ' ').toLowerCase().match(/[a-z0-9][a-z0-9.\-']*/g) || [];
 // Shingles are taken per line (a paragraph, list item or table row), so table columns never join into false passages.
-const shingles = (text, k = 8) => { const m = new Map(); for (const line of text.split('\n')) { const w = words(line); for (let i = 0; i + k <= w.length; i++) { const s = w.slice(i, i + k).join(' '); m.set(s, (m.get(s) || 0) + 1); } } return m; };
+const shingles = (text, k = 8) => { const m = new Map(); const ls = text.split('\n'); for (const [n, line] of ls.entries()) { if (/^\|[\s\-|]+\|$/.test(ls[n + 1] || '')) continue; /* table header rows repeat by design */ const w = words(line); for (let i = 0; i + k <= w.length; i++) { const s = w.slice(i, i + k).join(' '); m.set(s, (m.get(s) || 0) + 1); } } return m; };
 { const own = shingles(md); const p = [...own].filter(([, c]) => c > 1).map(([s]) => s); check('no_repeated_passages', p); }
 
 // 11. Overlap with the docs this guide replaces (report only; these passages leave those docs)
@@ -104,11 +104,17 @@ const shingles = (text, k = 8) => { const m = new Map(); for (const line of text
   const n = (k) => cov.filter((c) => (k === 'home' ? !/^(pointer|superseded):/.test(c.to) : c.to.startsWith(k))).length;
   check('retired_rules_have_a_home', p, `${cov.length} items: ${n('home')} placed in the guide, ${n('pointer')} pointed to their owner, ${n('superseded')} superseded by owner decisions`); }
 
-// 13. Every task has an ID and a done-when (or evidence) line
-{ const p = []; const L = section('Tasks').split('\n');
-  L.forEach((l, i) => { if (!/^- \[[ x]\]/.test(l)) return; if (!/\*\*T\d+\.\d+\*\*/.test(l)) p.push(`no ID: ${l.slice(0, 50)}`);
-    const next = (L[i + 1] || '').trim(); if (!/^(Done when|Done for|Evidence:)/.test(next)) p.push(`no done-when: ${l.slice(6, 50)}`); });
-  check('tasks_have_ids_and_done_when', p); }
+// 13. Every task row has an ID, a read-first, a done-when and a known status; dependencies exist
+{ const p = []; const ts = tables(section('Tasks')); const rows = ts.flatMap((t) => t.rows.map((r) => Object.fromEntries(t.head.map((h, i) => [h, r[i] || '']))));
+  const ids = new Set(rows.map((r) => r.ID));
+  for (const r of rows) { if (!/^T\d+\.\d+$/.test(r.ID)) p.push(`bad ID: ${r.ID}`);
+    for (const c of ['Prototype', 'Task', 'Read first', 'Done when']) if (!r[c]) p.push(`${r.ID}: no ${c}`);
+    if (!['Open', 'Done', 'Blocked'].includes(r.Status)) p.push(`${r.ID}: status "${r.Status}"`);
+    if (r.Status === 'Done' && !/commit [0-9a-f]{7}|CALLS \d+/.test(r['Done when'])) p.push(`${r.ID}: Done without commit or CALLS evidence`);
+    for (const [d] of (r['Depends on'] || '').matchAll(/T\d+\.\d+/g)) if (!ids.has(d)) p.push(`${r.ID} depends on missing ${d}`);
+    if (r.Status === 'Blocked' && !/question|[Oo]wner/.test(r['Depends on']) && !(r['Depends on'].match(/T\d+\.\d+/g) || []).some((d) => rows.find((x) => x.ID === d && x.Status === 'Blocked'))) p.push(`${r.ID}: Blocked but names no owner answer`); }
+  if (rows.length === 0) p.push('no task tables');
+  check('tasks_have_ids_and_done_when', p, `${rows.length} tasks: ${rows.filter((r) => r.Status === 'Done').length} done, ${rows.filter((r) => r.Status === 'Blocked').length} blocked`); }
 
 const report = { file, ran_at_head: sh('git rev-parse --short HEAD').trim(), results };
 writeFileSync(join(ROOT, 'docs/guide/check-report.json'), JSON.stringify(report, null, 1) + '\n');

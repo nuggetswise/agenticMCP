@@ -10,3 +10,5 @@ bad_status => FAIL inventory_and_grid_complete: P14 registry status Planned, gui
 bad_tool => FAIL paths_scripts_gate_checks_tools_exist: tool three_way_matcher
 dropped_rule => FAIL retired_rules_have_a_home: no home for R16 (Before the agent starts, the user opens )  [208 items: 105 placed in the guide, 86 pointed 
 no_done_when => FAIL tasks_have_ids_and_done_when: no done-when: **T0.5** Confirm P7 manual pattern A by hand
+task_bad_dependency => FAIL tasks_have_ids_and_done_when: T0.4 depends on missing T9.9  (13 November, table form)
+task_done_without_evidence => FAIL tasks_have_ids_and_done_when: T2.1: Done without commit or CALLS evidence  (13 November, table form)

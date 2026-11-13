@@ -1,0 +1,291 @@
+{
+ "errs": [],
+ "log": [
+  {
+   "i": 1,
+   "click": "Continue to PO NR-460207",
+   "ds": "a=stop|go",
+   "options": [
+    "Continue to PO NR-460207",
+    "Choose another shipment",
+    "Let Scout run",
+    "1 PO NR-460207 DC 2 load · Kinross Groveport 1 carton is not on the tr",
+    "2 PO NR-460219 Invoice · line 2 The invoice bills 180 cases of napkins",
+    "3 PO NR-460241 Collect · Kinross Joliet Northfield hasn’t been asked t",
+    "4 PO NR-460262 Allocation · Kinross Groveport Groveport has 520 mugs f",
+    "5 PO NR-460233 Labels · Kinross Joliet 12 cartons carry barcodes alrea"
+   ]
+  },
+  {
+   "i": 2,
+   "click": "Continue to What to fix first",
+   "ds": "a=stop|go",
+   "options": [
+    "Continue to What to fix first",
+    "Take over · work it myself",
+    "Let Scout run"
+   ]
+  },
+  {
+   "i": 3,
+   "click": "Carton, then order Recommended The seal can’t be undone; the order can",
+   "ds": "osel=a|floor",
+   "options": [
+    "Carton, then order Recommended The seal can’t be undone; the order can",
+    "Order, then carton Fixes ship-to and lines in the Supplier ERP first; ",
+    "Ship without the carton Lowest estimate, but line 2 is cancelled while"
+   ]
+  },
+  {
+   "i": 4,
+   "click": "Confirm · Carton, then order",
+   "ds": "a=h:order|floor",
+   "options": [
+    "Confirm · Carton, then order",
+    "Order, then carton Fixes ship-to and lines in the Supplier ERP first; ",
+    "Ship without the carton Lowest estimate, but line 2 is cancelled while",
+    "Carton, then order Recommended The seal can’t be undone; the order can"
+   ]
+  },
+  {
+   "i": 5,
+   "click": "Approve and send",
+   "ds": "a=h:floor|approve",
+   "options": [
+    "Approve and send",
+    "Edit",
+    "Do it myself",
+    "Ship without it"
+   ]
+  },
+  {
+   "i": 6,
+   "click": "Approve and write",
+   "ds": "a=h:erp|approve",
+   "options": [
+    "Approve and write",
+    "Edit",
+    "Do it myself",
+    "Keep as is"
+   ]
+  },
+  {
+   "i": 7,
+   "click": "Continue to Ship notice and receipt",
+   "ds": "a=stop|go",
+   "options": [
+    "Continue to Ship notice and receipt",
+    "Take over · work it myself",
+    "Let Scout run"
+   ]
+  },
+  {
+   "i": 8,
+   "click": "Approve and send",
+   "ds": "a=h:asn|approve",
+   "options": [
+    "Approve and send",
+    "Send it myself"
+   ]
+  },
+  {
+   "i": 9,
+   "click": "At DC 2 · read the receipt",
+   "ds": "a=h:rcv|go",
+   "options": [
+    "At DC 2 · read the receipt"
+   ]
+  },
+  {
+   "i": 10,
+   "click": "Replay · carton misses the trailer",
+   "ds": "a=end|short",
+   "options": [
+    "Replay · carton misses the trailer",
+    "Back to all shipments"
+   ]
+  },
+  {
+   "i": 11,
+   "click": "Take over · work it myself",
+   "ds": "a=stop|over",
+   "options": [
+    "Take over · work it myself",
+    "Let Scout run",
+    "Continue to What to fix first"
+   ]
+  },
+  {
+   "i": 12,
+   "click": "Correct to match",
+   "ds": "m=h:q|correct",
+   "options": [
+    "Correct to match",
+    "Keep as is"
+   ]
+  },
+  {
+   "i": 13,
+   "click": "Carton, then order Carton not loaded · seal in 29 min · est. $151",
+   "ds": "osel=m|floor",
+   "options": [
+    "Carton, then order Carton not loaded · seal in 29 min · est. $151",
+    "Order, then carton Wrong ship-to and lines · due by the ship notice · ",
+    "Ship without the carton Line 2 ships 159 of 160 · in-full charge est. "
+   ]
+  },
+  {
+   "i": 14,
+   "click": "Confirm · Carton, then order",
+   "ds": "m=h:order|floor",
+   "options": [
+    "Confirm · Carton, then order",
+    "Order, then carton Wrong ship-to and lines · due by the ship notice · ",
+    "Ship without the carton Line 2 ships 159 of 160 · in-full charge est. ",
+    "Carton, then order Carton not loaded · seal in 29 min · est. $151"
+   ]
+  },
+  {
+   "i": 15,
+   "click": "Send to Kinross",
+   "ds": "m=h:floor|send",
+   "options": [
+    "Send to Kinross",
+    "Ship without it"
+   ]
+  },
+  {
+   "i": 16,
+   "click": "Check the load scan",
+   "ds": "m=h:scan",
+   "options": [
+    "Check the load scan"
+   ]
+  },
+  {
+   "i": 17,
+   "click": "Ship 659 · cancel the line 2 remainder",
+   "ds": "m=h:short",
+   "options": [
+    "Ship 659 · cancel the line 2 remainder",
+    "Write to Supplier ERP",
+    "Included",
+    "Included",
+    "Included"
+   ]
+  },
+  {
+   "i": 18,
+   "click": "Write to Supplier ERP",
+   "ds": "m=h:erp",
+   "options": [
+    "Write to Supplier ERP",
+    "Included",
+    "Included",
+    "Included",
+    "Included"
+   ]
+  },
+  {
+   "i": 19,
+   "click": "After departure · re-read load and order",
+   "ds": "m=h:recheck",
+   "options": [
+    "After departure · re-read load and order"
+   ]
+  },
+  {
+   "i": 20,
+   "click": "Build ship notice from the load",
+   "ds": "m=h:build",
+   "options": [
+    "Build ship notice from the load"
+   ]
+  },
+  {
+   "i": 21,
+   "click": "Send to Northfield",
+   "ds": "m=h:asn",
+   "options": [
+    "Send to Northfield"
+   ]
+  },
+  {
+   "i": 22,
+   "click": "At DC 2 · read the receipt",
+   "ds": "m=h:rcv",
+   "options": [
+    "At DC 2 · read the receipt"
+   ]
+  },
+  {
+   "i": 23,
+   "click": "Replay · carton loaded",
+   "ds": "a=end|hero",
+   "options": [
+    "Replay · carton loaded",
+    "Back to all shipments"
+   ]
+  },
+  {
+   "i": 24,
+   "click": "Keep as is",
+   "ds": "m=h:q|keep",
+   "options": [
+    "Keep as is",
+    "Correct to match"
+   ]
+  },
+  {
+   "i": 25,
+   "click": "Ship without it",
+   "ds": "m=h:floor|skip",
+   "options": [
+    "Ship without it",
+    "Send to Kinross"
+   ]
+  },
+  {
+   "i": 26,
+   "click": "Ship 659 · cancel the line 2 remainder",
+   "ds": "m=h:short",
+   "options": [
+    "Ship 659 · cancel the line 2 remainder"
+   ]
+  },
+  {
+   "i": 27,
+   "click": "Included",
+   "ds": "mrow=3",
+   "options": [
+    "Included",
+    "Write to Supplier ERP"
+   ]
+  },
+  {
+   "i": 28,
+   "click": "Keep as is",
+   "ds": "m=h:erp",
+   "options": [
+    "Keep as is",
+    "Excluded"
+   ]
+  },
+  {
+   "i": 29,
+   "click": "After departure · re-read load and order",
+   "ds": "m=h:recheck",
+   "options": [
+    "After departure · re-read load and order"
+   ]
+  },
+  {
+   "i": 30,
+   "click": "Build ship notice from the load",
+   "ds": "m=h:build",
+   "options": [
+    "Build ship notice from the load"
+   ]
+  }
+ ]
+}

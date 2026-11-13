@@ -31,5 +31,20 @@ The lead shipment takes 11 actions by hand from opening it to the result, agains
 
 Folding click 4 and making clicks 6 and 8 automatic brings the lead path to eight. The other five items and the two replays are evidence paths; R42 puts them behind more detail.
 
+## A2 Manual option on the same case
+- Both paths work the same lead shipment, PO NR-460207. By hand it takes 11 actions (click map above). With Scout Agent it takes 9 after the agent is switched on and started: two "Continue" steps, the recommended fix order and its confirm, three approvals and the receipt (agent-after-ranking-log.json). "Take over · work it myself" returns the same case to the manual path part-way.
+- Finding for Phase 4: the agent path saves two clicks, not most of them; three of its nine are "Continue" or "Confirm" steps that serve no beat.
+
+## A3 Agency: does the next step change when the record changes?
+- On screen: no. The lead case follows one path. The next steps change only through two replay buttons ("carton loaded", "carton misses the trailer") and Priya's own choices; the second record the registry lists, PO NR-460288, is not on the screen.
+- On the server: yes. The live Ashby connection returns "send the load task to Kinross" for NR-460207 and "check the departure scan and ask Kinross" for NR-460288, each from its own records.
+- Finding: the screen's agency is scripted while the server's is computed. Making the screen read the computed decision is T2.2.
+
+## A4 A customer's own agent reaches the job through the tools
+- Method (owner, 13 November): the owner shows this by opening his own assistant beside the prototype, so the check is whether the live connection gives the same answer the screen shows.
+- Result: it does. Asked for the next step on NR-460207 as of the P5 moment, the Ashby connection returned one carton staged and not loaded (659 of 660), the trailer sealing in 40 minutes, the same three rules and the same exposure estimate the screen's first row shows, with Priya's approval required and nothing changed. The answer names its confirming record as Northfield's receiving advice.
+
 ## Not covered here
-A2 on the same case, A3 (waits for T2.2), A4 (no method yet for a screen prototype) and C1 (needs the server token).
+C1: P5 has one golden question with five graded runs; T0.3 asks for three. The other two are drafted below and still need their five runs.
+- As of the P5 moment, what should Ashby do about PO NR-460288, and which two records disagree?
+- How many Northfield shipments leave Kinross in the next 48 hours, and how many break a rule unless fixed?

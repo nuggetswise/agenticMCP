@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import * as D from './domain.js';
 import * as A from './agents.js';
-import { scorecard } from './score.js';
+import { scorecard, scorecardAsOf } from './score.js';
 import * as NR from './retailer.js';
 
 const asOf = z.string().optional().describe('Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern.');
@@ -39,8 +39,8 @@ export const TOOLS = [
     description: 'One deduction case: the charge and its rule, the remittance that withheld it, the dispute deadline and time left, where each piece of required evidence sits (in the case, held by another system, or not found), the case history and any repayment.',
     input: { case: z.string().describe('Case id (DC-40877), deduction reference (DM-55102) or PO number'), as_of: asOf }, run: (db, a) => D.deductionCase(db, a.case, t(a.as_of)) },
   { name: 'get_scorecard', title: 'Northfield scorecard', job: 'Performance review', rest: ['GET', '/v1/scorecard'], required: ['orders', 'documents'], optional: [],
-    description: 'Northfield’s on-time, in-full scorecard for Ashby over the 13-week quarter, recomputed from orders and receiving advice: cases, failing cases, failing lines by reason, and the figures Northfield published.',
-    input: { lines: z.boolean().optional().describe('Include every failing line') }, run: (db, a) => { const s = scorecard(db); if (!a.lines) delete s.lines; return s; } },
+    description: 'Northfield’s on-time, in-full scorecard for Ashby over the 13-week quarter, recomputed from orders and receiving advice: cases, failing cases, failing lines by reason, and the figures Northfield published. Northfield publishes it on 28 Dec 2026; before then it answers that the quarter is not published and lists the files published so far.',
+    input: { lines: z.boolean().optional().describe('Include every failing line'), as_of: asOf }, run: (db, a) => { const r = scorecardAsOf(db, t(a.as_of)); if (r.published && a.lines) r.lines = scorecard(db).lines; return r; } },
   { name: 'recommend_next_step', title: 'Next step for an exception', job: 'Exception investigation', rest: ['POST', '/v1/next-step'], required: ['orders', 'documents'], optional: ['errors', 'rules', 'deductions'],
     description: 'For one exception, reads the Supplier ERP, warehouse, carrier and Trading Grid records and returns the next step with the evidence behind it and what a fixed rule would have done. Jobs: missing_document (record: PO), deduction (record: case id), trade_test (record: test ship notice), shelf (record: store number), shipment_risk (record: PO), scorecard (record: "YYYY-MM-DD to YYYY-MM-DD", optional). It proposes; it sends and changes nothing.',
     input: { job: z.enum(Object.keys(A.JOBS)).describe('Kind of exception'), record: z.string().optional().describe('The record to investigate'), as_of: asOf }, run: (db, a) => A.JOBS[a.job](db, a.record || '', t(a.as_of)) },
@@ -76,7 +76,7 @@ export const NF_TOOLS = [
     description: 'One document Northfield sent or received, with the X12 as exchanged. The same X12 the supplier sees. Documents between a supplier and its own warehouse are not Northfield’s.',
     input: { reference: z.string().describe('Document reference, for example ASN-450118-2') }, run: (db, a) => NR.documentNF(db, a.reference) },
   { name: 'supplier_scorecard', title: 'Supplier scorecard', job: 'Performance review', required: ['suppliers'], optional: [],
-    description: 'The on-time, in-full scorecard Northfield publishes for a supplier over the 13-week quarter: cases, failing cases, failing lines by reason and the published figures.', input: { supplier: sup }, run: (db, a) => NR.scorecardNF(db, a.supplier) },
+    description: 'The on-time, in-full scorecard Northfield publishes for a supplier over the 13-week quarter: cases, failing cases, failing lines by reason and the published figures. Published on 28 Dec 2026; before then it answers that the quarter is not published and lists the files published so far.', input: { supplier: sup, as_of: asOf }, run: (db, a) => NR.scorecardNF(db, a.supplier, t(a.as_of)) },
   { name: 'list_deduction_cases', title: 'Deduction cases', job: 'Claims queue', required: ['deductions'], optional: [],
     description: 'Deduction cases Northfield has opened against its suppliers up to a point in time, with count and total.', input: { as_of: asOf }, run: (db, a) => NR.casesNF(db, t(a.as_of)) },
   { name: 'review_deduction_case', title: 'Review a deduction case', job: 'Claims review', required: ['deductions'], optional: ['rules'],

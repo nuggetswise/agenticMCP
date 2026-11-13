@@ -41,7 +41,7 @@
  ],
  "N7": [
   {
-   "evidence": "[\"Bill of lading with seal\",\"Delivery receipt\",\"Load scan by SSCC\"]",
+   "evidence": "[\"Bill of lading with seal\",\"Proof of delivery\",\"Load scan by SSCC\"]",
    "next_step": "recommend_reverse"
   }
  ],

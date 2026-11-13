@@ -4,7 +4,7 @@ Working copy: `docs/build-guide.md` in the repo. Reading copy: the Claude doc at
 
 ## How to use this guide
 
-This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 8d3940d.
+This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 4b427a4.
 
 - **Start here:** follow R39. It picks your next task from the Tasks tables and says what to read first. For one prototype, run `node scripts/guide-pack.mjs P5` with its ID: it prints that prototype's job, ending, v8 section, the rules that apply, its agent, tools and anchors, and its tasks in order, so you read one page and the prototype's source.
 - **Authority, highest first:**
@@ -230,7 +230,7 @@ The owner approved change items 1 to 14 on 12 November. Two are done, four are p
 | D56 | Trading Grid has its own assistant, named Aviator, for customers who do not connect an assistant of their own. It floats at the bottom right of every Trading Grid screen and stays closed until opened. It answers from the same tools, scopes, refusals and access log as the customer's connection, cites the records it used, and sends any action back to the screen for approval. This replaces D16 and is the one product name allowed on screen. Source: owner, 13 November. | A customer-agent finding that the two give different answers |
 | D57 | The main screen of an agent prototype carries three things: the problem on the record, the proposal with one primary button, and the present state. Everything else sits in the evidence, one level down. Source: owner, 13 November. | — |
 | D58 | The checkpoint carries three controls, not five: approve, Change, and handle it myself. Reject and take over are one control, and another option sits inside Change. Source: owner, 13 November. | — |
-| D59 | The model behind Aviator runs on the server, never in a page: the key sits in the server's environment and a page posts its question to one endpoint. The owner supplied a Gemini key for testing and will rotate it. Source: owner, 13 November. | A decision to answer through the viewer's own connectors on a published page |
+| D59 | The model behind Aviator runs on the server, never in a page: the key sits in the server's environment and a page posts its question to one endpoint. The owner supplied a Gemini key for testing and will rotate it; the model is gemini-3.5-flash-lite. Source: owner, 13 November. | A decision to answer through the viewer's own connectors on a published page |
 
 **Open questions for the owner**
 
@@ -403,7 +403,7 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T2.8 | Docs | Repo copies of the other docs become dated snapshots | — | Where each fact lives, role of every other doc | Each copy under docs/ carries its export date and the registry check no longer treats it as current | Open |
 | T2.9 | P10 Northfield | Live Northfield connector run | Owner asks for a live Northfield demo | `docs/phase2/golden-nf/` | One Northfield golden question is answered through the live URL with the Northfield key | Blocked |
 | T2.10 | Server | Test whether a published prototype can read the live server, from a private test page only, since the URL carries the token | — | Server reference, Hosting | A published test page calls one tool and shows its answer, or `docs/phase2/` records the error that blocks it | Open |
-| T2.11 | Aviator | The in-product assistant on prototype screens: floating, bottom right, answering from the same tools as the company's connection | T2.10 | D56; Customer-agent access rules R24 to R27 | Live model answer verified locally on the real tools: `docs/phase2/aviator-live-2026-11-13.txt`. Left: one answer from the deployed endpoint, a refusal answered under the free quota, and Aviator on a prototype screen once T2.10 shows how a published page reaches the tools | Open |
+| T2.11 | Aviator | The in-product assistant on prototype screens: floating, bottom right, answering from the same tools as the company's connection | T2.10 | D56; Customer-agent access rules R24 to R27 | Live model answers verified on the real tools, refusal included: `docs/phase2/aviator-live-2026-11-13.txt`. Left: one answer from the deployed endpoint, and Aviator on a prototype screen once T2.10 shows how a published page reaches the tools | Open |
 
 ### Phase 3 · New prototypes
 
@@ -481,7 +481,7 @@ Each row is one prototype through the Phase 4 loop under Build flow. Before prop
 
 ## Proofs, open items and drift control
 
-The gate and smoke tests pass at commit 8d3940d. Two of the plan's proofs have not been built or run.
+The gate and smoke tests pass at commit 4b427a4. Two of the plan's proofs have not been built or run.
 
 | Proof | Command or location | Result |
 | --- | --- | --- |
@@ -493,7 +493,7 @@ The gate and smoke tests pass at commit 8d3940d. Two of the plan's proofs have n
 | Golden questions, Ashby agents, scorecard and deductions | `docs/phase0/golden/grade-report.json` | 49 of 50. The earlier set's grader was never committed. |
 | Golden questions, Northfield | `docs/phase2/golden-nf/grade-report.json` | 50 of 50 |
 | Live server | /healthz | ok, version 0.2.0, writes off, as last read on 13 November; not read again after the Phase 1 deploy |
-| Aviator loop, tool declarations, model fallback and refusals | `npm run aviator-test` | 11 passed, 0 failed, against a stand-in model. A live run with the real model and tools answered one question correctly; the second hit the key's free quota (`docs/phase2/aviator-live-2026-11-13.txt`) |
+| Aviator loop, tool declarations, model fallback and refusals | `npm run aviator-test` | 11 passed, 0 failed, against a stand-in model. Live with gemini-3.5-flash-lite on the built world: P11's hold answered correctly, another supplier's cases refused, Ashby's own cases counted correctly (`docs/phase2/aviator-live-2026-11-13.txt`) |
 | Property-based invariants on quantities, time order and money | — | Not built; the gate checks invariants on the one generated quarter only |
 | Fresh agent answers ten builder questions from the docs | Reader tests, 13 November. First: ten answered from the guide alone; gaps fixed in CALLS 31. Second, after the owner decisions: ten of ten correct, including where P4 ends and where P9's business problem is; gaps fixed in CALLS 34 | Passed |
 | Viewer states each film chapter's problem and outcome | — | Not started |

@@ -1,12 +1,12 @@
 {
  "file": "/home/claude/agenticmcp/docs/build-guide.md",
- "ran_at_head": "d2b3b0f",
+ "ran_at_head": "4b427a4",
  "results": [
   {
    "name": "as_of_commit_current",
    "ok": true,
    "problems": [],
-   "info": "8d3940d"
+   "info": "4b427a4"
   },
   {
    "name": "commits_exist",
@@ -27,7 +27,7 @@
    "name": "calls_refs_exist",
    "ok": true,
    "problems": [],
-   "info": "61 calls logged"
+   "info": "62 calls logged"
   },
   {
    "name": "inventory_and_grid_complete",

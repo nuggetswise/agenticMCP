@@ -4,7 +4,7 @@ Working copy: `docs/build-guide.md` in the repo. Reading copy: the Claude doc at
 
 ## How to use this guide
 
-This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 27c6be4.
+This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 77f48a4.
 
 - **Start here:** follow R39. It picks your next task from the Tasks tables and says what to read first. For one prototype, run `node scripts/guide-pack.mjs P5` with its ID: it prints that prototype's job, ending, v8 section, the rules that apply, its agent, tools and anchors, and its tasks in order, so you read one page and the prototype's source.
 - **Authority, highest first:**
@@ -50,7 +50,7 @@ Each rule has one home, here. Its ID is how `docs/guide/coverage.json` maps the 
 **Story**
 
 - **R05** Each prototype shows three beats on screen for its own job: the problem in one line, the turn where the solution acts, and the result as the business record that settles that job. No number is required on screen. Figures come from the owner's narration and research; a number that does appear is still checked by the contract test.
-- **R06** Show the job's whole journey: from its first exchange to the record that settles the job, through every party and system in between. A feature boundary never ends it early, and it does not run on into stages the job does not own. The builder works out the job, and the record that ends it, from the business problem in v8 (R40) and the task card, and asks the owner when either is unclear. Task cards exist for P6, P7, P8, P9, P11, P10 and P13; P5's is proposed and those for P1, P2 and P4 are held. Where a prototype has no card, read its row in the Prototype Plan's portfolio table. Endings follow D43. Each answer is recorded once, in Inventory under Job, and where it ends.
+- **R06** Show the job's whole journey: from its first exchange to the record that settles the job, through every party and system in between. A feature boundary never ends it early, and it does not run on into stages the job does not own. The builder works out the job, and the record that ends it, from the business problem in v8 (R40) and the task card, and asks the owner when either is unclear. Task cards exist for P5, P6, P7, P8, P9, P11, P10 and P13; those for P1, P2 and P4 are held. Where a prototype has no card, read its row in the Prototype Plan's portfolio table. Endings follow D43. Each answer is recorded once, in Inventory under Job, and where it ends.
 - **R41** Each prototype's story is written once, on the Prototype Plan's task card for that prototype: problem, turn, result and where it ends. The video and the presentation reuse those four lines and never reword them. The screen at each beat must work as a still frame for a slide: it reads with no motion, narration or click.
 - **R07** Present the ideal state: no conditional framing and no "proposed" tags.
 - **R08** Show EDI and API in use on the route map. Settled route lines carry a small arrowhead.
@@ -235,7 +235,7 @@ The inventory has eighteen items: nine screen prototypes, one retired screen, tw
 | P1 | Long-tail | Screen | Built | [P1](https://claude.ai/artifact/N5Ly5kZWYqop1urPyH7WDp) | Turn an emailed order into EDI and into Supplier ERP. Ends at the Supplier ERP sales order and the order acknowledgment (855) to Northfield, not at receipt or payment. Source: owner, 13 November; v8 F1, Operate orders received outside EDI. |
 | P2 | Programme Readiness | Screen | Built | [P2](https://claude.ai/artifact/CM4B561qshaXjHkzWNtdi8) | After Ashby agrees to add Drop-ship, reuse approved setup and close the remaining readiness gaps. Ends at Northfield's programme approval and the activation record; first trade is not part of it. Source: v8 F4, Reuse approved setup and coordinate readiness for a new retail programme, and v8's Journey composition table. |
 | P4 | Marketplace to Wholesale | Screen | Built | [P4](https://claude.ai/artifact/FLWwR1dFDG4tposZcw2Q85) | Take an approved Marketplace seller into Wholesale: carry the approved setup forward, settle the item conflict and show inventory read by API. Ends when the first Wholesale order becomes a sales order in Supplier ERP; acknowledgment, ship notice and invoice belong to P1. Source: owner, 13 November. v8's Expand journey (F4, F20, F21) gives the problem but runs the other way, from Wholesale to Marketplace; the screen's direction stands. |
-| P5 | Scout Shipment Watch | Screen | Built | [P5](https://claude.ai/artifact/2Erv5An571ZHnR3WoUY5sf) | Correct a shipment that breaks a Northfield rule while the fix can still change the outcome. Ends at Northfield's receiving advice matching the corrected shipment, not at the released ship notice. Source: v8 F11, Correct retail execution risk before cutoff; owner, 13 November, on the confirming record. |
+| P5 | Scout Shipment Watch | Screen | Built | [P5](https://claude.ai/artifact/2Erv5An571ZHnR3WoUY5sf) | Correct a shipment that breaks a Northfield rule while the fix can still change the outcome. Ends when the charge Scout Agent watched for never arises, shown by Northfield receiving the load as the corrected ship notice describes it. Source: its accepted task card; v8 F11, Correct retail execution risk before cutoff. |
 | P6 | Northfield Charge Resolution | Screen | Built | [P6](https://claude.ai/artifact/3r1Xy87Vk4rDHDYSaKcQxo) | Settle a Northfield charge for both sides: Ashby's proof is spread across Ashby, its warehouse and its carrier, and Northfield has more disputes than reviewers. Ends when the charge is settled: Jordan decides from a recommendation and the reversal shows on Northfield's remittance. No ERP integration is implied. Source: the owner's task card, 13 November; v8 F9, Resolve deduction disputes, and F16, Explain and clear retail invoice exceptions; D28. |
 | P7 | Northfield Performance Improvement | Screen | Built | [P7](https://claude.ai/artifact/9F1PiXsrUJ54AJq1dSJMbu) | Give Ashby its own on-time, in-full figures, derived from the documents Trading Grid carries, and share them with Northfield. Ends when supplier and retailer hold the same account of the score and what drives it; there is no corrective plan and no later scorecard. Source: the owner's task card, 13 November, which replaces his earlier answer; v8 F15, Calculate and explain retailer performance outcomes. |
 | P8 | Money in Motion | Screen, view only | Built | [P8](https://claude.ai/artifact/RB5p54UuQ9GFGDPxhGzU3a) | Let Northfield's finance and merchandising leaders read open-order value at each stage from purchase order to payment, when it falls due, and what unfilled value could return to budget at acknowledgment. Ends when each leader can say what is due and what can be released; read only, it creates no record (R20). Source: P8's own source and its accepted task card. v8 has no section for it. |
@@ -277,7 +277,7 @@ Phase 0 is closed only when no cell reads Not done or Partly. A cell records whe
 | P2 | Partly | Not done | N/A | Not done | Partly | Done | Done | Not done | Done | Not done | Not done |
 | P4 | Partly | Not done | N/A | Not done | Done | Done | Done | Done | Done | Not done | Partly |
 | P5 | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done | Partly |
-| P6 | Done | Partly | Done | Not done | Done | Not done | Done | Done | Done | Not done | Done |
+| P6 | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done |
 | P7 | Done | Partly | Done | Not done | Partly | Not done | Done | Not done | Partly | Not done | Done |
 | P8 | Not done | N/A | N/A | Not done | Not done | Not done | Done | Not done | N/A | N/A | Not done |
 | P9 | Partly | Not done | Done | Not done | Done | Not done | Done | Not done | Done | Not done | Partly |
@@ -343,7 +343,7 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T0.11 | P2 | Complete P2's grid row | — | P2 link in Inventory | Every P2 cell reads Done or N/A | Open |
 | T0.12 | P4 | Complete P4's grid row | — | P4 link in Inventory | Every P4 cell reads Done or N/A | Open |
 | T0.13 | P5 | Complete P5's grid row; every cell but C1 is done in `docs/phase0/P5-grid.md`, and C1 needs two more golden questions under T0.3 | — | P5 link; `docs/phase0/walks/` for the dead state | Every P5 cell reads Done or N/A | Open |
-| T0.14 | P6 | Complete P6's grid row | — | P6 link in Inventory | Every P6 cell reads Done or N/A | Open |
+| T0.14 | P6 | Complete P6's grid row | — | P6 link in Inventory | Evidence: `docs/phase0/P6-grid.md`; CALLS 41 | Done |
 | T0.15 | P7 | Complete P7's grid row | T0.5 | P7 link; `contract/claims.json` | Every P7 cell reads Done or N/A | Open |
 | T0.16 | P8 | Complete P8's grid row | — | P8 link; why its cells are N/A | Every P8 cell reads Done or N/A | Open |
 | T0.17 | P9 | Complete P9's grid row | — | P9 link in Inventory | Every P9 cell reads Done or N/A | Open |
@@ -413,7 +413,7 @@ Each row is one prototype through the Phase 4 loop under Build flow. Before prop
 | T4.19 | P12 | ERP-native Activation | T0.19 | Decisions item 6 | Evidence: no loop needed after retirement, CALLS 32 | Done |
 | T4.2 | Portfolio | Entry page built from the story calendar | T4.10 | The Prototype Plan's story calendar | The owner approves it and every link on it opens a live prototype | Open |
 | T4.3 | FILM | Portfolio film, after the owner approves a storyboard | T0.7, T4.5 | FILM link in Inventory; R41 | Every chapter takes its problem, turn and result from its prototype's task card, any number shown passes the contract test, and a viewer states each chapter's problem and outcome | Open |
-| T4.5 | Docs | Add a task card to the Prototype Plan for each built prototype: problem, turn and result drafted for the owner, the ending copied from Inventory. Accepted so far: P6, P7, P8, P9 and P11 (CALLS 38) | Owner accepts P5's card and releases P1, P2 and P4 | R41; Inventory | Every built prototype has a task card carrying problem, turn, result and ending, and no video or deck words them differently | Blocked |
+| T4.5 | Docs | Add a task card to the Prototype Plan for each built prototype: problem, turn and result drafted for the owner, the ending copied from Inventory. Accepted so far: P5, P6, P7, P8, P9 and P11 (CALLS 38 and 41) | Owner releases P1, P2 and P4 | R41; Inventory | Every built prototype has a task card carrying problem, turn, result and ending, and no video or deck words them differently | Blocked |
 | T4.4 | Docs | Partner Map edits, Retail Direction section 9 change list, Prototype Briefs fixes, Agentic Retail Trade figures | — | Decisions items 8, 9 and 10 | Each change list is approved and applied, with its CALLS entry | Open |
 
 ## Server reference
@@ -460,7 +460,7 @@ Each row is one prototype through the Phase 4 loop under Build flow. Before prop
 
 ## Proofs, open items and drift control
 
-The gate and smoke tests pass at commit 27c6be4. Two of the plan's proofs have not been built or run.
+The gate and smoke tests pass at commit 77f48a4. Two of the plan's proofs have not been built or run.
 
 | Proof | Command or location | Result |
 | --- | --- | --- |

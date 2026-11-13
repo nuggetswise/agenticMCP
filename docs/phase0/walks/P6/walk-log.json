@@ -1,0 +1,416 @@
+{
+ "errs": [],
+ "log": [
+  {
+   "i": 1,
+   "click": "Start Claim Agent",
+   "ds": "a=h.choose:agent",
+   "options": [
+    "Start Claim Agent",
+    "Work by hand"
+   ]
+  },
+  {
+   "i": 2,
+   "click": "Approve dispute",
+   "ds": "a=h.ap:approve",
+   "options": [
+    "Approve dispute",
+    "Edit",
+    "Do it myself",
+    "Reject"
+   ]
+  },
+  {
+   "i": 3,
+   "click": "Approve sharing",
+   "ds": "a=h.consent",
+   "options": [
+    "Approve sharing",
+    "Share Pack scan",
+    "Share Load scan",
+    "Share Bill of lading with seal",
+    "Share Delivery receipt"
+   ]
+  },
+  {
+   "i": 4,
+   "click": "Continue to Northfield review",
+   "ds": "a=h.jump:review",
+   "options": [
+    "Continue to Northfield review"
+   ]
+  },
+  {
+   "i": 5,
+   "click": "Open evidence pack",
+   "ds": "a=h.kopenAll",
+   "options": [
+    "Open evidence pack",
+    "Reverse",
+    "Uphold",
+    "Reverse",
+    "Uphold"
+   ]
+  },
+  {
+   "i": 6,
+   "click": "Reverse",
+   "ds": "a=h.kim:SH01:rev",
+   "options": [
+    "Reverse",
+    "Uphold",
+    "Reverse",
+    "Uphold"
+   ]
+  },
+  {
+   "i": 7,
+   "click": "Uphold",
+   "ds": "a=h.kim:SH01:up",
+   "options": [
+    "Uphold",
+    "Reverse",
+    "Uphold",
+    "Reverse"
+   ]
+  },
+  {
+   "i": 8,
+   "click": "Reverse",
+   "ds": "a=h.kim:AS02:rev",
+   "options": [
+    "Reverse",
+    "Uphold",
+    "Reverse",
+    "Uphold"
+   ]
+  },
+  {
+   "i": 9,
+   "click": "Record decisions",
+   "ds": "a=h.kimRec",
+   "options": [
+    "Record decisions",
+    "Uphold",
+    "Reverse",
+    "Uphold",
+    "Reverse"
+   ]
+  },
+  {
+   "i": 10,
+   "click": "14 days later: repayment",
+   "ds": "a=h.jump:repay",
+   "options": [
+    "14 days later: repayment"
+   ]
+  },
+  {
+   "i": 11,
+   "click": "View outcome",
+   "ds": "a=h.jump:out",
+   "options": [
+    "View outcome"
+   ]
+  },
+  {
+   "i": 12,
+   "click": "Replay without the load scan",
+   "ds": "a=h.replay",
+   "options": [
+    "Replay without the load scan",
+    "Next record"
+   ]
+  },
+  {
+   "i": 13,
+   "click": "Approve acceptance",
+   "ds": "a=h.ap:approve",
+   "options": [
+    "Approve acceptance",
+    "Do it myself",
+    "Reject"
+   ]
+  },
+  {
+   "i": 14,
+   "click": "View outcome",
+   "ds": "a=h.jump:out",
+   "options": [
+    "View outcome"
+   ]
+  },
+  {
+   "i": 15,
+   "click": "Replay with the load scan",
+   "ds": "a=h.replay",
+   "options": [
+    "Replay with the load scan",
+    "Next record"
+   ]
+  },
+  {
+   "i": 16,
+   "click": "Edit",
+   "ds": "a=h.ap:edit",
+   "options": [
+    "Edit",
+    "Do it myself",
+    "Reject",
+    "Approve dispute"
+   ]
+  },
+  {
+   "i": 17,
+   "click": "Done editing",
+   "ds": "a=h.ap:edit",
+   "options": [
+    "Done editing",
+    "Do it myself",
+    "Reject",
+    "Approve dispute"
+   ]
+  },
+  {
+   "i": 18,
+   "click": "Do it myself",
+   "ds": "a=h.ap:mine",
+   "options": [
+    "Do it myself",
+    "Reject",
+    "Approve dispute",
+    "Edit"
+   ]
+  },
+  {
+   "i": 19,
+   "click": "Dispute",
+   "ds": "a=h.q:dispute",
+   "options": [
+    "Dispute",
+    "Accept"
+   ]
+  },
+  {
+   "i": 20,
+   "click": "Approve dispute",
+   "ds": "a=h.request",
+   "options": [
+    "Approve dispute",
+    "Back"
+   ]
+  },
+  {
+   "i": 21,
+   "click": "Share Pack scan",
+   "ds": "share=scan",
+   "options": [
+    "Share Pack scan",
+    "Share Load scan",
+    "Share Bill of lading with seal",
+    "Share Delivery receipt",
+    "Approve sharing"
+   ]
+  },
+  {
+   "i": 22,
+   "click": "Share Load scan",
+   "ds": "share=load",
+   "options": [
+    "Share Load scan",
+    "Share Bill of lading with seal",
+    "Share Delivery receipt",
+    "Approve sharing",
+    "Share Pack scan"
+   ]
+  },
+  {
+   "i": 23,
+   "click": "Share Bill of lading with seal",
+   "ds": "share=bol",
+   "options": [
+    "Share Bill of lading with seal",
+    "Share Delivery receipt",
+    "Approve sharing",
+    "Share Pack scan",
+    "Share Load scan"
+   ]
+  },
+  {
+   "i": 24,
+   "click": "Share Delivery receipt",
+   "ds": "share=pod",
+   "options": [
+    "Share Delivery receipt",
+    "Approve sharing",
+    "Share Pack scan",
+    "Share Load scan",
+    "Share Bill of lading with seal"
+   ]
+  },
+  {
+   "i": 25,
+   "click": "Approve sharing",
+   "ds": "a=h.consent",
+   "options": [
+    "Approve sharing",
+    "Share Pack scan",
+    "Share Load scan",
+    "Share Bill of lading with seal",
+    "Share Delivery receipt"
+   ]
+  },
+  {
+   "i": 26,
+   "click": "Ask Priya again",
+   "ds": "a=h.flag:again",
+   "options": [
+    "Ask Priya again",
+    "Accept $88.40"
+   ]
+  },
+  {
+   "i": 27,
+   "click": "Share Pack scan",
+   "ds": "share=scan",
+   "options": [
+    "Share Pack scan",
+    "Share Load scan",
+    "Share Bill of lading with seal",
+    "Share Delivery receipt",
+    "Approve sharing"
+   ]
+  },
+  {
+   "i": 28,
+   "click": "Share Load scan",
+   "ds": "share=load",
+   "options": [
+    "Share Load scan",
+    "Share Bill of lading with seal",
+    "Share Delivery receipt",
+    "Approve sharing",
+    "Share Pack scan"
+   ]
+  },
+  {
+   "i": 29,
+   "click": "Share Bill of lading with seal",
+   "ds": "share=bol",
+   "options": [
+    "Share Bill of lading with seal",
+    "Share Delivery receipt",
+    "Approve sharing",
+    "Share Pack scan",
+    "Share Load scan"
+   ]
+  },
+  {
+   "i": 30,
+   "click": "Share Delivery receipt",
+   "ds": "share=pod",
+   "options": [
+    "Share Delivery receipt",
+    "Approve sharing",
+    "Share Pack scan",
+    "Share Load scan",
+    "Share Bill of lading with seal"
+   ]
+  },
+  {
+   "i": 31,
+   "click": "Approve sharing",
+   "ds": "a=h.consent",
+   "options": [
+    "Approve sharing",
+    "Share Pack scan",
+    "Share Load scan",
+    "Share Bill of lading with seal",
+    "Share Delivery receipt"
+   ]
+  },
+  {
+   "i": 32,
+   "click": "Accept $88.40",
+   "ds": "a=h.flag:accept",
+   "options": [
+    "Accept $88.40",
+    "Ask Priya again"
+   ]
+  },
+  {
+   "i": 33,
+   "click": "Next record",
+   "ds": "a=nav.queue",
+   "options": [
+    "Next record",
+    "Replay without the load scan"
+   ]
+  },
+  {
+   "i": 34,
+   "click": "Open",
+   "ds": "a=open:hero",
+   "options": [
+    "Open",
+    "Open",
+    "Open"
+   ]
+  },
+  {
+   "i": 35,
+   "click": "Replay without the load scan",
+   "ds": "a=h.replay",
+   "options": [
+    "Replay without the load scan",
+    "Next record"
+   ]
+  },
+  {
+   "i": 36,
+   "click": "Reject",
+   "ds": "a=h.ap:reject",
+   "options": [
+    "Reject",
+    "Approve acceptance",
+    "Do it myself"
+   ]
+  },
+  {
+   "i": 37,
+   "click": "Accept",
+   "ds": "a=h.q:accept",
+   "options": [
+    "Accept",
+    "Dispute anyway"
+   ]
+  },
+  {
+   "i": 38,
+   "click": "Accept both charges",
+   "ds": "a=h.acceptNow",
+   "options": [
+    "Accept both charges",
+    "Back"
+   ]
+  },
+  {
+   "i": 39,
+   "click": "View outcome",
+   "ds": "a=h.jump:out",
+   "options": [
+    "View outcome"
+   ]
+  },
+  {
+   "i": 40,
+   "click": "Replay with the load scan",
+   "ds": "a=h.replay",
+   "options": [
+    "Replay with the load scan",
+    "Next record"
+   ]
+  }
+ ]
+}

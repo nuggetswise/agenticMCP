@@ -1,12 +1,12 @@
 {
  "file": "/home/claude/agenticmcp/docs/build-guide.md",
- "ran_at_head": "e3c4720",
+ "ran_at_head": "8d3940d",
  "results": [
   {
    "name": "as_of_commit_current",
    "ok": true,
    "problems": [],
-   "info": "24b2c5c"
+   "info": "8d3940d"
   },
   {
    "name": "commits_exist",
@@ -27,7 +27,7 @@
    "name": "calls_refs_exist",
    "ok": true,
    "problems": [],
-   "info": "57 calls logged"
+   "info": "60 calls logged"
   },
   {
    "name": "inventory_and_grid_complete",
@@ -96,7 +96,7 @@
    "name": "tasks_have_ids_and_done_when",
    "ok": true,
    "problems": [],
-   "info": "56 tasks: 17 done, 10 blocked"
+   "info": "56 tasks: 21 done, 9 blocked"
   }
  ]
 }

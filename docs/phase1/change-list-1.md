@@ -113,3 +113,17 @@ Each commit runs `node scripts/guide-check.mjs` and `npm run build`. Commits 3 a
 2. History volume: about 300 Ashby orders (recommended, no current byte changes), or the full current rate (every Ashby X12 file renumbered).
 3. Rewording D1, D2 and N1 to "in the current quarter".
 4. PO-104912 keeps its number (recommended) or is renumbered to NR-.
+
+## G. As built (13 November, commits e02ce57 and d286170)
+
+Approved by the owner with the four recommended points (Build Guide D53). Where the build differs from the list above:
+
+- **Control numbers.** P11's order adds documents to the Ashby and Northfield exchange from 26 November, so every later document in that exchange takes a higher interchange control number. 82 X12 files change in that number only. Nothing before 26 November changes, and no figure in the baseline table moves. History takes numbers below the current period's, as planned, so it changes no current file.
+- **No charge for a late ship notice.** Section B3 proposed AS02 cases from late ship notices. The catalogue gives NF-4.2 no charge, and AS02 belongs to NF-4.5, so history holds shortage cases (SH01) only. The lead signal stands on its own: of 28 orders acknowledged after more than 12 hours, 18 had a late ship notice; of 272 acknowledged sooner, 18 did.
+- **History in numbers.** 300 Ashby orders with 36 late ship notices and 19 decided shortage cases; 150 orders across ten other suppliers with 38 decided cases, 24 of them on Lakeline deliveries whose seal Northfield recorded as broken at arrival, across all ten suppliers. Orders run to 12 June; everything is settled by mid-July. Warehouse orders and advices (940, 945) are not generated for history.
+- **P5's lead orders (point F1) are not slowed yet.** The acknowledgments on NR-460207 to NR-460274 are unchanged; that edit touches the current quarter and is left for its own commit.
+- **NFD-1 and NFD-2.** 16 ship notices from other suppliers now go 31 to 38 minutes after departure, so NFD-1 fails 541 against 32 in force. NFD-2 fails two lines against one in force. The replay's documents-replayed count fell because it now covers the current quarter only.
+- **Schema.** `order_lines.price_original` and `order_changes.price` were added so an order change that sets a price is readable.
+- **Order numbers.** A NetSuite order keeps its PO- number; the server's order lookup was corrected to accept it.
+- **Golden questions.** D1, D2, N1 and N4 are reworded and their expected values recomputed (N4 and N5 re-baselined). The five graded runs for each have not been redone.
+

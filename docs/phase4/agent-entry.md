@@ -58,7 +58,7 @@ Source: the owner's research file, SAP Joule Studio Agent UX Reference for Retai
 | Evidence | The records read, each named and openable | R17 |
 | Finding and proposal | What the agent found, what it proposes, and what it does not know | R17, R21 |
 | Steps | Each step with who did it: rule, agent, person or system | R17 |
-| Actions | Approve, edit, take over, reject or ask for another | R15 |
+| Actions | Approve; Change; handle it myself | R15, D58 |
 | Latest state | The furthest state a record supports | R18 |
 
 **Who did each step.** Four markers, shown on the evidence:
@@ -100,7 +100,7 @@ Each item goes into that prototype's change list as a CORRECT or DELETE line. Ev
 - AE-ALL-1: CORRECT the first frame to the proposal layout above.
 - AE-ALL-2: ADD who did each step to the evidence (rule, agent, person, system). Steps a rule did lose any agent wording.
 - AE-ALL-3: CORRECT state labels to the five states; DELETE any "resolved" or "done" shown before the settling record.
-- AE-ALL-4: ADD reject and "another option" at the checkpoint where they are missing.
+- AE-ALL-4: CORRECT the checkpoint to three controls (D58): the approval as the one primary button, Change (edit, or another option where one exists), and a quiet "Handle it myself" link. DELETE separate Reject, Do it myself, Take over and Another option buttons.
 - AE-ALL-6: ADD Aviator, floating at the bottom right and closed on load. Until T2.11 shows a published page can reach the live tools, it opens to the questions the connection answers for this record and does not show an answer the tools did not give.
 - AE-ALL-5: Walk the three new design checks and record the result in the prototype's grid file.
 

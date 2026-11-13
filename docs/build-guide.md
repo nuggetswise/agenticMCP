@@ -4,7 +4,7 @@ Working copy: `docs/build-guide.md` in the repo. Reading copy: the Claude doc at
 
 ## How to use this guide
 
-This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 24b2c5c.
+This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 8d3940d.
 
 - **Start here:** follow R39. It picks your next task from the Tasks tables and says what to read first. For one prototype, run `node scripts/guide-pack.mjs P5` with its ID: it prints that prototype's job, ending, v8 section, the rules that apply, its agent, tools and anchors, and its tasks in order, so you read one page and the prototype's source.
 - **Authority, highest first:**
@@ -67,7 +67,7 @@ Each rule has one home, here. Its ID is how `docs/guide/coverage.json` maps the 
 **Agents**
 
 - **R14** Each agent is named "[Name] Agent", such as Claim Agent, and acts for Priya or for Jordan, never for both.
-- **R15** Every agent screen has a manual option, offered at the checkpoint and never as a second way in. The user can take the case over and work it by hand, change the proposal before approving it, or pause the agent and receive the same event as a plain task with no proposal. The checkpoint also lets the user reject the proposal and, where the records support a real alternative, ask for another.
+- **R15** Every agent screen has a manual option, offered at the checkpoint and never as a second way in. The checkpoint shows three controls and one is primary: the approval, named for its outcome; Change, which edits the proposal or picks another option where the records support one; and a quiet link to handle the case by hand, which is also how a proposal is declined, since the case still has to be worked. With the agent paused, the same event arrives as a plain task with no proposal. On Jordan's side the controls are the business decision itself, such as reverse or uphold (D58).
 - **R16** An agent starts on a business event, never on a start button: a document arrives, a rule fails, a deadline nears or a case opens. A request the user makes in their own words also starts one; that route runs through the customer's own assistant (R23) or through Aviator (D56). Its rules are set once, in agent settings, by the person it acts for; the goal is fixed, the user's rules are editable and the guardrails are locked. A prototype opens on the worklist item or record with the agent's proposal ready, and the proposal links to the rules that applied. No run waits for a start click or a rules step (D54). The business record comes first and the agent second, and no job needs a chat to be finished.
 - **R17** The agent's proposal shows what it read and which records it compared, as evidence the user can open; the user never clicks through the reading on the agent's behalf. The evidence is the record of what was actually read and returned, each line naming its record, and never the agent's own account of its thinking. Every step is marked with who did it: a rule, the agent, a person or a system; the marks sit inside the evidence, one level below the main screen. A step a rule did is never credited to the agent.
 - **R18** The agent sends a task, document or message only with the user's approval or a standing policy the user set. Each send shows the authority, channel, target-system response and audit record. Proposed, approved, sent, technically acknowledged and settled are separate states that never share one label, and nothing reads as settled before the business record exists. The screen shows the present state and what comes next, never a tracker of all five.
@@ -229,6 +229,8 @@ The owner approved change items 1 to 14 on 12 November. Two are done, four are p
 | D55 | The owner's research file, SAP Joule Studio Agent UX Reference for Retail Prototype, is the interaction reference for agent screens: what builders need from it is copied into `docs/phase4/agent-entry.md`, so they do not open it. Who did each step shows on screen, in the evidence. A workflow canvas, an agent builder and n8n are out of scope. Source: owner, 13 November. | — |
 | D56 | Trading Grid has its own assistant, named Aviator, for customers who do not connect an assistant of their own. It floats at the bottom right of every Trading Grid screen and stays closed until opened. It answers from the same tools, scopes, refusals and access log as the customer's connection, cites the records it used, and sends any action back to the screen for approval. This replaces D16 and is the one product name allowed on screen. Source: owner, 13 November. | A customer-agent finding that the two give different answers |
 | D57 | The main screen of an agent prototype carries three things: the problem on the record, the proposal with one primary button, and the present state. Everything else sits in the evidence, one level down. Source: owner, 13 November. | — |
+| D58 | The checkpoint carries three controls, not five: approve, Change, and handle it myself. Reject and take over are one control, and another option sits inside Change. Source: owner, 13 November. | — |
+| D59 | The model behind Aviator runs on the server, never in a page: the key sits in the server's environment and a page posts its question to one endpoint. The owner supplied a Gemini key for testing and will rotate it. Source: owner, 13 November. | A decision to answer through the viewer's own connectors on a published page |
 
 **Open questions for the owner**
 
@@ -381,11 +383,11 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T1.3 | World | Partner records in the timeline | — | Partner checks | Evidence: no partner record is added (D52); CALLS 54 | Done |
 | T1.4 | P8 | Shipments without a receipt | Owner confirms CALLS 8 | `docs/build-log/CALLS.md` | Other suppliers' shipments with no receipt are P8's stuck value | Blocked |
 | T1.5 | All screens | Raw X12 panels generated from the world | — | `build/tg.db`; `npm run contract` | Every raw X12 panel matches a world document byte for byte, checked by the contract test | Open |
-| T1.6 | P14, P15 | World records for every Prototype specs decision row: a price variance under NF-7.11, and other suppliers' ship notices that NFD-1 would fail | — | Prototype specs: P14 and P15; `docs/phase1/change-list-1.md`, its section C | Each draft rule and each P14 decision row replays to at least one record, proposed first as a Phase 1 change list | Open |
+| T1.6 | P14, P15 | World records for every Prototype specs decision row: a price variance under NF-7.11, and other suppliers' ship notices that NFD-1 would fail | — | Prototype specs: P14 and P15; `docs/phase1/change-list-1.md`, its section C | Evidence: commit d286170; gate checks `nf.match.price_held`, `nf.match.price_cleared_by_change`, `nf.match.total_fault`, `nf.replay.nfd2` and `nf.replay.nfd1_reaches_other_suppliers`; CALLS 59 | Done |
 | T1.8 | P7 | World record for a Northfield scorecard after the corrective work | — | P7's Inventory row | Evidence: not needed once P7's ending moved to shared figures, CALLS 38 | Done |
 | T1.7 | P2 | Supplier vetting in the world: one supplier vetted by a third party, one that confirms vetting itself, and a Northfield rule that activation waits for either | — | D31; Prototype specs, Supplier vetting in P2 | The owner approves the rule wording in the EDI Review Pack, the world holds both records, and a gate check reads them | Open |
-| T1.9 | P11 | A live NetSuite ship notice that breaks a Northfield rule, held and corrected before it leaves, with Northfield's matching receiving advice | — | P11's Inventory row; `docs/phase0/P11-grid.md`; `docs/phase1/change-list-1.md`, its section A | The world holds the records, T2.7 can anchor them, and P11's golden questions can run | Open |
-| T1.10 | World | Demo-world history for the intelligence tests: other suppliers' deduction cases with Northfield and past acknowledgment and ship-notice timings (D3 in the intelligence handoff), scoped by D49 | — | Project doc claude/Prototype-Intelligence-Handoff.md (project doc); `docs/phase1/change-list-1.md`, its section B | The records in section B are in the world, every figure the list marks stable is unchanged on a fresh run, and the reworded golden questions pass | Open |
+| T1.9 | P11 | A live NetSuite ship notice that breaks a Northfield rule, held and corrected before it leaves, with Northfield's matching receiving advice | — | P11's Inventory row; `docs/phase0/P11-grid.md`; `docs/phase1/change-list-1.md`, its section A | Evidence: commit e02ce57; gate check `p11.held_then_matched`; CALLS 58 | Done |
+| T1.10 | World | Demo-world history for the intelligence tests: other suppliers' deduction cases with Northfield and past acknowledgment and ship-notice timings (D3 in the intelligence handoff), scoped by D49 | — | Project doc claude/Prototype-Intelligence-Handoff.md (project doc); `docs/phase1/change-list-1.md`, its section B | Evidence: commit d286170; `world/history.js`; figures the list marked stable are unchanged on a fresh run; CALLS 59. Left: the three reworded golden questions have new expected values but no five graded runs | Done |
 
 ### Phase 2 · Agent and customer-agent access
 
@@ -397,11 +399,11 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T2.4 | P5, P9 | Shelf Agent reads averages; Watch Agent reads NF-4.2 from the catalogue | — | R22 | `agents.thresholds_come_from_catalogue` covers both agents | Open |
 | T2.5 | P10 Ashby, P10 Northfield | Tool comparison includes Northfield's tools | — | Server reference, compared with published tool lists | The comparison lists both connections' tools against the published NetSuite and Salesforce schemas | Open |
 | T2.6 | P15 | Registry anchors hold the draft rule record | — | Prototype specs, P15 | `registry/registry.json` names NFD-1 under P15 and the registry check passes | Open |
-| T2.7 | Registry | Finish the registry: P11's job, agent verdict, decisions and anchors match its screen | Owner approves a Phase 1 list that adds P11's held ship notice | Inventory; `docs/guide/registry-change-proposal.md` | P11's entry has no agent, anchors a held and corrected live ship notice with its receiving advice, and the gate passes. Part 1 is done: endings, names and the other rows, CALLS 35 | Blocked |
+| T2.7 | Registry | Finish the registry: P11's job, agent verdict, decisions and anchors match its screen | — | Inventory; `docs/guide/registry-change-proposal.md` | Evidence: commit e02ce57; P11 has no agent and anchors the held and corrected live ship notice with its receiving advice; CALLS 58 | Done |
 | T2.8 | Docs | Repo copies of the other docs become dated snapshots | — | Where each fact lives, role of every other doc | Each copy under docs/ carries its export date and the registry check no longer treats it as current | Open |
 | T2.9 | P10 Northfield | Live Northfield connector run | Owner asks for a live Northfield demo | `docs/phase2/golden-nf/` | One Northfield golden question is answered through the live URL with the Northfield key | Blocked |
 | T2.10 | Server | Test whether a published prototype can read the live server, from a private test page only, since the URL carries the token | — | Server reference, Hosting | A published test page calls one tool and shows its answer, or `docs/phase2/` records the error that blocks it | Open |
-| T2.11 | Aviator | The in-product assistant on prototype screens: floating, bottom right, answering from the same tools as the company's connection | T2.10 | D56; Customer-agent access rules R24 to R27 | One prototype's Aviator answers a golden question from the live tools with its records cited, or the row records why a published page cannot and what the owner chose instead | Open |
+| T2.11 | Aviator | The in-product assistant on prototype screens: floating, bottom right, answering from the same tools as the company's connection | T2.10 | D56; Customer-agent access rules R24 to R27 | The endpoint answers from the tools (commit 8d3940d, `npm run aviator-test`). Left: one live answer from the deployed server with its records cited, and Aviator on a prototype screen once T2.10 shows how a published page reaches the tools | Open |
 
 ### Phase 3 · New prototypes
 
@@ -479,18 +481,19 @@ Each row is one prototype through the Phase 4 loop under Build flow. Before prop
 
 ## Proofs, open items and drift control
 
-The gate and smoke tests pass at commit 24b2c5c. Two of the plan's proofs have not been built or run.
+The gate and smoke tests pass at commit 8d3940d. Two of the plan's proofs have not been built or run.
 
 | Proof | Command or location | Result |
 | --- | --- | --- |
-| World gate: invariants, catalogue equals the pack, thresholds from the catalogue | `npm run build` | 386 passed, 0 failed |
+| World gate: invariants, catalogue equals the pack, thresholds from the catalogue | `npm run build` | 385 passed, 0 failed |
 | Server smoke: both scopes, refusals, the shared deduction case | `npm run smoke` | 54 passed, 0 failed |
 | X12 validation | `npm run validate` | Passes, but its schemas were generated in this repo, so it does not meet the independent-schema test |
 | X12 against schemas this repo did not write | `validator/botscheck.py` with the bots-grammars X12 grammars | Every document checked; it faults exactly the documents the world rejects on a 997, and nothing else; all ten injected faults are rejected for their reason (`validator/bots-report.json`) |
 | Contract test of on-screen values: it checks every number a screen shows and requires none | `npm run contract` | Last full report is `docs/phase0/contract-report-turn4.json`. The P7 claim was checked against a working copy, not the live page. |
 | Golden questions, Ashby agents, scorecard and deductions | `docs/phase0/golden/grade-report.json` | 49 of 50. The earlier set's grader was never committed. |
 | Golden questions, Northfield | `docs/phase2/golden-nf/grade-report.json` | 50 of 50 |
-| Live server | /healthz | ok, version 0.2.0, writes off |
+| Live server | /healthz | ok, version 0.2.0, writes off, as last read on 13 November; not read again after the Phase 1 deploy |
+| Aviator loop, tool declarations, model fallback and refusals | `npm run aviator-test` | 11 passed, 0 failed, against a stand-in model; no live model call has been verified |
 | Property-based invariants on quantities, time order and money | — | Not built; the gate checks invariants on the one generated quarter only |
 | Fresh agent answers ten builder questions from the docs | Reader tests, 13 November. First: ten answered from the guide alone; gaps fixed in CALLS 31. Second, after the owner decisions: ten of ten correct, including where P4 ends and where P9's business problem is; gaps fixed in CALLS 34 | Passed |
 | Viewer states each film chapter's problem and outcome | — | Not started |

@@ -515,7 +515,7 @@
    "get": {
     "operationId": "get_scorecard",
     "summary": "Northfield scorecard",
-    "description": "Northfield’s on-time, in-full scorecard for Ashby over the 13-week quarter, recomputed from orders and receiving advice: cases, failing cases, failing lines by reason, and the figures Northfield published.",
+    "description": "Northfield’s on-time, in-full scorecard for Ashby over the 13-week quarter, recomputed from orders and receiving advice: cases, failing cases, failing lines by reason, and the figures Northfield published. Northfield publishes it on 28 Dec 2026; before then it answers that the quarter is not published and lists the files published so far.",
     "tags": [
      "Performance review"
     ],
@@ -536,6 +536,16 @@
        "description": "Include every failing line"
       },
       "description": "Include every failing line"
+     },
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+      },
+      "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
      }
     ],
     "responses": {

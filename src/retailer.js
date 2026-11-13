@@ -4,7 +4,7 @@
 // Northfield's. Every answer is read as of a time; nothing here sends or changes anything.
 import { fmtET } from '../world/lib.js';
 import { normPo, rule, param, chargeOf, storyClock, timeLeft } from './domain.js';
-import { scorecard } from './score.js';
+import { scorecard, scorecardAsOf } from './score.js';
 
 export const NOT_AVAILABLE_NF = 'Not available to Northfield';
 const J = (s) => (s ? JSON.parse(s) : {});
@@ -52,10 +52,10 @@ export function documentNF(db, reference) {
 }
 
 /** The supplier scorecard Northfield publishes. Only Ashby has a published scorecard file in this world. */
-export function scorecardNF(db, supplier) {
+export function scorecardNF(db, supplier, asOf = storyClock()) {
   const s = findSupplier(db, supplier || 'ASHBY'); if (!s) return { found: false, message: `No supplier ${supplier}` };
   if (s.id !== 'ASHBY') return { found: false, message: `No scorecard file is published for ${s.name} in this quarter` };
-  const sc = scorecard(db); delete sc.lines; return { found: true, supplier: s.name, ...sc };
+  return { found: true, supplier: s.name, ...scorecardAsOf(db, asOf) };
 }
 
 const caseOpened = (db, key) => db.prepare("SELECT * FROM events WHERE kind = 'case.opened'").all().map((e) => ({ ...e, d: J(e.data) })).find((e) => e.d.case === key || e.d.deduction === key || e.po === normPo(key));
@@ -75,7 +75,7 @@ export function caseNF(db, ref, asOf = storyClock()) {
   const evs = db.prepare('SELECT * FROM events WHERE po = ? AND at <= ? ORDER BY at').all(po, T).map((e) => ({ ...e, d: J(e.data) }));
   const caseEv = evs.filter((e) => e.kind.startsWith('case.') && (e.d.case === c.case || !e.d.case));
   const shared = new Set(caseEv.filter((e) => e.kind === 'case.dispute').flatMap((e) => e.d.evidence || []));
-  for (const e of evs) if (e.d.in_case === c.case) shared.add({ 'carrier.bill_of_lading': 'Bill of lading with seal', 'carrier.delivery_receipt': 'Delivery receipt', 'wms.load_scan': 'Load scan by SSCC', 'wms.load_tally': 'Load tally by SSCC' }[e.kind] || e.kind);
+  for (const e of evs) if (e.d.in_case === c.case) shared.add({ 'carrier.bill_of_lading': 'Bill of lading with seal', 'carrier.delivery_receipt': 'Proof of delivery', 'wms.load_scan': 'Load scan by SSCC', 'wms.load_tally': 'Load tally by SSCC' }[e.kind] || e.kind);
   const adj = db.prepare('SELECT * FROM adjustments WHERE po = ? AND paid_at <= ? ORDER BY paid_at').all(po, T).filter((a) => a.reference === c.deduction || /AS02|CI-NF/.test(a.reference || ''));
   const notes = db.prepare('SELECT at, charge, author, note FROM review_notes WHERE case_id = ? AND at <= ? ORDER BY at').all(c.case, T).map((n) => ({ ...n, at: fmtET(n.at) }));
   const decided = caseEv.filter((e) => e.kind === 'case.decision').map((e) => ({ at: fmtET(e.at), charge: e.d.charge, decision: e.d.decision, decided_by: e.d.decided_by, recommended_by: e.d.recommended_by || null, reason: e.d.reason }));
@@ -104,7 +104,7 @@ export function reviewRecommendation(db, { charge, shared, disputes, decided }) 
   if (d.charge === 'SH01') {
     const seal = has('bill of lading'), pod = has('deliver'), proof = has('load scan|load tally');
     if (!(seal && pod && proof)) return { charge: d.charge, next_step: 'recommend_not_reviewed', missing: [!seal && 'Bill of lading with seal', !pod && 'Proof of delivery', !proof && 'Load scan or load tally by SSCC'].filter(Boolean), rule: rule(db, 'NF-7.5'), charge_if_not_reviewed: `ID01 $${chargeOf(db, 'ID01')}` };
-    return { charge: d.charge, next_step: 'recommend_reverse', reason: 'Seal intact, delivery receipt, and the carton loaded before the seal by SSCC', rules: [rule(db, 'NF-5.3'), rule(db, 'NF-7.4')], note: 'A reversal does not change the receipt (NF-5.5).' };
+    return { charge: d.charge, next_step: 'recommend_reverse', reason: 'Seal intact, proof of delivery, and the carton loaded before the seal by SSCC', rules: [rule(db, 'NF-5.3'), rule(db, 'NF-7.4')], note: 'A reversal does not change the receipt (NF-5.5).' };
   }
   if (d.charge === 'AS02') return { charge: d.charge, next_step: 'recommend_uphold', reason: 'The ship notice still differs from the receiving advice; the receipt changes only through a revised receiving advice', rule: rule(db, 'NF-5.5') };
   return { charge: d.charge, next_step: 'jordan_decides', reason: 'No review rule for this charge' };

@@ -26,6 +26,15 @@ export function scorecard(db, { from = QUARTER.start, to = QUARTER.end } = {}) {
   return { period: `${from} to ${to}`, definition: 'OTIF-2026.2: compliant cases over all cases, per order line', programme: 'DC replenishment', cases, failing_cases: failing, compliant_cases: cases - failing, score: `${((1 - failing / cases) * 100).toFixed(1)}%`, failing_lines: rows.length, by_reason: Object.values(by).sort((a, b) => b.cases - a.cases), northfield_published: pub ? J(pub.data) : null, lines: rows.sort((a, b) => b.cases - a.cases) };
 }
 
+/** The 13-week scorecard as Northfield has published it at a point in time. Before the quarter's file (28 Dec 2026) it gives no quarter figures, only the files already published. */
+export function scorecardAsOf(db, asOf) {
+  const T = asOf.toISOString();
+  const files = db.prepare("SELECT at, data FROM events WHERE kind = 'scorecard.published' AND at <= ? ORDER BY at").all(T).map((e) => ({ published: fmtET(e.at), ...J(e.data) }));
+  const quarter = db.prepare("SELECT at FROM events WHERE kind = 'scorecard.published' AND data LIKE '%13 weeks%'").get();
+  if (quarter && quarter.at <= T) { const s = scorecard(db); delete s.lines; return { as_of: fmtET(asOf), published: true, ...s }; }
+  return { as_of: fmtET(asOf), published: false, message: `Northfield publishes the 13-week scorecard for ${QUARTER.start} to ${QUARTER.end} on ${quarter ? fmtET(quarter.at) : 'a later date'}. It is not published at ${fmtET(asOf)}.`, files_published_so_far: files };
+}
+
 /** In-full component and its OT01 charge (NF-8.2, NF-2.1): 3% of the goods value of in-full failing cases, by month of delivery, months under $1,000 waived. */
 export function inFull(db, opts = {}) {
   const s = scorecard(db, opts); const IN = ['Short shipped, remainder cancelled', 'Received below ship notice', 'Allocation cut'];

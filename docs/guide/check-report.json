@@ -1,6 +1,6 @@
 {
  "file": "/home/claude/agenticmcp/docs/build-guide.md",
- "ran_at_head": "06435a1",
+ "ran_at_head": "e24d21e",
  "results": [
   {
    "name": "as_of_commit_current",
@@ -52,13 +52,8 @@
   },
   {
    "name": "no_repeated_passages",
-   "ok": false,
-   "problems": [
-    "grid row every cell but c1 is done",
-    "row every cell but c1 is done in",
-    "every cell but c1 is done in docs",
-    "cell but c1 is done in docs phase0"
-   ]
+   "ok": true,
+   "problems": []
   },
   {
    "name": "overlap_with_replaced_docs",

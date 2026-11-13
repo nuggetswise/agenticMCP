@@ -25,7 +25,7 @@ Source: the live page, version 1794576266-f6d7, loaded headless in both views (V
 A2, A3, A9 and A10: view only, no agent, nothing to walk and no clicks on the main path.
 
 ## Not covered here
-C1: P8 has no golden questions. Three drafted for T0.3:
+C1: Partly. The three questions below ran five times (golden/t03, as G8a to G8c) and fail: the records do not carry P8's definitions. See RESULTS.md and open question 8.
 - As of 8 November, how much open-order value sits at each stage from purchase order to payment?
 - Which invoices are billed above received beyond the 0.5% tolerance, and by how much in total?
 - How much unfilled value would return to budget if released at acknowledgment, over the last 90 days of closed orders?

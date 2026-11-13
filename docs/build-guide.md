@@ -226,6 +226,7 @@ The owner approved change items 1 to 14 on 12 November. Two are done, four are p
 5. Which verified partner capabilities enter the timeline: Orderful's carton-level 945, ShipHawk's package data, or none?
 6. Nine pages may be retired (listed in `docs/phase0/HANDOFF.md`). Keep or retire each?
 7. Is the retailer catalogue connector in your Claude session P16, and what is its URL? It is connected as a real retailer and lists real brands, which R04 rules out.
+8. P8's figures cannot be checked by Northfield's own assistant from the shared records: no record marks which orders the screen counts, when an order closes, or what the invoice tolerance compares. State those definitions on the screen and in the guide, or add a tool to Northfield's connection that returns them?
 
 ## Inventory
 
@@ -277,11 +278,11 @@ Phase 0 is closed only when no cell reads Not done or Partly. A cell records whe
 | P1 | Done | Not done | N/A | Not done | Not done | Done | Done | Not done | Done | Not done | Partly |
 | P2 | Partly | Not done | N/A | Not done | Partly | Done | Done | Not done | Done | Not done | Not done |
 | P4 | Partly | Not done | N/A | Not done | Done | Done | Done | Done | Done | Not done | Partly |
-| P5 | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done | Partly |
+| P5 | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done |
 | P6 | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done |
 | P7 | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done |
-| P8 | Done | N/A | N/A | Done | Done | Done | Done | Done | N/A | N/A | Not done |
-| P9 | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done | Partly |
+| P8 | Done | N/A | N/A | Done | Done | Done | Done | Done | N/A | N/A | Partly |
+| P9 | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done |
 | P11 | Done | N/A | N/A | Done | Done | Done | Done | Done | Done | Done | Not done |
 | P12 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
 | P10 Ashby | Done | Done | Done | Done | N/A | Done | N/A | Done | Done | N/A | Done |
@@ -344,15 +345,15 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T0.10 | P1 | Complete P1's grid row | — | P1 link in Inventory | Every P1 cell reads Done or N/A | Open |
 | T0.11 | P2 | Complete P2's grid row | — | P2 link in Inventory | Every P2 cell reads Done or N/A | Open |
 | T0.12 | P4 | Complete P4's grid row | — | P4 link in Inventory | Every P4 cell reads Done or N/A | Open |
-| T0.13 | P5 | Complete P5's grid row; every cell but C1 is done in `docs/phase0/P5-grid.md`, and C1 needs two more golden questions under T0.3 | — | P5 link; `docs/phase0/walks/` for the dead state | Every P5 cell reads Done or N/A | Open |
+| T0.13 | P5 | Complete P5's grid row | — | P5 link; `docs/phase0/walks/` for the dead state | Evidence: `docs/phase0/P5-grid.md`; C1 in `docs/phase0/golden/t03/RESULTS.md`; CALLS 51 | Done |
 | T0.14 | P6 | Complete P6's grid row | — | P6 link in Inventory | Evidence: `docs/phase0/P6-grid.md`; CALLS 41 | Done |
 | T0.15 | P7 | Complete P7's grid row | T0.5 | P7 link; `contract/claims.json` | Evidence: `docs/phase0/P7-grid.md`; CALLS 43 | Done |
-| T0.16 | P8 | Complete P8's grid row; only C1 is left (`docs/phase0/P8-grid.md`), with its questions drafted for T0.3 | — | P8 link; why its cells are N/A | Every P8 cell reads Done or N/A | Open |
-| T0.17 | P9 | Complete P9's grid row; C1 remains, needing two more golden questions (`docs/phase0/P9-grid.md`) | — | P9 link in Inventory | Every P9 cell reads Done or N/A | Open |
+| T0.16 | P8 | Complete P8's grid row; only C1 is left. Its three questions ran five times and fail, because the records do not carry P8's definitions of an open order, a closed order and the tolerance basis (`docs/phase0/golden/t03/RESULTS.md`) | Owner chooses: state P8's definitions on screen and in the guide, or give Northfield's connection a tool that returns them (open question 8) | P8 link; why its cells are N/A | Every P8 cell reads Done or N/A | Blocked |
+| T0.17 | P9 | Complete P9's grid row | — | P9 link in Inventory | Evidence: `docs/phase0/P9-grid.md` and the t03 golden results; CALLS 51 | Done |
 | T0.18 | P11 | Complete P11's grid row; C1 waits for its records to enter the world (`docs/phase0/P11-grid.md`) | — | P11 link in Inventory | Every P11 cell reads Done or N/A | Open |
 | T0.19 | P12 | Complete P12's grid row | — | P12 link in Inventory | Evidence: P12 retired by the owner, CALLS 32 | Done |
 | T0.2 | P10 Ashby, P10 Northfield, P16 | Audit the two server scopes and the retailer catalogue connector as prototypes; both server rows are done (`docs/phase0/P10-P16-audit.md`) | Open question 7 | Server reference; `docs/phase2/` | Their grid rows are complete and P16's link is in Inventory | Blocked |
-| T0.3 | P1, P2, P4, P5, P8, P9, P11 | Golden questions: new sets for P2, P8 and P11, more for the other four | — | `docs/phase0/golden/` | Each has at least three questions with five graded runs | Open |
+| T0.3 | P1, P2, P4, P5, P8, P9, P11 | Golden questions: new sets for P2, P8 and P11, more for the other four. P5 and P9 are done and P8 has run (`docs/phase0/golden/t03/`) | Owner releases P1, P2 and P4; P11's records enter the world | `docs/phase0/golden/` | Each has at least three questions with five graded runs | Blocked |
 | T0.4 | World | Restore the X12 check against bots-grammars as a committed script | — | `validator/` | Evidence: `validator/botscheck.py` and `validator/bots-report.json`, commit 6bda779; CALLS 48 | Done |
 | T0.5 | P7 | Confirm manual pattern A by hand | — | `docs/phase0/FINDINGS.md`, turn 4 walks | Evidence: a walker limit, not a defect; `docs/phase0/P7-grid.md`; CALLS 43 | Done |
 | T0.6 | Partners | ShipHawk's partner-only questions and journey moment, from ShipHawk's own documentation; partner nodes on every route map. ShipHawk is done; route maps are read for every built screen except P1 and P4 | Owner releases P1 and P4 | Partner checks; Partner diligence tab; `docs/phase0/T0.6-partners.md` | The Partner checks table has no Not done or Partly row | Blocked |

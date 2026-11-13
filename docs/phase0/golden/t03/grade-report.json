@@ -1,0 +1,173 @@
+{
+ "run1.json": {
+  "G5a": {
+   "pass": true
+  },
+  "G5b": {
+   "pass": true
+  },
+  "G9a": {
+   "pass": true
+  },
+  "G9b": {
+   "pass": true
+  },
+  "G8a": {
+   "pass": false,
+   "missing": [
+    "$4365551.6",
+    "$3999826.4",
+    "$16821765.75"
+   ]
+  },
+  "G8b": {
+   "pass": false,
+   "missing": [
+    "7",
+    "$9721.1"
+   ]
+  },
+  "G8c": {
+   "pass": true
+  }
+ },
+ "run2.json": {
+  "G5a": {
+   "pass": true
+  },
+  "G5b": {
+   "pass": true
+  },
+  "G9a": {
+   "pass": true
+  },
+  "G9b": {
+   "pass": true
+  },
+  "G8a": {
+   "pass": false,
+   "missing": [
+    "$4365551.6",
+    "$3999826.4",
+    "$834164.45",
+    "$16821765.75"
+   ]
+  },
+  "G8b": {
+   "pass": false,
+   "missing": [
+    "7",
+    "$9721.1"
+   ]
+  },
+  "G8c": {
+   "pass": false,
+   "missing": [
+    "$150480.6"
+   ]
+  }
+ },
+ "run3.json": {
+  "G5a": {
+   "pass": true
+  },
+  "G5b": {
+   "pass": true
+  },
+  "G9a": {
+   "pass": true
+  },
+  "G9b": {
+   "pass": true
+  },
+  "G8a": {
+   "pass": false,
+   "missing": [
+    "$4365551.6",
+    "$3999826.4",
+    "$834164.45",
+    "$16821765.75"
+   ]
+  },
+  "G8b": {
+   "pass": false,
+   "missing": [
+    "$9721.1"
+   ]
+  },
+  "G8c": {
+   "pass": false,
+   "missing": [
+    "$150480.6"
+   ]
+  }
+ },
+ "run4.json": {
+  "G5a": {
+   "pass": true
+  },
+  "G5b": {
+   "pass": true
+  },
+  "G9a": {
+   "pass": true
+  },
+  "G9b": {
+   "pass": true
+  },
+  "G8a": {
+   "pass": false,
+   "missing": [
+    "$4365551.6",
+    "$3999826.4",
+    "$834164.45",
+    "$16821765.75"
+   ]
+  },
+  "G8b": {
+   "pass": false,
+   "missing": [
+    "7",
+    "$9721.1"
+   ]
+  },
+  "G8c": {
+   "pass": false,
+   "missing": [
+    "$150480.6"
+   ]
+  }
+ },
+ "run5.json": {
+  "G5a": {
+   "pass": true
+  },
+  "G5b": {
+   "pass": true
+  },
+  "G9a": {
+   "pass": true
+  },
+  "G9b": {
+   "pass": true
+  },
+  "G8a": {
+   "pass": false,
+   "missing": [
+    "$4365551.6",
+    "$3999826.4",
+    "$834164.45",
+    "$16821765.75"
+   ]
+  },
+  "G8b": {
+   "pass": false,
+   "missing": [
+    "$9721.1"
+   ]
+  },
+  "G8c": {
+   "pass": true
+  }
+ }
+}

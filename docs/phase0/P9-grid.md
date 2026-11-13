@@ -35,7 +35,7 @@ Eight actions, inside the budget.
 | 8 | Advance to next week | The following week's report | Result |
 
 ## Not covered here
-C1 stays Partly: P9 has one golden question and needs two more under T0.3.
+C1: Done. Three golden questions with five graded runs each, all passing; the two added on 13 November are in golden/t03/RESULTS.md.
 
 ## Findings for Phase 4, against the accepted task card
 - The recommendation text reads "Store 114 · replenish  pairs": the quantity is missing.

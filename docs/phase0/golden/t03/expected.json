@@ -1,0 +1,9 @@
+{
+ "G5a": {"next_step":"check_departure_scan_and_ask_kinross","records":["Supplier ERP fulfilment posted 14:05","Kinross load scan 140 of 140 at door 7, not departed"],"source":"src/agents.js scoutDecision on build/ashby.db; registry P5 decisions"},
+ "G5b": {"next_step":"propose_invoice_correction_in_supplier_erp","rule":"NF-7.8","billed":180,"shipped":176,"source":"src/agents.js scoutDecision; registry P5 decisions"},
+ "G9a": {"next_step":"wait_for_goods_in_transit","in_transit":"ASN-451207-1","source":"src/agents.js shelfDecision; registry P9 decisions"},
+ "G9b": {"next_step":"recommend_transfer","pairs":24,"source":"src/agents.js shelfDecision; registry P9 decisions"},
+ "G8a": {"ordered":1999954.10,"confirmed":4365551.60,"in_transit":3999826.40,"received":834164.45,"invoiced":16821765.75,"source":"P8's own engine (MIM.compute at 8 Nov), equal to the world by check p8.engine_equal"},
+ "G8b": {"count":7,"total":9721.10,"source":"P8 engine gaps.g4"},
+ "G8c": {"released":150480.60,"orders":10,"days":22,"source":"P8 engine replay variant A, 90 days"}
+}

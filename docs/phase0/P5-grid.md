@@ -45,6 +45,6 @@ Folding click 4 and making clicks 6 and 8 automatic brings the lead path to eigh
 - Result: it does. Asked for the next step on NR-460207 as of the P5 moment, the Ashby connection returned one carton staged and not loaded (659 of 660), the trailer sealing in 40 minutes, the same three rules and the same exposure estimate the screen's first row shows, with Priya's approval required and nothing changed. The answer names its confirming record as Northfield's receiving advice.
 
 ## Not covered here
-C1: P5 has one golden question with five graded runs; T0.3 asks for three. The other two are drafted below and still need their five runs.
+C1: Done. Three golden questions with five graded runs each, all passing; the two added on 13 November are in golden/t03/RESULTS.md.
 - As of the P5 moment, what should Ashby do about PO NR-460288, and which two records disagree?
 - How many Northfield shipments leave Kinross in the next 48 hours, and how many break a rule unless fixed?

@@ -1,0 +1,57 @@
+{
+ "errs": [],
+ "log": [
+  {
+   "i": 1,
+   "click": "Route to Warehouse operations",
+   "ds": "",
+   "options": [
+    "Route to Warehouse operations"
+   ]
+  },
+  {
+   "i": 2,
+   "click": "Route to Warehouse operations",
+   "ds": "",
+   "options": [
+    "Route to Warehouse operations"
+   ]
+  },
+  {
+   "i": 3,
+   "click": "Route to Master-data operations",
+   "ds": "",
+   "options": [
+    "Route to Master-data operations"
+   ]
+  },
+  {
+   "i": 4,
+   "click": "Generate version 2",
+   "ds": "",
+   "options": [
+    "Generate version 2"
+   ]
+  },
+  {
+   "i": 5,
+   "click": "Release corrected version",
+   "ds": "",
+   "options": [
+    "Release corrected version"
+   ]
+  },
+  {
+   "i": 6,
+   "click": "Align sales order to 48",
+   "ds": "",
+   "options": [
+    "Align sales order to 48"
+   ]
+  },
+  {
+   "i": 7,
+   "stop": "no actions"
+  }
+ ]
+}

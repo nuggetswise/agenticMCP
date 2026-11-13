@@ -281,7 +281,7 @@ Phase 0 is closed only when no cell reads Not done or Partly. A cell records whe
 | P7 | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done |
 | P8 | Done | N/A | N/A | Done | Done | Done | Done | Done | N/A | N/A | Not done |
 | P9 | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done | Partly |
-| P11 | Partly | Not done | N/A | Not done | Done | Done | Done | Not done | Done | Not done | Not done |
+| P11 | Done | N/A | N/A | Done | Done | Done | Done | Done | Done | Done | Not done |
 | P12 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
 | P10 Ashby | Not done | Not done | Done | Done | N/A | Not done | N/A | Not done | Done | N/A | Done |
 | P10 Northfield | Not done | Not done | Not done | Done | N/A | Not done | N/A | Not done | Done | N/A | Done |
@@ -293,6 +293,7 @@ Phase 0 is closed only when no cell reads Not done or Partly. A cell records whe
 **Why a cell is N/A**
 
 - **A3 on P1, P2, P4 and P11:** none of these screens has an agent.
+- **A2 on P11:** with no agent, every path is the manual one.
 - **P12:** retired (D40), so no check applies.
 - **P8:** view only. Nothing to walk, and no manual or agent path.
 - **A5, A7 and A10 on the two server scopes:** a server has no screen or clicks, and its values are the world itself.
@@ -347,7 +348,7 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T0.15 | P7 | Complete P7's grid row | T0.5 | P7 link; `contract/claims.json` | Evidence: `docs/phase0/P7-grid.md`; CALLS 43 | Done |
 | T0.16 | P8 | Complete P8's grid row; only C1 is left (`docs/phase0/P8-grid.md`), with its questions drafted for T0.3 | — | P8 link; why its cells are N/A | Every P8 cell reads Done or N/A | Open |
 | T0.17 | P9 | Complete P9's grid row; C1 remains, needing two more golden questions (`docs/phase0/P9-grid.md`) | — | P9 link in Inventory | Every P9 cell reads Done or N/A | Open |
-| T0.18 | P11 | Complete P11's grid row | — | P11 link in Inventory | Every P11 cell reads Done or N/A | Open |
+| T0.18 | P11 | Complete P11's grid row; C1 waits for its records to enter the world (`docs/phase0/P11-grid.md`) | — | P11 link in Inventory | Every P11 cell reads Done or N/A | Open |
 | T0.19 | P12 | Complete P12's grid row | — | P12 link in Inventory | Evidence: P12 retired by the owner, CALLS 32 | Done |
 | T0.2 | P10 Ashby, P10 Northfield, P16 | Audit the two server scopes and the retailer catalogue connector as prototypes | — | Server reference; `docs/phase2/` | Their grid rows are complete and P16's link is in Inventory | Open |
 | T0.3 | P1, P2, P4, P5, P8, P9, P11 | Golden questions: new sets for P2, P8 and P11, more for the other four | — | `docs/phase0/golden/` | Each has at least three questions with five graded runs | Open |

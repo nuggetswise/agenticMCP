@@ -14,6 +14,7 @@ import * as NR from './retailer.js';
 import * as D from './domain.js';
 import { TOOLS, BOUNDARY, SCOPES, ASHBY_WRITES, ASHBY_REFUSALS, NF_TOOLS, NF_WRITES, NF_REFUSALS, NF_SCOPES } from './tools.js';
 import { recordPage, documentPage, adminPage, homePage, nfOrderPage } from './pages.js';
+import * as Aviator from './aviator.js';
 
 const PORT = Number(process.env.PORT || 3000);
 const TOKEN = process.env.MCP_TOKEN || randomBytes(18).toString('base64url');
@@ -201,7 +202,7 @@ const app = express();
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false }));
 app.get('/', (req, res) => res.type('html').send(homePage()));
-app.get('/healthz', (req, res) => res.json({ status: 'ok', version: '0.3.0', writes: WRITES, connections: [AS, NF] }));
+app.get('/healthz', (req, res) => res.json({ status: 'ok', version: '0.3.0', writes: WRITES, connections: [AS, NF], aviator: !!process.env.GEMINI_API_KEY }));
 const cidOf = (req, res) => { const c = BY_TOKEN[req.params.token]; if (!c) { res.status(404).send('Not found'); return null; } return c; };
 
 app.post('/mcp/:token', async (req, res) => {
@@ -234,6 +235,19 @@ app.get('/records/northfield/document/:id', (req, res) => { const d = NR.documen
 app.get('/records/:old/order/:po', (req, res) => res.redirect(`/records/order/${encodeURIComponent(req.params.po)}`));
 
 const adminData = (cid, token) => ({ connection: conn(cid), side: SIDE[cid], rows: db.prepare('SELECT * FROM access_log WHERE connection_id = ? ORDER BY id DESC LIMIT 200').all(cid), allScopes: SIDE[cid].scopes, token, mcpUrl: `${BASE}/mcp/${token}`, writes: WRITES, proposals: db.prepare('SELECT * FROM proposals WHERE connection_id = ? ORDER BY created_at DESC').all(cid) });
+// Aviator: the in-product assistant. A Trading Grid page posts a question; the model runs on the server with the
+// connection's read tools only, so scopes, refusals and the access log apply exactly as they do for the company's own assistant.
+const cors = (res) => res.set({ 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'content-type' });
+app.options('/aviator/:token', (req, res) => { cors(res).status(204).end(); });
+app.post('/aviator/:token', async (req, res) => {
+  const cid = cidOf(req, res); if (!cid) return; cors(res);
+  const tools = cid === AS ? TOOLS : NF_TOOLS; const side = SIDE[cid]; const q = req.body?.question;
+  try {
+    const out = await Aviator.ask({ question: q, history: Array.isArray(req.body?.history) ? req.body.history : [], tools, callTool: (name, args) => call(cid, name, args), side: { person: side.person, company: side.company, other: side.other }, clock: fmtET(D.storyClock()), apiKey: process.env.GEMINI_API_KEY });
+    log(cid, 'aviator', [], { question: String(q || '').slice(0, 300) }, out.ok ? `Answered from ${out.tools_called.length} tool call(s)` : out.message, []);
+    res.status(out.ok ? 200 : out.status).json(out);
+  } catch (e) { console.error(e); res.status(500).json({ ok: false, message: 'Aviator failed.' }); }
+});
 app.get('/openapi.json', (req, res) => { const f = new URL('../openapi/openapi.json', import.meta.url); if (existsSync(f)) res.type('json').send(readFileSync(f)); else res.status(404).send('Not built'); });
 app.get('/admin/:token', (req, res) => { const cid = cidOf(req, res); if (cid) res.type('html').send(adminPage(adminData(cid, req.params.token))); });
 app.post('/admin/:token/scopes', (req, res) => {

@@ -150,6 +150,7 @@ export const TED = {
   UOM: { rule: 'NF-4.14', cause: 'Quantity not in cases' },
   DTE: { rule: 'NF-4.15', cause: 'Ship date after delivery date' },
   QTY: { rule: 'NF-7.8', cause: 'Invoice quantity above accepted quantity' },
+  PRC: { rule: 'NF-7.11', cause: 'Line price beyond tolerance of the order price' },
   STO: { rule: 'NF-4.7', cause: 'Ship-to differs from the current PO' },
   PCK: { rule: 'NF-4.9', cause: 'Units per case differ from Northfield item setup' },
 };

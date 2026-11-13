@@ -13,8 +13,8 @@ CREATE TABLE documents (
   sent_at TEXT NOT NULL, isa_ctl INTEGER NOT NULL, gs_ctl INTEGER NOT NULL, st_ctl TEXT NOT NULL,
   status TEXT NOT NULL, answers_doc_id TEXT, test INTEGER NOT NULL DEFAULT 0, file TEXT NOT NULL, body TEXT NOT NULL, raw TEXT NOT NULL);
 CREATE TABLE orders (po TEXT PRIMARY KEY, supplier_id TEXT NOT NULL, retailer_id TEXT NOT NULL, programme TEXT NOT NULL, stream TEXT NOT NULL, ship_to TEXT NOT NULL, received_at TEXT NOT NULL, requested_delivery TEXT NOT NULL, order_value REAL NOT NULL, accepted_value REAL);
-CREATE TABLE order_lines (po TEXT NOT NULL, line INTEGER NOT NULL, sku TEXT NOT NULL, northfield_item TEXT, qty_original INTEGER NOT NULL, qty_ordered INTEGER NOT NULL, qty_accepted INTEGER, price REAL NOT NULL, uom TEXT NOT NULL, delivery_date TEXT, PRIMARY KEY (po, line));
-CREATE TABLE order_changes (po TEXT NOT NULL, seq INTEGER NOT NULL, sent_at TEXT NOT NULL, line INTEGER NOT NULL, code TEXT NOT NULL, qty INTEGER, delivery_date TEXT, state TEXT NOT NULL);
+CREATE TABLE order_lines (po TEXT NOT NULL, line INTEGER NOT NULL, sku TEXT NOT NULL, northfield_item TEXT, qty_original INTEGER NOT NULL, qty_ordered INTEGER NOT NULL, qty_accepted INTEGER, price REAL NOT NULL, uom TEXT NOT NULL, delivery_date TEXT, price_original REAL, PRIMARY KEY (po, line));
+CREATE TABLE order_changes (po TEXT NOT NULL, seq INTEGER NOT NULL, sent_at TEXT NOT NULL, line INTEGER NOT NULL, code TEXT NOT NULL, qty INTEGER, delivery_date TEXT, state TEXT NOT NULL, price REAL);
 CREATE TABLE shipments (shipment_id TEXT PRIMARY KEY, po TEXT NOT NULL, doc_id TEXT NOT NULL, sent_at TEXT NOT NULL, shipped_at TEXT NOT NULL, delivery_date TEXT, cartons INTEGER NOT NULL, ship_from TEXT, ship_to TEXT, bol TEXT, seal TEXT, complete INTEGER NOT NULL);
 CREATE TABLE shipment_lines (shipment_id TEXT NOT NULL, po TEXT NOT NULL, line INTEGER NOT NULL, sku TEXT, qty INTEGER NOT NULL, uom TEXT);
 CREATE TABLE cartons (sscc TEXT NOT NULL, shipment_id TEXT NOT NULL, po TEXT NOT NULL, line INTEGER NOT NULL, sku TEXT, qty INTEGER NOT NULL, received INTEGER NOT NULL);

@@ -221,10 +221,11 @@ export function deductionCase(db, ref, asOf = storyClock()) {
     as_of: fmtET(asOf), other_charges_on_this_order: db.prepare('SELECT * FROM adjustments WHERE po = ? AND reference <> ? AND paid_at <= ? ORDER BY paid_at').all(po, c.deduction, T).map((a) => ({ payment: a.payment, at: fmtET(a.paid_at), amount: a.amount, reference: a.reference, note: a.note })), link: `order/${encodeURIComponent(po)}` };
 }
 
-export function deductions(db, asOf = storyClock()) {
-  const rows = db.prepare("SELECT * FROM events WHERE kind = 'case.opened' AND at <= ? ORDER BY at").all(asOf.toISOString()).map((e) => ({ ...J(e.data), po: e.po, opened: fmtET(e.at) })).filter((c) => ownsOrder(db, c.po) === 'own');
+export function deductions(db, asOf = storyClock(), from = null) {
+  const start = from ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(from) ? `${from}T00:00:00-04:00` : from).toISOString() : et('2026-09-27', '00:00').toISOString();
+  const rows = db.prepare("SELECT * FROM events WHERE kind = 'case.opened' AND at <= ? AND at >= ? ORDER BY at").all(asOf.toISOString(), start).map((e) => ({ ...J(e.data), po: e.po, opened: fmtET(e.at) })).filter((c) => ownsOrder(db, c.po) === 'own');
   const total = Math.round(rows.reduce((t, c) => t + c.amount, 0) * 100) / 100;
-  return { as_of: fmtET(asOf), count: rows.length, total_amount: total, cases: rows.map((c) => ({ case: c.case, po: c.po, charge: c.charge, amount: c.amount, opened: c.opened, link: `order/${encodeURIComponent(c.po)}` })) };
+  return { as_of: fmtET(asOf), opened_from: fmtET(start), count: rows.length, total_amount: total, cases: rows.map((c) => ({ case: c.case, po: c.po, charge: c.charge, amount: c.amount, opened: c.opened, link: `order/${encodeURIComponent(c.po)}` })) };
 }
 
-export function calendar(db) { return { quarter: 'Sunday 27 September to Saturday 26 December 2026', story_clock: fmtET(storyClock()), moments: db.prepare('SELECT * FROM calendar ORDER BY as_of').all().map((m) => ({ ...m, as_of_eastern: fmtET(m.as_of) })) }; }
+export function calendar(db) { return { quarter: 'Sunday 27 September to Saturday 26 December 2026', history: 'Closed history from 29 March to 27 June 2026, settled by 7 August: orders, documents and decided deduction cases. Lists and replays cover the current quarter unless a from date reaches back.', story_clock: fmtET(storyClock()), moments: db.prepare('SELECT * FROM calendar ORDER BY as_of').all().map((m) => ({ ...m, as_of_eastern: fmtET(m.as_of) })) }; }

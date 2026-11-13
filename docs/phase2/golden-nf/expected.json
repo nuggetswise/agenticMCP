@@ -22,14 +22,14 @@
  "N4": [
   {
    "now": 32,
-   "draft": 525,
-   "supplier": "Ashby Supplier",
-   "exposure": 73950
+   "draft": 541,
+   "suppliers_failing_with_draft": 12,
+   "exposure": 76350
   }
  ],
  "N5": [
   {
-   "failing": 0
+   "failing": 2
   }
  ],
  "N6": [

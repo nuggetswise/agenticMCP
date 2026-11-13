@@ -4,7 +4,12 @@
 // Northfield's. Every answer is read as of a time; nothing here sends or changes anything.
 import { fmtET } from '../world/lib.js';
 import { normPo, rule, param, chargeOf, storyClock, timeLeft } from './domain.js';
-import { scorecard, scorecardAsOf } from './score.js';
+import { scorecard, scorecardAsOf, QUARTER } from './score.js';
+import { et } from '../world/lib.js';
+
+/** The current period starts here. Lists and replays cover it by default; `from` reaches the history before it. */
+export const QUARTER_FROM = et(QUARTER.start, '00:00').toISOString();
+export const fromDate = (from) => (from ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(from) ? `${from}T00:00:00-04:00` : from).toISOString() : QUARTER_FROM);
 
 export const NOT_AVAILABLE_NF = 'Not available to Northfield';
 const J = (s) => (s ? JSON.parse(s) : {});
@@ -61,9 +66,9 @@ export function scorecardNF(db, supplier, asOf = storyClock()) {
 const caseOpened = (db, key) => db.prepare("SELECT * FROM events WHERE kind = 'case.opened'").all().map((e) => ({ ...e, d: J(e.data) })).find((e) => e.d.case === key || e.d.deduction === key || e.po === normPo(key));
 
 /** Deduction cases Northfield has opened, all suppliers. */
-export function casesNF(db, asOf = storyClock()) {
-  const rows = db.prepare("SELECT * FROM events WHERE kind = 'case.opened' AND at <= ? ORDER BY at").all(asOf.toISOString()).map((e) => ({ ...J(e.data), po: e.po, opened: fmtET(e.at), supplier: supplierName(db, db.prepare('SELECT supplier_id FROM orders WHERE po = ?').get(e.po)?.supplier_id) }));
-  return { as_of: fmtET(asOf), count: rows.length, total_amount: Math.round(rows.reduce((t, c) => t + c.amount, 0) * 100) / 100, cases: rows.map((c) => ({ case: c.case, supplier: c.supplier, po: c.po, charge: c.charge, amount: c.amount, opened: c.opened })) };
+export function casesNF(db, asOf = storyClock(), from = null) {
+  const rows = db.prepare("SELECT * FROM events WHERE kind = 'case.opened' AND at <= ? AND at >= ? ORDER BY at").all(asOf.toISOString(), fromDate(from)).map((e) => ({ ...J(e.data), po: e.po, opened: fmtET(e.at), supplier: supplierName(db, db.prepare('SELECT supplier_id FROM orders WHERE po = ?').get(e.po)?.supplier_id) }));
+  return { as_of: fmtET(asOf), opened_from: fmtET(fromDate(from)), count: rows.length, total_amount: Math.round(rows.reduce((t, c) => t + c.amount, 0) * 100) / 100, cases: rows.map((c) => ({ case: c.case, supplier: c.supplier, po: c.po, charge: c.charge, amount: c.amount, opened: c.opened })) };
 }
 
 /** One case from Northfield's side: charges, what the supplier put in the case, what NF-7.4 needs, reviewer notes and decisions. */
@@ -124,7 +129,8 @@ export function threeWayMatch(db, ref, asOf = storyClock()) {
     const received = db.prepare('SELECT coalesce(sum(qty),0) q FROM receipts WHERE po = ? AND line = ? AND received_at <= ?').get(po, l.line, T).q;
     const billed = il ? il.qty : 0; const price = il ? il.price : null; const priceVar = price != null && l.price ? Math.abs(price - l.price) / l.price : 0;
     const origin = !il ? 'not billed' : billed > shipped ? 'quantity: billed more than shipped' : billed > received ? 'quantity: billed more than received' : priceVar > tol ? 'price: beyond the NF-7.11 tolerance' : 'matches';
-    return { line: l.line, item: l.northfield_item, ordered: l.qty_ordered, accepted: l.qty_accepted, po_price: l.price, shipped, received, billed, invoice_price: price, origin, amount_at_issue: !il ? 0 : Math.round(Math.max(0, billed - Math.min(shipped, received)) * l.price * 100) / 100 + (priceVar > tol ? Math.round((price - l.price) * billed * 100) / 100 : 0) };
+    const chg = l.price_original != null && l.price !== l.price_original ? db.prepare("SELECT seq, sent_at FROM order_changes WHERE po = ? AND line = ? AND code = 'PC' AND sent_at <= ? ORDER BY seq DESC").get(po, l.line, T) : null;
+    return { line: l.line, item: l.northfield_item, ordered: l.qty_ordered, accepted: l.qty_accepted, po_price: l.price, ...(chg ? { first_po_price: l.price_original, price_set_by: `Order change ${chg.seq}, ${fmtET(chg.sent_at)} (NF-1.1)` } : {}), shipped, received, billed, invoice_price: price, origin, amount_at_issue: !il ? 0 : Math.round(Math.max(0, billed - Math.min(shipped, received)) * l.price * 100) / 100 + (priceVar > tol ? Math.round((price - l.price) * billed * 100) / 100 : 0) };
   });
   const corrections = invs.filter((i) => i.replaces === inv.invoice || (i.invoice !== inv.invoice && i.replaces)).map((i) => ({ invoice: i.invoice, replaces: i.replaces, sent: fmtET(i.sent_at), total: i.total, status: i.status }));
   const bad = lines.filter((l) => l.origin !== 'matches' && l.origin !== 'not billed');
@@ -149,7 +155,7 @@ export const REPLAY_CHECKS = {
   price_tolerance_pct: { what: 'Invoice line price within N percent of the purchase order price', set: '810', current: 'NF-7.11', currentValue: 0.5 },
 };
 function failsOf(db, check, value) {
-  const docs = (set) => db.prepare(`SELECT d.*, o.supplier_id sup FROM documents d JOIN orders o ON o.po = d.po WHERE d.doc_type = ? AND d.status <> 'Superseded'`).all(set);
+  const docs = (set) => db.prepare(`SELECT d.*, o.supplier_id sup FROM documents d JOIN orders o ON o.po = d.po WHERE d.doc_type = ? AND d.status <> 'Superseded' AND d.sent_at >= ?`).all(set, QUARTER_FROM);
   const first = (po, set) => db.prepare('SELECT sent_at, body FROM documents WHERE po = ? AND doc_type = ? ORDER BY sent_at').get(po, set);
   const out = [];
   if (check === 'ship_notice_minutes') for (const d of docs('856')) { const b = J(d.body); if (b.shipped_at && (Date.parse(d.sent_at) - Date.parse(b.shipped_at)) / 60000 > value) out.push(d); }
@@ -167,7 +173,7 @@ export function replayRule(db, { draft, check, value, charge }) {
   const now = failsOf(db, check, C.currentValue); const then = failsOf(db, check, v);
   const by = (rows) => { const m = {}; for (const r of rows) (m[r.sup] ||= []).push(r.reference); return m; };
   const A = by(now), B = by(then); const sups = [...new Set([...Object.keys(A), ...Object.keys(B)])];
-  return { found: true, draft: d ? { id: d.id, statement: d.statement, state: d.state } : null, check: C.what.replace('N', String(v)), compared_with: `${C.current} at ${C.currentValue}`, documents_replayed: db.prepare("SELECT count(*) n FROM documents WHERE doc_type = ? AND status <> 'Superseded'").get(C.set).n,
+  return { found: true, draft: d ? { id: d.id, statement: d.statement, state: d.state } : null, check: C.what.replace('N', String(v)), compared_with: `${C.current} at ${C.currentValue}`, documents_replayed: db.prepare("SELECT count(*) n FROM documents WHERE doc_type = ? AND status <> 'Superseded' AND sent_at >= ?").get(C.set, QUARTER_FROM).n,
     failing_now: now.length, failing_with_draft: then.length, charge_per_failure: perFail, added_exposure: (then.length - now.length) * perFail,
     by_supplier: sups.map((s) => ({ supplier: supplierName(db, s), now: (A[s] || []).length, with_draft: (B[s] || []).length, newly_failing: (B[s] || []).filter((x) => !(A[s] || []).includes(x)).slice(0, 5) })).sort((a, b) => b.with_draft - a.with_draft),
     note: 'Replayed against the quarter’s exchanged X12 only. Nothing is published; publishing needs this replay on record and Jordan Ellis’s approval.' };

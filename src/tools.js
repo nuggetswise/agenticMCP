@@ -7,6 +7,7 @@ import { scorecard, scorecardAsOf } from './score.js';
 import * as NR from './retailer.js';
 
 const asOf = z.string().optional().describe('Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern.');
+const fromD = z.string().optional().describe('Earliest opening date to include, ISO 8601 or a date. Default: the start of the current quarter, 27 September 2026.');
 const t = (v) => D.asOfDate(v);
 
 export const SCOPES = ['orders', 'documents', 'errors', 'rules', 'deductions'];
@@ -34,7 +35,7 @@ export const TOOLS = [
     description: 'The rule catalogue Ashby works under, each rule with its owner (Industry standard, US law, Northfield, Ashby, Ashby agreement), the Northfield rule an Ashby rule implements, its basis and source, and the precedence statement saying which rule wins. Covers Northfield’s supplier guide 2026.2 (deadlines, field limits, item and location rules, charges, evidence and scorecard rules), Ashby’s own policies and its Kinross and marketplace agreements. Filter by rule id or charge code, topic words, or X12 document number.',
     input: { rule_id: z.string().optional().describe('Rule id or charge code, for example NF-4.2 or AS02'), topic: z.string().optional().describe('Words to match, for example "ship notice"'), document: z.string().optional().describe('X12 set, for example 856') }, run: (db, a) => D.rules(db, { id: a.rule_id, topic: a.topic, document: a.document }) },
   { name: 'list_deductions', title: 'Deduction cases', job: 'Deduction triage', rest: ['GET', '/v1/deductions'], required: ['deductions'], optional: [],
-    description: 'Northfield deduction cases opened against Ashby up to a point in time, each with its charge, amount and order.', input: { as_of: asOf }, run: (db, a) => D.deductions(db, t(a.as_of)) },
+    description: 'Northfield deduction cases opened against Ashby in the current quarter up to a point in time, each with its charge, amount and order. Pass from (a date, for example 2026-03-29) to include decided cases from the history before the quarter.', input: { as_of: asOf, from: fromD }, run: (db, a) => D.deductions(db, t(a.as_of), a.from) },
   { name: 'get_deduction_case', title: 'Deduction case', job: 'Deduction triage', rest: ['GET', '/v1/deductions/{case}'], required: ['deductions'], optional: ['rules'],
     description: 'One deduction case: the charge and its rule, the remittance that withheld it, the dispute deadline and time left, where each piece of required evidence sits (in the case, held by another system, or not found), the case history and any repayment.',
     input: { case: z.string().describe('Case id (DC-40877), deduction reference (DM-55102) or PO number'), as_of: asOf }, run: (db, a) => D.deductionCase(db, a.case, t(a.as_of)) },
@@ -78,7 +79,7 @@ export const NF_TOOLS = [
   { name: 'supplier_scorecard', title: 'Supplier scorecard', job: 'Performance review', required: ['suppliers'], optional: [],
     description: 'The on-time, in-full scorecard Northfield publishes for a supplier over the 13-week quarter: cases, failing cases, failing lines by reason and the published figures. Published on 28 Dec 2026; before then it answers that the quarter is not published and lists the files published so far.', input: { supplier: sup, as_of: asOf }, run: (db, a) => NR.scorecardNF(db, a.supplier, t(a.as_of)) },
   { name: 'list_deduction_cases', title: 'Deduction cases', job: 'Claims queue', required: ['deductions'], optional: [],
-    description: 'Deduction cases Northfield has opened against its suppliers up to a point in time, with count and total.', input: { as_of: asOf }, run: (db, a) => NR.casesNF(db, t(a.as_of)) },
+    description: 'Deduction cases Northfield has opened against its suppliers in the current quarter up to a point in time, with count and total. Pass from (a date, for example 2026-03-29) to include decided cases from the history before the quarter, across suppliers.', input: { as_of: asOf, from: fromD }, run: (db, a) => NR.casesNF(db, t(a.as_of), a.from) },
   { name: 'review_deduction_case', title: 'Review a deduction case', job: 'Claims review', required: ['deductions'], optional: ['rules'],
     description: 'One deduction case from Northfield’s side: the charges withheld, what the supplier put in the case, what NF-7.4 requires, the claims reviewer’s notes, the decisions so far, and Review Agent’s recommendation for the next undecided charge. Jordan Ellis decides each charge (NF-7.7); the agent only recommends.',
     input: { case: z.string().describe('Case id, deduction reference or PO number'), as_of: asOf }, run: (db, a) => NR.caseNF(db, a.case, t(a.as_of)) },
@@ -87,7 +88,7 @@ export const NF_TOOLS = [
     input: { reference: z.string().describe('Invoice number (INV-7731) or PO number'), as_of: asOf }, run: (db, a) => NR.threeWayMatch(db, a.reference, t(a.as_of)) },
   { name: 'list_draft_rules', title: 'Draft rules', job: 'Rule authoring', required: ['rule_drafts'], optional: [], description: 'Northfield’s draft supplier rules not yet published, with what each checks.', input: {}, run: (db) => NR.draftRules(db) },
   { name: 'replay_draft_rule', title: 'Replay a draft rule against the quarter', job: 'Rule authoring', required: ['rule_drafts', 'documents'], optional: [],
-    description: `Applies a draft rule to every document exchanged in the quarter and shows which suppliers would fail, how many documents, and the charge exposure, against the rule in force. Pass a draft id (NFD-1) or a check and value. Checks: ${Object.keys(NR.REPLAY_CHECKS).join(', ')}. Publishing a rule needs a replay on record.`,
+    description: `Applies a draft rule to every document exchanged in the current quarter (history before it is not replayed) and shows which suppliers would fail, how many documents, and the charge exposure, against the rule in force. Pass a draft id (NFD-1) or a check and value. Checks: ${Object.keys(NR.REPLAY_CHECKS).join(', ')}. Publishing a rule needs a replay on record.`,
     input: { draft: z.string().optional(), check: z.enum(Object.keys(NR.REPLAY_CHECKS)).optional(), value: z.number().optional(), charge: z.number().optional().describe('Charge per failure in dollars, default 150') }, run: (db, a) => NR.replayRule(db, a), records_replay: true },
   { name: 'lookup_rules', title: 'Supplier guide rules', job: 'Requirement lookup', required: ['rules'], optional: [],
     description: 'Northfield’s supplier guide 2026.2 with the industry and legal rules it relies on, each with owner, basis and source, and the precedence statement. Suppliers’ own policies are theirs and are not shown.',

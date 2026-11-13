@@ -411,7 +411,7 @@
    "get": {
     "operationId": "list_deductions",
     "summary": "Deduction cases",
-    "description": "Northfield deduction cases opened against Ashby up to a point in time, each with its charge, amount and order.",
+    "description": "Northfield deduction cases opened against Ashby in the current quarter up to a point in time, each with its charge, amount and order. Pass from (a date, for example 2026-03-29) to include decided cases from the history before the quarter.",
     "tags": [
      "Deduction triage"
     ],
@@ -431,6 +431,16 @@
        "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
       },
       "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+     },
+     {
+      "name": "from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Earliest opening date to include, ISO 8601 or a date. Default: the start of the current quarter, 27 September 2026."
+      },
+      "description": "Earliest opening date to include, ISO 8601 or a date. Default: the start of the current quarter, 27 September 2026."
      }
     ],
     "responses": {

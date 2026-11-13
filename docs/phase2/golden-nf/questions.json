@@ -1,22 +1,52 @@
 [
- {"id":"N1","q":"As of 10 December 2026, how many deduction cases has Northfield opened against Ashby Supplier, and what is their total amount?",
-  "sql":"SELECT count(*) n, round(sum(json_extract(data,'$.amount')),2) total FROM events WHERE kind='case.opened' AND at <= '2026-12-11T04:59:00.000Z'"},
- {"id":"N2","q":"At 09:00 Eastern on 10 November 2026, does invoice INV-7731 match its purchase order and receipts? Where does any variance come from, and what is the next step?",
-  "sql":"SELECT il.line, il.qty billed, (SELECT sum(qty) FROM shipment_lines sl JOIN shipments s ON s.shipment_id = sl.shipment_id WHERE sl.po = il.po AND sl.line = il.line AND s.sent_at <= '2026-11-10T14:00:00.000Z') shipped, CASE WHEN il.qty > (SELECT sum(qty) FROM shipment_lines sl JOIN shipments s ON s.shipment_id = sl.shipment_id WHERE sl.po = il.po AND sl.line = il.line AND s.sent_at <= '2026-11-10T14:00:00.000Z') THEN 'hold_and_request_corrected_invoice' END next_step FROM invoice_lines il WHERE il.invoice = 'INV-7731' AND il.line = 1"},
- {"id":"N3","q":"Check invoice INV-7731 again as of 30 December 2026. What does the match find now, and what is the next step?",
-  "sql":"SELECT invoice corrected, CASE WHEN sent_at <= '2026-12-30T14:00:00.000Z' THEN 'match_corrected_invoice' END next_step FROM invoices WHERE replaces = 'INV-7731'"},
- {"id":"N4","q":"Replay draft rule NFD-1 against the quarter. How many ship notices fail under the rule in force and under the draft, which supplier is affected, and what is the added charge exposure?",
-  "sql":"SELECT sum((julianday(d.sent_at)-julianday(json_extract(d.body,'$.shipped_at')))*1440 > 60) now, sum((julianday(d.sent_at)-julianday(json_extract(d.body,'$.shipped_at')))*1440 > 30) draft, (SELECT name FROM parties WHERE id = 'ASHBY') supplier, (sum((julianday(d.sent_at)-julianday(json_extract(d.body,'$.shipped_at')))*1440 > 30) - sum((julianday(d.sent_at)-julianday(json_extract(d.body,'$.shipped_at')))*1440 > 60)) * 150 exposure FROM documents d WHERE d.doc_type = '856' AND d.status <> 'Superseded' AND json_extract(d.body,'$.shipped_at') IS NOT NULL"},
- {"id":"N5","q":"What would draft rule NFD-2 change if published?",
-  "sql":"SELECT count(*) failing FROM documents d, json_each(json_extract(d.body,'$.lines')) l JOIN order_lines o ON o.po = d.po AND o.line = json_extract(l.value,'$.line') WHERE d.doc_type='810' AND d.status <> 'Superseded' AND abs(json_extract(l.value,'$.price') - o.price)/o.price*100 > 0.25"},
- {"id":"N6","q":"Summarise Ashby Supplier's EDI exchange with Northfield for the 30 days ending 17 November 2026 11:00 Eastern: documents, failures, and failures by channel.",
-  "sql":"SELECT (SELECT count(*) FROM documents WHERE supplier_id='ASHBY' AND partner_id='NORTHFIELD' AND test=0 AND sent_at > '2026-10-18T16:00:00.000Z' AND sent_at <= '2026-11-17T16:00:00.000Z') docs, (SELECT count(*) FROM errors e JOIN documents d ON d.doc_id=e.doc_id WHERE d.supplier_id='ASHBY' AND d.partner_id='NORTHFIELD' AND d.test=0 AND d.sent_at > '2026-10-18T16:00:00.000Z' AND d.sent_at <= '2026-11-17T16:00:00.000Z' AND d.status NOT LIKE 'Held%') fails, (SELECT count(*) FROM errors e JOIN documents d ON d.doc_id=e.doc_id WHERE d.supplier_id='ASHBY' AND d.partner_id='NORTHFIELD' AND d.test=0 AND d.sent_at > '2026-10-18T16:00:00.000Z' AND d.sent_at <= '2026-11-17T16:00:00.000Z' AND d.status NOT LIKE 'Held%' AND e.channel LIKE '%824%') ch824"},
- {"id":"N7","q":"Review deduction case DC-40877 as of 3 December 2026. What evidence has Ashby put in the case, and what does the review recommend for the shortage charge?",
-  "sql":"SELECT json_extract(data,'$.evidence') evidence, CASE WHEN json_extract(data,'$.evidence') LIKE '%Bill of lading%' AND json_extract(data,'$.evidence') LIKE '%Proof of delivery%' AND json_extract(data,'$.evidence') LIKE '%Load scan%' THEN 'recommend_reverse' END next_step FROM events WHERE kind='case.dispute' AND json_extract(data,'$.case')='DC-40877' AND json_extract(data,'$.charge')='SH01' AND at <= '2026-12-03T05:00:00.000Z'"},
- {"id":"N8","q":"Show me Kinross's warehouse shipping advice WSA-45620 for Ashby.",
-  "sql":"SELECT count(*) visible FROM documents WHERE reference = 'WSA-45620'"},
- {"id":"N9","q":"What did Northfield's published scorecard for Ashby show for the quarter: official score and failing lines?",
-  "sql":"SELECT json_extract(data,'$.official') official, json_extract(data,'$.failing_lines') lines FROM events WHERE kind='scorecard.published' AND json_extract(data,'$.cases') IS NOT NULL"},
- {"id":"N10","q":"How did Northfield decide each charge in case DC-40877, and who decided?",
-  "sql":"SELECT group_concat(json_extract(data,'$.charge')||':'||json_extract(data,'$.decision'),';') decisions, max(json_extract(data,'$.decided_by')) decided_by FROM events WHERE kind='case.decision' AND json_extract(data,'$.case')='DC-40877'"}
+ {
+  "id": "N1",
+  "q": "In the current quarter, as of 10 December 2026, how many deduction cases has Northfield opened against Ashby Supplier, and what is their total amount?",
+  "sql": "SELECT count(*) n, round(sum(json_extract(e.data,'$.amount')),2) total FROM events e JOIN orders o ON o.po = e.po WHERE e.kind='case.opened' AND o.supplier_id = 'ASHBY' AND e.at >= '2026-09-27T04:00:00.000Z' AND e.at <= '2026-12-11T04:59:00.000Z'"
+ },
+ {
+  "id": "N2",
+  "q": "At 09:00 Eastern on 10 November 2026, does invoice INV-7731 match its purchase order and receipts? Where does any variance come from, and what is the next step?",
+  "sql": "SELECT il.line, il.qty billed, (SELECT sum(qty) FROM shipment_lines sl JOIN shipments s ON s.shipment_id = sl.shipment_id WHERE sl.po = il.po AND sl.line = il.line AND s.sent_at <= '2026-11-10T14:00:00.000Z') shipped, CASE WHEN il.qty > (SELECT sum(qty) FROM shipment_lines sl JOIN shipments s ON s.shipment_id = sl.shipment_id WHERE sl.po = il.po AND sl.line = il.line AND s.sent_at <= '2026-11-10T14:00:00.000Z') THEN 'hold_and_request_corrected_invoice' END next_step FROM invoice_lines il WHERE il.invoice = 'INV-7731' AND il.line = 1"
+ },
+ {
+  "id": "N3",
+  "q": "Check invoice INV-7731 again as of 30 December 2026. What does the match find now, and what is the next step?",
+  "sql": "SELECT invoice corrected, CASE WHEN sent_at <= '2026-12-30T14:00:00.000Z' THEN 'match_corrected_invoice' END next_step FROM invoices WHERE replaces = 'INV-7731'"
+ },
+ {
+  "id": "N4",
+  "q": "Replay draft rule NFD-1 against the current quarter. How many ship notices fail under the rule in force and under the draft, how many suppliers would newly fail, and what is the added charge exposure?",
+  "sql": "SELECT sum((julianday(d.sent_at)-julianday(json_extract(d.body,'$.shipped_at')))*1440 > 60) now, sum((julianday(d.sent_at)-julianday(json_extract(d.body,'$.shipped_at')))*1440 > 30) draft, count(DISTINCT CASE WHEN (julianday(d.sent_at)-julianday(json_extract(d.body,'$.shipped_at')))*1440 > 30 THEN d.supplier_id END) suppliers_failing_with_draft, (sum((julianday(d.sent_at)-julianday(json_extract(d.body,'$.shipped_at')))*1440 > 30) - sum((julianday(d.sent_at)-julianday(json_extract(d.body,'$.shipped_at')))*1440 > 60)) * 150 exposure FROM documents d WHERE d.doc_type = '856' AND d.status <> 'Superseded' AND d.sent_at >= '2026-09-27T04:00:00.000Z' AND json_extract(d.body,'$.shipped_at') IS NOT NULL"
+ },
+ {
+  "id": "N5",
+  "q": "What would draft rule NFD-2 change if published?",
+  "sql": "SELECT count(*) failing FROM documents d, json_each(json_extract(d.body,'$.lines')) l JOIN order_lines o ON o.po = d.po AND o.line = json_extract(l.value,'$.line') WHERE d.doc_type='810' AND d.status <> 'Superseded' AND abs(json_extract(l.value,'$.price') - o.price)/o.price*100 > 0.25"
+ },
+ {
+  "id": "N6",
+  "q": "Summarise Ashby Supplier's EDI exchange with Northfield for the 30 days ending 17 November 2026 11:00 Eastern: documents, failures, and failures by channel.",
+  "sql": "SELECT (SELECT count(*) FROM documents WHERE supplier_id='ASHBY' AND partner_id='NORTHFIELD' AND test=0 AND sent_at > '2026-10-18T16:00:00.000Z' AND sent_at <= '2026-11-17T16:00:00.000Z') docs, (SELECT count(*) FROM errors e JOIN documents d ON d.doc_id=e.doc_id WHERE d.supplier_id='ASHBY' AND d.partner_id='NORTHFIELD' AND d.test=0 AND d.sent_at > '2026-10-18T16:00:00.000Z' AND d.sent_at <= '2026-11-17T16:00:00.000Z' AND d.status NOT LIKE 'Held%') fails, (SELECT count(*) FROM errors e JOIN documents d ON d.doc_id=e.doc_id WHERE d.supplier_id='ASHBY' AND d.partner_id='NORTHFIELD' AND d.test=0 AND d.sent_at > '2026-10-18T16:00:00.000Z' AND d.sent_at <= '2026-11-17T16:00:00.000Z' AND d.status NOT LIKE 'Held%' AND e.channel LIKE '%824%') ch824"
+ },
+ {
+  "id": "N7",
+  "q": "Review deduction case DC-40877 as of 3 December 2026. What evidence has Ashby put in the case, and what does the review recommend for the shortage charge?",
+  "sql": "SELECT json_extract(data,'$.evidence') evidence, CASE WHEN json_extract(data,'$.evidence') LIKE '%Bill of lading%' AND json_extract(data,'$.evidence') LIKE '%Proof of delivery%' AND json_extract(data,'$.evidence') LIKE '%Load scan%' THEN 'recommend_reverse' END next_step FROM events WHERE kind='case.dispute' AND json_extract(data,'$.case')='DC-40877' AND json_extract(data,'$.charge')='SH01' AND at <= '2026-12-03T05:00:00.000Z'"
+ },
+ {
+  "id": "N8",
+  "q": "Show me Kinross's warehouse shipping advice WSA-45620 for Ashby.",
+  "sql": "SELECT count(*) visible FROM documents WHERE reference = 'WSA-45620'"
+ },
+ {
+  "id": "N9",
+  "q": "What did Northfield's published scorecard for Ashby show for the quarter: official score and failing lines?",
+  "sql": "SELECT json_extract(data,'$.official') official, json_extract(data,'$.failing_lines') lines FROM events WHERE kind='scorecard.published' AND json_extract(data,'$.cases') IS NOT NULL"
+ },
+ {
+  "id": "N10",
+  "q": "How did Northfield decide each charge in case DC-40877, and who decided?",
+  "sql": "SELECT group_concat(json_extract(data,'$.charge')||':'||json_extract(data,'$.decision'),';') decisions, max(json_extract(data,'$.decided_by')) decided_by FROM events WHERE kind='case.decision' AND json_extract(data,'$.case')='DC-40877'"
+ }
 ]

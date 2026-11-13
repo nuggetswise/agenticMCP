@@ -3,6 +3,8 @@ import { et, addH, addD, etDay, sscc } from './lib.js';
 import { Log, D, iso } from './log.js';
 import { replen, replenDocs, CLOCK10 } from './replen.js';
 import { anchors, finishRisks } from './anchors.js';
+import { history } from './history.js';
+import { variance } from './variance.js';
 import { BUYER_FX, buyerSupplierId, PARTY, TED, QUARTER, ITEM } from './ref.js';
 
 export const T8 = '2026-11-08'; // Money in Motion's day 0
@@ -43,7 +45,7 @@ function buyerOrders(L, W) {
       const at = t(e[1]);
       if (e[0] === 'chg') D.change(L, O, at, ++seq, Object.entries(e[2]).map(([k, q]) => ({ line: ln(k).line, code: q === 0 ? 'DI' : q < ln(k).qty ? 'QD' : 'QI', qty: q, qty_left: q })));
       else if (e[0] === 'ack') D.ack(L, O, at, { ref: `ACK-${p.id.slice(3)}`, codes: Object.fromEntries(Object.entries(e[2]).map(([k, a]) => [ln(k).line, a[1]])), qty: Object.fromEntries(Object.entries(e[2]).map(([k, a]) => [ln(k).line, a[0]])), backorder: Object.fromEntries(Object.entries(e[2]).filter(([, a]) => a[2]).map(([k, a]) => [ln(k).line, a[2]])) });
-      else if (e[0] === 'asn' && asnQty.set(e[2], e[3])) D.asn(L, O, at, { ref: e[2], shippedAt: at, deliveryDate: etDay(dayAt(e[1] + fx.transit, '12:00')), lines: Object.entries(e[3]).map(([k, q]) => ({ line: ln(k).line, sku: ln(k).sku, qty: q, uom: 'EA' })), cartonCount: Math.max(1, Math.ceil(Object.values(e[3]).reduce((a, b) => a + b, 0) / 24)), status: e[4] ? 'CC' : 'BP', shipFrom: { name: PARTY[supplier].name, gln: PARTY[supplier].gln }, scac: 'LKLF' });
+      else if (e[0] === 'asn' && asnQty.set(e[2], e[3])) D.asn(L, O, supplier !== 'ASHBY' && idx % 8 === 3 && at >= et('2026-09-27', '00:00') ? new Date(at.getTime() + (31 + idx % 8) * 60000) : at, { ref: e[2], shippedAt: at, deliveryDate: etDay(dayAt(e[1] + fx.transit, '12:00')), lines: Object.entries(e[3]).map(([k, q]) => ({ line: ln(k).line, sku: ln(k).sku, qty: q, uom: 'EA' })), cartonCount: Math.max(1, Math.ceil(Object.values(e[3]).reduce((a, b) => a + b, 0) / 24)), status: e[4] ? 'CC' : 'BP', shipFrom: { name: PARTY[supplier].name, gln: PARTY[supplier].gln }, scac: 'LKLF' });
       else if (e[0] === 'rcv') D.receipt(L, O, at, { ref: `RCV-${e[2]}`, asnRef: e[2], qty: Object.fromEntries(Object.entries(e[3]).map(([k, q]) => [ln(k).line, q])), short: Object.fromEntries(Object.entries(e[3]).map(([k, q]) => [ln(k).line, Math.max(0, (asnQty.get(e[2])?.[k] ?? q) - q)])) });
       else if (e[0] === 'inv') D.invoice(L, O, at, { ref: e[2], qty: Object.fromEntries(O.lines.map((l) => [l.line, e[3][l.k] || 0])), terms: fx.terms });
       else if (e[0] === 'pay') W.remit.push({ at, to: supplier, ref: `PMT-${p.id.slice(3)}-${e[2].slice(-3)}`, items: [{ invoice: e[2], po: p.id, paid: e[3] / 100, invoice_amount: (e[3] + e[4]) / 100, adjustments: e[4] ? [{ amount: -e[4] / 100, reason: '04', ref: `DM-${p.id.slice(3)}`, note: 'Deduction taken on remittance' }] : [] }] });
@@ -104,6 +106,8 @@ export function build(nPre, jitter) {
   finishRisks(L, W);
   buyerOrders(L, W);
   remittances(L, W, G);
+  L.asideHist = true; L.aside(() => history(L, W)); L.asideHist = false;
+  L.aside(() => variance(L, W));
   L.event({ at: et('2026-12-28', '09:00'), kind: 'scorecard.published', po: null, system: 'Northfield scorecard file', party: 'NORTHFIELD', channel: 'API', data: { period: '13 weeks to 26 Dec 2026', definition: 'OTIF-2026.2, cases per order line', official: 0.91, compliant_cases: 43680, cases: 48000, failing_lines: 108, network_view: 0.924, plan_rule: 'NF-9.2', plan_due_days: 30 } });
   return { L, W, G };
 }

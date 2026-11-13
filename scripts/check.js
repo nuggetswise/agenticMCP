@@ -66,15 +66,17 @@ none('time.997_two_to_nine_minutes_after', `SELECT f.doc_id, (julianday(f.sent_a
   for (let i = 1; i < rows.length; i++) { const a = rows[i - 1], b = rows[i]; if (a.s !== b.s || a.r !== b.r || a.fa !== b.fa) continue; if (b.c === a.c) dup++; if (b.t < a.t) bad++; }
   eq('time.control_numbers_unique', dup, 0); eq('time.control_numbers_rise_with_time', bad, 0); }
 none('time.envelope_matches_body_control_numbers', "SELECT doc_id FROM documents WHERE json_extract(body, '$.isa_ctl') <> isa_ctl OR json_extract(body, '$.se_count') <> json_extract(body, '$.segments') AND status = 'Delivered' AND doc_id NOT IN (SELECT doc_id FROM errors)");
-// NF-4.2: a ship notice goes within 1 hour of departure; the only late ones are the records the story names.
-{ const late = db.prepare(`SELECT s.po FROM shipments s JOIN orders o ON o.po = s.po WHERE o.supplier_id = 'ASHBY' AND (julianday((SELECT min(d.sent_at) FROM documents d WHERE d.doc_type = '856' AND d.reference = s.shipment_id)) - julianday(s.shipped_at)) * 24 > 1.0001 ORDER BY 1`).all().map((r) => r.po);
+// NF-4.2: in the current period a ship notice goes within 1 hour of departure; the only late ones are the records the story names. History before it carries late ship notices on purpose.
+{ const late = db.prepare(`SELECT s.po FROM shipments s JOIN orders o ON o.po = s.po WHERE o.supplier_id = 'ASHBY' AND s.shipped_at >= '2026-09-27' AND (julianday((SELECT min(d.sent_at) FROM documents d WHERE d.doc_type = '856' AND d.reference = s.shipment_id)) - julianday(s.shipped_at)) * 24 > 1.0001 ORDER BY 1`).all().map((r) => r.po);
   eq('time.ship_notice_within_one_hour_except_named', late, ['NR-46215']); }
 none('time.no_ship_notice_before_departure_minus_a_day', 'SELECT shipment_id FROM shipments WHERE julianday(shipped_at) - julianday(sent_at) > 1');
 
 // ── Money ──────────────────────────────────────────────────────────────────────────────────────────────────────────
-none('money.order_value_is_line_sum', 'SELECT o.po FROM orders o JOIN order_lines l ON l.po = o.po GROUP BY o.po HAVING abs(o.order_value - sum(l.qty_original * l.price)) > 0.005');
+none('money.order_value_is_line_sum', 'SELECT o.po FROM orders o JOIN order_lines l ON l.po = o.po GROUP BY o.po HAVING abs(o.order_value - sum(l.qty_original * coalesce(l.price_original, l.price))) > 0.005');
 none('money.delivered_invoice_total_is_line_sum', "SELECT i.invoice FROM invoices i JOIN invoice_lines l ON l.invoice = i.invoice WHERE i.status = 'Delivered' GROUP BY i.invoice HAVING abs(i.total - sum(l.qty * l.price)) > 0.005");
-none('money.invoice_price_is_order_price', "SELECT il.invoice FROM invoice_lines il JOIN invoices i ON i.invoice = il.invoice JOIN order_lines o ON o.po = il.po AND o.line = il.line WHERE i.status = 'Delivered' AND abs(il.price - o.price) > 0.005");
+none('money.invoice_price_is_order_price', "SELECT il.invoice FROM invoice_lines il JOIN invoices i ON i.invoice = il.invoice JOIN order_lines o ON o.po = il.po AND o.line = il.line WHERE i.status = 'Delivered' AND abs(il.price - o.price) > 0.005 AND il.invoice NOT LIKE 'INV-V47%'");
+// The price variance records for P14 are the only delivered invoice lines priced off the order, and each stays inside NF-7.11's tolerance.
+none('money.price_variance_delivered_is_within_tolerance', "SELECT il.invoice FROM invoice_lines il JOIN invoices i ON i.invoice = il.invoice JOIN order_lines o ON o.po = il.po AND o.line = il.line WHERE i.status = 'Delivered' AND il.invoice LIKE 'INV-V47%' AND abs(il.price - o.price) / o.price > 0.005");
 none('money.paid_is_invoice_plus_adjustments', `SELECT r.payment, r.invoice, r.paid, r.invoice_amount, (SELECT coalesce(sum(a.amount), 0) FROM adjustments a WHERE a.payment = r.payment AND a.invoice = r.invoice) adj FROM remittance_items r WHERE abs(r.paid - r.invoice_amount - adj) > 0.005`);
 none('money.remitted_amount_is_invoice_total', "SELECT r.payment, r.invoice FROM remittance_items r JOIN invoices i ON i.invoice = r.invoice WHERE abs(r.invoice_amount - i.total) > 0.005");
 none('money.invoice_paid_once', 'SELECT invoice FROM remittance_items WHERE invoice_amount > 0 GROUP BY invoice HAVING count(*) > 1');
@@ -168,12 +170,18 @@ for (const p of REG.prototypes) {
 // ── Northfield scope: answers computed from shared records ─────────────────────────────────────────────────────────
 { const m1 = NR.threeWayMatch(db, 'INV-7731', D.asOfDate('2026-11-10T09:00:00-05:00')); const m2 = NR.threeWayMatch(db, 'INV-7731', D.asOfDate('2026-12-30'));
   results['nf.match.quantity'] = m1.found && m1.variance_origin.startsWith('quantity'); results['nf.match.correction'] = m2.found && m2.variance_origin.startsWith('missed correction');
-  const r = NR.replayRule(db, { draft: 'NFD-1' }); const byHand = db.prepare("SELECT d.body, d.sent_at FROM documents d WHERE d.doc_type = '856' AND d.status <> 'Superseded'").all().filter((d) => { const b = JSON.parse(d.body); return b.shipped_at && (Date.parse(d.sent_at) - Date.parse(b.shipped_at)) / 60000 > 30; }).length;
+  const r = NR.replayRule(db, { draft: 'NFD-1' }); const byHand = db.prepare("SELECT d.body, d.sent_at FROM documents d WHERE d.doc_type = '856' AND d.status <> 'Superseded' AND d.sent_at >= ?").all(NR.QUARTER_FROM).filter((d) => { const b = JSON.parse(d.body); return b.shipped_at && (Date.parse(d.sent_at) - Date.parse(b.shipped_at)) / 60000 > 30; }).length;
   results['nf.replay.nfd1'] = r.found && r.failing_with_draft === byHand && r.failing_with_draft > r.failing_now;
   results['nf.publish_needs_replay'] = true;
   const ashbyHealth = D.health(db, 30), nfView = NR.trail(db, { supplier: 'ASHBY', days: 30 });
   eq('nf.shared_documents_agree_with_ashby', [nfView.documents, nfView.failures, nfView.rejected_by.application_advice_824], [ashbyHealth.documents, ashbyHealth.failures, ashbyHealth.rejected_by.application_advice_824]);
-  for (const k of ['nf.match.quantity', 'nf.match.correction', 'nf.replay.nfd1']) ok(k, results[k]);
+  { const late = D.asOfDate('2026-12-20'); const m = (r) => NR.threeWayMatch(db, r, late); const held = m('INV-V470001'), cleared = m('INV-V470002'), tot = db.prepare("SELECT e.rule_id, e.status FROM errors e JOIN documents d ON d.doc_id = e.doc_id WHERE d.reference = 'INV-V470004'").get();
+    results['nf.match.price_held'] = held.found && held.variance_origin === 'price' && held.next_step === 'hold_for_price' && /^Held/.test(held.invoice_status);
+    results['nf.match.price_cleared_by_change'] = cleared.found && cleared.variance_origin === 'none' && !!cleared.lines[0].price_set_by && cleared.lines[0].first_po_price < cleared.lines[0].invoice_price;
+    results['nf.match.total_fault'] = !!tot && tot.rule_id === 'NF-7.10' && tot.status === 'Corrected';
+    const r2 = NR.replayRule(db, { draft: 'NFD-2' }); results['nf.replay.nfd2'] = r2.found && r2.failing_now === 1 && r2.failing_with_draft === 2;
+    const r1 = NR.replayRule(db, { draft: 'NFD-1' }); results['nf.replay.nfd1_reaches_other_suppliers'] = r1.by_supplier.filter((x) => x.supplier !== 'Ashby Supplier' && x.with_draft > x.now).length >= 5 && r1.by_supplier.filter((x) => x.supplier !== 'Ashby Supplier').every((x) => x.now === 0); }
+  for (const k of ['nf.match.quantity', 'nf.match.correction', 'nf.replay.nfd1', 'nf.match.price_held', 'nf.match.price_cleared_by_change', 'nf.match.total_fault', 'nf.replay.nfd2', 'nf.replay.nfd1_reaches_other_suppliers']) ok(k, results[k]);
   eq('nf.match.status_as_of', [m1.invoice_status, m2.invoice_status.startsWith('Held, then replaced')], ['Held', true]);
   { const nfdb0 = new DatabaseSync(join(ROOT, 'build', 'northfield.db'), { readOnly: true }); const c1 = NR.caseNF(nfdb0, 'DC-40877', D.asOfDate('2026-12-30')), c2 = NR.caseNF(nfdb0, 'DC-40877', D.asOfDate('2027-01-06'));
     eq('nf.case.repaid_from_own_remittance', [c1.repaid.length, c2.repaid.map((r) => [r.payment, r.amount])], [0, [['PMT-991204', 88.4]]]); }

@@ -82,7 +82,7 @@ export function derive(files, events) {
     const others = [d.sender, d.receiver].filter((x) => x !== 'NORTHFIELD' && x !== 'KINROSS');
     d.partner = [d.sender, d.receiver].includes('KINROSS') ? 'KINROSS' : 'NORTHFIELD'; d.supplier = others[0] || 'ASHBY';
     // A 997 has no reference of its own in X12: it is named by its sender and interchange control number.
-    if (d.type === '997') d.ref = `FA-${d.sender === 'NORTHFIELD' ? (d.receiver === 'ASHBY' ? 'N' : `N${d.receiver.slice(3)}-`) : d.sender === 'ASHBY' ? (d.receiver === 'KINROSS' ? 'AK' : 'A') : d.sender === 'KINROSS' ? 'K' : `S${d.sender.slice(3)}-`}${d.isa_ctl - 500000000}`;
+    if (d.type === '997') d.ref = `FA-${d.sender === 'NORTHFIELD' ? (d.receiver === 'ASHBY' ? 'N' : `N${d.receiver.slice(3)}-`) : d.sender === 'ASHBY' ? (d.receiver === 'KINROSS' ? 'AK' : 'A') : d.sender === 'KINROSS' ? 'K' : `S${d.sender.slice(3)}-`}${d.isa_ctl > 500000000 ? d.isa_ctl - 500000000 : `H${d.isa_ctl}`}`;
     const base = `${d.type}:${d.ref}`; const n = (idCount.get(base) || 0) + 1; idCount.set(base, n); d.doc_id = n === 1 ? base : `${base}#${n}`;
     byCtl.set(`${d.sender}>${d.receiver}:${d.type}:${d.gs_ctl}`, d);
     if (d.type !== '997' && d.type !== '824') (byRef.get(`${d.type}:${d.ref}:${d.sender}`) || byRef.set(`${d.type}:${d.ref}:${d.sender}`, []).get(`${d.type}:${d.ref}:${d.sender}`)).push(d);
@@ -131,9 +131,9 @@ export function derive(files, events) {
       const stream = d.programme === 'STORE' ? 'store' : d.programme === 'DSD' ? 'buyer' : /^NR-\d{5}$/.test(d.po) ? 'replenishment' : 'buyer';
       const o = { po: d.po, supplier_id: d.supplier, retailer_id: 'NORTHFIELD', programme: { WHSL: 'Wholesale', STORE: 'Wholesale, store order', DSD: 'Direct store delivery' }[d.programme] || d.programme, stream, ship_to: loc(d.parties.ST.gln), received_at: d.at, requested_delivery: d.requested_delivery, order_value: Math.round(d.lines.reduce((a, l) => a + l.qty * l.price, 0) * 100) / 100, accepted_value: null };
       order.set(d.po, o); T.orders.push(o);
-      for (const l of d.lines) { const r = { po: d.po, line: l.line, sku: l.sku, northfield_item: l.nf_item || null, qty_original: l.qty, qty_ordered: l.qty, qty_accepted: null, price: l.price, uom: l.uom, delivery_date: d.requested_delivery }; line.set(lineKey(d.po, l.line), r); T.order_lines.push(r); }
+      for (const l of d.lines) { const r = { po: d.po, line: l.line, sku: l.sku, northfield_item: l.nf_item || null, qty_original: l.qty, qty_ordered: l.qty, qty_accepted: null, price: l.price, uom: l.uom, delivery_date: d.requested_delivery, price_original: l.price }; line.set(lineKey(d.po, l.line), r); T.order_lines.push(r); }
     } else if (d.type === '860') {
-      for (const c of d.changes) { T.order_changes.push({ po: d.po, seq: d.seq, sent_at: d.at, line: c.line, code: c.code, qty: c.qty, delivery_date: c.date || null, state: d.status === 'Superseded' ? 'Superseded' : 'Latest' }); const r = line.get(lineKey(d.po, c.line)); if (r) { r.qty_ordered = c.qty; if (c.date) r.delivery_date = c.date; } }
+      for (const c of d.changes) { T.order_changes.push({ po: d.po, seq: d.seq, sent_at: d.at, line: c.line, code: c.code, qty: c.qty, delivery_date: c.date || null, state: d.status === 'Superseded' ? 'Superseded' : 'Latest', price: c.price ?? null }); const r = line.get(lineKey(d.po, c.line)); if (r) { r.qty_ordered = c.qty; if (c.date) r.delivery_date = c.date; if (c.code === 'PC' && c.price) r.price = c.price; } }
     } else if (d.type === '855' || d.type === '865') {
       for (const l of d.lines) { const r = line.get(lineKey(d.po, l.line)); if (r) { r.qty_accepted = l.qty; if (l.date) r.delivery_date = l.date; } }
     } else if (d.type === '856') {
@@ -196,7 +196,7 @@ export function buildWorld({ quiet = false } = {}) {
     { id: 'NFD-2', created_at: '2026-11-10T15:30:00.000Z', author: 'Jordan Ellis', statement: 'Invoice line prices within 0.25% of the purchase order price', check_kind: 'price_tolerance_pct', value: 0.25, charge: 100, state: 'Draft' }]);
   db.exec('COMMIT'); db.close();
   buildAshbyView(); buildNorthfieldView();
-  const facts = { tuning: { nPre: g.nPre, jitter: g.jitter }, anchor: g.W.anchor, slots: g.W.slots, claimCases: g.W.claimCases, files: files.length, documents: T.documents.length, events: T.events.length };
+  const facts = { tuning: { nPre: g.nPre, jitter: g.jitter }, history: g.W.history, anchor: g.W.anchor, slots: g.W.slots, claimCases: g.W.claimCases, files: files.length, documents: T.documents.length, events: T.events.length };
   writeFileSync(join(BUILD, 'facts.json'), JSON.stringify(facts, null, 1));
   if (!quiet) console.log(`World built: ${T.documents.length} transaction sets in ${files.length} X12 files, ${T.events.length} other records, ${T.orders.length} orders`);
   return facts;

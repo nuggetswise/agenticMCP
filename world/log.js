@@ -23,7 +23,7 @@ export class Log {
 
   /** Runs `fn` so the documents it adds take their order numbers from a separate range. Records added to the world
    * later (Phase 1 additions) must not shift the numbering, and with it the acknowledgment delay, of the records already there. */
-  aside(fn) { const seq = this.seq, from = this.docs.length; this.sideSeq ??= 5000000; fn(); for (const x of this.docs.slice(from)) { x._n = this.sideSeq++; x.ackDelay = 2 + (x._n % 8); } this.seq = seq; }
+  aside(fn) { const seq = this.seq, from = this.docs.length; this.sideSeq ??= 5000000; fn(); for (const x of this.docs.slice(from)) { x._n = this.sideSeq++; x.ackDelay = 2 + (x._n % 8); if (this.asideHist) x.hist = true; } this.seq = seq; }
 
   /** Adds a business document. `from` and `to` are party ids; the rest is what the X12 writer needs. */
   doc(d) { const x = { ...d, at: iso(d.at), _n: this.seq++ }; x.ackDelay = 2 + (x._n % 8); this.docs.push(x); return x; }
@@ -35,10 +35,13 @@ export class Log {
   emit() {
     const docs = [...this.docs].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : a._n - b._n));
     const ctl = new Map(); const next = (k, base) => { const v = (ctl.get(k) ?? base) + 1; ctl.set(k, v); return v; };
+    // History documents come first in time. They count up to the period's base, so the current period keeps its numbers.
+    const histN = new Map(); for (const d of docs) if (d.hist) { for (const k of [`${d.from}>${d.to}`, ...(d.no_ack ? [] : [`${d.to}>${d.from}:FA`])]) histN.set(k, (histN.get(k) || 0) + 1); }
+    const nextCtl = (d, k, base) => (d.hist ? next(`${k}:H`, base - histN.get(k)) : next(k, base));
     const out = []; const acks = [];
     for (const d of docs) {
       const from = PARTY[d.from], to = PARTY[d.to];
-      d.ctl = next(`${d.from}>${d.to}`, 1000);
+      d.ctl = nextCtl(d, `${d.from}>${d.to}`, 1000);
       if (typeof d.answers_gs === 'function') d.answers_gs = d.answers_gs();
       let text = writeInterchange(d, { isaSender: from.isa, isaReceiver: to.isa, ctl: d.ctl });
       if (d.test) text = text.replace(/\*0\*P\*>~/, '*0*T*>~');
@@ -53,7 +56,7 @@ export class Log {
     // Acknowledgment control numbers are allocated in the order the acknowledgments are sent.
     acks.sort((x, y) => (x.fa.at < y.fa.at ? -1 : x.fa.at > y.fa.at ? 1 : x.d._n - y.d._n));
     for (const { d, fa } of acks) {
-      fa.ctl = next(`${fa.from}>${fa.to}:FA`, 500000000);
+      fa.ctl = nextCtl(d, `${fa.from}>${fa.to}:FA`, 500000000);
       let faText = writeInterchange(fa, { isaSender: PARTY[fa.from].isa, isaReceiver: PARTY[fa.to].isa, ctl: fa.ctl });
       if (d.test) faText = faText.replace(/\*0\*P\*>~/, '*0*T*>~');
       out.push({ text: faText, from: fa.from, to: fa.to, at: fa.at, type: '997' });

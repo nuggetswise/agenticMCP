@@ -5,9 +5,9 @@
   "path": "x12/4010",
   "commit": "6c1d8a5"
  },
- "world_x12_sha256": "37089e751e2407c3f89e088e17099c16fe30303aee3ca2e824e9e7aa92bdb524",
- "documents": 23930,
- "transaction_sets": 23930,
+ "world_x12_sha256": "ce184bf6e12c4490267f9c1161affd8c8293d667425150994a6f717d2aab0bc3",
+ "documents": 28942,
+ "transaction_sets": 28942,
  "documents_with_faults": 12,
  "faults_by_reason": {
   "Nn too long (n > n)": 4,
@@ -21,7 +21,7 @@
  "rejected_on_997_but_clean": [],
  "faulted_but_not_rejected_on_997": [],
  "faulted_but_not_rejected_on_997_count": 0,
- "injected_on": "856:ASN-449510",
+ "injected_on": "856:ASN-41001",
  "injected": [
   {
    "fault": "PO reference too long",
@@ -53,7 +53,7 @@
    "rejected_for_it": true,
    "errors": [
     "BSN required, missing at segment 2",
-    "SE01 says 853 segments, set has 852"
+    "SE01 says 108 segments, set has 107"
    ]
   },
   {
@@ -61,7 +61,7 @@
    "expected": "SE01 says",
    "rejected_for_it": true,
    "errors": [
-    "SE01 says 854 segments, set has 853"
+    "SE01 says 109 segments, set has 108"
    ]
   },
   {

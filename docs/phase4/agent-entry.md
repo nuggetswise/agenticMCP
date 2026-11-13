@@ -78,7 +78,7 @@ Source: the owner's research file, SAP Joule Studio Agent UX Reference for Retai
 2. A reader can tell at a glance whether the proposal is pending or applied.
 3. One decision can be traced from the record read, to the step taken, to the document sent, to the record that settles it.
 
-**Not taken from the reference.** A run number, version and step timings on screen (R11 bars durations); an "ask" box inside Trading Grid (D16 sends questions to the customer's own assistant); an inbox of counts as a prototype's home (each prototype shows one job, and any count would have to pass the contract test); its sample order number, which is not in the world.
+**Owner calls after the reference (D56, D57).** The main screen carries three things only: the problem on the record, the proposal with one primary button, and the present state. Who did each step sits in the evidence. A count of cases is allowed beside the rows it counts, never instead of them, and it passes the contract test. The assistant inside Trading Grid is named Aviator: a floating control at the bottom right, closed until opened, answering from the same tools as the customer's own assistant. Still not taken: a run number, version or step timings on screen (R11), and the reference's sample order number.
 
 ## How the manual option works (R15)
 
@@ -101,6 +101,7 @@ Each item goes into that prototype's change list as a CORRECT or DELETE line. Ev
 - AE-ALL-2: ADD who did each step to the evidence (rule, agent, person, system). Steps a rule did lose any agent wording.
 - AE-ALL-3: CORRECT state labels to the five states; DELETE any "resolved" or "done" shown before the settling record.
 - AE-ALL-4: ADD reject and "another option" at the checkpoint where they are missing.
+- AE-ALL-6: ADD Aviator, floating at the bottom right and closed on load. Until T2.11 shows a published page can reach the live tools, it opens to the questions the connection answers for this record and does not show an answer the tools did not give.
 - AE-ALL-5: Walk the three new design checks and record the result in the prototype's grid file.
 
 **P5 Scout Shipment Watch (T4.13)**

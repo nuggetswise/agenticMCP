@@ -1,6 +1,6 @@
 {
  "file": "/home/claude/agenticmcp/docs/build-guide.md",
- "ran_at_head": "120cfed",
+ "ran_at_head": "cb6351b",
  "results": [
   {
    "name": "as_of_commit_current",
@@ -27,7 +27,7 @@
    "name": "calls_refs_exist",
    "ok": true,
    "problems": [],
-   "info": "27 calls logged"
+   "info": "28 calls logged"
   },
   {
    "name": "inventory_and_grid_complete",
@@ -61,18 +61,41 @@
    "problems": [],
    "info": {
     "docs/prototype-plan.md": {
-     "shared_8word_passages": 0,
-     "sample": []
+     "shared_8word_passages": 31,
+     "sample": [
+      "p5 shows the agent layer on top no",
+      "shows the agent layer on top no new",
+      "the agent layer on top no new detection"
+     ]
     },
     "docs/database-and-server-plan.md": {
-     "shared_8word_passages": 0,
-     "sample": []
+     "shared_8word_passages": 128,
+     "sample": [
+      "a field that needs it reads scope not",
+      "field that needs it reads scope not granted",
+      "that needs it reads scope not granted with"
+     ]
     },
     "docs/agent-and-mcp-strategy.md": {
-     "shared_8word_passages": 0,
-     "sample": []
+     "shared_8word_passages": 131,
+     "sample": [
+      "show edi and api in use on the",
+      "edi and api in use on the route",
+      "and api in use on the route map."
+     ]
     }
    }
+  },
+  {
+   "name": "retired_rules_have_a_home",
+   "ok": true,
+   "problems": [],
+   "info": "208 items: 105 placed in the guide, 86 pointed to their owner, 17 superseded by owner decisions"
+  },
+  {
+   "name": "tasks_have_ids_and_done_when",
+   "ok": true,
+   "problems": []
   }
  ]
 }

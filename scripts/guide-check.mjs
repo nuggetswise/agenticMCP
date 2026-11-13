@@ -5,6 +5,7 @@
 import { readFileSync, existsSync, writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { join } from 'node:path';
+import { sectionItems, key } from './lib/sections.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const file = process.argv[2] || join(ROOT, 'docs/build-guide.md');
@@ -32,6 +33,8 @@ const tables = (s) => { const out = []; let cur = null; for (const l of s.split(
 { const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).scripts; const gate = readFileSync(join(ROOT, 'scripts/check.js'), 'utf8'); const tools = readFileSync(join(ROOT, 'src/tools.js'), 'utf8') + readFileSync(join(ROOT, 'src/server.js'), 'utf8'); const p = [];
   for (const [, s] of md.matchAll(/`([^`\n]+)`/g)) {
     if (/^npm run /.test(s)) { if (!pkg[s.slice(8)]) p.push(`npm script ${s}`); continue; }
+    if (s.startsWith('/')) continue; // a URL path on the server, not a repo path
+    if (existsSync(join(ROOT, s))) continue;
     if (/^[a-z0-9_]+(\.[a-z0-9_]+)+$/.test(s)) { if (!gate.includes(`'${s}'`)) p.push(`gate check ${s}`); continue; }
     if (/^[a-z]+(_[a-z]+)+$/.test(s)) { if (!tools.includes(`name: '${s}'`)) p.push(`tool ${s}`); continue; }
     if (/^[\w.\-/]+$/.test(s) && (s.includes('/') || /\.(json|md|js|mjs|db)$/.test(s))) { if (!existsSync(join(ROOT, s))) p.push(`path ${s}`); } }
@@ -67,7 +70,7 @@ const tables = (s) => { const out = []; let cur = null; for (const l of s.split(
   check('no_copied_world_values', [...new Set(p)]); }
 
 // 8. Proof counts in the guide equal a fresh run
-{ const p = []; const proofs = section('Proofs and drift control');
+{ const p = []; const proofs = section('Proofs, open items and drift control');
   const run = (cmd) => { try { return sh(cmd); } catch (e) { return (e.stdout || '') + (e.stderr || ''); } };
   const pairs = [['npm run build', /(\d+) checks passed, (\d+) failed/, 'node --no-warnings scripts/check.js'], ['npm run smoke', /(\d+) smoke checks passed, (\d+) failed/, 'node --no-warnings scripts/smoke.js']];
   for (const [label, re, cmd] of pairs) { const line = proofs.split('\n').find((l) => l.includes(`\`${label}\``)); const g = line && line.match(/(\d+) passed, (\d+) failed/); const f = run(cmd).match(re);
@@ -88,6 +91,24 @@ const shingles = (text, k = 8) => { const m = new Map(); for (const line of text
 { const g = new Set(shingles(md).keys()); const info = {};
   for (const d of ['docs/prototype-plan.md', 'docs/database-and-server-plan.md', 'docs/agent-and-mcp-strategy.md']) { const o = [...shingles(readFileSync(join(ROOT, d), 'utf8')).keys()].filter((s) => g.has(s)); info[d] = { shared_8word_passages: o.length, sample: o.slice(0, 3) }; }
   results.push({ name: 'overlap_with_replaced_docs', ok: true, problems: [], info }); }
+
+
+// 12. Omission check: every item in a retired governing section has a home in the guide (docs/guide/coverage.json)
+{ const cov = JSON.parse(readFileSync(join(ROOT, 'docs/guide/coverage.json'), 'utf8')).items; const p = [];
+  const sections = [...new Set(cov.map((c) => `${c.doc}\u0000${c.section}`))];
+  for (const s of sections) { const [doc, heading] = s.split('\u0000'); const items = sectionItems(join(ROOT, doc), heading);
+    if (!items) { p.push(`section gone: ${doc} ${heading}`); continue; }
+    for (const it of items) if (!cov.some((c) => c.doc === doc && c.section === heading && c.key === key(it))) p.push(`unmapped: ${doc} ${heading}: ${it.slice(0, 50)}`); }
+  for (const c of cov) { if (/^(pointer|superseded):/.test(c.to)) continue;
+    const homes = [`**${c.to}**`, `| ${c.to} |`, `## ${c.to}`, `**${c.to}**`]; if (!homes.some((h) => md.includes(h))) p.push(`no home for ${c.to} (${c.item.slice(0, 40)})`); }
+  const n = (k) => cov.filter((c) => (k === 'home' ? !/^(pointer|superseded):/.test(c.to) : c.to.startsWith(k))).length;
+  check('retired_rules_have_a_home', p, `${cov.length} items: ${n('home')} placed in the guide, ${n('pointer')} pointed to their owner, ${n('superseded')} superseded by owner decisions`); }
+
+// 13. Every task has an ID and a done-when (or evidence) line
+{ const p = []; const L = section('Tasks').split('\n');
+  L.forEach((l, i) => { if (!/^- \[[ x]\]/.test(l)) return; if (!/\*\*T\d+\.\d+\*\*/.test(l)) p.push(`no ID: ${l.slice(0, 50)}`);
+    const next = (L[i + 1] || '').trim(); if (!/^(Done when|Done for|Evidence:)/.test(next)) p.push(`no done-when: ${l.slice(6, 50)}`); });
+  check('tasks_have_ids_and_done_when', p); }
 
 const report = { file, ran_at_head: sh('git rev-parse --short HEAD').trim(), results };
 writeFileSync(join(ROOT, 'docs/guide/check-report.json'), JSON.stringify(report, null, 1) + '\n');

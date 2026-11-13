@@ -1,12 +1,10 @@
 # TG for Retail · Build Guide
 
-Nov 12, 2026 · @Mandip
-
-Live doc: https://claude.ai/artifact/5fb2Z4j5jAZeTdMpjkQSvJ
+Working copy: `docs/build-guide.md` in the repo. Reading copy: the Claude doc at https://claude.ai/artifact/5fb2Z4j5jAZeTdMpjkQSvJ, refreshed from this file after every commit.
 
 ## How to use this guide
 
-This is the only doc a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit f9c8276.
+This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit f9c8276.
 
 - **Authority, highest first:**
   1. Owner decisions, recorded under Decisions.
@@ -17,43 +15,95 @@ This is the only doc a builder reads before working on TG for Retail prototypes,
   6. This guide.
   7. Every other doc.
 - **When it conflicts:** where this guide disagrees with a higher source, this guide is wrong. Fix it here first.
-- **What it replaces:** the single-thread prompt, plus the build rules, build queue and build briefs inside the Prototype Plan and the Agent and MCP strategy. Until those docs are edited, ignore those sections.
 - **No copied values:** counts, amounts, dates and rule wording are read from the owners named under Where each fact lives. The only figures here are proof results, each tied to a commit.
+- **Changing this guide:** edit this file, run `node scripts/guide-check.mjs`, commit and push, then refresh the Claude doc's three tabs from this file. The check also fails when a rule from a retired governing section has no home here (`docs/guide/coverage.json`).
 
 ## Build flow
 
-[embedded content: build flow · five phases, one approval loop per prototype]
+<!-- figure: build-flow -->
 
-A prototype change starts only from an approved change list, and a rejected list goes back for revision. Status lives in the checklists, not in the figure, so the figure does not go stale.
+1. Phase 0 audits every prototype against every check, read only.
+2. The owner approves a change list.
+3. Phase 1 applies approved world changes and closes world gaps.
+4. Phase 2 makes every agent decision come from records, on both companies' connections.
+5. Once Phases 1 and 2 pass their proofs, Phase 3 builds new prototypes from the Prototype specs tab.
+6. Phase 4 changes one built prototype at a time: propose a change list, wait for approval, build with the three skills, walk it and pass the contract test, then publish and log the call. A rejected list goes back for revision.
+
+Status lives in the task lists, not in the figure, so the figure does not go stale.
 
 ## Rules every build follows
 
-These rules hold in every phase.
+Each rule has one home, here. Its ID is how `docs/guide/coverage.json` maps the retired sources to it.
 
-- **People:** Priya Raman (Ashby Supplier) and Jordan Ellis (Northfield Retailer) are the only named people. Everyone else is a company or a function, such as the Kinross warehouse or Northfield receiving.
-- **Data:** all data is fictional, with GS1 prefix 0614141. The companies are Northfield Retailer and Ashby Supplier everywhere.
-- **Screens:**
-  - No dates.
-  - No OpenText product names outside the Trading Grid box on the route map.
-  - No variant or scenario pickers.
-- **Prototype changes:**
-  - Changes happen in Phase 4 only, one prototype at a time.
-  - Propose a RETAIN, CORRECT, DELETE, ADD list citing rule IDs and registry anchors.
-  - Build only after the owner approves that list. Nothing is republished without that approval.
-- **Skills, for every prototype task:** tg-retail-workspace-prototype, enterprise-product-writing and visual-treatment-planner, all loaded before any visible word changes.
-- **Rules:**
-  - The EDI Review Pack is the only rule catalogue. A rule shown on screen carries its catalogue statement, not a paraphrase.
-  - Agents read their thresholds from the catalogue.
-  - A threshold with no catalogue rule stays an agent setting and gets no new rule. That covers the Pace Agent's dominance threshold and the strategy doc's three timing numbers.
-- **P8 Money in Motion:** read only. It carries no budget approval.
-- **Other people's docs:** never overwrite a doc or artifact that another chat created, unless the owner asks.
-- **Links:** never open internal OpenText links. Builders open only Claude docs, the repo, the live server, prototype source and, for partner checks only, partner websites. They never open files uploaded to the project; a missing fact goes into a Claude doc first.
-- **Evidence:** every proof and note is committed to the repo under docs/. A result that exists only in a scratchpad does not count as evidence.
-- **Calls:** every call is logged in docs/build-log/CALLS.md with what would change it.
-- **Words:**
-  - Trading Grid Catalogue or TGC, never AC.
-  - Supplier readiness.
-  - Banned words follow the enterprise-product-writing skill.
+**Sources**
+
+- **R01** Builders open only Claude docs, the repo, the live server, prototype source and, for partner checks only, partner websites. They never open files uploaded to the project or internal OpenText links. A missing fact goes into a Claude doc first, normally a tab of this guide.
+
+**People and data**
+
+- **R02** Two people are named and no one else. Priya Raman (Ashby Supplier) does every supplier role: operations, finance, evidence owner and admin. Jordan Ellis (Northfield Retailer) does every retailer role: buyer contact, claims reviewer, compliance and activation approval.
+- **R03** The warehouse and the carrier appear as companies only, Kinross and Lakeline Freight. Any other actor is a function, such as Northfield receiving.
+- **R04** All data is fictional, with GS1 prefix 0614141, and the companies are Northfield Retailer and Ashby Supplier everywhere. No retailer customer data goes into fixtures or analysis.
+
+**Story**
+
+- **R05** Each prototype shows three beats on screen: the problem in one line with one number from the world, the turn where the solution acts, and the result as the confirming business record and its measure.
+- **R06** Show the whole journey, end to end; a feature boundary never ends it.
+- **R07** Present the ideal state: no conditional framing and no "proposed" tags.
+- **R08** Show EDI and API in use on the route map. Settled route lines carry a small arrowhead.
+
+**Screens**
+
+- **R09** Minimal and functional: little text, smooth motion, no guided tour.
+- **R10** No OpenText product names anywhere on screen, including inside the Trading Grid box. Everything Trading Grid does is labelled Trading Grid. (Owner decision, 13 November.)
+- **R11** No dates, feature IDs, durations beside buttons, green ticks, or stage labels such as detect, prioritize, act and verify.
+- **R12** No variant or scenario pickers.
+- **R13** Colours come only from the OpenText TG Retail Design System tokens.
+
+**Agents**
+
+- **R14** Each agent is named "[Name] Agent", such as Claim Agent, and acts for Priya or for Jordan, never for both.
+- **R15** Every agent screen has a manual option.
+- **R16** Before the agent starts, the user opens and edits its rules. The goal is fixed, the user's rules are editable and the guardrails are locked.
+- **R17** The agent visibly reads systems and compares records; it never reads as a rule being applied.
+- **R18** The agent sends a task, document or message only with the user's approval or a standing policy the user set. Each send shows the authority, channel, target-system response and audit record.
+- **R19** The agent never changes an authoritative record without permitted authority.
+- **R20** User actions change what happens next. P8 is the one exception: it is read only and carries no budget approval.
+- **R21** An agent appears only where all six tests pass; otherwise the behaviour is shown as rule-based automation with no agent label.
+  1. A named decision: two materially different next steps, and the evidence that leads to each.
+  2. A rule baseline: the simplest credible rule-based workflow runs on the same case.
+  3. Changed evidence: a changed record produces a different next step with no new script.
+  4. Authority: who approves, where, and the target system's response.
+  5. A business confirmation: a business record such as a receiving advice, a passed test or a matched repayment. A 997 confirms only that a file was accepted.
+  6. A failure case: a document that never arrives, a tool that fails, or a deadline that approaches.
+- **R22** Agents read thresholds from the rule catalogue. A threshold with no catalogue rule stays an agent setting and gets no new rule; that covers the Pace Agent's dominance threshold and the strategy doc's three timing numbers.
+
+**Customer-agent access**
+
+- **R23** The caller is the customer's own AI assistant in the customer's workspace. The assistant platform is never named on screen.
+- **R24** Access is read-only at first release. Actions go back to Trading Grid screens for approval.
+- **R25** The customer's admin picks scopes before connecting. A question outside the scopes, or about another company's records, gets a refusal, not a guess.
+- **R26** Every answer cites the Trading Grid records it used.
+- **R27** Every call is written to an access log: user, assistant, tool, scope, outcome and time.
+- **R28** An incident or work order is created by the customer's assistant in the customer's own service desk. Trading Grid is not changed.
+
+**Domain facts**
+
+- **R29** Most retailers return only a 997 and send no business acceptance; Northfield follows NF-1.5.
+- **R30** Inventory is pulled by API in real time, not sent by the supplier.
+- **R31** The EDI Review Pack is the only rule catalogue. A rule shown on screen carries its catalogue statement, not a paraphrase.
+
+**Building and changing prototypes**
+
+- **R32** Changes to built prototypes happen in Phase 4 only, one prototype at a time. Propose a RETAIN, CORRECT, DELETE, ADD list citing rule IDs and registry anchors, and build only after the owner approves it. Nothing is republished without that approval.
+- **R33** A new prototype is built from scratch from its Prototype specs entry. For every prototype task, tg-retail-workspace-prototype, enterprise-product-writing and visual-treatment-planner are loaded before any visible word changes.
+
+**Working rules**
+
+- **R34** Never overwrite a doc or artifact another chat created unless the owner asks.
+- **R35** Every proof and note is committed to the repo under docs/. A result that exists only in a scratchpad is not evidence.
+- **R36** Every call is logged in docs/build-log/CALLS.md with what would change it.
+- **R37** Words: Trading Grid Catalogue or TGC, never AC; Supplier readiness; banned words follow the enterprise-product-writing skill.
 
 ## Where each fact lives
 
@@ -64,25 +114,26 @@ Each kind of fact has exactly one owner. This guide points to that owner and nev
 | Counts, documents, orders, amounts, times | The world, `build/tg.db` | `npm run build`; live server tools |
 | Rule wording, owner, basis, charges, thresholds | [EDI Review Pack](https://claude.ai/artifact/8BgJyjrA6nYLF32n9F9pxd) | Repo mirror `registry/catalogue-pack.json`; the gate fails if it differs from the world |
 | Per prototype: calendar moment, agency verdict, anchor records, tools, status | `registry/registry.json` | Read the file |
+| Tool list for both connections | `src/tools.js` | Read the file; `/openapi.json` for REST |
 | On-screen numbers each prototype claims | `contract/claims.json` | `npm run contract` |
 | Builder calls and what would change them | `docs/build-log/CALLS.md` | Read the file |
 | Owner decisions | This guide, under Decisions | — |
 | Phase 0 evidence | `docs/phase0/` | Findings, walks, contract report, golden questions |
 | Northfield scope evidence | `docs/phase2/` | Northfield golden questions |
 | X12 validity | `validator/` | `npm run validate` |
-| Partner capability | The partner's own documentation | Cited in `docs/phase0/FINDINGS.md` |
+| Partner capability | The partner's own documentation | Cited in `docs/phase0/FINDINGS.md`; moments and questions in the Partner diligence tab |
 | Feature behaviour | Prototype source, or its Prototype specs entry if unbuilt | — |
 
-**Role of every other doc once this guide exists**
+**Role of every other doc**
 
 | Doc | Role from now | Sections that stop governing |
 | --- | --- | --- |
 | [TG-Retail-Single-Thread-Prompt](https://claude.ai/artifact/LC3ehzTGLV8yNJ1JQRkVN9), plus two same-named copies in this project | Retired; this guide replaces it | All of it |
-| [Prototype Plan](https://claude.ai/artifact/Ux8ZjNd7BTj6mdH7e5rJ2S) | Portfolio and story calendar, for peers | Start here decisions, Build queue, Revisions to built prototypes, Not building, Standing rules for every prototype, Retailer-side prototypes |
-| [Shared Demo Database and MCP Server Plan](https://claude.ai/artifact/BH5yvtjF5thUSJhUjrSBun) | Absorbed into this guide and the repo; kept as a record | All of it |
-| [Agent and MCP strategy](https://claude.ai/artifact/VXoARJoJoqyv4VmGRUjFtz) | Self-contained leadership read: position, agentic tests, task analysis | How to use this doc, Rules every build follows, One world behind every prototype, Build briefs 1, 3 and 4 (Build brief 2 stays P13's spec until P13 is built) |
+| [Prototype Plan](https://claude.ai/artifact/Ux8ZjNd7BTj6mdH7e5rJ2S) | Portfolio and story calendar, for peers | Start here and its decisions, Build queue, Revisions to built prototypes, Not building, Standing rules for every prototype, Retailer-side prototypes |
+| [Shared Demo Database and MCP Server Plan](https://claude.ai/artifact/BH5yvtjF5thUSJhUjrSBun) | Kept as a record; its decisions, open items, server behaviour and hosting notes now live here | All of it |
+| [Agent and MCP strategy](https://claude.ai/artifact/VXoARJoJoqyv4VmGRUjFtz) | Self-contained leadership read: position, agentic tests, task analysis. Its four build briefs stay the specs for P10, P13, P6 and the NetSuite journey. | How to use this doc, Rules every build follows, One world behind every prototype |
 | [SPS MAX and TrueCommerce AI: Threat Ranking](https://claude.ai/artifact/PFa9A3bMAn8aZUiNKFRQae) | Competitive reference | Not a build source |
-| Project uploads: Requirements v8, the partner briefs, the Northstar teardown and prototype, and the prototype skill's Plan .md, Demonstration Inputs and Presenter Notes. What builders need from them is in the Prototype specs and Partner diligence tabs. | Retired | All of them |
+| Project uploads: Requirements v8, the partner briefs, the Northstar teardown and prototype, and the prototype skill's Plan .md, Demonstration Inputs and Presenter Notes | Not opened by builders. What builders need from them is in the Prototype specs and Partner diligence tabs. | All of them |
 
 None of these docs has been edited yet. Their governing sections come out only after the owner approves each change.
 
@@ -109,16 +160,38 @@ The owner approved change items 1 to 14 on 12 November. Two are done, four are p
 
 **Standing decisions**
 
-- **Partners:**
-  - In scope: Pipe17, Vividly, Kanmon, Salsify, ShipHawk.
-  - Out: Insight Works and RetailPath. ShipHero is out as a separate partner because it reaches us through Pipe17.
-  - Pipe17 is ecosystem only and shown on the warehouse side. Retailer EDI stays on Trading Grid.
-  - Partner designs show only capability the partner documents today.
-- **Rule NF-1.7** stays on the 855.
-- **Non-Claude client test:** dropped.
-- **Northfield's live connector** needs NF\_TOKEN on Render, and only for a live Northfield demo.
-- **Retired October pages:** the owner unshares the eleven listed in `docs/phase0/HANDOFF.md`.
-- **Salsify:** questions only Salsify can answer are kept as diligence notes. The owner is pursuing Salsify directly.
+| ID | Decision | What would change it |
+| --- | --- | --- |
+| D01 | Partners in scope: Pipe17, Vividly, Kanmon, Salsify, ShipHawk. Out: Insight Works, RetailPath, and ShipHero as a separate partner (it reaches us through Pipe17). | — |
+| D02 | Pipe17 is ecosystem only, shown on the warehouse side; retailer EDI stays on Trading Grid | — |
+| D03 | Partner designs show only capability the partner documents today | — |
+| D04 | Salsify's partner-only questions stay diligence notes; the owner pursues Salsify directly | — |
+| D05 | Rule NF-1.7 stays on the 855 | — |
+| D06 | The non-Claude client test is dropped | — |
+| D07 | The eleven retired October pages listed in `docs/phase0/HANDOFF.md` are unshared by the owner | — |
+| D08 | Builders use Claude docs only (R01); Requirements v8 is not a source | — |
+| D09 | No product names anywhere on screen (R10) | — |
+| D10 | This repo file is the working copy; the Claude doc is refreshed from it | — |
+| D11 | Live checks of ship notices and invoices against retailer rules are existing capability: Trading Grid Intelligence, through Chargeback Avoidance. P5 shows the agent layer on top; no new detection prototype. | — |
+| D12 | AI-assisted onboarding and map work run on Mapping AI Aviator, shown in P2 and the NetSuite journey; no new prototype | — |
+| D13 | Suppliers see errors while testing before go-live through the compliance link; validation before go-live is not prototyped | — |
+| D14 | Command Center Integration Monitor does not alert on missing, out-of-order or late documents; P13 fills that gap | — |
+| D15 | No Trading Grid Insights or Trading Grid Intelligence API exists for an MCP server; MCP access goes on the roadmap, P10 shows it, and the API is its first engineering step | — |
+| D16 | No in-product question-and-answer assistant; its questions are answered through the customer's own AI in P10 | — |
+| D17 | Not building guided supplier onboarding (shown in P2 and the NetSuite journey) | — |
+| D18 | Not building supplier cash watch: P8 and P6 cover it. Still unshown: a 3PL shipment whose status never reaches Supplier ERP, so no invoice is created. | — |
+| D19 | Not building stalled drop-ship order detection: drop-ship is a small share of net deduction dollars in the internal chargeback analysis | — |
+| D20 | Not building agentic trading partner mapping: Mapping AI Aviator gives parity | — |
+| D21 | Not building a support assistant: outside Retail scope | — |
+| D22 | Not building demand forecasting in VMI: out of scope; P9 is the 852-only answer | — |
+| D23 | The ship notice rule is within 1 hour of departure on every screen (NF-4.2) | A named retailer guide a demo must match |
+| D24 | PO reference rejections travel on the 997; business errors on the 824 | A retailer guide that applies the limit as a business rule |
+| D25 | Five scopes are on by default; the P10 journey shows the admin switching deductions off | A demo that must open with four |
+| D26 | Existing tool names are kept so connected assistants keep working | A naming standard for the product API |
+| D27 | The replenishment scorecard and the buyer-order view are separate populations | A single scorecard across both order streams |
+| D28 | Jordan reverses the shortage charge and upholds the ship notice charge | — |
+| D29 | The world follows built screens for rule wording and record numbers where the screens already agree with each other | A screen rebuilt from the world |
+| D30 | Retailer jobs with no Trading Grid evidence stay out of prototypes: docks, carrier diversion, stores and shelves, forecasting and replenishment, shelf life, packaging, emissions, peak planning, distribution-centre stock | Trading Grid evidence for the job |
 
 **Open questions for the owner**
 
@@ -128,6 +201,8 @@ The owner approved change items 1 to 14 on 12 November. Two are done, four are p
 4. P7's charge on screen differs from the charge the world computes (`contract/claims.json`). Should the screen or the world change?
 5. Which verified partner capabilities enter the timeline: Orderful's carton-level 945, ShipHawk's package data, or none?
 6. Nine pages may be retired (listed in `docs/phase0/HANDOFF.md`). Keep or retire each?
+7. Supplier vetting (identity, bank details, signed terms) is left out because Trading Grid holds no such records. Confirm?
+8. Product ownership and competitor positions per prototype lived in presenter-notes files, now retired. Should they move to the Prototype Plan's portfolio table, or be dropped?
 
 ## Inventory
 
@@ -154,7 +229,7 @@ The inventory has eighteen items: ten screen prototypes, two server scopes, thre
 | FILM | TG for Retail in Two Minutes | Narrative | Not in registry | [Film](https://claude.ai/artifact/RQbZQsmz433BjJCaEbU1BL) |
 | CAT | Retailer catalogue connector | Connector | Not in registry | Not recorded |
 
-The registry calls NetSuite a ship notice exception with an agent; the live screen has no agent. The registry is the drift item: Phase 2 corrects it.
+The registry calls NetSuite a ship notice exception with an agent; the live screen has no agent. The registry is the drift item: T2.7 corrects it.
 
 ## Coverage grid
 
@@ -213,7 +288,7 @@ Phase 0 is closed only when no cell reads Not done or Partly. A cell records whe
 
 ## Partner checks
 
-The Pipe17 question that had to be settled first is settled. Two partner checks are still open: partner nodes on the route maps beyond P2, and ShipHawk's questions and journey moment. Every verdict and source is in `docs/phase0/FINDINGS.md` under B.
+The Pipe17 question that had to be settled first is settled. Two partner checks are still open: partner nodes on the route maps beyond P2, and ShipHawk's questions and journey moment. Verdicts and sources are in `docs/phase0/FINDINGS.md` under B.
 
 | Check | Status | Evidence |
 | --- | --- | --- |
@@ -227,85 +302,124 @@ The Pipe17 question that had to be settled first is settled. Two partner checks 
 | Questions only the partner can answer | Partly: all but ShipHawk | Partner diligence tab |
 | Journey moment and what the customer gains over Trading Grid alone | Partly: all but ShipHawk | Partner diligence tab |
 
-## Phase checklists
+## Tasks
 
-Phase 0 is approved but not closed. Phases 1 and 2 are partly done, and Phases 3 and 4 have not started. A task is ticked only when its evidence is committed.
+Phase 0 is approved but not closed. Phases 1 and 2 are partly done, and Phases 3 and 4 have not started. A task is ticked only when its evidence is committed. Cite the task ID in the commit message and the CALLS entry.
 
 ### Phase 0 · Audit, read only
 
-- [ ] Fill every Not done and Partly cell in the coverage grid
-
-  Done when every cell reads Done or N/A. Evidence goes in `docs/phase0/` under the cell's check.
-- [ ] Audit P10, the Northfield scope and the retailer catalogue connector as prototypes
-
+- [ ] **T0.1** Fill every Not done and Partly cell in the coverage grid.
+  Done when every cell reads Done or N/A. Evidence: `docs/phase0/`, under the cell's check.
+- [ ] **T0.2** Audit P10, the Northfield scope and the retailer catalogue connector as prototypes.
   Done when their grid rows are complete and the connector's link is recorded in Inventory.
-- [ ] Golden questions for P2, P8, NetSuite and ERP-native, and more for P1, P4, P5 and P9
-
-  Done when each has at least three questions with five graded runs in `docs/phase0/golden/`.
-- [ ] Restore the X12 check against bots-grammars as a committed script
-
+- [ ] **T0.3** Golden questions for P2, P8, NetSuite and ERP-native, and more for P1, P4, P5 and P9.
+  Done when each has at least three questions with five graded runs. Evidence: `docs/phase0/golden/`.
+- [ ] **T0.4** Restore the X12 check against bots-grammars as a committed script.
   Done when the script and its report sit in `validator/` and it rejects each injected fault for the stated reason.
-- [ ] Confirm P7 manual pattern A by hand
-
-  Done when it is recorded in FINDINGS as a defect or as a walker limit.
-- [ ] Add ShipHawk's partner-only questions and journey moment from ShipHawk's own documentation, and partner nodes on every prototype route map
-
+- [ ] **T0.5** Confirm P7 manual pattern A by hand.
+  Done when FINDINGS records it as a defect or as a walker limit.
+- [ ] **T0.6** Add ShipHawk's partner-only questions and journey moment from ShipHawk's own documentation, and partner nodes on every prototype route map.
   Done when the Partner checks table has no Not done or Partly row.
-- [ ] Read the film's frames
-
+- [ ] **T0.7** Read the film's frames.
   Done when the FILM A7 cell reads Done.
 
 ### Phase 1 · World
 
-- [x] World and server parts of approved items 1, 2 and 4, and AP-5.1
-
-  Commit 0d3fb87; CALLS 3, 4, 6 and 7.
-- [ ] Settle P7's week 6 orders and charge figure
-
+- [x] **T1.1** World and server parts of approved items 1, 2 and 4, and AP-5.1.
+  Evidence: commit 0d3fb87; CALLS 3, 4, 6 and 7.
+- [ ] **T1.2** Settle P7's week 6 orders and charge figure.
   Done when the owner answers open question 4 and P7's contract check runs against the live page, not a working copy.
-- [ ] Partner records in the timeline
-
+- [ ] **T1.3** Partner records in the timeline.
   Done when the owner answers open question 5 and any added record traces to a cited partner document.
-- [ ] Shipments without a receipt
-
+- [ ] **T1.4** Shipments without a receipt.
   Done when the owner confirms CALLS 8: other suppliers' shipments with no receipt are P8's stuck value.
-- [ ] Raw X12 panels on prototypes generated from the world
-
+- [ ] **T1.5** Raw X12 panels on prototypes generated from the world.
   Done when every prototype's raw X12 panel matches a document in `build/tg.db` byte for byte, checked by the contract test.
+- [ ] **T1.6** World records for every Prototype specs decision row: a price variance under NF-7.11, and other suppliers' ship notices that NFD-1 would fail.
+  Done when the replay of each draft rule and each P14 decision row returns at least one record, proposed first as a Phase 1 change list.
 
 ### Phase 2 · Agent and customer-agent access
 
-- [x] Northfield scope: shared documents, private records, refusals, writes that follow the catalogue
-
-  Commit 5dd3748. Northfield golden questions in `docs/phase2/golden-nf/`.
-- [ ] Every agent decision on every prototype computed from its timeline records
-
+- [x] **T2.1** Northfield scope: shared documents, private records, refusals, writes that follow the catalogue.
+  Evidence: commit 5dd3748; `docs/phase2/golden-nf/`.
+- [ ] **T2.2** Every agent decision on every prototype computed from its timeline records.
   Done when the A3 column reads Done for every prototype with an agent.
-- [ ] Replay a changed agent rule against the quarter before it goes live
-- [ ] Shelf Agent reads averages; Watch Agent reads NF-4.2 from the catalogue
-- [ ] Tool comparison includes Northfield's tools
-- [ ] P15's registry anchors hold its draft rule record
-- [ ] Registry covers every inventory row, and the build fails when a doc or the server disagrees with it
-
+- [ ] **T2.3** Agent governance, from the Agent governance entry in Prototype specs: authority limits, override, pause, audit, and replay of a changed agent rule before it goes live.
+  Done when a gate check replays a changed agent rule and the governance golden questions pass.
+- [ ] **T2.4** Shelf Agent reads averages; Watch Agent reads NF-4.2 from the catalogue.
+  Done when `agents.thresholds_come_from_catalogue` covers both agents.
+- [ ] **T2.5** Tool comparison includes Northfield's tools.
+  Done when the comparison table in this guide's Server reference lists both connections' tools against the published NetSuite and Salesforce schemas.
+- [ ] **T2.6** P15's registry anchors hold its draft rule record.
+  Done when `registry/registry.json` names NFD-1 under P15 and the registry check passes.
+- [ ] **T2.7** Registry covers every inventory row, and the build fails when a doc or the server disagrees with it.
   Done when ERP-native (or its retirement), the Northfield scope, the narrative pages and the connector are in `registry/registry.json`, and a gate check reads it.
-- [ ] Repo copies of docs become dated snapshots
-- [ ] Live Northfield connector run, only if a live Northfield demo is wanted
+- [ ] **T2.8** Repo copies of the other docs become dated snapshots.
+  Done when each copy under docs/ carries its export date and the registry check no longer treats them as current.
+- [ ] **T2.9** Live Northfield connector run, only if a live Northfield demo is wanted.
+  Done when one Northfield golden question is answered through the live URL with the Northfield key.
 
 ### Phase 3 · New prototypes
 
-- [ ] Check each spec in the Prototype specs tab against the world: every record it needs exists, or a Phase 1 change list adds it
-- [ ] Rank them, place them on the story calendar, and build the top one after Phases 1 and 2 pass their proofs
+- [ ] **T3.1** Check each spec in the Prototype specs tab against the world.
+  Done when every record each spec needs exists, or a Phase 1 change list adds it.
+- [ ] **T3.2** Rank the specs, place them on the story calendar, and build the top one after Phases 1 and 2 pass their proofs.
+  Done when the owner approves the ranking and the first new prototype passes its acceptance tests, walk and contract test.
 
 ### Phase 4 · Prototype changes, one at a time
 
-- [ ] For each of P1, P2, P4, P5, P6, P7, P8, P9, NetSuite and ERP-native (unless retired), work through the loop in the Build flow figure
-
+- [ ] **T4.1** For each of P1, P2, P4, P5, P6, P7, P8, P9, NetSuite and ERP-native (unless retired), work through the Phase 4 loop under Build flow.
   Done for a prototype when it has an approved change list, a walk with no script errors and a passing contract test, and the call is logged.
-- [ ] Portfolio entry page built from the story calendar
-- [ ] Portfolio film, after the owner approves a storyboard
-- [ ] Docs: Partner Map edits, Retail Direction section 9 change list, Prototype Briefs fixes, Agentic Retail Trade figures
+- [ ] **T4.2** Portfolio entry page built from the story calendar.
+  Done when the owner approves it and every link on it opens a live prototype.
+- [ ] **T4.3** Portfolio film, after the owner approves a storyboard.
+  Done when every chapter's numbers pass the contract test and a viewer states each chapter's problem and outcome.
+- [ ] **T4.4** Docs: Partner Map edits, Retail Direction section 9 change list, Prototype Briefs fixes, Agentic Retail Trade figures.
+  Done when each change list is approved and applied, with its CALLS entry.
 
-## Proofs and drift control
+## Server reference
+
+**Connections**
+
+| Element | Behaviour |
+| --- | --- |
+| Connection | One per company, each on its own token: Ashby at `/mcp/<MCP_TOKEN>`, Northfield at `/mcp/<NF_TOKEN>`. Both tokens are generated by Render (`render.yaml`); copy a value from the Render dashboard to connect. |
+| Scopes | Orders, documents, errors, rules and deductions, picked by the company's admin. A tool that needs a scope that is off refuses; a field that needs it reads "Scope not granted" with the scope's name. |
+| Isolation | Each connection opens a database that holds only what its company may see. Ashby's warehouse, ERP and agent records, the 940 and 945, and Ashby's policies stay off Northfield's copy. Northfield's accounts payable match, draft rules and reviewer notes stay off Ashby's. |
+| Refusals | "Not available to Ashby" and "Not available to Northfield"; every refusal is written to that connection's access log. |
+| Time | Every question tool takes a time to answer as of. The default is the story clock (`STORY_CLOCK`). |
+| REST twin | The same tools over REST, described by `/openapi.json`, generated from the one tool list. |
+| Record pages | Each answer links to an order or document page with the record and its X12 text. |
+| Writes | A write records a proposal; nothing changes until the connection's person approves it, and approval appends the record to the shared case and both access logs. Reset returns both connections to baseline. `WRITES=off` makes both read-only. |
+| URL | Carries a secret token; suitable for fictional data only, not production sign-in. |
+
+**Writes follow the rule catalogue**
+
+| Write | Drafted by | Approved by | Rule |
+| --- | --- | --- | --- |
+| submit_dispute | Claim Agent | Priya Raman; without asking only under AP-4.1 | AP-3.2, AP-4.1 |
+| release_ship_notice | Priya's assistant | Always Priya Raman | AP-1.3 |
+| decide_charge | Jordan's assistant, with Review Agent's recommendation | Always Jordan Ellis | NF-7.7 |
+| publish_rule | Jordan's assistant | Jordan Ellis, only after a replay of that draft | `nf.publish_needs_replay` |
+| request_change | Either assistant | The connection's person | AP-3.2 |
+
+**Hosting**
+
+- Render's free tier deploys from main. The service sleeps after a spell without traffic and takes about a minute to wake, so open the URL a few minutes before presenting ([Render](https://render.com/docs/free)).
+- Its filesystem resets on restart, which clears the access log and any proposals.
+- The Java validator does not run on Render. Its report is committed with a hash of the X12 files, and the build fails if the built files do not match that hash.
+- `/healthz` reports the same version for every commit, so it cannot show which commit is deployed.
+- The live server reports writes off, while `render.yaml` sets no `WRITES`. The setting is presumably made in the Render dashboard; not verified.
+
+**Compared with published tool lists**
+
+| Vendor | What is published | How this surface differs |
+| --- | --- | --- |
+| NetSuite | [MCP Standard Tools](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/article_0902023508.html): generic tools for records, SuiteQL, reports and saved searches | NetSuite exposes the data model; this surface answers trading questions and cites the rule. The read-only SQL tool is the nearest equivalent. |
+| Salesforce | [Hosted MCP server for record reads](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/references/reference/sobject-reads.html): schema, query, search, recent and related records; writes on separate servers | Same split of reads from writes; this surface adds point-in-time answers and refusals for other companies' records |
+| SPS Commerce | A [press release](https://www.spscommerce.com/press/max-ai-fulfillment-edi/) says MAX Connect supports MCP; no tool list or schema is public | Not comparable |
+
+## Proofs, open items and drift control
 
 The gate and smoke tests pass at commit f9c8276. Four of the plan's proofs have not been built or run.
 
@@ -318,31 +432,35 @@ The gate and smoke tests pass at commit f9c8276. Four of the plan's proofs have 
 | Golden questions, Ashby agents, scorecard and deductions | `docs/phase0/golden/grade-report.json` | 49 of 50. The earlier set's grader was never committed. |
 | Golden questions, Northfield | `docs/phase2/golden-nf/grade-report.json` | 50 of 50 |
 | Live server | /healthz | ok, version 0.2.0, writes off |
-| Property-based invariants on quantities, time order and money | — | Not built |
+| Property-based invariants on quantities, time order and money | — | Not built; the gate checks invariants on the one generated quarter only |
 | Fresh agent answers ten builder questions from the docs | — | Not run |
 | Viewer states each film chapter's problem and outcome | — | Not started |
-| One-page review pack for an EDI practitioner | [EDI Review Pack](https://claude.ai/artifact/8BgJyjrA6nYLF32n9F9pxd) | Built |
+| One-page review pack for an EDI practitioner | [EDI Review Pack](https://claude.ai/artifact/8BgJyjrA6nYLF32n9F9pxd) | Built, but no EDI practitioner has reviewed it |
+
+**Not verified**
+
+- No EDI practitioner has reviewed the documents or the rule catalogue.
+- SPS Commerce publishes no MCP tool list.
+- The ship notice timing rule is cited from a third-party summary of a retailer guide, not the guide itself.
+- Whether a published prototype can read the server live was never tested; prototypes carry their fixtures inline.
+- A shipment with a ship notice and no receipt exists only for other suppliers (T1.4).
+- Raw X12 panels inside built screens are not generated from the world (T1.5).
 
 **How this guide stays current**
 
-- **Pointers, not values:** the guide holds decisions, status and pointers. Every value stays with its owner.
-- **Status only in the checklists:** the figure carries no status, so it cannot go stale.
-- **The check script:** `node scripts/guide-check.mjs` reads the guide's Markdown export at `docs/build-guide.md` and fails when any of these is true:
+- **Pointers, not values:** the guide holds rules, decisions, status and pointers. Every value stays with its owner.
+- **The check script:** `node scripts/guide-check.mjs` fails when any of these is true:
   1. The repo has changed behaviour since the commit the guide states.
-  2. A commit, path, npm script, gate check, rule ID or CALLS number it names does not exist.
+  2. A commit, path, npm script, gate check, tool, rule ID or CALLS number it names does not exist.
   3. A registry prototype is missing from Inventory, or an Inventory row is missing from the grid.
-  4. A grid cell is blank or holds an unknown word.
-  5. Inventory status disagrees with the registry.
-  6. A money amount, percentage or large count appears.
-  7. The proof counts above differ from a fresh run.
-  8. A claude.ai link is not in `docs/guide/artifacts-verified.json`.
-  9. Any eight-word passage appears twice.
-- **Overlap report:** the script also reports passages shared with the repo copies of the Prototype Plan, the database plan and the strategy doc. Those passages leave those docs once the owner approves.
-- **After every edit:**
-  1. Change this guide first.
-  2. Export all three tabs as Markdown, main tab first, into `docs/build-guide.md`.
-  3. Run the check.
-  4. Commit the export with `docs/guide/check-report.json`.
+  4. A grid cell is blank or holds an unknown word, or Inventory status disagrees with the registry.
+  5. A money amount, percentage or large count appears.
+  6. The proof counts above differ from a fresh run.
+  7. A claude.ai link is not in `docs/guide/artifacts-verified.json`.
+  8. Any eight-word passage appears twice.
+  9. An item in a retired governing section has no home in this guide, per `docs/guide/coverage.json`.
+  10. A task has no ID or no done-when line.
+- **Overlap report:** the script also reports passages shared with the repo copies of the Prototype Plan, the database plan and the strategy doc.
 
 ---
 
@@ -350,18 +468,46 @@ The gate and smoke tests pass at commit f9c8276. Four of the plan's proofs have 
 
 # Prototype specs
 
-These specs are the requirements for TG for Retail prototypes not yet built. They were drawn once, on 12 November, from the Northstar retailer prototype and its teardown, which builders do not open. A built prototype takes its requirements from its own source.
+These specs are the requirements for TG for Retail prototypes and jobs not yet built. They were drawn once, on 12 and 13 November, from the Northstar retailer prototype and its teardown, which builders do not open. A built prototype takes its requirements from its own source. Northstar is drawn with sample data: it is evidence of a design, not of demand.
 
-## What was kept and what was left out
+## Where each Northstar flow went
 
-- **Kept:** retailer-side jobs whose evidence Trading Grid holds. That covers invoice matching, missing or late ship notices, quantity reconciliation, rule authoring and replay, order change decisions, stuck documents, and supplier remediation.
-- **Left out:**
-  - Dock slots and carrier diversion: Trading Grid holds no dock or yard records.
-  - Store delivery and shelf availability.
-  - Forecasting and replenishment.
-  - Shelf life: the world's items carry no use-by dates.
-  - Packaging fees and emissions.
-  - Peak planning.
+Northstar presents 40 business flows across 17 views. Every flow has one disposition.
+
+| Northstar view | Business problem it presents | Disposition |
+| --- | --- | --- |
+| Overview | Leaders cannot see where orders, suppliers or sites need intervention | Fold into P8, Money in Motion |
+| Overview | A buyer's urgent decisions sit in separate queues | Northfield assistant job: daily queue |
+| Overview | Order changes need an accountable answer before the supplier ships against stale terms | Fold into the Northfield scope as a timeline record under NF-1.6 |
+| Overview | Receiving cannot anticipate late loads or loads with no ship notice | Left out (D30: docks) |
+| Exceptions | Too many issues compete for attention and ownership | Northfield assistant job: daily queue |
+| Exceptions | Ordered, shipped and received quantity differ | Fold into P6's shortage case and P14's first decision row |
+| Exceptions | A shipment may arrive with no ship notice or a disputed carrier trail | Retailer ship notice chase |
+| Exceptions | Paying the wrong invoice leaks money or blocks settlement | P14 |
+| Exceptions | Short-dated goods raise spoilage risk | Left out (D30: shelf life) |
+| Orders | No shared account of what was ordered, shipped, received and invoiced | Northfield assistant job: order trace |
+| Suppliers | Poor delivery is hard to attribute to a supplier | Northfield assistant job: supplier performance |
+| Products | Low cover and uneven site stock | Left out (D30: replenishment) |
+| Network | Uneven distribution-centre stock and inbound load | Left out (D30: distribution-centre stock) |
+| Store | Missed store deliveries and empty shelves (two flows) | Left out (D30: stores and shelves) |
+| Rules | Requirements need consistent enforcement across suppliers | P15 |
+| Rules | A changed rule can create false rejections or payment holds | P15 |
+| Supplier compliance | Repeat breaches and inconsistent follow-up | Fold into P7, as the Northfield request that opens it |
+| Onboarding | Unverified identity, bank details or unsigned terms | Left out, pending open question 7 |
+| Onboarding | A supplier fails testing, the first acknowledgment or ramp-up | Fold into P2 |
+| Packaging and emissions | Packaging data, fees and emission hotspots (three flows) | Left out (D30) |
+| Agents | Replenishment, forecast critique, shelf-life triage, carrier diversion (five flows) | Left out (D30) |
+| Agents | Ship notice reminders and escalation | Retailer ship notice chase |
+| Agents | Minor invoice discrepancies queue while material ones need review | P14 |
+| Agents | Repeat breaches need a reviewed improvement plan | Fold into P7 |
+| Agents | Operators need authority limits, oversight and intervention | Agent governance (T2.3) |
+| Simulations | A change can raise risk unless replayed and approved first | Agent governance (T2.3) and P15 |
+| Simulations | Results that look good in replay can fail in live operation | Agent governance (T2.3) |
+| Simulations | Teams need to track changes at different stages | Agent governance (T2.3) |
+| Peak | Demand spikes beyond capacity; plans fail when assumptions change (two flows) | Left out (D30: peak planning) |
+| Network health | Broken connections interrupt orders and confirmations | Northfield assistant job: connection health |
+| Document flow | Missing acknowledgments and stuck documents stall trade | Northfield assistant job: order trace |
+| Navigation | Users need a role-based starting point | Not a business job |
 
 ## P13 Silent order watch
 
@@ -399,16 +545,17 @@ One held invoice can trace to a short receipt, a price beyond tolerance, a total
 | PO, receiving advice and invoice all disagree | Read the receiving advice first, then the invoice lines; propose the record that settles each line | NF-5.5, NF-7.8 |
 
 - **Simplest rule baseline:** the match shows Held with the failing rule, and Jordan fetches every record himself.
-- **World check:** the builder confirms by SQL that each row has a record in the world. Missing rows go to a Phase 1 change list.
+- **World gap:** no invoice line in the world varies on price, so the price row has no record yet (T1.6).
 - **Not modelled:** promotion and tax variances. The catalogue has no rule for either, so adding them needs an owner decision and a new rule.
 - **Northstar sources:** invoice reconciliation, match resolution, and the triple-mismatch case, which is the plan's mutation case.
 
 ## P15 Rule replay before publishing
 
-A new supplier rule can reject documents or raise charges across many suppliers. Jordan sees that effect on the quarter's real exchange before the rule goes live.
+When a retailer changes a supplier rule, it cannot see beforehand whose documents will start failing or what charges follow. Suppliers then take charges for a window they could not meet, and the cost returns to Northfield as disputes, claims review and scorecard swings. Trading Grid already lets retailers define chargeback rules; P15 adds a replay before a change goes live.
 
 - **Seen by:** Jordan Ellis, Northfield compliance.
 - **Agent:** none. Replay is a computation, so this is a tool (registry verdict).
+- **Anchor:** draft rule NFD-1, which shortens the NF-4.2 ship notice window. Its replay shows the added failures and charge exposure.
 - **Tools:** `list_draft_rules`, `replay_draft_rule`, `publish_rule`, `lookup_rules`.
 - **Gate checks:** `nf.replay.nfd1` and `nf.publish_needs_replay`.
 
@@ -423,8 +570,8 @@ A new supplier rule can reject documents or raise charges across many suppliers.
 4. As Priya Raman, I see a rule only once it is published.
    - Accepted when Ashby's scope never shows a draft.
 
+- **World gaps:** every ship notice NFD-1 newly fails is Ashby's, although the other suppliers send ship notices too, so the replay shows one supplier. Draft NFD-2, on price tolerance, fails nothing. Both go to T1.6.
 - **Northstar sources:** rules library, rule authoring tested against recent receipts, and change replay with approval.
-- **Open:** P15's registry anchors must hold its draft rule record (Phase 2 checklist).
 
 ## Retailer ship notice chase
 
@@ -443,15 +590,31 @@ This job belongs to Jordan's own assistant on Northfield's connection. No new sc
 
 - **Northstar sources:** missing or late shipment notice, and the ship notice chase agent.
 
-## Smaller jobs, folded into existing prototypes
+## Northfield assistant jobs
 
-| Job | Northstar source | Goes into |
-| --- | --- | --- |
-| Answer a supplier's change request with an order change | PO amendment decisions | Northfield scope, as a timeline record under NF-1.6 |
-| Reconcile ordered, shipped and received quantity | Quantity reconciliation | P6's shortage case and P14's first decision row |
-| Find stuck documents by stage | Document flow | Northfield scope, as a golden question on `supplier_document_trail` |
-| Ask a supplier with repeat failures for an improvement plan | Supplier compliance; improvement drafting | P7, as the Northfield request that opens it |
-| Supplier conformance failure during setup | EDI setup and ramp | P2, already built |
+These jobs run through Jordan's own assistant on Northfield's connection. Each needs golden questions graded against SQL before it counts as done.
+
+| Job | User story | Tool today | Gap |
+| --- | --- | --- | --- |
+| Order trace | As Jordan, I ask where one order stands from PO to remittance, and which document is stuck and why | `supplier_document_trail` | Golden question needed |
+| Supplier performance | As Jordan, I ask which suppliers miss on time and in full, and which documents drive the miss | `supplier_scorecard` | Golden question needed |
+| Daily queue | As Jordan, I ask what needs Northfield's attention today across ship notices, invoices and deductions, ranked by money at risk and age | None | A new tool, built only if the owner ranks it in T3.2 |
+| Connection health | As Jordan, I ask which suppliers' exchanges are failing and on which channel | `supplier_document_trail` over a period | Golden question needed; channel detail to confirm |
+
+## Agent governance
+
+Operators need to see and limit what agents do, and to try a change safely before it goes live. This is Phase 2 work (T2.3), on both connections.
+
+1. As Priya or Jordan, I see each agent's authority limit and every action it took, with the record and the outcome.
+   - Accepted when the access log and the case history show agent, authority, approver and outcome for every write.
+2. As the user, I can pause an agent, and take over or override its proposal.
+   - Accepted when a paused agent proposes nothing and an override is recorded with who made it.
+3. A changed agent rule is replayed against the quarter before it goes live, with its effect shown beside the current rule.
+   - Accepted when a gate check replays one changed agent rule and the result differs from the current rule's.
+4. A change that looks good in replay can still fail live, so it runs for a trial period with drift watched and a way back.
+   - Accepted when the change list records the trial, the drift measure and the rollback path. A live trial is not prototyped.
+
+- **Northstar sources:** agent control plane (authority, audit, override, pause, kill) and the scenario workbench (replay, approval, trial, drift, rollback).
 
 ## Partner journeys
 

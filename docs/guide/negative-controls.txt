@@ -8,3 +8,5 @@ bad_rule => FAIL rule_ids_in_catalogue: NF-4.99
 blank_cell => FAIL inventory_and_grid_complete: grid CAT A1: ""  [18 inventory rows, 16 grid rows]
 bad_status => FAIL inventory_and_grid_complete: P14 registry status Planned, guide Built  [18 inventory rows, 16 grid rows]
 bad_tool => FAIL paths_scripts_gate_checks_tools_exist: tool three_way_matcher
+dropped_rule => FAIL retired_rules_have_a_home: no home for R16 (Before the agent starts, the user opens )  [208 items: 105 placed in the guide, 86 pointed 
+no_done_when => FAIL tasks_have_ids_and_done_when: no done-when: **T0.5** Confirm P7 manual pattern A by hand

@@ -1,0 +1,1461 @@
+{
+ "note": "Every item in a retired governing section, mapped to its home in docs/build-guide.md. to = a rule, decision or task ID, a guide heading, pointer: <owner>, or superseded: <reason>. Built from the repo copies of the three docs.",
+ "items": [
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "## How to use this doc",
+   "key": "p10tradinggridinthecustomersai",
+   "item": "P10 Trading Grid in the customer's AI",
+   "to": "pointer: Agent and MCP strategy build brief 1 (P10, built)"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "## How to use this doc",
+   "key": "p13silentorderwatch",
+   "item": "P13 Silent order watch",
+   "to": "pointer: Agent and MCP strategy build brief 2 (P13 spec)"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "## How to use this doc",
+   "key": "p6chargeresolutionevidenceacquis",
+   "item": "P6 Charge Resolution, evidence acquisition",
+   "to": "pointer: Agent and MCP strategy build brief 3 (P6 Phase 4 input)"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "## How to use this doc",
+   "key": "netsuiteshipnoticeexceptiontesta",
+   "item": "NetSuite ship notice exception, Test Agent",
+   "to": "pointer: Agent and MCP strategy build brief 4 (NetSuite Phase 4 input)"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "## How to use this doc",
+   "key": "everyacceptancetestinthebriefpas",
+   "item": "Every acceptance test in the brief passes in a headless run.",
+   "to": "T4.1"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "## How to use this doc",
+   "key": "eachchangedevidencerecordproduce",
+   "item": "Each changed-evidence record produces its stated next step from the sa",
+   "to": "R21"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "## How to use this doc",
+   "key": "thepresenternotesfileiswrittenfr",
+   "item": "The presenter-notes file is written from the brief's presenter notes.",
+   "to": "superseded: presenter-notes files retired by the owner on 12 November"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Story and screens",
+   "key": "showtheproblemandwhatthesolution",
+   "item": "Show the problem and what the solution achieves, on screen.",
+   "to": "R05"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Story and screens",
+   "key": "showthefullendtoendjourneynevers",
+   "item": "Show the full end-to-end journey; never stop at a feature boundary.",
+   "to": "R06"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Story and screens",
+   "key": "presenttheidealstatewithnocondit",
+   "item": "Present the ideal state, with no conditional framing and no proposed t",
+   "to": "R07"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Story and screens",
+   "key": "showediandapiinuseontheroutemaps",
+   "item": "Show EDI and API in use on the route map. Settled route lines carry a ",
+   "to": "R08"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Story and screens",
+   "key": "keepscreensminimallittletextsmoo",
+   "item": "Keep screens minimal: little text, smooth motion, functional only, no ",
+   "to": "R09"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Story and screens",
+   "key": "noproductnamesonscreenincludingi",
+   "item": "No product names on screen, including inside the Trading Grid box. Eve",
+   "to": "R10"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Story and screens",
+   "key": "nofeatureidsnodatesnodurationsbe",
+   "item": "No feature IDs, no dates, no durations beside buttons, no green ticks,",
+   "to": "R11"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Story and screens",
+   "key": "useonlyopentexttgretaildesignsys",
+   "item": "Use only OpenText TG Retail Design System colour tokens.",
+   "to": "R13"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Story and screens",
+   "key": "noretailercustomerdatainfixtures",
+   "item": "No retailer customer data in fixtures.",
+   "to": "R04"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### People",
+   "key": "priyaramanashbysuppliershedoesev",
+   "item": "Priya Raman, Ashby Supplier. She does every supplier role: operations,",
+   "to": "R02"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### People",
+   "key": "jordanellisnorthfieldretailerhed",
+   "item": "Jordan Ellis, Northfield Retailer. He does every retailer role: buyer ",
+   "to": "R02"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### People",
+   "key": "warehouseandcarrierappearascompa",
+   "item": "Warehouse and carrier appear as companies only: Kinross Logistics and ",
+   "to": "R03"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Agents inside Trading Grid",
+   "key": "eachagentisnamednameagentandacts",
+   "item": "Each agent is named \"<Name> Agent\" and acts for Priya or for Jordan, n",
+   "to": "R14"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Agents inside Trading Grid",
+   "key": "everyagentscreenhasamanualoption",
+   "item": "Every agent screen has a manual option.",
+   "to": "R15"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Agents inside Trading Grid",
+   "key": "beforetheagentstartstheuseropens",
+   "item": "Before the agent starts, the user opens and edits its agent rules. The",
+   "to": "R16"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Agents inside Trading Grid",
+   "key": "theagentvisiblyreadssystemsandco",
+   "item": "The agent visibly reads systems and compares records.",
+   "to": "R17"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Agents inside Trading Grid",
+   "key": "itsendsataskdocumentormessageonl",
+   "item": "It sends a task, document or message only with the user's approval or ",
+   "to": "R18"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Agents inside Trading Grid",
+   "key": "itneverchangesanauthoritativerec",
+   "item": "It never changes an authoritative record without permitted authority.",
+   "to": "R19"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Agents inside Trading Grid",
+   "key": "useractionschangewhathappensnext",
+   "item": "User actions change what happens next; nothing is read-only.",
+   "to": "R20"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### The six agentic tests",
+   "key": "anameddecisiontwomateriallydiffe",
+   "item": "A named decision. Two materially different next steps, and the evidenc",
+   "to": "R21"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### The six agentic tests",
+   "key": "arulebaselinethesimplestcredible",
+   "item": "A rule baseline. The simplest credible rule-based workflow runs on the",
+   "to": "R21"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### The six agentic tests",
+   "key": "changedevidenceachangedfixturepr",
+   "item": "Changed evidence. A changed fixture produces a different next step wit",
+   "to": "R21"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### The six agentic tests",
+   "key": "authoritywhoapproveswheretheappr",
+   "item": "Authority. Who approves, where the approval happens, and the target sy",
+   "to": "R21"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### The six agentic tests",
+   "key": "abusinessconfirmationtheoutcomei",
+   "item": "A business confirmation. The outcome is confirmed by a business record",
+   "to": "R21"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### The six agentic tests",
+   "key": "afailurecaseadocumentthatneverar",
+   "item": "A failure case. A document that never arrives, a tool that fails, or a",
+   "to": "R21"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Customer-agent access",
+   "key": "thecalleristhecustomersownaiassi",
+   "item": "The caller is the customer's own AI assistant in the customer's worksp",
+   "to": "R23"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Customer-agent access",
+   "key": "accessisreadonlyatfirstreleaseac",
+   "item": "Access is read-only at first release. Actions in Trading Grid go back ",
+   "to": "R24"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Customer-agent access",
+   "key": "thecustomersadminpicksscopesbefo",
+   "item": "The customer's admin picks scopes before connecting. A question outsid",
+   "to": "R25"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Customer-agent access",
+   "key": "everyanswercitesthetradinggridre",
+   "item": "Every answer cites the Trading Grid records it used.",
+   "to": "R26"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Customer-agent access",
+   "key": "everycalliswrittentoanaccesslogu",
+   "item": "Every call is written to an access log: user, assistant, tool, scope, ",
+   "to": "R27"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Customer-agent access",
+   "key": "anincidentorworkorderiscreatedby",
+   "item": "An incident or work order is created by the customer's assistant in th",
+   "to": "R28"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Companies, people and systems",
+   "key": "ashbysupplier",
+   "item": "Ashby Supplier",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Companies, people and systems",
+   "key": "northfieldretailer",
+   "item": "Northfield Retailer",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Companies, people and systems",
+   "key": "kinross",
+   "item": "Kinross",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Companies, people and systems",
+   "key": "lakelinefreight",
+   "item": "Lakeline Freight",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Timeline",
+   "key": "1",
+   "item": "1",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Timeline",
+   "key": "1",
+   "item": "1",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Timeline",
+   "key": "3",
+   "item": "3",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Timeline",
+   "key": "5",
+   "item": "5",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Timeline",
+   "key": "6to7",
+   "item": "6 to 7",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Timeline",
+   "key": "7",
+   "item": "7",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Timeline",
+   "key": "8",
+   "item": "8",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Timeline",
+   "key": "8",
+   "item": "8",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Timeline",
+   "key": "9",
+   "item": "9",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Timeline",
+   "key": "10",
+   "item": "10",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Timeline",
+   "key": "11",
+   "item": "11",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Timeline",
+   "key": "14",
+   "item": "14",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Items",
+   "key": "ashmug12",
+   "item": "ASH-MUG-12",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Items",
+   "key": "ashnap4",
+   "item": "ASH-NAP-4",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Items",
+   "key": "ashhny340",
+   "item": "ASH-HNY-340",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Items",
+   "key": "ashmug16",
+   "item": "ASH-MUG-16",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Items",
+   "key": "ashtrl09",
+   "item": "ASH-TRL-09",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Items",
+   "key": "ahp8820",
+   "item": "AHP-8820",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Northfield rules 2026.2",
+   "key": "nf14",
+   "item": "NF-1.4",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Northfield rules 2026.2",
+   "key": "nf15",
+   "item": "NF-1.5",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Northfield rules 2026.2",
+   "key": "nf42",
+   "item": "NF-4.2",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Northfield rules 2026.2",
+   "key": "nf49",
+   "item": "NF-4.9",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Northfield rules 2026.2",
+   "key": "nf410",
+   "item": "NF-4.10",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Northfield rules 2026.2",
+   "key": "nf411",
+   "item": "NF-4.11",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Northfield rules 2026.2",
+   "key": "nf73",
+   "item": "NF-7.3",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Northfield rules 2026.2",
+   "key": "nf74",
+   "item": "NF-7.4",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Northfield rules 2026.2",
+   "key": "nf79",
+   "item": "NF-7.9",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Northfield rules 2026.2",
+   "key": "sh01as02",
+   "item": "SH01, AS02",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Northfield rules 2026.2",
+   "key": "kinrossagreement",
+   "item": "Kinross agreement",
+   "to": "pointer: the world (build/tg.db) and the EDI Review Pack, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Server contract in brief",
+   "key": "ordersneedingattention",
+   "item": "orders_needing_attention",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Server contract in brief",
+   "key": "explainrejection",
+   "item": "explain_rejection",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Server contract in brief",
+   "key": "edihealthsummary",
+   "item": "edi_health_summary",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Server contract in brief",
+   "key": "checkdeliveries",
+   "item": "check_deliveries",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Server contract in brief",
+   "key": "getordergetdocument",
+   "item": "get_order, get_document",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Server contract in brief",
+   "key": "lookupretailerrules",
+   "item": "lookup_retailer_rules",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Server contract in brief",
+   "key": "listdeductionsgetdeductioncase",
+   "item": "list_deductions, get_deduction_case",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Server contract in brief",
+   "key": "getscorecard",
+   "item": "get_scorecard",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Server contract in brief",
+   "key": "recommendnextstep",
+   "item": "recommend_next_step",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Server contract in brief",
+   "key": "getstorycalendar",
+   "item": "get_story_calendar",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Server contract in brief",
+   "key": "comparewithothersuppliers",
+   "item": "compare_with_other_suppliers",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Server contract in brief",
+   "key": "requestchange",
+   "item": "request_change",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/agent-and-mcp-strategy.md",
+   "section": "### Server contract in brief",
+   "key": "runreadonlysqlgetaccesslog",
+   "item": "run_readonly_sql, get_access_log",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "### Decisions recorded 11 November 2026",
+   "key": "doesanyopentextproductchecklivea",
+   "item": "Does any OpenText product check live ASNs and invoices against retaile",
+   "to": "D11"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "### Decisions recorded 11 November 2026",
+   "key": "whatrunsaiassistedonboardingandm",
+   "item": "What runs AI-assisted onboarding and map work?",
+   "to": "D12"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "### Decisions recorded 11 November 2026",
+   "key": "dosuppliersseeerrorswhiletesting",
+   "item": "Do suppliers see errors while testing before go-live?",
+   "to": "D13"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "### Decisions recorded 11 November 2026",
+   "key": "doescommandcenterintegrationmoni",
+   "item": "Does Command Center Integration Monitor alert on missing, out-of-order",
+   "to": "D14"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "### Decisions recorded 11 November 2026",
+   "key": "doesatradinggridinsightsortradin",
+   "item": "Does a Trading Grid Insights or Trading Grid Intelligence API exist fo",
+   "to": "D15"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "### Decisions recorded 11 November 2026",
+   "key": "isaninproductquestionandansweras",
+   "item": "Is an in-product question-and-answer assistant needed?",
+   "to": "D16"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "problemonscreen",
+   "item": "Problem on screen",
+   "to": "superseded: P10 is built and live; its spec is build brief 1"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "solutiononscreen",
+   "item": "Solution on screen",
+   "to": "superseded: P10 is built and live; its spec is build brief 1"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "user",
+   "item": "User",
+   "to": "superseded: P10 is built and live; its spec is build brief 1"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "routemap",
+   "item": "Route map",
+   "to": "superseded: P10 is built and live; its spec is build brief 1"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "data",
+   "item": "Data",
+   "to": "superseded: P10 is built and live; its spec is build brief 1"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "accessruleseditablebeforeconnect",
+   "item": "Access rules (editable before connecting)",
+   "to": "superseded: P10 is built and live; its spec is build brief 1"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "manualoption",
+   "item": "Manual option",
+   "to": "superseded: P10 is built and live; its spec is build brief 1"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "ashbysitadminconnectstradinggrid",
+   "item": "Ashby's IT admin connects Trading Grid to the company AI assistant and",
+   "to": "superseded: P10 is built and live; its spec is build brief 1"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "priyaaskswhichnorthfieldordersne",
+   "item": "Priya asks: \"Which Northfield orders need attention today?\" The assist",
+   "to": "superseded: P10 is built and live; its spec is build brief 1"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "whydidnorthfieldrejectasn46118th",
+   "item": "\"Why did Northfield reject ASN-46118?\" The PO reference is 26 characte",
+   "to": "superseded: P10 is built and live; its spec is build brief 1"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "summarizenorthfieldedihealthfort",
+   "item": "\"Summarize Northfield EDI health for the last 30 days.\" 3,412 document",
+   "to": "superseded: P10 is built and live; its spec is build brief 1"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "jordanellisemailssixponumbershes",
+   "item": "Jordan Ellis emails six PO numbers he says shipped late. The assistant",
+   "to": "superseded: P10 is built and live; its spec is build brief 1"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "theadminopenstheaccesslogeveryca",
+   "item": "The admin opens the access log: every call, user, scope and time.",
+   "to": "superseded: P10 is built and live; its spec is build brief 1"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "problemonscreen",
+   "item": "Problem on screen",
+   "to": "pointer: Agent and MCP strategy build brief 2 (P13 spec)"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "solutiononscreen",
+   "item": "Solution on screen",
+   "to": "pointer: Agent and MCP strategy build brief 2 (P13 spec)"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "user",
+   "item": "User",
+   "to": "pointer: Agent and MCP strategy build brief 2 (P13 spec)"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "routemap",
+   "item": "Route map",
+   "to": "pointer: Agent and MCP strategy build brief 2 (P13 spec)"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "documents",
+   "item": "Documents",
+   "to": "pointer: Agent and MCP strategy build brief 2 (P13 spec)"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "agent",
+   "item": "Agent",
+   "to": "pointer: Agent and MCP strategy build brief 2 (P13 spec)"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "agentruleseditablebeforestart",
+   "item": "Agent rules (editable before start)",
+   "to": "pointer: Agent and MCP strategy build brief 2 (P13 spec)"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "manualoption",
+   "item": "Manual option",
+   "to": "pointer: Agent and MCP strategy build brief 2 (P13 spec)"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "nr46210",
+   "item": "NR-46210",
+   "to": "pointer: Agent and MCP strategy build brief 2 (P13 spec)"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "nr46215",
+   "item": "NR-46215",
+   "to": "pointer: Agent and MCP strategy build brief 2 (P13 spec)"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "nr46220",
+   "item": "NR-46220",
+   "to": "pointer: Agent and MCP strategy build brief 2 (P13 spec)"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "nr46226",
+   "item": "NR-46226",
+   "to": "pointer: Agent and MCP strategy build brief 2 (P13 spec)"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "nr46231",
+   "item": "NR-46231",
+   "to": "pointer: Agent and MCP strategy build brief 2 (P13 spec)"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "priyaopensopenorderstheproblemli",
+   "item": "Priya opens open orders. The problem line reads: four orders missing a",
+   "to": "pointer: Agent and MCP strategy build brief 2 (P13 spec)"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "sheopenstheagentruleschangesthek",
+   "item": "She opens the agent rules, changes the Kinross window from 48 to 24 ho",
+   "to": "pointer: Agent and MCP strategy build brief 2 (P13 spec)"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "theagentreadsopenordersfromsuppl",
+   "item": "The agent reads open orders from Supplier ERP and document history fro",
+   "to": "pointer: Agent and MCP strategy build brief 2 (P13 spec)"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "thefiverowsappearindeadlineorder",
+   "item": "The five rows appear in deadline order. Priya works them from the tabl",
+   "to": "pointer: Agent and MCP strategy build brief 2 (P13 spec)"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Build queue",
+   "key": "kinrossreturnsthe945at1140nr4622",
+   "item": "Kinross returns the 945 at 11:40; NR-46220 moves to Shipped.",
+   "to": "pointer: Agent and MCP strategy build brief 2 (P13 spec)"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Revisions to built prototypes",
+   "key": "p5scoutshipmentwatch",
+   "item": "P5 Scout Shipment Watch",
+   "to": "superseded: presenter-notes files retired by the owner on 12 November; positioning goes to open question 8"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Revisions to built prototypes",
+   "key": "p7performanceimprovement",
+   "item": "P7 Performance Improvement",
+   "to": "superseded: presenter-notes files retired by the owner on 12 November; positioning goes to open question 8"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Not building",
+   "key": "guidedsupplieronboarding",
+   "item": "Guided supplier onboarding",
+   "to": "D17"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Not building",
+   "key": "suppliercashwatch",
+   "item": "Supplier cash watch",
+   "to": "D18"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Not building",
+   "key": "inproductquestionandanswerassist",
+   "item": "In-product question-and-answer assistant",
+   "to": "D16"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Not building",
+   "key": "validationbeforegolive",
+   "item": "Validation before go-live",
+   "to": "D13"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Not building",
+   "key": "stalleddropshiporderdetection",
+   "item": "Stalled drop-ship order detection",
+   "to": "D19"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Not building",
+   "key": "agentictradingpartnermapping",
+   "item": "Agentic trading partner mapping",
+   "to": "D20"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Not building",
+   "key": "supportassistant",
+   "item": "Support assistant",
+   "to": "D21"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Not building",
+   "key": "demandforecastinginvmi",
+   "item": "Demand forecasting in VMI",
+   "to": "D22"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Standing rules for every prototype",
+   "key": "showtheproblembeingsolvedandwhat",
+   "item": "Show the problem being solved and what the solution achieves, on scree",
+   "to": "R05"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Standing rules for every prototype",
+   "key": "showthefullendtoendcustomerjourn",
+   "item": "Show the full end-to-end customer journey; never stop at a feature bou",
+   "to": "R06"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Standing rules for every prototype",
+   "key": "presenttheidealstatenoconditiona",
+   "item": "Present the ideal state: no conditional framing and no \"proposed\" tags",
+   "to": "R07"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Standing rules for every prototype",
+   "key": "showediandapiinuseontheroutemap",
+   "item": "Show EDI and API in use on the route map.",
+   "to": "R08"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Standing rules for every prototype",
+   "key": "minimalbutfunctionallittletexton",
+   "item": "Minimal but functional: little text on the main screen, smooth motion,",
+   "to": "R09"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Standing rules for every prototype",
+   "key": "noproductnamesonscreenincludingi",
+   "item": "No product names on screen, including inside the Trading Grid box; eve",
+   "to": "R10"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Standing rules for every prototype",
+   "key": "nofeatureidsnostagelabelsfordete",
+   "item": "No feature IDs, no stage labels for detect, prioritize, act and verify",
+   "to": "R11"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Standing rules for every prototype",
+   "key": "functionalonlynoguidedtour",
+   "item": "Functional only: no guided tour.",
+   "to": "R09"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Standing rules for every prototype",
+   "key": "nameeachagentnameagentitactsforo",
+   "item": "Name each agent \"<Name> Agent\"; it acts for one named business user, n",
+   "to": "R14"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Standing rules for every prototype",
+   "key": "everyagentscreenhasamanualoption",
+   "item": "Every agent screen has a manual option. The user opens and edits the a",
+   "to": "R15"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Standing rules for every prototype",
+   "key": "theagentvisiblyreadssystemsandch",
+   "item": "The agent visibly reads systems and checks records; it does not read a",
+   "to": "R17"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Standing rules for every prototype",
+   "key": "itsendsataskdocumentormessageonl",
+   "item": "It sends a task, document or message only with a named user's approval",
+   "to": "R18"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Standing rules for every prototype",
+   "key": "useractionschangewhathappensnoth",
+   "item": "User actions change what happens; nothing is read-only.",
+   "to": "R20"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Standing rules for every prototype",
+   "key": "mostretailersreturnonlya997nobus",
+   "item": "Most retailers return only a 997; no business acceptance is sent.",
+   "to": "R29"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Standing rules for every prototype",
+   "key": "inventoryispulledbyapiinrealtime",
+   "item": "Inventory is pulled by API in real time, not sent by the supplier.",
+   "to": "R30"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Standing rules for every prototype",
+   "key": "noretailercustomerdatainfixtures",
+   "item": "No retailer customer data in fixtures or analysis.",
+   "to": "R04"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Standing rules for every prototype",
+   "key": "buildeachnewprototypefromscratch",
+   "item": "Build each new prototype from scratch with the TG for Retail workspace",
+   "to": "R33"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Standing rules for every prototype",
+   "key": "productownershipcompetitorrefere",
+   "item": "Product ownership, competitor references and capability positions go i",
+   "to": "superseded: presenter-notes files retired by the owner on 12 November; positioning goes to open question 8"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Retailer-side prototypes on Northfield\u2019s connection",
+   "key": "p14invoicevariance",
+   "item": "P14 Invoice Variance",
+   "to": "P14 Invoice variance investigation"
+  },
+  {
+   "doc": "docs/prototype-plan.md",
+   "section": "## Retailer-side prototypes on Northfield\u2019s connection",
+   "key": "p15rulereplay",
+   "item": "P15 Rule Replay",
+   "to": "P15 Rule replay before publishing"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "ordersneedingattention",
+   "item": "orders_needing_attention",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "explainrejection",
+   "item": "explain_rejection",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "edihealthsummary",
+   "item": "edi_health_summary",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "checkdeliveries",
+   "item": "check_deliveries",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "getorder",
+   "item": "get_order",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "getdocument",
+   "item": "get_document",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "lookupretailerrules",
+   "item": "lookup_retailer_rules",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "listdeductions",
+   "item": "list_deductions",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "getdeductioncase",
+   "item": "get_deduction_case",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "getscorecard",
+   "item": "get_scorecard",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "recommendnextstep",
+   "item": "recommend_next_step",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "getstorycalendar",
+   "item": "get_story_calendar",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "comparewithothersuppliers",
+   "item": "compare_with_other_suppliers",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "requestchange",
+   "item": "request_change",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "runreadonlysql",
+   "item": "run_readonly_sql",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "getaccesslog",
+   "item": "get_access_log",
+   "to": "pointer: src/tools.js, per Where each fact lives"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "connection",
+   "item": "Connection",
+   "to": "Server reference"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "scopeoff",
+   "item": "Scope off",
+   "to": "Server reference"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "isolation",
+   "item": "Isolation",
+   "to": "Server reference"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "time",
+   "item": "Time",
+   "to": "Server reference"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "resttwin",
+   "item": "REST twin",
+   "to": "Server reference"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "recordpages",
+   "item": "Record pages",
+   "to": "Server reference"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "writesasevents",
+   "item": "Writes as events",
+   "to": "Server reference"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "url",
+   "item": "URL",
+   "to": "Server reference"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "netsuite",
+   "item": "NetSuite",
+   "to": "Compared with published tool lists"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "salesforce",
+   "item": "Salesforce",
+   "to": "Compared with published tool lists"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## The server",
+   "key": "spscommerce",
+   "item": "SPS Commerce",
+   "to": "Compared with published tool lists"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Proofs",
+   "key": "independentx12checkstaedi1267pub",
+   "item": "Independent X12 check: StAEDI 1.26.7, published 8 November 2026, reads",
+   "to": "Proofs, open items and drift control"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Proofs",
+   "key": "invariantsovereveryrecordonevery",
+   "item": "Invariants over every record, on every build",
+   "to": "Proofs, open items and drift control"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Proofs",
+   "key": "fixedvalues",
+   "item": "Fixed values",
+   "to": "pointer: fixed values are gate checks in scripts/check.js"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Proofs",
+   "key": "agentdecisiontests",
+   "item": "Agent decision tests",
+   "to": "T2.2"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Proofs",
+   "key": "moneyinmotionroundtrip",
+   "item": "Money in Motion round trip",
+   "to": "pointer: the round trip is a gate check in scripts/check.js"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Proofs",
+   "key": "contracttestagainstbuiltscreens",
+   "item": "Contract test against built screens",
+   "to": "Proofs, open items and drift control"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Proofs",
+   "key": "registrycheck",
+   "item": "Registry check",
+   "to": "T2.7"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Proofs",
+   "key": "smoketest",
+   "item": "Smoke test",
+   "to": "Proofs, open items and drift control"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Not verified",
+   "key": "noedipractitionerhasreviewedthed",
+   "item": "No EDI practitioner has reviewed the documents or the rule catalogue. ",
+   "to": "Not verified"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Not verified",
+   "key": "spscommercepublishesnomcptoollis",
+   "item": "SPS Commerce publishes no MCP tool list, so that comparison could not ",
+   "to": "Not verified"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Not verified",
+   "key": "thedickssportinggoodsshipnoticer",
+   "item": "The Dick's Sporting Goods ship notice rule is cited from a third-party",
+   "to": "Not verified"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Not verified",
+   "key": "ashipmentwithashipnoticeandnorec",
+   "item": "A shipment with a ship notice and no receipt is not on the timeline.",
+   "to": "Not verified"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Not verified",
+   "key": "whetherapublishedprototypecanrea",
+   "item": "Whether a published prototype can read the server live was not tested;",
+   "to": "Not verified"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Not verified",
+   "key": "rawx12panelsinsidebuiltscreenswe",
+   "item": "Raw X12 panels inside built screens were not regenerated from the worl",
+   "to": "Not verified"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Decisions taken",
+   "key": "shipnoticeruleiswithin1hourofdep",
+   "item": "Ship notice rule is within 1 hour of departure, on every screen",
+   "to": "D23"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Decisions taken",
+   "key": "poreferencerejectionstravelonthe",
+   "item": "PO reference rejections travel on the 997; business errors on the 824",
+   "to": "D24"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Decisions taken",
+   "key": "fivescopesonbydefaultthep10journ",
+   "item": "Five scopes on by default; the P10 journey shows the admin switching d",
+   "to": "D25"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Decisions taken",
+   "key": "existingtoolnamesarekeptsothecon",
+   "item": "Existing tool names are kept so the connected assistant keeps working",
+   "to": "D26"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Decisions taken",
+   "key": "thereplenishmentscorecardandtheb",
+   "item": "The replenishment scorecard and the buyer-order view are separate popu",
+   "to": "D27"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Decisions taken",
+   "key": "jordanreversestheshortagechargea",
+   "item": "Jordan reverses the shortage charge and upholds the ship notice charge",
+   "to": "D28"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Decisions taken",
+   "key": "theworldfollowsbuiltscreensforru",
+   "item": "The world follows built screens for rule wording and record numbers wh",
+   "to": "D29"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Northfield connection: the retailer\u2019s assistant on the same world",
+   "key": "documentsbothcompaniesexchanged8",
+   "item": "Documents both companies exchanged (850, 855, 856, 810, 860, 865, 861,",
+   "to": "Server reference"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Northfield connection: the retailer\u2019s assistant on the same world",
+   "key": "deductioncaseschargesdisputesdec",
+   "item": "Deduction cases: charges, disputes, decisions, evidence put in the cas",
+   "to": "Server reference"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Northfield connection: the retailer\u2019s assistant on the same world",
+   "key": "ashbyssuppliererpkinrosswarehous",
+   "item": "Ashby's Supplier ERP, Kinross warehouse, Lakeline carrier and agent re",
+   "to": "Server reference"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Northfield connection: the retailer\u2019s assistant on the same world",
+   "key": "northfieldsaccountspayablematchd",
+   "item": "Northfield's accounts payable match, draft rules, claims reviewer note",
+   "to": "Server reference"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Northfield connection: the retailer\u2019s assistant on the same world",
+   "key": "submitdispute",
+   "item": "submit_dispute",
+   "to": "Writes follow the rule catalogue"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Northfield connection: the retailer\u2019s assistant on the same world",
+   "key": "releaseshipnotice",
+   "item": "release_ship_notice",
+   "to": "Writes follow the rule catalogue"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Northfield connection: the retailer\u2019s assistant on the same world",
+   "key": "decidecharge",
+   "item": "decide_charge",
+   "to": "Writes follow the rule catalogue"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Northfield connection: the retailer\u2019s assistant on the same world",
+   "key": "publishrule",
+   "item": "publish_rule",
+   "to": "Writes follow the rule catalogue"
+  },
+  {
+   "doc": "docs/database-and-server-plan.md",
+   "section": "## Northfield connection: the retailer\u2019s assistant on the same world",
+   "key": "requestchange",
+   "item": "request_change",
+   "to": "Writes follow the rule catalogue"
+  }
+ ]
+}

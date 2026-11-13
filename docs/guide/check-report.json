@@ -1,6 +1,6 @@
 {
  "file": "/home/claude/agenticmcp/docs/build-guide.md",
- "ran_at_head": "d64ac97",
+ "ran_at_head": "eebc6c2",
  "results": [
   {
    "name": "as_of_commit_current",
@@ -27,7 +27,7 @@
    "name": "calls_refs_exist",
    "ok": true,
    "problems": [],
-   "info": "65 calls logged"
+   "info": "66 calls logged"
   },
   {
    "name": "inventory_and_grid_complete",
@@ -69,7 +69,7 @@
      ]
     },
     "docs/database-and-server-plan.md": {
-     "shared_8word_passages": 125,
+     "shared_8word_passages": 123,
      "sample": [
       "a field that needs it reads scope not",
       "field that needs it reads scope not granted",
@@ -77,7 +77,7 @@
      ]
     },
     "docs/agent-and-mcp-strategy.md": {
-     "shared_8word_passages": 128,
+     "shared_8word_passages": 127,
      "sample": [
       "show edi and api in use on the",
       "edi and api in use on the route",
@@ -96,7 +96,7 @@
    "name": "tasks_have_ids_and_done_when",
    "ok": true,
    "problems": [],
-   "info": "56 tasks: 22 done, 9 blocked"
+   "info": "56 tasks: 22 done, 8 blocked"
   }
  ]
 }

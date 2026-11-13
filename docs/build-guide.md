@@ -240,7 +240,7 @@ The owner approved change items 1 to 14 on 12 November. Two are done, four are p
 4. Answered: the world wins (D51).
 5. Answered: none (D52).
 6. Nine pages may be retired (listed in `docs/phase0/HANDOFF.md`). Keep or retire each?
-7. P8's numbers cannot be checked against the shared records, because three definitions live only inside the screen: which orders count as open, when an order counts as closed, and how an invoice is compared with what was received. Should P8 state those three on screen?
+7. Answered: P8 states its three definitions on screen, beside the figures they govern (CALLS 66).
 
 ## Inventory
 
@@ -362,7 +362,7 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T0.13 | P5 | Complete P5's grid row | — | P5 link; `docs/phase0/walks/` for the dead state | Evidence: `docs/phase0/P5-grid.md`; C1 in `docs/phase0/golden/t03/RESULTS.md`; CALLS 51 | Done |
 | T0.14 | P6 | Complete P6's grid row | — | P6 link in Inventory | Evidence: `docs/phase0/P6-grid.md`; CALLS 41 | Done |
 | T0.15 | P7 | Complete P7's grid row | T0.5 | P7 link; `contract/claims.json` | Evidence: `docs/phase0/P7-grid.md`; CALLS 43 | Done |
-| T0.16 | P8 | Complete P8's grid row; only C1 is left. Its three questions ran five times and fail, because the records do not carry P8's definitions of an open order, a closed order and the tolerance basis (`docs/phase0/golden/t03/RESULTS.md`) | Owner chooses: state P8's definitions on screen and in the guide, or give Northfield's connection a tool that returns them (open question 7) | P8 link; why its cells are N/A | Every P8 cell reads Done or N/A | Blocked |
+| T0.16 | P8 | Complete P8's grid row; only C1 is left. Its three questions failed five runs because three definitions lived only inside the screen. With them stated, the shared records reproduce each P8 figure (`docs/phase0/P8-definitions.md`, CALLS 66). Left: five graded runs with the definitions in the question, under T0.3 | — | P8 link; why its cells are N/A | Every P8 cell reads Done or N/A | Open |
 | T0.17 | P9 | Complete P9's grid row | — | P9 link in Inventory | Evidence: `docs/phase0/P9-grid.md` and the t03 golden results; CALLS 51 | Done |
 | T0.18 | P11 | Complete P11's grid row; only C1 is left (`docs/phase0/P11-grid.md`) | T1.9 | P11 link in Inventory | Every P11 cell reads Done or N/A | Open |
 | T0.19 | P12 | Complete P12's grid row | — | P12 link in Inventory | Evidence: P12 retired by the owner, CALLS 32 | Done |
@@ -428,7 +428,7 @@ Each row is one prototype through the Phase 4 loop under Build flow. Before prop
 | T4.13 | P5 | Scout Shipment Watch | T0.13, T2.4 | Decisions item 13; the working copy is not in the repo, so rebuild the fix; `docs/phase4/agent-entry.md`, items AE-P5 | Phase 4 loop complete | Open |
 | T4.14 | P6 | Northfield Charge Resolution | T0.14 | Decisions item 4; D28; `docs/phase4/agent-entry.md`, items AE-P6 | Phase 4 loop complete | Open |
 | T4.15 | P7 | Northfield Performance Improvement | T0.15, T1.2 | Decisions item 5; D51; `docs/phase4/agent-entry.md`, items AE-P7 | Phase 4 loop complete, with the world's week 6 orders and charge on screen and P7's contract check passing against the live page | Open |
-| T4.16 | P8 | Money in Motion, view only | T0.16, T1.4 | R20 | Phase 4 loop complete | Open |
+| T4.16 | P8 | Money in Motion, view only. Put the three definitions next to their figures and correct the two label faults the definitions file lists | T0.16, T1.4 | R20; `docs/phase0/P8-definitions.md` | Phase 4 loop complete | Open |
 | T4.17 | P9 | Shelf Recovery | T0.17, T2.4 | D22; `docs/phase4/agent-entry.md`, items AE-P9 | Phase 4 loop complete | Open |
 | T4.18 | P11 | NetSuite Chargeback Avoidance | T0.18 | Decisions item 7; `docs/phase4/agent-entry.md`, items AE-P11 | Phase 4 loop complete | Open |
 | T4.19 | P12 | ERP-native Activation | T0.19 | Decisions item 6 | Evidence: no loop needed after retirement, CALLS 32 | Done |
@@ -507,7 +507,6 @@ The gate and smoke tests pass at commit 1a62f35. Two of the plan's proofs have n
 | SPS Commerce publishes no MCP tool list | Nobody: a known limit | SPS publishes a tool list or schema |
 | The ship notice timing rule rests on third-party reports of one retailer's guide, which sits behind that retailer's vendor portal (FINDINGS, T0.8) | Owner, with vendor-portal access | The portal guide's wording is recorded |
 | Whether a published prototype can read the server live; prototypes carry their fixtures inline | Builder, T2.10 | The test page result is committed |
-| A shipment with a ship notice and no receipt exists only for other suppliers | Owner, T1.4 | CALLS 8 is confirmed |
 | Raw X12 panels inside built screens are not generated from the world | Builder, T1.5 | The contract test compares them |
 | Where the live server's writes-off setting comes from | Owner, in the Render dashboard | The setting is recorded under Hosting |
 | A third of first calls to the live server return nothing and answer on retry | Owner, by deciding on a paid Render plan | Calls answer first time |

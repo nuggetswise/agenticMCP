@@ -1,0 +1,12 @@
+Screen: the page's own order records
+  orders in set 340 · open 200 · ordered 1999954.10 · confirmed 4365551.60 · in transit 3999826.40 · received 834164.45 · invoiced 16821765.75
+  billed above received: 7 orders, 9721.10 · released at acknowledgment: 150480.60 over 10 orders, 21.5 days earlier
+Records: buyer orders placed 13 July to 8 November
+  orders in set 342 · open 200 · ordered 1999954.10 · confirmed 4365551.60 · in transit 3999826.40 · received 834164.45 · invoiced 16821765.75
+  billed above received: 7 orders, 9721.10 · released at acknowledgment: 150480.60 over 10 orders, 21.5 days earlier
+Records: every buyer order to 8 November
+  orders in set 492 · open 200 · ordered 1999954.10 · confirmed 4365551.60 · in transit 3999826.40 · received 834164.45 · invoiced 16821765.75
+  billed above received: 7 orders, 9721.10 · released at acknowledgment: 150480.60 over 10 orders, 21.5 days earlier
+Records: every order to 8 November, replenishment included
+  orders in set 1243 · open 537 · ordered 2000942.90 · confirmed 4397258.00 · in transit 4010969.60 · received 834164.45 · invoiced 17222469.35
+  billed above received: 7 orders, 9721.10 · released at acknowledgment: 150480.60 over 10 orders, 21.5 days earlier

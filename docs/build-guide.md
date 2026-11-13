@@ -38,7 +38,8 @@ Each rule has one home, here. Its ID is how `docs/guide/coverage.json` maps the 
 
 **Sources**
 
-- **R01** Builders open only Claude docs, the repo, the live server, prototype source, retailers' public EDI guides and vendors' published API documentation on the web and, for partner checks only, partner websites. They never open files uploaded to the project. A missing fact goes into a Claude doc first, normally a tab of this guide; a fact taken from a retailer guide carries its link.
+- **R01** Builders open only Claude docs, the repo, the live server, prototype source, retailers' public EDI guides and vendors' published API documentation on the web and, for partner checks only, partner websites. One project upload may be opened, for one purpose: Requirements v8, under R40. Every other uploaded file stays closed. A missing fact goes into a Claude doc first, normally a tab of this guide; a fact taken from a retailer guide carries its link.
+- **R40** A prototype's business problem is read from Requirements v8 (`TG_for_Retail_Feature_Requirements_v8.docx`, a project upload): who has the problem, why it matters and what outcome settles it. Inventory names the v8 section for each prototype; read its Why, What and Boundary parts and the Journey composition table, and nothing else. Feature behaviour still comes from the prototype's source or its Prototype specs entry, and values still come from the world. Where v8 does not cover the problem, or disagrees with the task card or the screen, ask the owner before proposing a change list.
 
 **People and data**
 
@@ -48,8 +49,9 @@ Each rule has one home, here. Its ID is how `docs/guide/coverage.json` maps the 
 
 **Story**
 
-- **R05** Each prototype shows three beats on screen for its own job: the problem in one line with one number from the world, the turn where the solution acts, and the result as the business record that settles that job, with its measure.
-- **R06** Show the job's whole journey: from its first exchange to the record that settles the job, through every party and system in between. A feature boundary never ends it early, and it does not run on into stages the job does not own. P1's job is turning an emailed order into EDI and into Supplier ERP, so it ends at the Supplier ERP sales order and the order acknowledgment (855) to Northfield, not at receipt or payment (owner, 13 November).
+- **R05** Each prototype shows three beats on screen for its own job: the problem in one line, the turn where the solution acts, and the result as the business record that settles that job. No number is required on screen. Figures come from the owner's narration and research; a number that does appear is still checked by the contract test.
+- **R06** Show the job's whole journey: from its first exchange to the record that settles the job, through every party and system in between. A feature boundary never ends it early, and it does not run on into stages the job does not own. The builder works out the job, and the record that ends it, from the business problem in v8 (R40) and the task card, and asks the owner when either is unclear. Each answer is recorded once, in Inventory under Job, and where it ends.
+- **R41** Each prototype's story is written once, on the Prototype Plan's task card for that prototype: problem, turn, result and where it ends. The video and the presentation reuse those four lines and never reword them. The screen at each beat must work as a still frame for a slide: it reads with no motion, narration or click.
 - **R07** Present the ideal state: no conditional framing and no "proposed" tags.
 - **R08** Show EDI and API in use on the route map. Settled route lines carry a small arrowhead.
 
@@ -126,6 +128,9 @@ Each kind of fact has exactly one owner. This guide points to that owner and nev
 | X12 validity | `validator/` | `npm run validate` |
 | Partner capability | The partner's own documentation | Cited in `docs/phase0/FINDINGS.md`; moments and questions in the Partner diligence tab |
 | Feature behaviour | Prototype source, or its Prototype specs entry if unbuilt | — |
+| Business problem: who has it, why it matters, what outcome settles it | Requirements v8, a project upload | The v8 section Inventory names, under R40 |
+| Each prototype's job and the record that ends it | This guide, Inventory | The Job, and where it ends column |
+| Each prototype's story: problem, turn, result, ending | Its task card in the Prototype Plan | Reused by the video and the presentation (R41) |
 
 **Role of every other doc**
 
@@ -136,13 +141,14 @@ Each kind of fact has exactly one owner. This guide points to that owner and nev
 | [Shared Demo Database and MCP Server Plan](https://claude.ai/artifact/BH5yvtjF5thUSJhUjrSBun) | Kept as a record; its decisions, open items, server behaviour and hosting notes now live here | All of it |
 | [Agent and MCP strategy](https://claude.ai/artifact/VXoARJoJoqyv4VmGRUjFtz) | Self-contained leadership read: position, agentic tests, task analysis. Its four build briefs stay the specs for P10, P13, P6 and P11. | How to use this doc, Rules every build follows, One world behind every prototype |
 | [SPS MAX and TrueCommerce AI: Threat Ranking](https://claude.ai/artifact/PFa9A3bMAn8aZUiNKFRQae) | Competitive reference | Not a build source |
-| Project uploads: Requirements v8, the partner briefs, the Northstar teardown and prototype, and the prototype skill's Plan .md, Demonstration Inputs and Presenter Notes | Not opened by builders. What builders need from them is in the Prototype specs and Partner diligence tabs. | All of them |
+| Requirements v8, a project upload | Business-problem context only (R40) | Everything else in it: feature behaviour, stages, scenarios, people, fixtures and values |
+| Other project uploads: the partner briefs, the Northstar teardown and prototype, and the prototype skill's Plan .md, Demonstration Inputs and Presenter Notes | Not opened by builders. What builders need from them is in the Prototype specs and Partner diligence tabs. | All of them |
 
 None of these docs has been edited yet. Their governing sections come out only after the owner approves each change.
 
 ## Decisions
 
-The owner approved change items 1 to 14 on 12 November. Two are done, four are partly done and eight have not started. Three of the eight were applied and then withdrawn on 12 November, until their Phase 4 change lists are approved.
+The owner approved change items 1 to 14 on 12 November. Two are done, four are partly done, seven have not started and one closed when P12 was retired. Two of the seven were applied and then withdrawn on 12 November, until their Phase 4 change lists are approved.
 
 | # | Approved change | Phase | Status | Evidence |
 | --- | --- | --- | --- | --- |
@@ -151,12 +157,12 @@ The owner approved change items 1 to 14 on 12 November. Two are done, four are p
 | 3 | P1: remove dates, selector, product names; P4 selector | 4 | Withdrawn, not started | CALLS 21, 22, 25 |
 | 4 | AP-4.1 evidence-on-hand rule; P6 consent redesign, Lakeline prepaid, NF-5.5 meaning | 1, then 4 | Rule done; screen not started | CALLS 3 |
 | 5 | AP-5.1 share of prior volume; P7 week 6 orders; P7 In Full and charge figures tested | 1, then 4 | Rule done; week 6 orders absent from the world; charge conflict open | CALLS 4; `contract/claims.json` |
-| 6 | P12 ERP-native Activation: names, its own order, tests in P2 only | 4 | Withdrawn, not started | CALLS 23, 25 |
+| 6 | P12 ERP-native Activation: names, its own order, tests in P2 only | 4 | Closed: P12 retired (D40) | CALLS 23, 25 and 32 |
 | 7 | P11 NetSuite: its records in the world, earlier findings, keep one P5 risk | 4 | Withdrawn, not started | CALLS 24, 25 |
 | 8 | Partner Map edits; list of Retail Direction section 9 changes | Docs | Not started | — |
 | 9 | Agentic Retail Trade figures from the world or removed | 4 | Not started | — |
 | 10 | Prototype Briefs: retired P4 link, old names, P7 placeholder | Docs | Not started | — |
-| 11 | Cut repeated figures; add the record that settles the job to P1, P12, P2, P11 (R05) | 4 | Not started | — |
+| 11 | Cut repeated figures; add the record that settles the job to P1, P2 and P11 (R05) | 4 | Not started | — |
 | 12 | Overlap and role proposals from the Phase 0 report | 4 | Not started | — |
 | 13 | P5: a shipment opens at once while ranking finishes behind it | 4 | Fixed only in an unpublished working copy | — |
 | 14 | Northfield scope on the same world | 2 | Done; live Northfield connector not run | Commit 5dd3748; CALLS 10 to 17 |
@@ -172,7 +178,7 @@ The owner approved change items 1 to 14 on 12 November. Two are done, four are p
 | D05 | Rule NF-1.7 stays on the 855 | — |
 | D06 | The non-Claude client test is dropped | — |
 | D07 | The eleven retired October pages listed in `docs/phase0/HANDOFF.md` are unshared by the owner | — |
-| D08 | Builders use Claude docs only (R01); Requirements v8 is not a source | — |
+| D08 | Builders use Claude docs only (R01); Requirements v8 is not a source of feature behaviour or values. D36 reverses this for one purpose. | — |
 | D09 | No product names anywhere on screen (R10) | — |
 | D10 | This repo file is the working copy; the Claude doc is refreshed from it | — |
 | D11 | Live checks of ship notices and invoices against retailer rules are existing capability: Trading Grid Intelligence, through Chargeback Avoidance. P5 shows the agent layer on top; no new detection prototype. | — |
@@ -197,13 +203,18 @@ The owner approved change items 1 to 14 on 12 November. Two are done, four are p
 | D30 | Retailer jobs with no Trading Grid evidence stay out of prototypes: docks, carrier diversion, stores and shelves, forecasting and replenishment, shelf life, packaging, emissions, peak planning, distribution-centre stock | Trading Grid evidence for the job |
 | D31 | Supplier vetting (identity, bank details, signed terms) appears in prototypes as either a third party's result or the supplier's own confirmation that it is done. Trading Grid keeps the result or confirmation, never the underlying documents. | A named vetting partner with documented capability |
 | D32 | Competitor positions go on each prototype's task card in the Prototype Plan. Product ownership is not recorded anywhere. | — |
-| D33 | Every prototype carries its number in its name and gallery title: P11 is NetSuite Chargeback Avoidance, P12 is ERP-native Activation, P10 covers both server scopes (P10 Ashby, P10 Northfield), P16 is the retailer catalogue connector. P3 stays unused. | — |
-| D34 | A journey ends at the record that settles the prototype's own job, as R06 states with P1 as its example | — |
+| D33 | Every prototype carries its number in its name and gallery title: P11 is NetSuite Chargeback Avoidance, P10 covers both server scopes (P10 Ashby, P10 Northfield), P16 is the retailer catalogue connector. P3 and P12 stay unused. | — |
+| D34 | A journey ends at the record that settles the prototype's own job (R06); Inventory records that ending for every prototype | — |
 | D35 | Mining Northstar for new prototypes is a planning task (T3.0), not a builder task; later mining is done by the planning chat and lands in the Prototype specs tab. | — |
+| D36 | Builders may read Requirements v8 for a prototype's business problem only (R40). This reverses D08 for that purpose and no other. | A Claude doc that carries every prototype's business problem |
+| D37 | No number is required on screen. The three beats are the problem, the turn and the record that settles the job; the owner narrates the figures (R05). | A demo that has to run without the owner's narration |
+| D38 | Each prototype's job and ending is worked out by the builder from v8 plus its task card; unclear cases go to the owner (R06). The answers of 13 November are in Inventory. | An owner answer that moves a prototype's ending |
+| D39 | One story per prototype, held on the task card, serves the prototype, the video and the presentation; every beat's screen holds up as a still frame (R41). | A video or deck that needs a line the task card lacks; the line goes on the card first |
+| D40 | P12 ERP-native Activation is retired. P1 shows its order leg, P2 its go-live and P11 its in-ERP work. Its page stays published until the owner unshares it. | A supplier-ERP job that none of those three shows |
 
 **Open questions for the owner**
 
-1. Retire P12 ERP-native Activation? It is not in the registry.
+1. P12 is retired (D40). Unshare its page, or keep it readable as a record?
 2. The Prototype Plan's gallery card still carries the Threat Ranking title. It has to be renamed in claude.ai.
 3. Delete the three retired presenter-notes files from this project?
 4. P7's charge on screen differs from the charge the world computes (`contract/claims.json`). Should the screen or the world change?
@@ -212,36 +223,38 @@ The owner approved change items 1 to 14 on 12 November. Two are done, four are p
 
 ## Inventory
 
-The inventory has eighteen items: ten screen prototypes, two server scopes, three planned prototypes, two narrative pages and one connector never audited. Registry status comes from `registry/registry.json`. Each link was checked live on 12 November; gallery titles carry the same number (D33).
+The inventory has eighteen items: nine screen prototypes, one retired screen, two server scopes, three planned prototypes, two narrative pages and one connector never audited. Registry status comes from `registry/registry.json`. Each link was checked live on 12 November; gallery titles carry the same number (D33).
 
-| ID | Prototype | Class | Registry status | Link |
-| --- | --- | --- | --- | --- |
-| P1 | Long-tail | Screen | Built | [P1](https://claude.ai/artifact/N5Ly5kZWYqop1urPyH7WDp) |
-| P2 | Programme Readiness | Screen | Built | [P2](https://claude.ai/artifact/CM4B561qshaXjHkzWNtdi8) |
-| P4 | Marketplace to Wholesale | Screen | Built | [P4](https://claude.ai/artifact/FLWwR1dFDG4tposZcw2Q85) |
-| P5 | Scout Shipment Watch | Screen | Built | [P5](https://claude.ai/artifact/2Erv5An571ZHnR3WoUY5sf) |
-| P6 | Northfield Charge Resolution | Screen | Built | [P6](https://claude.ai/artifact/3r1Xy87Vk4rDHDYSaKcQxo) |
-| P7 | Northfield Performance Improvement | Screen | Built | [P7](https://claude.ai/artifact/9F1PiXsrUJ54AJq1dSJMbu) |
-| P8 | Money in Motion | Screen, view only | Built | [P8](https://claude.ai/artifact/RB5p54UuQ9GFGDPxhGzU3a) |
-| P9 | Shelf Recovery | Screen | Built | [P9](https://claude.ai/artifact/3D2tsVjwvnmMtPEoRKSpVe) |
-| P11 | NetSuite Chargeback Avoidance | Screen | Built | [P11](https://claude.ai/artifact/AhjjX49TBdZ7qbMiHkZpnx) |
-| P12 | ERP-native Activation | Screen | Not in registry | [P12](https://claude.ai/artifact/NKh7WnRwiPQSqa7vz61zYj) |
-| P10 Ashby | Trading Grid in the customer's AI, Ashby scope | Server | Live | [Server](https://tg-retail-demo-mcp.onrender.com) |
-| P10 Northfield | Northfield scope on the same server; registry entry pending (T2.7) | Server | Live | Same server, Northfield key |
-| P13 | Silent order watch | Planned | Queued | — |
-| P14 | Invoice Variance | Planned | Planned | — |
-| P15 | Rule Replay | Planned | Planned | — |
-| ART | Agentic Retail Trade | Narrative | Not in registry | [Agentic Retail Trade](https://claude.ai/artifact/P6KTkzJp8rVcY5wNUvrcwS) |
-| FILM | TG for Retail in Two Minutes | Narrative | Not in registry | [Film](https://claude.ai/artifact/RQbZQsmz433BjJCaEbU1BL) |
-| P16 | Retailer catalogue connector | Connector | Not in registry | Not recorded |
+| ID | Prototype | Class | Registry status | Link | Job, and where it ends |
+| --- | --- | --- | --- | --- | --- |
+| P1 | Long-tail | Screen | Built | [P1](https://claude.ai/artifact/N5Ly5kZWYqop1urPyH7WDp) | Turn an emailed order into EDI and into Supplier ERP. Ends at the Supplier ERP sales order and the order acknowledgment (855) to Northfield, not at receipt or payment. Source: owner, 13 November; v8 F1, Operate orders received outside EDI. |
+| P2 | Programme Readiness | Screen | Built | [P2](https://claude.ai/artifact/CM4B561qshaXjHkzWNtdi8) | After Ashby agrees to add Drop-ship, reuse approved setup and close the remaining readiness gaps. Ends at Northfield's programme approval and the activation record; first trade is not part of it. Source: v8 F4, Reuse approved setup and coordinate readiness for a new retail programme, and v8's Journey composition table. |
+| P4 | Marketplace to Wholesale | Screen | Built | [P4](https://claude.ai/artifact/FLWwR1dFDG4tposZcw2Q85) | Take an approved Marketplace seller into Wholesale: carry the approved setup forward, settle the item conflict and show inventory read by API. Ends when the first Wholesale order becomes a sales order in Supplier ERP; acknowledgment, ship notice and invoice belong to P1. Source: owner, 13 November. v8's Expand journey (F4, F20, F21) gives the problem but runs the other way, from Wholesale to Marketplace; the screen's direction stands. |
+| P5 | Scout Shipment Watch | Screen | Built | [P5](https://claude.ai/artifact/2Erv5An571ZHnR3WoUY5sf) | Correct a shipment that breaks a Northfield rule while the fix can still change the outcome. Ends at Northfield's receiving advice matching the corrected shipment, not at the released ship notice. Source: v8 F11, Correct retail execution risk before cutoff; owner, 13 November, on the confirming record. |
+| P6 | Northfield Charge Resolution | Screen | Built | [P6](https://claude.ai/artifact/3r1Xy87Vk4rDHDYSaKcQxo) | Settle a Northfield charge against Ashby from the evidence on record. Ends at Jordan's decision and, where he reverses the charge, the repayment matched in Supplier ERP. Source: v8 F9, Resolve deduction disputes, and F16, Explain and clear retail invoice exceptions; D28. |
+| P7 | Northfield Performance Improvement | Screen | Built | [P7](https://claude.ai/artifact/9F1PiXsrUJ54AJq1dSJMbu) | Explain a missed on-time, in-full score, agree the corrective work and show whether it worked. Ends at Northfield's next scorecard on the same definition, not at the agreed plan. Source: v8 F15, Calculate and explain retailer performance outcomes; the owner's answer of 13 November. |
+| P8 | Money in Motion | Screen, view only | Built | [P8](https://claude.ai/artifact/RB5p54UuQ9GFGDPxhGzU3a) | Let a Northfield director read the value of open orders at each stage from purchase order to payment, and see where it is stuck. Ends at the view itself: read only, it creates no record (R20). Source: owner, 11 November; the registry. v8 has no section for it. |
+| P9 | Shelf Recovery | Screen | Built | [P9](https://claude.ai/artifact/3D2tsVjwvnmMtPEoRKSpVe) | Turn store activity reports (852) into a refill the buyer accepts. Ends at the next store activity report showing the shelf refilled, not at the order. Source: v8 F27, Use sell-through and inventory evidence to improve assortment and supply; D22; same owner answer as P5. |
+| P11 | NetSuite Chargeback Avoidance | Screen | Built | [P11](https://claude.ai/artifact/AhjjX49TBdZ7qbMiHkZpnx) | Hold a live ship notice that breaks a Northfield rule inside NetSuite and correct it there before it leaves. Ends when Northfield's receiving advice matches the corrected ship notice; a 997 does not end it. Source: owner, 13 November. v8 has no NetSuite section; F11 is the nearest problem. |
+| P12 | ERP-native Activation | Retired screen | Not in registry | [P12](https://claude.ai/artifact/NKh7WnRwiPQSqa7vz61zYj) | Retired by the owner on 13 November; see D40. |
+| P10 Ashby | Trading Grid in the customer's AI, Ashby scope | Server | Live | [Server](https://tg-retail-demo-mcp.onrender.com) | Not set in this pass. The Prototype Plan's end state stands until T0.2 audits the scope. |
+| P10 Northfield | Northfield scope on the same server; registry entry pending (T2.7) | Server | Live | Same server, Northfield key | As P10 Ashby, seen from Jordan's side. |
+| P13 | Silent order watch | Planned | Queued | — | Set by P13's spec before it is built (T3.1). |
+| P14 | Invoice Variance | Planned | Planned | — | Its spec gives the job; the ending is confirmed with the owner when T3.2 ranks it. |
+| P15 | Rule Replay | Planned | Planned | — | Same treatment as P14. |
+| ART | Agentic Retail Trade | Narrative | Not in registry | [Agentic Retail Trade](https://claude.ai/artifact/P6KTkzJp8rVcY5wNUvrcwS) | A narrative page with no job of its own. |
+| FILM | TG for Retail in Two Minutes | Narrative | Not in registry | [Film](https://claude.ai/artifact/RQbZQsmz433BjJCaEbU1BL) | No job of its own: each chapter takes its story from a prototype's task card (R41). |
+| P16 | Retailer catalogue connector | Connector | Not in registry | Not recorded | Not audited; T0.2 sets it. |
 
-The registry calls P11 a ship notice exception with an agent; the live screen has no agent. The registry is the drift item: T2.7 corrects it.
+The registry calls P11 a ship notice exception with an agent; the live screen has no agent. The registry is the drift item: T2.7 corrects it. The changes proposed for it, none applied, are in `docs/guide/registry-change-proposal.md`.
+
+The v8 section named in a row is where a builder reads that prototype's business problem (R40). An ending the screen does not yet reach is Phase 4 work for that prototype, not a reason to change the ending.
 
 ## Coverage grid
 
 Phase 0 is closed only when no cell reads Not done or Partly. A cell records whether the check was done. What the check found is the Phase 4 work.
 
-- **A1** Problem, turn and result, each with a number from the world
+- **A1** Problem, turn and result on screen, the result being the record Inventory names as the job's ending (R05)
 - **A2** A manual option on the same case
 - **A3** Agency: the next step changes when the record changes
 - **A4** A customer's own agent reaches the job through the tools
@@ -254,7 +267,7 @@ Phase 0 is closed only when no cell reads Not done or Partly. A cell records whe
 
 | ID | A1 | A2 | A3 | A4 | A5 | A6 | A7 | A8 | A9 | C1 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| P1 | Partly | Not done | N/A | Not done | Not done | Done | Done | Not done | Done | Partly |
+| P1 | Done | Not done | N/A | Not done | Not done | Done | Done | Not done | Done | Partly |
 | P2 | Partly | Not done | N/A | Not done | Partly | Done | Done | Not done | Done | Not done |
 | P4 | Partly | Not done | N/A | Not done | Done | Done | Done | Done | Done | Partly |
 | P5 | Partly | Partly | Partly | Not done | Done | Done | Done | Done | Partly | Partly |
@@ -263,7 +276,7 @@ Phase 0 is closed only when no cell reads Not done or Partly. A cell records whe
 | P8 | Not done | N/A | N/A | Not done | Not done | Not done | Done | Not done | N/A | Not done |
 | P9 | Partly | Not done | Done | Not done | Done | Not done | Done | Not done | Done | Partly |
 | P11 | Partly | Not done | N/A | Not done | Done | Done | Done | Not done | Done | Not done |
-| P12 | Not done | Not done | N/A | Not done | Partly | Done | Done | Not done | Done | Not done |
+| P12 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
 | P10 Ashby | Not done | Not done | Done | Done | N/A | Not done | N/A | Not done | Done | Done |
 | P10 Northfield | Not done | Not done | Not done | Done | N/A | Not done | N/A | Not done | Done | Done |
 | P13, P14, P15 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
@@ -273,7 +286,8 @@ Phase 0 is closed only when no cell reads Not done or Partly. A cell records whe
 
 **Why a cell is N/A**
 
-- **A3 on P1, P2, P4, P11 and P12:** none of these screens has an agent.
+- **A3 on P1, P2, P4 and P11:** none of these screens has an agent.
+- **P12:** retired (D40), so no check applies.
 - **P8:** view only. Nothing to walk, and no manual or agent path.
 - **A5 and A7 on the two server scopes:** a server has no screen, and its values are the world itself.
 - **P13, P14 and P15:** not built. Every check applies once they are.
@@ -283,7 +297,7 @@ Phase 0 is closed only when no cell reads Not done or Partly. A cell records whe
 
 | Check | Evidence |
 | --- | --- |
-| A1, A5 | `docs/phase0/FINDINGS.md`: turn 3 screen table; turn 4 sections A1 result beat and A5 repeats |
+| A1, A5 | `docs/phase0/FINDINGS.md`: turn 3 screen table; turn 4 sections A1 result beat and A5 repeats. A1 was first judged on whether a number appeared; D37 withdrew that test. P1's cell moved to Done because its only gap was the number (CALLS 30); every other A1 cell keeps its value until its grid-row task compares the end frame with Inventory. |
 | A2 | Manual paths walked for P5, P6, P7 (FINDINGS, turn 4 scripted walks). Same-case not assessed; no other prototype assessed. |
 | A3 | FINDINGS: A3 agency from source, and turn 4 A3 agency on the prototypes. Server: gate mutation test. |
 | A4 | None in Phase 0. Server rows come from the golden runs, which call the tools. |
@@ -314,7 +328,7 @@ Phase 0 is approved but not closed. Phases 1 and 2 are partly done. Phase 3 has 
 
 ### Phase 0 · Audit, read only
 
-Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-row task, read the Coverage grid and its evidence table first.
+Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-row task, read the Coverage grid, its evidence table and the prototype's Inventory row first.
 
 | ID | Prototype | Task | Depends on | Read first | Done when | Status |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -327,9 +341,9 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T0.16 | P8 | Complete P8's grid row | — | P8 link; why its cells are N/A | Every P8 cell reads Done or N/A | Open |
 | T0.17 | P9 | Complete P9's grid row | — | P9 link in Inventory | Every P9 cell reads Done or N/A | Open |
 | T0.18 | P11 | Complete P11's grid row | — | P11 link in Inventory | Every P11 cell reads Done or N/A | Open |
-| T0.19 | P12 | Complete P12's grid row | Open question 1 | P12 link in Inventory | Every P12 cell reads Done or N/A, or the row leaves with P12's retirement | Blocked |
+| T0.19 | P12 | Complete P12's grid row | — | P12 link in Inventory | Evidence: P12 retired by the owner, CALLS 32 | Done |
 | T0.2 | P10 Ashby, P10 Northfield, P16 | Audit the two server scopes and the retailer catalogue connector as prototypes | — | Server reference; `docs/phase2/` | Their grid rows are complete and P16's link is in Inventory | Open |
-| T0.3 | P1, P2, P4, P5, P8, P9, P11, P12 | Golden questions: new sets for P2, P8, P11 and P12, more for the other four | — | `docs/phase0/golden/` | Each has at least three questions with five graded runs | Open |
+| T0.3 | P1, P2, P4, P5, P8, P9, P11 | Golden questions: new sets for P2, P8 and P11, more for the other four | — | `docs/phase0/golden/` | Each has at least three questions with five graded runs | Open |
 | T0.4 | World | Restore the X12 check against bots-grammars as a committed script | — | `validator/` | Script and report sit in `validator/`, and it rejects each injected fault for the stated reason | Open |
 | T0.5 | P7 | Confirm manual pattern A by hand | — | `docs/phase0/FINDINGS.md`, turn 4 walks | FINDINGS records it as a defect or as a walker limit | Open |
 | T0.6 | Partners | ShipHawk's partner-only questions and journey moment, from ShipHawk's own documentation; partner nodes on every route map | — | Partner checks; Partner diligence tab | The Partner checks table has no Not done or Partly row | Open |
@@ -358,7 +372,7 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T2.4 | P5, P9 | Shelf Agent reads averages; Watch Agent reads NF-4.2 from the catalogue | — | R22 | `agents.thresholds_come_from_catalogue` covers both agents | Open |
 | T2.5 | P10 Ashby, P10 Northfield | Tool comparison includes Northfield's tools | — | Server reference, compared with published tool lists | The comparison lists both connections' tools against the published NetSuite and Salesforce schemas | Open |
 | T2.6 | P15 | Registry anchors hold the draft rule record | — | Prototype specs, P15 | `registry/registry.json` names NFD-1 under P15 and the registry check passes | Open |
-| T2.7 | Registry | Registry covers every inventory row, and the build fails when a doc or the server disagrees with it | T0.19 | Inventory | P12 (or its retirement), P10 Northfield, ART, FILM and P16 are in the registry, P11's name and agent verdict match its screen, and a gate check reads it | Open |
+| T2.7 | Registry | Registry covers every inventory row, and the build fails when a doc or the server disagrees with it | T0.19; owner approves the registry change list | Inventory; `docs/guide/registry-change-proposal.md` | P10 Northfield, ART, FILM and P16 are in the registry, P12 is recorded there as retired, P11's name, job and agent verdict match its screen, every entry carries the ending Inventory gives, and a gate check reads it | Blocked |
 | T2.8 | Docs | Repo copies of the other docs become dated snapshots | — | Where each fact lives, role of every other doc | Each copy under docs/ carries its export date and the registry check no longer treats it as current | Open |
 | T2.9 | P10 Northfield | Live Northfield connector run | Owner asks for a live Northfield demo | `docs/phase2/golden-nf/` | One Northfield golden question is answered through the live URL with the Northfield key | Blocked |
 | T2.10 | Server | Test whether a published prototype can read the live server, from a private test page only, since the URL carries the token | — | Server reference, Hosting | A published test page calls one tool and shows its answer, or `docs/phase2/` records the error that blocks it | Open |
@@ -371,15 +385,15 @@ New prototypes come from the Prototype specs tab. Mining Northstar for them was 
 | --- | --- | --- | --- | --- | --- | --- |
 | T3.0 | Specs | Mine the Northstar prototype and teardown into the Prototype specs tab | — | — | Evidence: the Prototype specs tab; CALLS 27 and 28 | Done |
 | T3.1 | P13, P14, P15 | Check each spec against the world | T1.6 | Prototype specs | Every record each spec needs exists, or a Phase 1 change list adds it | Open |
-| T3.2 | P13, P14, P15 | Rank the specs, place them on the story calendar, and build the top one | T3.1, T2.2, T2.3 | Prototype specs; story calendar in the Prototype Plan | The owner approves the ranking and the first new prototype passes its acceptance tests, walk and contract test | Open |
+| T3.2 | P13, P14, P15 | Rank the specs, place them on the story calendar, and build the top one | T3.1, T2.2, T2.3 | Prototype specs; story calendar in the Prototype Plan; v8 for the business problem (R40) | The owner approves the ranking and the first new prototype passes its acceptance tests, walk and contract test | Open |
 
 ### Phase 4 · Prototype changes, one at a time
 
-Each row is one prototype through the Phase 4 loop under Build flow. Before proposing its change list, read Rules R05 to R22, the prototype's source and its task card in the Prototype Plan. A row is Done when its prototype has an approved change list, a walk with no script errors and a passing contract test, and the call is logged.
+Each row is one prototype through the Phase 4 loop under Build flow. Before proposing its change list, read Rules R05 to R22, the prototype's Inventory row, its business problem in v8 (R40), its source and its task card in the Prototype Plan. A row is Done when its prototype has an approved change list, a walk with no script errors and a passing contract test, and the call is logged.
 
 | ID | Prototype | Task | Depends on | Read first | Done when | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| T4.10 | P1 | Long-tail | T0.10 | R06 on P1's job; Decisions item 3 | Phase 4 loop complete | Open |
+| T4.10 | P1 | Long-tail | T0.10 | P1's Inventory row; Decisions item 3 | Phase 4 loop complete | Open |
 | T4.11 | P2 | Programme Readiness, with supplier vetting | T0.11, T1.7 | D31; Prototype specs, Supplier vetting in P2 | Loop complete, and vetting shows as a third party's result or the supplier's confirmation | Open |
 | T4.12 | P4 | Marketplace to Wholesale | T0.12 | Decisions item 3 | Phase 4 loop complete | Open |
 | T4.13 | P5 | Scout Shipment Watch | T0.13, T2.4 | Decisions item 13; the working copy is not in the repo, so rebuild the fix | Phase 4 loop complete | Open |
@@ -388,9 +402,10 @@ Each row is one prototype through the Phase 4 loop under Build flow. Before prop
 | T4.16 | P8 | Money in Motion, view only | T0.16, T1.4 | R20 | Phase 4 loop complete | Open |
 | T4.17 | P9 | Shelf Recovery | T0.17, T2.4 | D22 | Phase 4 loop complete | Open |
 | T4.18 | P11 | NetSuite Chargeback Avoidance | T0.18 | Decisions item 7 | Phase 4 loop complete | Open |
-| T4.19 | P12 | ERP-native Activation | T0.19; open question 1 | Decisions item 6 | Phase 4 loop complete, or P12 is retired | Blocked |
+| T4.19 | P12 | ERP-native Activation | T0.19 | Decisions item 6 | Evidence: no loop needed after retirement, CALLS 32 | Done |
 | T4.2 | Portfolio | Entry page built from the story calendar | T4.10 | The Prototype Plan's story calendar | The owner approves it and every link on it opens a live prototype | Open |
-| T4.3 | FILM | Portfolio film, after the owner approves a storyboard | T0.7 | FILM link in Inventory | Every chapter's numbers pass the contract test and a viewer states each chapter's problem and outcome | Open |
+| T4.3 | FILM | Portfolio film, after the owner approves a storyboard | T0.7 | FILM link in Inventory; R41 | Every chapter takes its problem, turn and result from its prototype's task card, any number shown passes the contract test, and a viewer states each chapter's problem and outcome | Open |
+| T4.5 | Docs | Write each built prototype's story on its Prototype Plan task card, from Inventory | Owner approves the Prototype Plan edit | R41; Inventory | Every built prototype's task card carries problem, turn, result and ending, and no video or deck words them differently | Blocked |
 | T4.4 | Docs | Partner Map edits, Retail Direction section 9 change list, Prototype Briefs fixes, Agentic Retail Trade figures | — | Decisions items 8, 9 and 10 | Each change list is approved and applied, with its CALLS entry | Open |
 
 ## Server reference
@@ -444,7 +459,7 @@ The gate and smoke tests pass at commit 4f9e289. Four of the plan's proofs have 
 | World gate: invariants, catalogue equals the pack, thresholds from the catalogue | `npm run build` | 385 passed, 0 failed |
 | Server smoke: both scopes, refusals, the shared deduction case | `npm run smoke` | 54 passed, 0 failed |
 | X12 validation | `npm run validate` | Passes, but its schemas were generated in this repo, so it does not meet the independent-schema test |
-| Contract test of on-screen values | `npm run contract` | Last full report is `docs/phase0/contract-report-turn4.json`. The P7 claim was checked against a working copy, not the live page. |
+| Contract test of on-screen values: it checks every number a screen shows and requires none | `npm run contract` | Last full report is `docs/phase0/contract-report-turn4.json`. The P7 claim was checked against a working copy, not the live page. |
 | Golden questions, Ashby agents, scorecard and deductions | `docs/phase0/golden/grade-report.json` | 49 of 50. The earlier set's grader was never committed. |
 | Golden questions, Northfield | `docs/phase2/golden-nf/grade-report.json` | 50 of 50 |
 | Live server | /healthz | ok, version 0.2.0, writes off |
@@ -479,6 +494,7 @@ The gate and smoke tests pass at commit 4f9e289. Four of the plan's proofs have 
   8. Any eight-word passage appears twice.
   9. An item in a retired governing section has no home in this guide, per `docs/guide/coverage.json`.
   10. A task row lacks an ID, a Read first entry, a Done when entry or a known status, or depends on a task that does not exist.
+  11. An Inventory row has no entry under Job, and where it ends.
 - **Overlap report:** the script also reports passages shared with the repo copies of the Prototype Plan, the database plan and the strategy doc.
 
 ---
@@ -487,7 +503,7 @@ The gate and smoke tests pass at commit 4f9e289. Four of the plan's proofs have 
 
 # Prototype specs
 
-These specs are the requirements for TG for Retail prototypes and jobs not yet built. They were drawn once, on 12 and 13 November, from the Northstar retailer prototype and its teardown, which builders do not open. A built prototype takes its requirements from its own source. Northstar is drawn with sample data: it is evidence of a design, not of demand.
+These specs are the requirements for TG for Retail prototypes and jobs not yet built. They were drawn once, on 12 and 13 November, from the Northstar retailer prototype and its teardown, which builders do not open. A built prototype takes its feature behaviour from its own source and its business problem from Requirements v8 (R40). Northstar is drawn with sample data: it is evidence of a design, not of demand.
 
 ## Where each Northstar flow went
 

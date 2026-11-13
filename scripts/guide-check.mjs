@@ -61,6 +61,10 @@ const tables = (s) => { const out = []; let cur = null; for (const l of s.split(
   for (const r of grid.rows) { if (r.length !== grid.head.length) p.push(`grid row ${r[0]} has ${r.length} cells`); r.slice(1).forEach((c, i) => { if (!allowed.has(c)) p.push(`grid ${r[0]} ${grid.head[i + 1]}: "${c}"`); }); }
   const regStatus = Object.fromEntries(JSON.parse(readFileSync(join(ROOT, 'registry/registry.json'), 'utf8')).prototypes.map((x) => [x.id, x.status]));
   for (const r of inv.rows) if (regStatus[regIdOf(r[0])] && regStatus[regIdOf(r[0])] !== r[3]) p.push(`${r[0]} registry status ${regStatus[r[0]]}, guide ${r[3]}`);
+  // Every Inventory row states the prototype's job and the record that ends it (R06)
+  const jobCol = inv.head.indexOf('Job, and where it ends');
+  if (jobCol < 0) p.push('Inventory has no "Job, and where it ends" column');
+  else for (const r of inv.rows) { const c = (r[jobCol] || '').trim(); if (!c || /^(—|-|tbd|n\/a)$/i.test(c)) p.push(`${r[0]}: blank "Job, and where it ends"`); }
   check('inventory_and_grid_complete', p, `${inv.rows.length} inventory rows, ${grid.rows.length} grid rows`); }
 
 // 7. No copied world values: money, percentages, thousands, long numbers (outside IDs, the GS1 prefix and years)

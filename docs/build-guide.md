@@ -38,7 +38,7 @@ Each rule has one home, here. Its ID is how `docs/guide/coverage.json` maps the 
 
 **Sources**
 
-- **R01** Builders open only Claude docs, the repo, the live server, prototype source, retailers' public EDI guides on the web and, for partner checks only, partner websites. They never open files uploaded to the project. A missing fact goes into a Claude doc first, normally a tab of this guide; a fact taken from a retailer guide carries its link.
+- **R01** Builders open only Claude docs, the repo, the live server, prototype source, retailers' public EDI guides and vendors' published API documentation on the web and, for partner checks only, partner websites. They never open files uploaded to the project. A missing fact goes into a Claude doc first, normally a tab of this guide; a fact taken from a retailer guide carries its link.
 
 **People and data**
 
@@ -49,14 +49,14 @@ Each rule has one home, here. Its ID is how `docs/guide/coverage.json` maps the 
 **Story**
 
 - **R05** Each prototype shows three beats on screen for its own job: the problem in one line with one number from the world, the turn where the solution acts, and the result as the business record that settles that job, with its measure.
-- **R06** Show the job's whole journey: from its first exchange to the record that settles the job, through every party and system in between. A feature boundary never ends it early, and it does not run on into stages the job does not own. P1's job is turning an emailed order into EDI and into Supplier ERP, so it ends at the Supplier ERP sales order and the acknowledgment to Northfield, not at receipt or payment (owner, 13 November).
+- **R06** Show the job's whole journey: from its first exchange to the record that settles the job, through every party and system in between. A feature boundary never ends it early, and it does not run on into stages the job does not own. P1's job is turning an emailed order into EDI and into Supplier ERP, so it ends at the Supplier ERP sales order and the order acknowledgment (855) to Northfield, not at receipt or payment (owner, 13 November).
 - **R07** Present the ideal state: no conditional framing and no "proposed" tags.
 - **R08** Show EDI and API in use on the route map. Settled route lines carry a small arrowhead.
 
 **Screens**
 
 - **R09** Minimal and functional: little text, smooth motion, no guided tour.
-- **R10** No OpenText product names anywhere on screen, including inside the Trading Grid box. Everything Trading Grid does is labelled Trading Grid. (Owner decision, 13 November.)
+- **R10** No OpenText product names anywhere on screen, including inside the Trading Grid box. Everything Trading Grid does is labelled Trading Grid. Product names in Decisions describe capability, never screen text. (Owner decision, 13 November.)
 - **R11** No dates, feature IDs, durations beside buttons, green ticks, or stage labels such as detect, prioritize, act and verify.
 - **R12** No variant or scenario pickers.
 - **R13** Colours come only from the OpenText TG Retail Design System tokens.
@@ -106,7 +106,7 @@ Each rule has one home, here. Its ID is how `docs/guide/coverage.json` maps the 
 - **R36** Every call is logged in docs/build-log/CALLS.md with what would change it.
 - **R37** Words: Trading Grid Catalogue or TGC, never AC; Supplier readiness; banned words follow the enterprise-product-writing skill.
 - **R38** A conversation may carry several tasks when they all belong to one prototype; name the prototype and its task IDs in the first message. World, server, partner and docs tasks run one per conversation. Each new chat reads this guide first, and hand-off between chats runs through this guide, the commit and its CALLS entry, never through chat history.
-- **R39** Start here. In Tasks, take the first row whose status is Open and whose Depends on entries are all Done. Read its Read first entries, do the task, and stop when its Done when holds. Then set the row to Done with the commit, log the call in CALLS and refresh the Claude doc. A Blocked row waits for the owner answer it names.
+- **R39** Start here. In Tasks, read the tables top to bottom and take the first row whose status is Open and whose Depends on entries are all Done; a dash means no dependency. In a chat for one prototype (R38), take every eligible row for that prototype in the same order. Read its Read first entries, do the task, and stop when its Done when holds. Commit the evidence first, then set the row to Done citing that commit, log the call in CALLS, run the check, commit and push, and refresh the Claude doc. When a commit changes repo behaviour, the guide's as-of commit moves to it in the same edit. A Blocked row waits for the owner answer it names.
 
 ## Where each fact lives
 
@@ -310,7 +310,7 @@ The Pipe17 question that had to be settled first is settled. Two partner checks 
 
 ## Tasks
 
-Phase 0 is approved but not closed. Phases 1 and 2 are partly done, and Phases 3 and 4 have not started. R39 picks the next row. A row turns Done only when its evidence is committed; cite its ID in the commit message and the CALLS entry. Status is Open, Done or Blocked; a Blocked row names the owner answer it waits for in Depends on.
+Phase 0 is approved but not closed. Phases 1 and 2 are partly done. Phase 3 has its specs (T3.0) but no build, and Phase 4 has not started. R39 picks the next row. A row turns Done only when its evidence is committed; cite its ID in the commit message and the CALLS entry. Status is Open, Done or Blocked; a Blocked row names the owner answer it waits for in Depends on.
 
 ### Phase 0 · Audit, read only
 
@@ -361,7 +361,7 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T2.7 | Registry | Registry covers every inventory row, and the build fails when a doc or the server disagrees with it | T0.19 | Inventory | P12 (or its retirement), P10 Northfield, ART, FILM and P16 are in the registry, P11's name and agent verdict match its screen, and a gate check reads it | Open |
 | T2.8 | Docs | Repo copies of the other docs become dated snapshots | — | Where each fact lives, role of every other doc | Each copy under docs/ carries its export date and the registry check no longer treats it as current | Open |
 | T2.9 | P10 Northfield | Live Northfield connector run | Owner asks for a live Northfield demo | `docs/phase2/golden-nf/` | One Northfield golden question is answered through the live URL with the Northfield key | Blocked |
-| T2.10 | Server | Test whether a published prototype can read the live server | — | Server reference, Hosting | A published test page calls one tool and shows its answer, or `docs/phase2/` records the error that blocks it | Open |
+| T2.10 | Server | Test whether a published prototype can read the live server, from a private test page only, since the URL carries the token | — | Server reference, Hosting | A published test page calls one tool and shows its answer, or `docs/phase2/` records the error that blocks it | Open |
 
 ### Phase 3 · New prototypes
 
@@ -382,13 +382,13 @@ Each row is one prototype through the Phase 4 loop under Build flow. Before prop
 | T4.10 | P1 | Long-tail | T0.10 | R06 on P1's job; Decisions item 3 | Phase 4 loop complete | Open |
 | T4.11 | P2 | Programme Readiness, with supplier vetting | T0.11, T1.7 | D31; Prototype specs, Supplier vetting in P2 | Loop complete, and vetting shows as a third party's result or the supplier's confirmation | Open |
 | T4.12 | P4 | Marketplace to Wholesale | T0.12 | Decisions item 3 | Phase 4 loop complete | Open |
-| T4.13 | P5 | Scout Shipment Watch | T0.13, T2.4 | Decisions item 13 | Phase 4 loop complete | Open |
+| T4.13 | P5 | Scout Shipment Watch | T0.13, T2.4 | Decisions item 13; the working copy is not in the repo, so rebuild the fix | Phase 4 loop complete | Open |
 | T4.14 | P6 | Northfield Charge Resolution | T0.14 | Decisions item 4; D28 | Phase 4 loop complete | Open |
 | T4.15 | P7 | Northfield Performance Improvement | T0.15, T1.2 | Decisions item 5 | Phase 4 loop complete | Open |
 | T4.16 | P8 | Money in Motion, view only | T0.16, T1.4 | R20 | Phase 4 loop complete | Open |
 | T4.17 | P9 | Shelf Recovery | T0.17, T2.4 | D22 | Phase 4 loop complete | Open |
 | T4.18 | P11 | NetSuite Chargeback Avoidance | T0.18 | Decisions item 7 | Phase 4 loop complete | Open |
-| T4.19 | P12 | ERP-native Activation | T0.19 | Decisions item 6 | Phase 4 loop complete, or P12 is retired | Blocked |
+| T4.19 | P12 | ERP-native Activation | T0.19; open question 1 | Decisions item 6 | Phase 4 loop complete, or P12 is retired | Blocked |
 | T4.2 | Portfolio | Entry page built from the story calendar | T4.10 | The Prototype Plan's story calendar | The owner approves it and every link on it opens a live prototype | Open |
 | T4.3 | FILM | Portfolio film, after the owner approves a storyboard | T0.7 | FILM link in Inventory | Every chapter's numbers pass the contract test and a viewer states each chapter's problem and outcome | Open |
 | T4.4 | Docs | Partner Map edits, Retail Direction section 9 change list, Prototype Briefs fixes, Agentic Retail Trade figures | — | Decisions items 8, 9 and 10 | Each change list is approved and applied, with its CALLS entry | Open |
@@ -449,7 +449,7 @@ The gate and smoke tests pass at commit 4f9e289. Four of the plan's proofs have 
 | Golden questions, Northfield | `docs/phase2/golden-nf/grade-report.json` | 50 of 50 |
 | Live server | /healthz | ok, version 0.2.0, writes off |
 | Property-based invariants on quantities, time order and money | — | Not built; the gate checks invariants on the one generated quarter only |
-| Fresh agent answers ten builder questions from the docs | — | Not run |
+| Fresh agent answers ten builder questions from the docs | Reader test, 13 November: ten answered from the guide alone; its gaps fixed in CALLS 31 | Passed after fixes |
 | Viewer states each film chapter's problem and outcome | — | Not started |
 | One-page review pack for an EDI practitioner | [EDI Review Pack](https://claude.ai/artifact/8BgJyjrA6nYLF32n9F9pxd) | Built, but no EDI practitioner has reviewed it |
 

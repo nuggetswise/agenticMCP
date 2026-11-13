@@ -1,0 +1,29 @@
+{
+ "errs": [],
+ "buttons": [
+  "VP Finance",
+  "VP Merchandising",
+  "Overview",
+  "View",
+  "View",
+  "View",
+  "Ordered $2.00M Awaiting acknowledgment 74% acknowledged in 24 hours",
+  "Confirmed $4.37M Confirmed, not shipped 99.1% of ordered value confirmed",
+  "In transit $4.00M Shipped, not received 99.2% shipped in full",
+  "Received $834K Received, not invoiced 99.9% of shipped value received",
+  "Invoiced $16.82M Open payables 95% matched to receipt",
+  "Confirmed below ordered $201K",
+  "Shipped below confirmed $92.1K",
+  "Received below shipped $8.1K",
+  "Billed above received $9.7K",
+  "Next 30 days $8.91M",
+  "31 to 60 days $11.85M",
+  "61 to 90 days $6.86M",
+  "Over 90 days $396K",
+  "Details",
+  "Invoice",
+  "Raw X12",
+  "Details",
+  "Close"
+ ]
+}

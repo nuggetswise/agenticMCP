@@ -1,6 +1,6 @@
 {
  "file": "/home/claude/agenticmcp/docs/build-guide.md",
- "ran_at_head": "231996a",
+ "ran_at_head": "06435a1",
  "results": [
   {
    "name": "as_of_commit_current",
@@ -27,7 +27,7 @@
    "name": "calls_refs_exist",
    "ok": true,
    "problems": [],
-   "info": "43 calls logged"
+   "info": "44 calls logged"
   },
   {
    "name": "inventory_and_grid_complete",
@@ -52,8 +52,13 @@
   },
   {
    "name": "no_repeated_passages",
-   "ok": true,
-   "problems": []
+   "ok": false,
+   "problems": [
+    "grid row every cell but c1 is done",
+    "row every cell but c1 is done in",
+    "every cell but c1 is done in docs",
+    "cell but c1 is done in docs phase0"
+   ]
   },
   {
    "name": "overlap_with_replaced_docs",

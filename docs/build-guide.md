@@ -279,7 +279,7 @@ Phase 0 is closed only when no cell reads Not done or Partly. A cell records whe
 | P5 | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done | Partly |
 | P6 | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done |
 | P7 | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done |
-| P8 | Not done | N/A | N/A | Not done | Not done | Not done | Done | Not done | N/A | N/A | Not done |
+| P8 | Done | N/A | N/A | Done | Done | Done | Done | Done | N/A | N/A | Not done |
 | P9 | Partly | Not done | Done | Not done | Done | Not done | Done | Not done | Done | Not done | Partly |
 | P11 | Partly | Not done | N/A | Not done | Done | Done | Done | Not done | Done | Not done | Not done |
 | P12 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
@@ -345,7 +345,7 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T0.13 | P5 | Complete P5's grid row; every cell but C1 is done in `docs/phase0/P5-grid.md`, and C1 needs two more golden questions under T0.3 | — | P5 link; `docs/phase0/walks/` for the dead state | Every P5 cell reads Done or N/A | Open |
 | T0.14 | P6 | Complete P6's grid row | — | P6 link in Inventory | Evidence: `docs/phase0/P6-grid.md`; CALLS 41 | Done |
 | T0.15 | P7 | Complete P7's grid row | T0.5 | P7 link; `contract/claims.json` | Evidence: `docs/phase0/P7-grid.md`; CALLS 43 | Done |
-| T0.16 | P8 | Complete P8's grid row | — | P8 link; why its cells are N/A | Every P8 cell reads Done or N/A | Open |
+| T0.16 | P8 | Complete P8's grid row; every cell but C1 is done in `docs/phase0/P8-grid.md`, and C1's questions are drafted for T0.3 | — | P8 link; why its cells are N/A | Every P8 cell reads Done or N/A | Open |
 | T0.17 | P9 | Complete P9's grid row | — | P9 link in Inventory | Every P9 cell reads Done or N/A | Open |
 | T0.18 | P11 | Complete P11's grid row | — | P11 link in Inventory | Every P11 cell reads Done or N/A | Open |
 | T0.19 | P12 | Complete P12's grid row | — | P12 link in Inventory | Evidence: P12 retired by the owner, CALLS 32 | Done |

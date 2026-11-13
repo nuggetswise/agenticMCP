@@ -356,7 +356,7 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T0.4 | World | Restore the X12 check against bots-grammars as a committed script | — | `validator/` | Evidence: `validator/botscheck.py` and `validator/bots-report.json`, commit 6bda779; CALLS 48 | Done |
 | T0.5 | P7 | Confirm manual pattern A by hand | — | `docs/phase0/FINDINGS.md`, turn 4 walks | Evidence: a walker limit, not a defect; `docs/phase0/P7-grid.md`; CALLS 43 | Done |
 | T0.6 | Partners | ShipHawk's partner-only questions and journey moment, from ShipHawk's own documentation; partner nodes on every route map | — | Partner checks; Partner diligence tab | The Partner checks table has no Not done or Partly row | Open |
-| T0.7 | FILM | Read the film's frames | — | FILM link in Inventory | The FILM A7 cell reads Done | Open |
+| T0.7 | FILM | Read the film's frames; the video is larger than this session can read, so only its page was checked | Owner shares the film's frames or a smaller copy | FILM link in Inventory | The FILM A7 cell reads Done | Blocked |
 | T0.8 | World | Find the ship notice timing rule in a retailer's own published EDI guide | — | D23; NF-4.2 in the EDI Review Pack | Evidence: no openly published retailer guide states it; FINDINGS, T0.8 section; CALLS 37 | Done |
 
 ### Phase 1 · World

@@ -19,18 +19,19 @@ You cannot send, approve, dispute or change anything. When asked to act, say wha
 Keep answers short: the answer first, then the records.`;
 
 /** One question, answered by the model calling the connection's read tools. `callTool(name, args)` runs a tool exactly as the connection would. */
-export async function ask({ question, history = [], tools, callTool, side, clock, apiKey, fetchImpl = fetch, models = AVIATOR_MODELS, maxTurns = 6 }) {
+export async function ask({ question, history = [], tools, callTool, side, clock, apiKey, fetchImpl = fetch, models = AVIATOR_MODELS, maxTurns = 8 }) {
   if (!apiKey) return { ok: false, status: 503, message: 'Aviator has no model key on this server.' };
   if (!question || !String(question).trim()) return { ok: false, status: 400, message: 'Ask a question.' };
   const contents = [...history.slice(-8).map((h) => ({ role: h.role === 'model' ? 'model' : 'user', parts: [{ text: String(h.text).slice(0, 4000) }] })), { role: 'user', parts: [{ text: String(question).slice(0, 4000) }] }];
-  const body = () => ({ systemInstruction: { parts: [{ text: instruction({ ...side, clock }) }] }, contents, tools: [{ functionDeclarations: declarations(tools) }], generationConfig: { temperature: 0 } });
+  // On the last step the model may call no more tools, so it answers from what it has already read.
+  const body = (last) => ({ systemInstruction: { parts: [{ text: instruction({ ...side, clock }) }] }, contents, tools: [{ functionDeclarations: declarations(tools) }], toolConfig: { functionCallingConfig: { mode: last ? 'NONE' : 'AUTO' } }, generationConfig: { temperature: 0 } });
   const called = []; let model = null;
   for (let turn = 0; turn < maxTurns; turn++) {
     let data = null, err = null;
     for (const m of model ? [model] : models) {
-      const r = await fetchImpl(`${API}/${m}:generateContent`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey }, body: JSON.stringify(body()) });
+      const r = await fetchImpl(`${API}/${m}:generateContent`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey }, body: JSON.stringify(body(turn === maxTurns - 1)) });
       if (r.ok) { data = await r.json(); model = m; break; }
-      err = { status: r.status, text: (await r.text()).slice(0, 300) }; if (r.status !== 404) break;
+      err = { status: r.status, text: (await r.text()).slice(0, 300) }; if (![404, 429, 500, 503].includes(r.status)) break; // unknown or busy model: try the next one
     }
     if (!data) return { ok: false, status: 502, message: `The model did not answer (${err?.status}).`, detail: err?.text, tools_called: called };
     const content = data.candidates?.[0]?.content; const parts = content?.parts || [];

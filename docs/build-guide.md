@@ -403,7 +403,7 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T2.8 | Docs | Repo copies of the other docs become dated snapshots | — | Where each fact lives, role of every other doc | Each copy under docs/ carries its export date and the registry check no longer treats it as current | Open |
 | T2.9 | P10 Northfield | Live Northfield connector run | Owner asks for a live Northfield demo | `docs/phase2/golden-nf/` | One Northfield golden question is answered through the live URL with the Northfield key | Blocked |
 | T2.10 | Server | Test whether a published prototype can read the live server, from a private test page only, since the URL carries the token | — | Server reference, Hosting | A published test page calls one tool and shows its answer, or `docs/phase2/` records the error that blocks it | Open |
-| T2.11 | Aviator | The in-product assistant on prototype screens: floating, bottom right, answering from the same tools as the company's connection | T2.10 | D56; Customer-agent access rules R24 to R27 | The endpoint answers from the tools (commit 8d3940d, `npm run aviator-test`). Left: one live answer from the deployed server with its records cited, and Aviator on a prototype screen once T2.10 shows how a published page reaches the tools | Open |
+| T2.11 | Aviator | The in-product assistant on prototype screens: floating, bottom right, answering from the same tools as the company's connection | T2.10 | D56; Customer-agent access rules R24 to R27 | Live model answer verified locally on the real tools: `docs/phase2/aviator-live-2026-11-13.txt`. Left: one answer from the deployed endpoint, a refusal answered under the free quota, and Aviator on a prototype screen once T2.10 shows how a published page reaches the tools | Open |
 
 ### Phase 3 · New prototypes
 
@@ -493,7 +493,7 @@ The gate and smoke tests pass at commit 8d3940d. Two of the plan's proofs have n
 | Golden questions, Ashby agents, scorecard and deductions | `docs/phase0/golden/grade-report.json` | 49 of 50. The earlier set's grader was never committed. |
 | Golden questions, Northfield | `docs/phase2/golden-nf/grade-report.json` | 50 of 50 |
 | Live server | /healthz | ok, version 0.2.0, writes off, as last read on 13 November; not read again after the Phase 1 deploy |
-| Aviator loop, tool declarations, model fallback and refusals | `npm run aviator-test` | 11 passed, 0 failed, against a stand-in model; no live model call has been verified |
+| Aviator loop, tool declarations, model fallback and refusals | `npm run aviator-test` | 11 passed, 0 failed, against a stand-in model. A live run with the real model and tools answered one question correctly; the second hit the key's free quota (`docs/phase2/aviator-live-2026-11-13.txt`) |
 | Property-based invariants on quantities, time order and money | — | Not built; the gate checks invariants on the one generated quarter only |
 | Fresh agent answers ten builder questions from the docs | Reader tests, 13 November. First: ten answered from the guide alone; gaps fixed in CALLS 31. Second, after the owner decisions: ten of ten correct, including where P4 ends and where P9's business problem is; gaps fixed in CALLS 34 | Passed |
 | Viewer states each film chapter's problem and outcome | — | Not started |

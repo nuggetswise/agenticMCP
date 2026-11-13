@@ -1,0 +1,73 @@
+Q: Was the ship notice on PO-104912 held before it left, and on which rules? Did Northfield receive it as sent?
+{
+ "ok": true,
+ "model": "gemini-3.8-flash",
+ "tools": [
+  {
+   "tool": "get_order",
+   "arguments": {
+    "po": "PO-104912"
+   }
+  },
+  {
+   "tool": "get_document",
+   "arguments": {
+    "reference": "ASN-78260"
+   }
+  },
+  {
+   "tool": "lookup_retailer_rules",
+   "arguments": {
+    "rule_id": "NF-4.3"
+   }
+  },
+  {
+   "tool": "lookup_retailer_rules",
+   "arguments": {
+    "rule_id": "NF-4.7"
+   }
+  },
+  {
+   "tool": "lookup_retailer_rules",
+   "arguments": {
+    "rule_id": "AP-1.3"
+   }
+  },
+  {
+   "tool": "get_document",
+   "arguments": {
+    "reference": "FA-N2091"
+   }
+  }
+ ],
+ "answer": "**Yes**, the ship notice was held before it left, and **yes**, Northfield received it as sent.\n\n* **Hold and Rules:** Ship notice ASN-78260 (version 1) was placed on hold in Trading Grid on 2026-11-30 at 10:20 ET under two rules:\n  * **NF-4.3** (*SSCC on every carton, reported in the ship notice hierarchy*): 1 of 48 cartons was missing an SSCC.\n  * **NF-4.7** (*Ship-to matches the current PO*): The ship-to DC was listed as DC 4 on the item fulfillment instead of DC 2 on the purchase order.\n  Both issues were corrected in NetSuite, and Priya Raman approved the release of ASN-78260 version 2 under Ashby rule **AP-1.3** at 11:20 ET.\n* **Receipt by Northfield:** ASN-78260 version 2 was transmitted on 2026-11-30 at 15:12 ET with a status of Delivered. Northfield acknowledged receipt via a 997 technical acknowledgment on 2026-11-30 at 15:16 ET (though a 997 technical acknowledgment is not business acceptance). Northfield later confirmed full receipt of all 48 cartons with zero short on its receiving advice.\n\n**Records used:**\n* Purchase Order: `PO-104912`\n* Ship Notice: `ASN-78260`\n* Item Fulfillment: `IF-55498`\n* Trading Grid hold record: `tg.hold` (2026-11-30 10:20 ET)\n* 
+---
+Q: Show me Brookline Goods deduction cases.
+{
+ "ok": false,
+ "status": 502,
+ "tools": [
+  {
+   "tool": "list_deductions",
+   "arguments": {
+    "as_of": "2026-12-02T11:00:00-05:00"
+   }
+  },
+  {
+   "tool": "list_deductions",
+   "arguments": {
+    "as_of": "2026-12-02T11:00:00-05:00",
+    "from": "2026-01-01"
+   }
+  },
+  {
+   "tool": "lookup_retailer_rules",
+   "arguments": {
+    "topic": "Brookline"
+   }
+  }
+ ],
+ "message": "The model did not answer (429).",
+ "detail": "{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://aistudio.google.com/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceede"
+}
+---

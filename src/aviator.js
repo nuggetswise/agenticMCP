@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
 const API = 'https://generativelanguage.googleapis.com/v1beta/models';
-export const AVIATOR_MODELS = (process.env.GEMINI_MODEL || 'gemini-3.8-flash,gemini-2.5-flash').split(',').map((s) => s.trim()).filter(Boolean);
+export const AVIATOR_MODELS = (process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite').split(',').map((s) => s.trim()).filter(Boolean);
 
 const strip = (s) => { if (Array.isArray(s)) return s.map(strip); if (!s || typeof s !== 'object') return s; const o = {}; for (const [k, v] of Object.entries(s)) if (!['$schema', 'additionalProperties', 'default'].includes(k)) o[k] = strip(v); return o; };
 export const declarations = (tools) => tools.map((t) => { const p = strip(zodToJsonSchema(z.object(t.input || {}), { target: 'openApi3' })); return { name: t.name, description: t.description.slice(0, 1000), ...(Object.keys(p.properties || {}).length ? { parameters: p } : {}) }; });
@@ -14,7 +14,7 @@ export const declarations = (tools) => tools.map((t) => { const p = strip(zodToJ
 export const instruction = ({ person, company, other, clock }) => `You are Aviator, the assistant inside Trading Grid, acting for ${person} at ${company}. All data is fictional.
 Answer only from the results of the tools you call in this conversation. If the tools do not hold the answer, say so; never estimate, and never answer from general knowledge about a record.
 Name every record you used (PO number, document reference, case id). Unless the question gives a time, answer as of ${clock}.
-A technical acknowledgment (997) is not business acceptance. Records that belong to ${other} are not available: give the tool's refusal as it reads.
+A technical acknowledgment (997) is not business acceptance. Records that belong to ${other}, or to any company other than ${company}, are not available to ${company}. If the question names another company, pass it to the tool's supplier field when the tool has one and give the tool's refusal as it reads; otherwise answer "Not available to ${company}" and stop. Never answer a question about another company with ${company}'s own records.
 You cannot send, approve, dispute or change anything. When asked to act, say what would be proposed and that ${person} approves it on the Trading Grid screen.
 Keep answers short: the answer first, then the records.`;
 

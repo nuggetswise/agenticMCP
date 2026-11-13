@@ -1,3 +1,6 @@
+# Aviator live runs, 13 November 2026. Real model, real tools on the built world, key removed.
+
+## Run 1: gemini-3.8-flash (first model then); P11 answered, second question hit the free quota
 Q: Was the ship notice on PO-104912 held before it left, and on which rules? Did Northfield receive it as sent?
 {
  "ok": true,
@@ -69,5 +72,68 @@ Q: Show me Brookline Goods deduction cases.
  ],
  "message": "The model did not answer (429).",
  "detail": "{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://aistudio.google.com/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceede"
+}
+---
+
+## Run 2: gemini-3.5-flash-lite (owner's choice), before the refusal fix: P11 correct; another supplier's cases answered with Ashby's own (wrong)
+Q: Was the ship notice on PO-104912 held before it left, and on which rules? Did Northfield receive it as sent?
+{
+ "ok": true,
+ "model": "gemini-3.5-flash-lite",
+ "tools": [
+  {
+   "tool": "get_order",
+   "arguments": {
+    "po": "PO-104912"
+   }
+  },
+  {
+   "tool": "get_document",
+   "arguments": {
+    "reference": "ASN-78260"
+   }
+  }
+ ],
+ "answer": "Yes, the ship notice on PO-104912 was held on Trading Grid before it left. It was held on two rules: **NF-4.3** (1 of 48 cartons missing SSCC in the ship notice) and **NF-4.7** (Ship-to DC 4 on the item fulfillment against DC 2 on the current PO). Both were corrected in NetSuite, and the release was approved on Trading Grid before the truck departed. Northfield received the ship notice as sent (delivered successfully, acknowledged by FA-N2091).\n\nRecords used: PO-104912, ASN-78260, FA-N2091."
+}
+---
+Q: Show me Brookline Goods deduction cases.
+{
+ "ok": true,
+ "model": "gemini-3.5-flash-lite",
+ "tools": [
+  {
+   "tool": "list_deductions",
+   "arguments": {
+    "as_of": "2026-12-02T11:00:00-05:00"
+   }
+  }
+ ],
+ "answer": "Northfield opened two deduction cases (DC-40877 for $88.40 on PO NR-450118, and DC-40931 for $208.00 on PO NR-450415) under charge code SH01.\n\nRecords used: Deduction cases DC-40877 and DC-40931."
+}
+---
+
+## Run 3: gemini-3.5-flash-lite, after the refusal fix
+Q: Show me Brookline Goods deduction cases.
+{
+ "ok": true,
+ "model": "gemini-3.5-flash-lite",
+ "tools": [],
+ "answer": "Not available to Ashby Supplier"
+}
+---
+Q: How many deduction cases has Northfield opened against us this quarter, as of 10 December?
+{
+ "ok": true,
+ "model": "gemini-3.5-flash-lite",
+ "tools": [
+  {
+   "tool": "list_deductions",
+   "arguments": {
+    "as_of": "2026-12-10T11:00:00-05:00"
+   }
+  }
+ ],
+ "answer": "5 deduction cases.\n\nRecords used: DC-40877, DC-40931, DC-41102, DC-41118, DC-41131."
 }
 ---

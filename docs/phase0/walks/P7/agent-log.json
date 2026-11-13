@@ -1,0 +1,149 @@
+{
+ "errs": [],
+ "log": [
+  {
+   "i": 1,
+   "click": "Start Pace Agent",
+   "ds": "",
+   "options": [
+    "Start Pace Agent",
+    "Find what keeps failing"
+   ]
+  },
+  {
+   "i": 2,
+   "click": "Short shipped, remainder cancelled In full · 31 lines · 1,794 cases · ",
+   "ds": "pat=A",
+   "options": [
+    "Short shipped, remainder cancelled In full · 31 lines · 1,794 cases · ",
+    "Received below ship notice In full · 44 lines · 66 cases · Enough line"
+   ]
+  },
+  {
+   "i": 3,
+   "click": "Work this pattern",
+   "ds": "",
+   "options": [
+    "Work this pattern",
+    "Received below ship notice In full · 44 lines · 66 cases · Enough line",
+    "Short shipped, remainder cancelled In full · 31 lines · 1,794 cases · "
+   ]
+  },
+  {
+   "i": 4,
+   "click": "Confirm the action",
+   "ds": "",
+   "options": [
+    "Confirm the action",
+    "Write my own"
+   ]
+  },
+  {
+   "i": 5,
+   "click": "Approve and send",
+   "ds": "",
+   "options": [
+    "Approve and send",
+    "Edit",
+    "Do it myself",
+    "Reject"
+   ]
+  },
+  {
+   "i": 6,
+   "click": "Accept plan",
+   "ds": "",
+   "options": [
+    "Accept plan"
+   ]
+  },
+  {
+   "i": 7,
+   "click": "Continue to week 6",
+   "ds": "",
+   "options": [
+    "Continue to week 6"
+   ]
+  },
+  {
+   "i": 8,
+   "click": "Edit",
+   "ds": "",
+   "options": [
+    "Edit",
+    "Do it myself",
+    "Reject",
+    "Approve and send"
+   ]
+  },
+  {
+   "i": 9,
+   "click": "Done editing",
+   "ds": "",
+   "options": [
+    "Done editing",
+    "Do it myself",
+    "Reject",
+    "Approve and send"
+   ]
+  },
+  {
+   "i": 10,
+   "click": "Do it myself",
+   "ds": "",
+   "options": [
+    "Do it myself",
+    "Reject",
+    "Approve and send",
+    "Edit"
+   ]
+  },
+  {
+   "i": 11,
+   "click": "Send task to Kinross",
+   "ds": "",
+   "options": [
+    "Send task to Kinross",
+    "Open the 3 lines",
+    "Leave it for now"
+   ]
+  },
+  {
+   "i": 12,
+   "click": "After week 13 · compare",
+   "ds": "",
+   "options": [
+    "After week 13 · compare",
+    "Open the 3 lines"
+   ]
+  },
+  {
+   "i": 13,
+   "click": "Open the next scorecard",
+   "ds": "",
+   "options": [
+    "Open the next scorecard"
+   ]
+  },
+  {
+   "i": 14,
+   "click": "Open the next scorecard",
+   "ds": "",
+   "options": [
+    "Open the next scorecard"
+   ]
+  },
+  {
+   "i": 15,
+   "click": "Send result to Northfield",
+   "ds": "",
+   "options": [
+    "Send result to Northfield"
+   ]
+  },
+  {
+   "i": 16,
+   "stop": "no actions"
+  }
+ ]
+}

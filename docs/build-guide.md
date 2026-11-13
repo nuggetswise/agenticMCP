@@ -278,7 +278,7 @@ Phase 0 is closed only when no cell reads Not done or Partly. A cell records whe
 | P4 | Partly | Not done | N/A | Not done | Done | Done | Done | Done | Done | Not done | Partly |
 | P5 | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done | Partly |
 | P6 | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done |
-| P7 | Done | Partly | Done | Not done | Partly | Not done | Done | Not done | Partly | Not done | Done |
+| P7 | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done | Done |
 | P8 | Not done | N/A | N/A | Not done | Not done | Not done | Done | Not done | N/A | N/A | Not done |
 | P9 | Partly | Not done | Done | Not done | Done | Not done | Done | Not done | Done | Not done | Partly |
 | P11 | Partly | Not done | N/A | Not done | Done | Done | Done | Not done | Done | Not done | Not done |
@@ -309,7 +309,7 @@ Phase 0 is closed only when no cell reads Not done or Partly. A cell records whe
 | A4 | For a screen prototype, the live connection is asked for the same job and its answer is compared with the screen (owner's method, 13 November); done for P5. Server rows come from the golden runs, which call the tools. |
 | A6, A8 | Turn 3 report in FINDINGS: overlap across prototypes; collapsed roles |
 | A7 | `docs/phase0/contract-report-turn4.json`; narrative pages in FINDINGS, other live sources. Film frames not inspected. |
-| A9 | `docs/phase0/walks/` and FINDINGS turn 4. P5 dead state found; P7 manual pattern A not confirmed by hand. Server and Northfield: `npm run smoke`. |
+| A9 | `docs/phase0/walks/` and FINDINGS turn 4. P5 dead state found and reproduced; P7 manual pattern A confirmed as a walker limit. Server and Northfield: `npm run smoke`. |
 | A10 | Action counts are in the FINDINGS turn 4 scripted walks; the hand paths of P5 and P6 run far past the budget. No click map exists yet. |
 | C1 | `docs/phase0/golden/` (Ashby) and `docs/phase2/golden-nf/` (Northfield) |
 
@@ -344,7 +344,7 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T0.12 | P4 | Complete P4's grid row | — | P4 link in Inventory | Every P4 cell reads Done or N/A | Open |
 | T0.13 | P5 | Complete P5's grid row; every cell but C1 is done in `docs/phase0/P5-grid.md`, and C1 needs two more golden questions under T0.3 | — | P5 link; `docs/phase0/walks/` for the dead state | Every P5 cell reads Done or N/A | Open |
 | T0.14 | P6 | Complete P6's grid row | — | P6 link in Inventory | Evidence: `docs/phase0/P6-grid.md`; CALLS 41 | Done |
-| T0.15 | P7 | Complete P7's grid row | T0.5 | P7 link; `contract/claims.json` | Every P7 cell reads Done or N/A | Open |
+| T0.15 | P7 | Complete P7's grid row | T0.5 | P7 link; `contract/claims.json` | Evidence: `docs/phase0/P7-grid.md`; CALLS 43 | Done |
 | T0.16 | P8 | Complete P8's grid row | — | P8 link; why its cells are N/A | Every P8 cell reads Done or N/A | Open |
 | T0.17 | P9 | Complete P9's grid row | — | P9 link in Inventory | Every P9 cell reads Done or N/A | Open |
 | T0.18 | P11 | Complete P11's grid row | — | P11 link in Inventory | Every P11 cell reads Done or N/A | Open |
@@ -352,7 +352,7 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T0.2 | P10 Ashby, P10 Northfield, P16 | Audit the two server scopes and the retailer catalogue connector as prototypes | — | Server reference; `docs/phase2/` | Their grid rows are complete and P16's link is in Inventory | Open |
 | T0.3 | P1, P2, P4, P5, P8, P9, P11 | Golden questions: new sets for P2, P8 and P11, more for the other four | — | `docs/phase0/golden/` | Each has at least three questions with five graded runs | Open |
 | T0.4 | World | Restore the X12 check against bots-grammars as a committed script | — | `validator/` | Script and report sit in `validator/`, and it rejects each injected fault for the stated reason | Open |
-| T0.5 | P7 | Confirm manual pattern A by hand | — | `docs/phase0/FINDINGS.md`, turn 4 walks | FINDINGS records it as a defect or as a walker limit | Open |
+| T0.5 | P7 | Confirm manual pattern A by hand | — | `docs/phase0/FINDINGS.md`, turn 4 walks | Evidence: a walker limit, not a defect; `docs/phase0/P7-grid.md`; CALLS 43 | Done |
 | T0.6 | Partners | ShipHawk's partner-only questions and journey moment, from ShipHawk's own documentation; partner nodes on every route map | — | Partner checks; Partner diligence tab | The Partner checks table has no Not done or Partly row | Open |
 | T0.7 | FILM | Read the film's frames | — | FILM link in Inventory | The FILM A7 cell reads Done | Open |
 | T0.8 | World | Find the ship notice timing rule in a retailer's own published EDI guide | — | D23; NF-4.2 in the EDI Review Pack | Evidence: no openly published retailer guide states it; FINDINGS, T0.8 section; CALLS 37 | Done |

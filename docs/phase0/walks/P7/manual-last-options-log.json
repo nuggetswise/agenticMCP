@@ -1,0 +1,157 @@
+{
+ "errs": [],
+ "log": [
+  {
+   "i": 1,
+   "click": "Find what keeps failing",
+   "ds": "",
+   "options": [
+    "Find what keeps failing"
+   ]
+  },
+  {
+   "i": 2,
+   "click": "Short shipped, remainder cancelled In full · 31 lines · 1,794 cases · ",
+   "ds": "pat=A",
+   "options": [
+    "Short shipped, remainder cancelled In full · 31 lines · 1,794 cases · ",
+    "Received below ship notice In full · 44 lines · 66 cases · Enough line"
+   ]
+  },
+  {
+   "i": 3,
+   "click": "Work this pattern",
+   "ds": "",
+   "options": [
+    "Work this pattern",
+    "Received below ship notice In full · 44 lines · 66 cases · Enough line",
+    "Short shipped, remainder cancelled In full · 31 lines · 1,794 cases · "
+   ]
+  },
+  {
+   "i": 4,
+   "click": "DC",
+   "ds": "group=dc",
+   "options": [
+    "DC",
+    "Item and warehouse",
+    "Ships from",
+    "Item",
+    "Failure"
+   ]
+  },
+  {
+   "i": 5,
+   "click": "No, write my own action",
+   "ds": "",
+   "options": [
+    "No, write my own action",
+    "Yes, target it",
+    "Item and warehouse",
+    "Ships from",
+    "Item",
+    "Failure",
+    "DC"
+   ]
+  },
+  {
+   "i": 6,
+   "click": "Use this action",
+   "ds": "",
+   "options": [
+    "Use this action",
+    "Yes, target it",
+    "Item and warehouse",
+    "Ships from",
+    "Item",
+    "Failure",
+    "No, write my own action",
+    "DC"
+   ]
+  },
+  {
+   "i": 7,
+   "filled": 1
+  },
+  {
+   "i": 7,
+   "filled": 1
+  },
+  {
+   "i": 7,
+   "filled": 1
+  },
+  {
+   "i": 7,
+   "filled": 1
+  },
+  {
+   "i": 7,
+   "click": "Send plan to Northfield",
+   "ds": "",
+   "options": [
+    "Send plan to Northfield"
+   ]
+  },
+  {
+   "i": 8,
+   "click": "Accept plan",
+   "ds": "",
+   "options": [
+    "Accept plan"
+   ]
+  },
+  {
+   "i": 9,
+   "click": "Continue to week 6",
+   "ds": "",
+   "options": [
+    "Continue to week 6"
+   ]
+  },
+  {
+   "i": 10,
+   "click": "Open the 3 lines",
+   "ds": "",
+   "options": [
+    "Open the 3 lines"
+   ]
+  },
+  {
+   "i": 11,
+   "click": "After week 13 · compare",
+   "ds": "",
+   "options": [
+    "After week 13 · compare"
+   ]
+  },
+  {
+   "i": 12,
+   "click": "Open the next scorecard",
+   "ds": "",
+   "options": [
+    "Open the next scorecard"
+   ]
+  },
+  {
+   "i": 13,
+   "click": "Open the next scorecard",
+   "ds": "",
+   "options": [
+    "Open the next scorecard"
+   ]
+  },
+  {
+   "i": 14,
+   "click": "Send result to Northfield",
+   "ds": "",
+   "options": [
+    "Send result to Northfield"
+   ]
+  },
+  {
+   "i": 15,
+   "stop": "no actions"
+  }
+ ]
+}

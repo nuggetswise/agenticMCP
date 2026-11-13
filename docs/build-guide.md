@@ -317,7 +317,7 @@ Phase 0 is closed only when no cell reads Not done or Partly. A cell records whe
 
 ## Partner checks
 
-The Pipe17 question that had to be settled first is settled. Three partner checks are still open: partner nodes on the route maps beyond P2, ShipHawk's questions, and ShipHawk's journey moment. Verdicts and sources are in `docs/phase0/FINDINGS.md` under B.
+The Pipe17 question that had to be settled first is settled. ShipHawk's questions and journey moment are now settled from ShipHawk's own documentation. One partner check stays partly open: the route maps of P1 and P4, which wait for the owner to release them. Verdicts and sources are in `docs/phase0/FINDINGS.md` under B and in `docs/phase0/T0.6-partners.md`.
 
 | Check | Status | Evidence |
 | --- | --- | --- |
@@ -326,10 +326,10 @@ The Pipe17 question that had to be settled first is settled. Three partner check
 | Partner Map claims, verdict and source each | Done | FINDINGS, Partner Map claims table |
 | Retail Direction section 9 claims | Done | FINDINGS turn 4, Partners |
 | Partner briefs: moment, division of labour, stop conditions | Done for Pipe17, Kanmon, Vividly and Salsify | Partner diligence tab |
-| Partner nodes on every prototype route map | Partly: P2 only | FINDINGS B |
+| Partner nodes on every prototype route map | Partly: all built screens but P1 and P4 (held); only P2 names a partner, and it is documented; candidate nodes for P5, P8 and P11 wait for open question 5 | `docs/phase0/T0.6-partners.md` |
 | Alliances with SPS, TrueCommerce, Cleo | Done, one search per partner | FINDINGS, alliance checks |
-| Questions only the partner can answer | Partly: all but ShipHawk | Partner diligence tab |
-| Journey moment and what the customer gains over Trading Grid alone | Partly: all but ShipHawk | Partner diligence tab |
+| Questions only the partner can answer | Done | Partner diligence tab |
+| Journey moment and what the customer gains over Trading Grid alone | Done | Partner diligence tab |
 
 ## Tasks
 
@@ -355,7 +355,7 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T0.3 | P1, P2, P4, P5, P8, P9, P11 | Golden questions: new sets for P2, P8 and P11, more for the other four | — | `docs/phase0/golden/` | Each has at least three questions with five graded runs | Open |
 | T0.4 | World | Restore the X12 check against bots-grammars as a committed script | — | `validator/` | Evidence: `validator/botscheck.py` and `validator/bots-report.json`, commit 6bda779; CALLS 48 | Done |
 | T0.5 | P7 | Confirm manual pattern A by hand | — | `docs/phase0/FINDINGS.md`, turn 4 walks | Evidence: a walker limit, not a defect; `docs/phase0/P7-grid.md`; CALLS 43 | Done |
-| T0.6 | Partners | ShipHawk's partner-only questions and journey moment, from ShipHawk's own documentation; partner nodes on every route map | — | Partner checks; Partner diligence tab | The Partner checks table has no Not done or Partly row | Open |
+| T0.6 | Partners | ShipHawk's partner-only questions and journey moment, from ShipHawk's own documentation; partner nodes on every route map. ShipHawk is done; route maps are read for every built screen except P1 and P4 | Owner releases P1 and P4 | Partner checks; Partner diligence tab; `docs/phase0/T0.6-partners.md` | The Partner checks table has no Not done or Partly row | Blocked |
 | T0.7 | FILM | Read the film's frames; the video is larger than this session can read, so only its page was checked | Owner shares the film's frames or a smaller copy | FILM link in Inventory | The FILM A7 cell reads Done | Blocked |
 | T0.8 | World | Find the ship notice timing rule in a retailer's own published EDI guide | — | D23; NF-4.2 in the EDI Review Pack | Evidence: no openly published retailer guide states it; FINDINGS, T0.8 section; CALLS 37 | Done |
 
@@ -687,13 +687,14 @@ Kanmon supplier cash and a Vividly promotional deduction are not specified. Phas
 
 # Partner diligence
 
-The Partner Map carries each partner's role, flows and value. It does not carry what the partner briefs add: where the partner sits in the journey, the questions only the partner can answer, and when to stop. Those were copied once, on 12 November, from the four in-scope briefs, so builders do not open the briefs. ShipHawk has no brief, and the ShipHero and RetailPath briefs are out of scope.
+The Partner Map carries each partner's role, flows and value. It does not carry what the partner briefs add: where the partner sits in the journey, the questions only the partner can answer, and when to stop. Those were copied once, on 12 November, from the four in-scope briefs, so builders do not open the briefs. ShipHawk has no brief; its row comes from ShipHawk's own help pages on 13 November, and its stop conditions are derived, not copied. The ShipHero and RetailPath briefs are out of scope.
 
 | Partner | Moment in the journey | Division of labour | Stop if |
 | --- | --- | --- | --- |
 | Pipe17 | Activate: between the supplier's order system and several warehouses | Trading Grid keeps retailer EDI; Supplier ERP stays the order authority; Pipe17 routes orders and returns warehouse facts | Pipe17 expects to replace Trading Grid EDI; the ship notice or label fields are unavailable; the customer's systems already suffice; delivery cost exceeds the benefit |
 | Kanmon | Extend: after a receivable exists, before the retailer's payment date | Kanmon underwrites, funds, services and collects; the first option is a partner-hosted link that carries no Trading Grid data | No referral-only option and no approved integration economics; no authorized placement; poor borrower terms; regulatory or brand risk |
 | Vividly | Activate and Optimize: terms are set before the order; matching happens when invoices, remittances and promotional deductions are reconciled | Vividly owns promotion terms and matching; Trading Grid supplies invoice and remittance evidence only where those routes run; finance ERP settles | Trading Grid does not improve the outcome; promotion-term permissions fail; case ownership duplicates; no buying sponsor |
+| ShipHawk | Operate: at pack and ship, between the warehouse's packing step and the ship notice | ShipHawk rates, books, labels and assigns carton and pallet SSCCs, then writes them to the ERP fulfillment record; Trading Grid builds and sends the 856; ShipHawk generates no ship notice itself | ShipHawk cannot write to the fields Trading Grid's ERP connector reads and its API lacks carton-to-item detail; the warehouse system already produces compliant labels; ShipHawk expects to own the retailer EDI |
 | Salsify | Connect: before the first order, while item content is validated and accepted | Salsify owns attributes, retailer validation and syndication; the retailer approves items; Trading Grid carries the trade once the route is set up; Trading Grid Catalogue stays out | No new supplier access; no status or feedback interface; data rights fail; no recurring network value for Trading Grid |
 
 ## Questions only the partner can answer
@@ -725,6 +726,13 @@ The Partner Map carries each partner's role, flows and value. It does not carry 
 3. Does Salsify emit publication or acceptance events that a partner can subscribe to?
 4. How does Salsify see the overlap between its own data pool and Trading Grid Catalogue?
 5. Which brands are shared customers, and may they be named?
+
+**ShipHawk**
+
+1. Can the SuiteApp write carton and pallet SSCC, package ID and tracking into the fields Trading Grid's NetSuite connector reads, as it already does for SPS Commerce and TrueCommerce?
+2. Outside NetSuite, does the shipment API or webhook say which items sit in which carton?
+3. Would ShipHawk take a retailer's carton label specification from Trading Grid, as it takes labels from SPS Commerce?
+4. Which shared customers ship to retailers that require SSCC labels, and may they be named?
 
 ## Where a brief and the Partner Map disagree
 

@@ -29,12 +29,13 @@ const tables = (s) => { const out = []; let cur = null; for (const l of s.split(
 { const p = []; for (const [, c] of md.matchAll(/[Cc]ommit ([0-9a-f]{7})\b/g)) { try { sh(`git cat-file -e ${c}^{commit}`); } catch { p.push(c); } } check('commits_exist', p); }
 
 // 3. Every repo path in backticks exists; every npm script exists; every gate check name exists
-{ const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).scripts; const gate = readFileSync(join(ROOT, 'scripts/check.js'), 'utf8'); const p = [];
+{ const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).scripts; const gate = readFileSync(join(ROOT, 'scripts/check.js'), 'utf8'); const tools = readFileSync(join(ROOT, 'src/tools.js'), 'utf8') + readFileSync(join(ROOT, 'src/server.js'), 'utf8'); const p = [];
   for (const [, s] of md.matchAll(/`([^`\n]+)`/g)) {
     if (/^npm run /.test(s)) { if (!pkg[s.slice(8)]) p.push(`npm script ${s}`); continue; }
-    if (/^[a-z_]+\.[a-z_]+$/.test(s)) { if (!gate.includes(`'${s}'`)) p.push(`gate check ${s}`); continue; }
+    if (/^[a-z0-9_]+(\.[a-z0-9_]+)+$/.test(s)) { if (!gate.includes(`'${s}'`)) p.push(`gate check ${s}`); continue; }
+    if (/^[a-z]+(_[a-z]+)+$/.test(s)) { if (!tools.includes(`name: '${s}'`)) p.push(`tool ${s}`); continue; }
     if (/^[\w.\-/]+$/.test(s) && (s.includes('/') || /\.(json|md|js|mjs|db)$/.test(s))) { if (!existsSync(join(ROOT, s))) p.push(`path ${s}`); } }
-  check('paths_scripts_gate_checks_exist', p); }
+  check('paths_scripts_gate_checks_tools_exist', p); }
 
 // 4. Every rule id exists in the catalogue mirror
 { const ids = new Set(JSON.parse(readFileSync(join(ROOT, 'registry/catalogue-pack.json'), 'utf8')).rules.map((r) => r.id));

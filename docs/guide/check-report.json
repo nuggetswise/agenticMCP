@@ -1,6 +1,6 @@
 {
  "file": "/home/claude/agenticmcp/docs/build-guide.md",
- "ran_at_head": "f9c8276",
+ "ran_at_head": "120cfed",
  "results": [
   {
    "name": "as_of_commit_current",
@@ -14,7 +14,7 @@
    "problems": []
   },
   {
-   "name": "paths_scripts_gate_checks_exist",
+   "name": "paths_scripts_gate_checks_tools_exist",
    "ok": true,
    "problems": []
   },
@@ -27,7 +27,7 @@
    "name": "calls_refs_exist",
    "ok": true,
    "problems": [],
-   "info": "26 calls logged"
+   "info": "27 calls logged"
   },
   {
    "name": "inventory_and_grid_complete",

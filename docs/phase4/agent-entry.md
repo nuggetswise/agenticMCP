@@ -45,6 +45,41 @@ What SAP adds to the pattern: the conversational start is legitimate, as a reque
 4. **One checkpoint.** Approve, edit, take over, or reject. A standing policy the user set can skip the checkpoint (R18), and the page then opens on what was sent and the response.
 5. **Oversight elsewhere.** Authority limits, pause, override and audit sit in the governance view (T2.3), not on the journey.
 
+## What the owner's reference adds (D55)
+
+Source: the owner's research file, SAP Joule Studio Agent UX Reference for Retail Prototype, 13 November. Builders do not open it; this section carries what they need. Whether a SAP feature is live or pre-release does not matter here, because the file is used for interaction patterns only. Its workflow canvas, agent builder and n8n material are out of scope.
+
+**The proposal, as the first frame.** Business record first, agent second:
+
+| Part | What it holds | Rule |
+| --- | --- | --- |
+| Record | The order, shipment, invoice or case affected, and its deadline | R16 |
+| Problem | One line | R05 |
+| Evidence | The records read, each named and openable | R17 |
+| Finding and proposal | What the agent found, what it proposes, and what it does not know | R17, R21 |
+| Steps | Each step with who did it: rule, agent, person or system | R17 |
+| Actions | Approve, edit, take over, reject or ask for another | R15 |
+| Latest state | The furthest state a record supports | R18 |
+
+**Who did each step.** Four markers, shown on the evidence:
+
+| Marker | Example in this world |
+| --- | --- |
+| Rule | A ship notice checked against NF-4.2; a case opened because a deadline passed |
+| Agent | Choosing which record to read next when two disagree; the recommendation |
+| Person | Priya approves a release; Jordan decides a charge |
+| System | Northfield's 997; Northfield's receiving advice; a remittance |
+
+**States.** Five, never merged: proposed, approved, sent, technically acknowledged (997), settled (the business record Inventory names as the ending). A sent document with no receiving advice yet reads as sent and waiting, not as resolved. These are states of records, not stage labels across the page, which R11 still bars.
+
+**Design checks added to each Phase 4 walk.** The reference lists eight; five are already rules here (changed evidence is R21 test 3, authority is R18 and R19, a 997 is not acceptance under R29, two people on one case is P6's shared case, and the ending record is Inventory). Three are new:
+
+1. The job can be finished without opening a chat.
+2. A reader can tell at a glance whether the proposal is pending or applied.
+3. One decision can be traced from the record read, to the step taken, to the document sent, to the record that settles it.
+
+**Not taken from the reference.** A run number, version and step timings on screen (R11 bars durations); an "ask" box inside Trading Grid (D16 sends questions to the customer's own assistant); an inbox of counts as a prototype's home (each prototype shows one job, and any count would have to pass the contract test); its sample order number, which is not in the world.
+
 ## How the manual option works (R15)
 
 The manual option stays on every agent screen. It moves from the front of the journey to the checkpoint, in three forms:
@@ -60,6 +95,13 @@ The third form is the rule baseline R21 already requires, so the comparison betw
 ## Phase 4 items, by prototype
 
 Each item goes into that prototype's change list as a CORRECT or DELETE line. Event records are in the world today unless marked.
+
+**Every agent prototype: P5, P6, P7, P9**
+- AE-ALL-1: CORRECT the first frame to the proposal layout above.
+- AE-ALL-2: ADD who did each step to the evidence (rule, agent, person, system). Steps a rule did lose any agent wording.
+- AE-ALL-3: CORRECT state labels to the five states; DELETE any "resolved" or "done" shown before the settling record.
+- AE-ALL-4: ADD reject and "another option" at the checkpoint where they are missing.
+- AE-ALL-5: Walk the three new design checks and record the result in the prototype's grid file.
 
 **P5 Scout Shipment Watch (T4.13)**
 - AE-P5-1: DELETE "Start Scout Agent". The page opens on Scout Agent's ranked list of six shipments, already ranked, with the lead shipment's proposal ready. Event: a shipment planned inside the watch window fails a Northfield rule check before departure (anchors NR-460207 to NR-460274).
@@ -86,6 +128,8 @@ Each item goes into that prototype's change list as a CORRECT or DELETE line. Ev
 
 **P11 NetSuite Chargeback Avoidance (T4.18)**
 - AE-P11-1: RETAIN the entry. It has no agent and opens on the held ship notice; it is the reference for the others.
+- AE-P11-2: ADD who did each step: the check is a rule, the corrections and the release are people, the 997 and the receiving advice are systems. No step is the agent's.
+- AE-P11-3: CORRECT the ending state: it stops at the technical acknowledgment today; the settled state is Northfield's receiving advice (records from T1.9).
 
 **P8 Money in Motion (T4.16)**
 - No item. View only, no agent.

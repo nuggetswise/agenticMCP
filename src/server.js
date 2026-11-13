@@ -32,6 +32,10 @@ const nfDb = new DatabaseSync(NORTHFIELD_DB, { readOnly: true });
 const BASELINE_EVENT = db.prepare('SELECT max(id) m FROM events').get().m;
 const AS = 'ashby-assistant', NF = 'northfield-assistant';
 const BY_TOKEN = { [TOKEN]: AS, [NF_TOKEN]: NF };
+// AVIATOR_TOKEN opens Aviator only (read tools through the model), never MCP, REST or admin: <token>-ashby or <token>-northfield.
+const AV = process.env.AVIATOR_TOKEN || '';
+const BY_AVIATOR = AV ? { [`${AV}-ashby`]: AS, [`${AV}-northfield`]: NF } : {};
+const aviatorCid = (req, res) => { const c = BY_TOKEN[req.params.token] || BY_AVIATOR[req.params.token]; if (!c) { res.status(404).send('Not found'); return null; } return c; };
 const OTHER = { [AS]: NF, [NF]: AS };
 const SIDE = {
   [AS]: { party: 'ASHBY', person: 'Priya Raman', company: 'Ashby Supplier', other: 'Northfield Retailer', notAvailable: D.NOT_AVAILABLE, scopes: SCOPES, sqlDb: () => ashbyDb, records: 'records', privateTables: /\b(review_notes|draft_rules|rule_replays)\b/i, privateWhat: 'Northfield’s accounts payable, draft rules and claims reviewer notes' },
@@ -240,7 +244,7 @@ const adminData = (cid, token) => ({ connection: conn(cid), side: SIDE[cid], row
 const cors = (res) => res.set({ 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'content-type' });
 app.options('/aviator/:token', (req, res) => { cors(res).status(204).end(); });
 app.post('/aviator/:token', async (req, res) => {
-  const cid = cidOf(req, res); if (!cid) return; cors(res);
+  const cid = aviatorCid(req, res); if (!cid) return; cors(res);
   const tools = cid === AS ? TOOLS : NF_TOOLS; const side = SIDE[cid]; const q = req.body?.question;
   try {
     const out = await Aviator.ask({ question: q, history: Array.isArray(req.body?.history) ? req.body.history : [], tools, callTool: (name, args) => call(cid, name, args), side: { person: side.person, company: side.company, other: side.other }, clock: fmtET(D.storyClock()), apiKey: process.env.GEMINI_API_KEY });

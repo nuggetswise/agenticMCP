@@ -1,0 +1,114 @@
+{
+ "checked": "2026-11-13",
+ "grammars": {
+  "source": "github.com/bots-edi/bots-grammars",
+  "path": "x12/4010",
+  "commit": "6c1d8a5"
+ },
+ "world_x12_sha256": "37089e751e2407c3f89e088e17099c16fe30303aee3ca2e824e9e7aa92bdb524",
+ "documents": 23930,
+ "transaction_sets": 23930,
+ "documents_with_faults": 12,
+ "faults_by_reason": {
+  "Nn too long (n > n)": 4,
+  "PRFn too long (n > n)": 3,
+  "SEn says n segments, set has n": 2,
+  "DTMn invalid date": 2,
+  "BIGn too long (n > n)": 1
+ },
+ "rejected_on_997_in_world": 12,
+ "rejected_on_997_and_faulted": 12,
+ "rejected_on_997_but_clean": [],
+ "faulted_but_not_rejected_on_997": [],
+ "faulted_but_not_rejected_on_997_count": 0,
+ "injected_on": "856:ASN-449510",
+ "injected": [
+  {
+   "fault": "PO reference too long",
+   "expected": "PRF01 too long",
+   "rejected_for_it": true,
+   "errors": [
+    "PRF01 too long (27 > 22)"
+   ]
+  },
+  {
+   "fault": "Invalid ship date",
+   "expected": "BSN03 invalid date",
+   "rejected_for_it": true,
+   "errors": [
+    "BSN03 invalid date"
+   ]
+  },
+  {
+   "fault": "Invalid ship time",
+   "expected": "BSN04 invalid time",
+   "rejected_for_it": true,
+   "errors": [
+    "BSN04 invalid time"
+   ]
+  },
+  {
+   "fault": "Missing BSN",
+   "expected": "BSN required, missing",
+   "rejected_for_it": true,
+   "errors": [
+    "BSN required, missing at segment 2",
+    "SE01 says 853 segments, set has 852"
+   ]
+  },
+  {
+   "fault": "Wrong segment count",
+   "expected": "SE01 says",
+   "rejected_for_it": true,
+   "errors": [
+    "SE01 says 854 segments, set has 853"
+   ]
+  },
+  {
+   "fault": "SE control number differs",
+   "expected": "SE02 differs",
+   "rejected_for_it": true,
+   "errors": [
+    "SE02 differs from ST02"
+   ]
+  },
+  {
+   "fault": "Unknown segment",
+   "expected": "ZZZ unknown segment",
+   "rejected_for_it": true,
+   "errors": [
+    "HL required, missing at segment 3",
+    "SE required, missing at segment 3",
+    "ZZZ not allowed at segment 3",
+    "ZZZ unknown segment"
+   ]
+  },
+  {
+   "fault": "Ship-to name too long",
+   "expected": "N102 too long",
+   "rejected_for_it": true,
+   "errors": [
+    "N102 too long (61 > 60)"
+   ]
+  },
+  {
+   "fault": "Non-numeric quantity",
+   "expected": "SN102 not numeric",
+   "rejected_for_it": true,
+   "errors": [
+    "SN102 not numeric"
+   ]
+  },
+  {
+   "fault": "Too many elements",
+   "expected": "BSN has",
+   "rejected_for_it": true,
+   "errors": [
+    "BSN has 13 elements, 7 allowed",
+    "BSN06 too short (1 < 2)",
+    "BSN07 too short (1 < 3)"
+   ]
+  }
+ ],
+ "pass": true
+}

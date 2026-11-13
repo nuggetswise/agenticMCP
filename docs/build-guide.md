@@ -4,7 +4,7 @@ Working copy: `docs/build-guide.md` in the repo. Reading copy: the Claude doc at
 
 ## How to use this guide
 
-This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 4f9e289.
+This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 356e2c7.
 
 - **Start here:** follow R39. It picks your next task from the Tasks tables and says what to read first.
 - **Authority, highest first:**
@@ -118,7 +118,7 @@ Each kind of fact has exactly one owner. This guide points to that owner and nev
 | --- | --- | --- |
 | Counts, documents, orders, amounts, times | The world, `build/tg.db` | `npm run build`; live server tools |
 | Rule wording, owner, basis, charges, thresholds | [EDI Review Pack](https://claude.ai/artifact/8BgJyjrA6nYLF32n9F9pxd) | Repo mirror `registry/catalogue-pack.json`; the gate fails if it differs from the world |
-| Per prototype: calendar moment, agency verdict, anchor records, tools, status | `registry/registry.json` | Read the file |
+| Per prototype: calendar moment, agency verdict, anchor records, tools, status, and a copy of its ending | `registry/registry.json` | Read the file |
 | Tool list for both connections | `src/tools.js` | Read the file; `/openapi.json` for REST |
 | On-screen numbers each prototype claims | `contract/claims.json` | `npm run contract` |
 | Builder calls and what would change them | `docs/build-log/CALLS.md` | Read the file |
@@ -236,19 +236,19 @@ The inventory has eighteen items: nine screen prototypes, one retired screen, tw
 | P8 | Money in Motion | Screen, view only | Built | [P8](https://claude.ai/artifact/RB5p54UuQ9GFGDPxhGzU3a) | Let a Northfield director read the value of open orders at each stage from purchase order to payment, and see where it is stuck. Ends at the view itself: read only, it creates no record (R20), so the populated view is its result beat. Source: owner, 11 November; the registry. v8 has no section for it. |
 | P9 | Shelf Recovery | Screen | Built | [P9](https://claude.ai/artifact/3D2tsVjwvnmMtPEoRKSpVe) | Turn store activity reports (852) into a refill the buyer accepts. Ends at the next store activity report showing the shelf refilled, not at the order. Source: v8 F27, Use sell-through and inventory evidence to improve assortment and supply; D22; owner, 13 November. |
 | P11 | NetSuite Chargeback Avoidance | Screen | Built | [P11](https://claude.ai/artifact/AhjjX49TBdZ7qbMiHkZpnx) | Hold a live ship notice that breaks a Northfield rule inside NetSuite and correct it there before it leaves. Ends when Northfield's receiving advice matches the corrected ship notice; a 997 does not end it. Source: owner, 13 November. v8 has no NetSuite section; F11 is the nearest problem. |
-| P12 | ERP-native Activation | Retired screen | Not in registry | [P12](https://claude.ai/artifact/NKh7WnRwiPQSqa7vz61zYj) | Retired by the owner on 13 November; see D40. |
+| P12 | ERP-native Activation | Retired screen | Retired | [P12](https://claude.ai/artifact/NKh7WnRwiPQSqa7vz61zYj) | Retired by the owner on 13 November; see D40. |
 | P10 Ashby | Trading Grid in the customer's AI, Ashby scope | Server | Live | [Server](https://tg-retail-demo-mcp.onrender.com) | Not set in this pass. The Prototype Plan's end state stands until T0.2 audits the scope. |
-| P10 Northfield | Northfield scope on the same server; registry entry pending (T2.7) | Server | Live | Same server, Northfield key | As P10 Ashby, seen from Jordan's side. |
+| P10 Northfield | Northfield scope on the same server | Server | Live | Same server, Northfield key | As P10 Ashby, seen from Jordan's side. |
 | P13 | Silent order watch | Planned | Queued | — | Not set in this pass; its task card in the Prototype Plan states an end state. |
 | P14 | Invoice Variance | Planned | Planned | — | Its spec gives the job; the ending is confirmed with the owner when T3.2 ranks it. |
 | P15 | Rule Replay | Planned | Planned | — | Same treatment as P14. |
-| ART | Agentic Retail Trade | Narrative | Not in registry | [Agentic Retail Trade](https://claude.ai/artifact/P6KTkzJp8rVcY5wNUvrcwS) | A narrative page with no job of its own. |
-| FILM | TG for Retail in Two Minutes | Narrative | Not in registry | [Film](https://claude.ai/artifact/RQbZQsmz433BjJCaEbU1BL) | No job of its own: each chapter takes its story from a prototype's task card (R41). |
-| P16 | Retailer catalogue connector | Connector | Not in registry | Not recorded | Not audited; T0.2 sets it. |
+| ART | Agentic Retail Trade | Narrative | Narrative | [Agentic Retail Trade](https://claude.ai/artifact/P6KTkzJp8rVcY5wNUvrcwS) | A narrative page with no job of its own. |
+| FILM | TG for Retail in Two Minutes | Narrative | Narrative | [Film](https://claude.ai/artifact/RQbZQsmz433BjJCaEbU1BL) | No job of its own: each chapter takes its story from a prototype's task card (R41). |
+| P16 | Retailer catalogue connector | Connector | Not audited | Not recorded | Not audited; T0.2 sets it. |
 
-The registry calls P11 a ship notice exception with an agent; the live screen has no agent. The registry is the drift item: T2.7 corrects it. The changes proposed for it, none applied, are in `docs/guide/registry-change-proposal.md`.
+The owner approved the registry change list on 13 November in two parts. Applied: every built prototype's ending, the names of P6, P7 and P11, and the rows the calendar does not carry (P10 Northfield, P12 as retired, ART, FILM, P16). Held: the registry still gives P11 a Test Agent and test anchors, while the live screen has no agent; that part of `docs/guide/registry-change-proposal.md` waits for the world to hold P11's held ship notice.
 
-The v8 section named in a row is where a builder reads that prototype's business problem (R40). An ending the screen does not yet reach is Phase 4 work for that prototype, not a reason to change the ending. The world already holds the ending records for P5, P9 and P11; P7's is missing (T1.8). The endings are owner decisions, so where the registry differs, as it does for P11, Inventory stands until T2.7 brings the registry into line.
+The v8 section named in a row is where a builder reads that prototype's business problem (R40). An ending the screen does not yet reach is Phase 4 work for that prototype, not a reason to change the ending. The world already holds the ending records for P5, P9 and P11; P7's is missing (T1.8). The endings are owner decisions, so where the registry differs, as it does on P11's agent, Inventory stands until T2.7 finishes.
 
 ## Coverage grid
 
@@ -360,7 +360,7 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T1.4 | P8 | Shipments without a receipt | Owner confirms CALLS 8 | `docs/build-log/CALLS.md` | Other suppliers' shipments with no receipt are P8's stuck value | Blocked |
 | T1.5 | All screens | Raw X12 panels generated from the world | — | `build/tg.db`; `npm run contract` | Every raw X12 panel matches a world document byte for byte, checked by the contract test | Open |
 | T1.6 | P14, P15 | World records for every Prototype specs decision row: a price variance under NF-7.11, and other suppliers' ship notices that NFD-1 would fail | — | Prototype specs: P14 and P15 | Each draft rule and each P14 decision row replays to at least one record, proposed first as a Phase 1 change list | Open |
-| T1.8 | P7 | World record for P7's ending: a Northfield scorecard published after the corrective work | — | P7's Inventory row; `registry/registry.json` | The owner approves the added record, the world holds that scorecard and a gate check reads it | Open |
+| T1.8 | P7 | World record for P7's ending: one Northfield scorecard published after the corrective plan falls due, added as a single record (owner agreed, 13 November) | — | P7's Inventory row; `registry/registry.json` | The owner approves the record's period and values, the world holds that scorecard and a gate check reads it | Open |
 | T1.7 | P2 | Supplier vetting in the world: one supplier vetted by a third party, one that confirms vetting itself, and a Northfield rule that activation waits for either | — | D31; Prototype specs, Supplier vetting in P2 | The owner approves the rule wording in the EDI Review Pack, the world holds both records, and a gate check reads them | Open |
 
 ### Phase 2 · Agent and customer-agent access
@@ -373,7 +373,7 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T2.4 | P5, P9 | Shelf Agent reads averages; Watch Agent reads NF-4.2 from the catalogue | — | R22 | `agents.thresholds_come_from_catalogue` covers both agents | Open |
 | T2.5 | P10 Ashby, P10 Northfield | Tool comparison includes Northfield's tools | — | Server reference, compared with published tool lists | The comparison lists both connections' tools against the published NetSuite and Salesforce schemas | Open |
 | T2.6 | P15 | Registry anchors hold the draft rule record | — | Prototype specs, P15 | `registry/registry.json` names NFD-1 under P15 and the registry check passes | Open |
-| T2.7 | Registry | Registry covers every inventory row, and the build fails when a doc or the server disagrees with it | T0.19; owner approves the registry change list | Inventory; `docs/guide/registry-change-proposal.md` | P10 Northfield, ART, FILM and P16 are in the registry, P12 is recorded there as retired, P11's name, job and agent verdict match its screen, every entry carries the ending Inventory gives, and a gate check reads it | Blocked |
+| T2.7 | Registry | Finish the registry: P11's job, agent verdict, decisions and anchors match its screen | Owner approves a Phase 1 list that adds P11's held ship notice | Inventory; `docs/guide/registry-change-proposal.md` | P11's entry has no agent, anchors a held and corrected live ship notice with its receiving advice, and the gate passes. Part 1 is done: endings, names and the other rows, CALLS 35 | Blocked |
 | T2.8 | Docs | Repo copies of the other docs become dated snapshots | — | Where each fact lives, role of every other doc | Each copy under docs/ carries its export date and the registry check no longer treats it as current | Open |
 | T2.9 | P10 Northfield | Live Northfield connector run | Owner asks for a live Northfield demo | `docs/phase2/golden-nf/` | One Northfield golden question is answered through the live URL with the Northfield key | Blocked |
 | T2.10 | Server | Test whether a published prototype can read the live server, from a private test page only, since the URL carries the token | — | Server reference, Hosting | A published test page calls one tool and shows its answer, or `docs/phase2/` records the error that blocks it | Open |
@@ -453,11 +453,11 @@ Each row is one prototype through the Phase 4 loop under Build flow. Before prop
 
 ## Proofs, open items and drift control
 
-The gate and smoke tests pass at commit 4f9e289. Four of the plan's proofs have not been built or run.
+The gate and smoke tests pass at commit 356e2c7. Four of the plan's proofs have not been built or run.
 
 | Proof | Command or location | Result |
 | --- | --- | --- |
-| World gate: invariants, catalogue equals the pack, thresholds from the catalogue | `npm run build` | 385 passed, 0 failed |
+| World gate: invariants, catalogue equals the pack, thresholds from the catalogue | `npm run build` | 386 passed, 0 failed |
 | Server smoke: both scopes, refusals, the shared deduction case | `npm run smoke` | 54 passed, 0 failed |
 | X12 validation | `npm run validate` | Passes, but its schemas were generated in this repo, so it does not meet the independent-schema test |
 | Contract test of on-screen values: it checks every number a screen shows and requires none | `npm run contract` | Last full report is `docs/phase0/contract-report-turn4.json`. The P7 claim was checked against a working copy, not the live page. |

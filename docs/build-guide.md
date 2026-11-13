@@ -67,9 +67,9 @@ Each rule has one home, here. Its ID is how `docs/guide/coverage.json` maps the 
 **Agents**
 
 - **R14** Each agent is named "[Name] Agent", such as Claim Agent, and acts for Priya or for Jordan, never for both.
-- **R15** Every agent screen has a manual option.
-- **R16** Before the agent starts, the user opens and edits its rules. The goal is fixed, the user's rules are editable and the guardrails are locked.
-- **R17** The agent visibly reads systems and compares records; it never reads as a rule being applied.
+- **R15** Every agent screen has a manual option, offered at the checkpoint and never as a second way in. The user can take the case over and work it by hand, change the proposal before approving it, or pause the agent and receive the same event as a plain task with no proposal.
+- **R16** An agent starts on a business event, never on a start button: a document arrives, a rule fails, a deadline nears or a case opens. A request the user makes in their own words also starts one; that route is shown through the customer's own assistant (R23), not on a prototype screen. Its rules are set once, in agent settings, by the person it acts for; the goal is fixed, the user's rules are editable and the guardrails are locked. A prototype opens on the worklist item or record with the agent's proposal ready, and the proposal links to the rules that applied. No run waits for a start click or a rules step (D54).
+- **R17** The agent's proposal shows what it read and which records it compared, as evidence the user can open; it never reads as a rule being applied, and the user never clicks through the reading on the agent's behalf.
 - **R18** The agent sends a task, document or message only with the user's approval or a standing policy the user set. Each send shows the authority, channel, target-system response and audit record.
 - **R19** The agent never changes an authoritative record without permitted authority.
 - **R20** User actions change what happens next. P8 is the one exception: it is read only and carries no budget approval.
@@ -224,6 +224,8 @@ The owner approved change items 1 to 14 on 12 November. Two are done, four are p
 | D50 | Part 2 of the registry change list is approved. P11's held and corrected ship notice goes onto the world's existing live NetSuite order, and P11's screen moves onto those records in Phase 4. Source: owner, 13 November. | — |
 | D51 | P7: the world wins over the screen on week 6 orders and the OTIF charge; the screen changes in T4.15 and the world does not. Source: owner, 13 November, answering open question 4. | — |
 | D52 | No partner record enters the timeline, and no candidate partner node is added to P5 or P11. Source: owner, 13 November, answering open question 5. | A partner documenting a route a prototype needs |
+| D53 | Phase 1 change list 1 (`docs/phase1/change-list-1.md`) is approved with its four recommended points: history of about three hundred Ashby orders, slower acknowledgments on P5's own lead orders only, golden questions D1, D2 and N1 reworded to the current quarter, and PO-104912 keeping its number. Source: owner, 13 November. | — |
+| D54 | Agents start on business events and the user meets finished work at a checkpoint; R15, R16 and R17 are rewritten to say so. The evidence and each built prototype's items are in `docs/phase4/agent-entry.md`. Source: owner, 13 November. | A demo that must show the agent being switched on |
 
 **Open questions for the owner**
 
@@ -376,11 +378,11 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T1.3 | World | Partner records in the timeline | — | Partner checks | Evidence: no partner record is added (D52); CALLS 54 | Done |
 | T1.4 | P8 | Shipments without a receipt | Owner confirms CALLS 8 | `docs/build-log/CALLS.md` | Other suppliers' shipments with no receipt are P8's stuck value | Blocked |
 | T1.5 | All screens | Raw X12 panels generated from the world | — | `build/tg.db`; `npm run contract` | Every raw X12 panel matches a world document byte for byte, checked by the contract test | Open |
-| T1.6 | P14, P15 | World records for every Prototype specs decision row: a price variance under NF-7.11, and other suppliers' ship notices that NFD-1 would fail | Owner approves Phase 1 change list 1 | Prototype specs: P14 and P15; `docs/phase1/change-list-1.md`, its section C | Each draft rule and each P14 decision row replays to at least one record, proposed first as a Phase 1 change list | Blocked |
+| T1.6 | P14, P15 | World records for every Prototype specs decision row: a price variance under NF-7.11, and other suppliers' ship notices that NFD-1 would fail | — | Prototype specs: P14 and P15; `docs/phase1/change-list-1.md`, its section C | Each draft rule and each P14 decision row replays to at least one record, proposed first as a Phase 1 change list | Open |
 | T1.8 | P7 | World record for a Northfield scorecard after the corrective work | — | P7's Inventory row | Evidence: not needed once P7's ending moved to shared figures, CALLS 38 | Done |
 | T1.7 | P2 | Supplier vetting in the world: one supplier vetted by a third party, one that confirms vetting itself, and a Northfield rule that activation waits for either | — | D31; Prototype specs, Supplier vetting in P2 | The owner approves the rule wording in the EDI Review Pack, the world holds both records, and a gate check reads them | Open |
-| T1.9 | P11 | A live NetSuite ship notice that breaks a Northfield rule, held and corrected before it leaves, with Northfield's matching receiving advice | Owner approves Phase 1 change list 1 | P11's Inventory row; `docs/phase0/P11-grid.md`; `docs/phase1/change-list-1.md`, its section A | The world holds the records, T2.7 can anchor them, and P11's golden questions can run | Blocked |
-| T1.10 | World | Demo-world history for the intelligence tests: other suppliers' deduction cases with Northfield and past acknowledgment and ship-notice timings (D3 in the intelligence handoff), scoped by D49 | Owner approves Phase 1 change list 1 | Project doc claude/Prototype-Intelligence-Handoff.md (project doc); `docs/phase1/change-list-1.md`, its section B | The records in section B are in the world, every figure the list marks stable is unchanged on a fresh run, and the reworded golden questions pass | Blocked |
+| T1.9 | P11 | A live NetSuite ship notice that breaks a Northfield rule, held and corrected before it leaves, with Northfield's matching receiving advice | — | P11's Inventory row; `docs/phase0/P11-grid.md`; `docs/phase1/change-list-1.md`, its section A | The world holds the records, T2.7 can anchor them, and P11's golden questions can run | Open |
+| T1.10 | World | Demo-world history for the intelligence tests: other suppliers' deduction cases with Northfield and past acknowledgment and ship-notice timings (D3 in the intelligence handoff), scoped by D49 | — | Project doc claude/Prototype-Intelligence-Handoff.md (project doc); `docs/phase1/change-list-1.md`, its section B | The records in section B are in the world, every figure the list marks stable is unchanged on a fresh run, and the reworded golden questions pass | Open |
 
 ### Phase 2 · Agent and customer-agent access
 
@@ -410,19 +412,19 @@ New prototypes come from the Prototype specs tab. Mining Northstar for them was 
 
 ### Phase 4 · Prototype changes, one at a time
 
-Each row is one prototype through the Phase 4 loop under Build flow. Before proposing its change list, read Rules R05 to R22, R41 and R42, the prototype's Inventory row, its business problem in v8 (R40), its source, and its task card or portfolio row in the Prototype Plan. Every change list carries a click map: each click, what it changes on screen and the beat it serves. A row is Done when its prototype has an approved change list, a walk with no script errors and a passing contract test, and the call is logged.
+Each row is one prototype through the Phase 4 loop under Build flow. Before proposing its change list, read Rules R05 to R22, R41 and R42, the agent-entry items for that prototype (D54), the prototype's Inventory row, its business problem in v8 (R40), its source, and its task card or portfolio row in the Prototype Plan. Every change list carries a click map: each click, what it changes on screen and the beat it serves. A row is Done when its prototype has an approved change list, a walk with no script errors and a passing contract test, and the call is logged.
 
 | ID | Prototype | Task | Depends on | Read first | Done when | Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | T4.10 | P1 | Long-tail | T0.10 | P1's Inventory row; Decisions item 3 | Phase 4 loop complete | Open |
 | T4.11 | P2 | Programme Readiness, with supplier vetting | T0.11, T1.7 | D31; Prototype specs, Supplier vetting in P2 | Loop complete, and vetting shows as a third party's result or the supplier's confirmation | Open |
 | T4.12 | P4 | Marketplace to Wholesale | T0.12 | Decisions item 3 | Phase 4 loop complete | Open |
-| T4.13 | P5 | Scout Shipment Watch | T0.13, T2.4 | Decisions item 13; the working copy is not in the repo, so rebuild the fix | Phase 4 loop complete | Open |
-| T4.14 | P6 | Northfield Charge Resolution | T0.14 | Decisions item 4; D28 | Phase 4 loop complete | Open |
-| T4.15 | P7 | Northfield Performance Improvement | T0.15, T1.2 | Decisions item 5; D51 | Phase 4 loop complete, with the world's week 6 orders and charge on screen and P7's contract check passing against the live page | Open |
+| T4.13 | P5 | Scout Shipment Watch | T0.13, T2.4 | Decisions item 13; the working copy is not in the repo, so rebuild the fix; `docs/phase4/agent-entry.md`, items AE-P5 | Phase 4 loop complete | Open |
+| T4.14 | P6 | Northfield Charge Resolution | T0.14 | Decisions item 4; D28; `docs/phase4/agent-entry.md`, items AE-P6 | Phase 4 loop complete | Open |
+| T4.15 | P7 | Northfield Performance Improvement | T0.15, T1.2 | Decisions item 5; D51; `docs/phase4/agent-entry.md`, items AE-P7 | Phase 4 loop complete, with the world's week 6 orders and charge on screen and P7's contract check passing against the live page | Open |
 | T4.16 | P8 | Money in Motion, view only | T0.16, T1.4 | R20 | Phase 4 loop complete | Open |
-| T4.17 | P9 | Shelf Recovery | T0.17, T2.4 | D22 | Phase 4 loop complete | Open |
-| T4.18 | P11 | NetSuite Chargeback Avoidance | T0.18 | Decisions item 7 | Phase 4 loop complete | Open |
+| T4.17 | P9 | Shelf Recovery | T0.17, T2.4 | D22; `docs/phase4/agent-entry.md`, items AE-P9 | Phase 4 loop complete | Open |
+| T4.18 | P11 | NetSuite Chargeback Avoidance | T0.18 | Decisions item 7; `docs/phase4/agent-entry.md`, items AE-P11 | Phase 4 loop complete | Open |
 | T4.19 | P12 | ERP-native Activation | T0.19 | Decisions item 6 | Evidence: no loop needed after retirement, CALLS 32 | Done |
 | T4.2 | Portfolio | Entry page built from the story calendar | T4.10 | The Prototype Plan's story calendar | The owner approves it and every link on it opens a live prototype | Open |
 | T4.3 | FILM | Portfolio film, after the owner approves a storyboard | T0.7, T4.5 | FILM link in Inventory; R41 | Every chapter takes its problem, turn and result from its prototype's task card, any number shown passes the contract test, and a viewer states each chapter's problem and outcome | Open |
@@ -577,6 +579,7 @@ One held invoice can trace to a short receipt, a price beyond tolerance, a total
 
 - **Seen by:** Jordan Ellis, Northfield accounts payable.
 - **Agent:** Match Agent, on Northfield's connection.
+- **Entry:** Match Agent runs when an invoice is held; Jordan opens the held invoice with its proposal ready (R16).
 - **Payment:** release stays in Northfield accounts payable.
 - **Tools:** `three_way_match`, `supplier_document_trail`, `get_document`, `request_change`.
 - **Anchor:** INV-7731 and its corrected invoice, as `registry/registry.json` records.

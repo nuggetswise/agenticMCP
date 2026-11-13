@@ -1,5 +1,7 @@
 # Registry change list, proposed and not applied
 
+Status, 13 November 2026: part 1 is applied (CALLS 35). Part 2, the P11 section, is approved (Build Guide D50) and is applied under T2.7 after T1.9 adds P11's records (`docs/phase1/change-list-1.md`, section A).
+
 Proposed on 13 November 2026 from the owner's answers recorded in the Build Guide's Inventory (Job, and where it ends). Nothing here has been applied to `registry/registry.json`. Applying it changes repo behaviour (the gate reads the registry), so it needs the owner's approval and then runs as T2.7. Each line is RETAIN, CORRECT, DELETE or ADD.
 
 ## Every entry

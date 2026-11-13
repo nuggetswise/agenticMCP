@@ -191,6 +191,7 @@ for (const p of REG.prototypes) {
     ok(`registry ${p.id} anchor ${an}`, hit > 0); }
   for (const t of p.acceptance) ok(`registry ${p.id} acceptance ${t} ran and passed`, results[t] === true, results[t] === undefined ? 'no such test' : 'failed');
 }
+eq('registry.built_prototypes_state_their_ending', REG.prototypes.filter((p) => p.status === 'Built' && !p.ends_at).map((p) => p.id), []);
 // Doc snapshots (docs/*.md, exported from the three working docs) must agree with the registry and the server.
 const DOCS = { plan: 'prototype-plan.md', server: 'database-and-server-plan.md', strategy: 'agent-and-mcp-strategy.md' };
 const docDir = join(ROOT, 'docs');

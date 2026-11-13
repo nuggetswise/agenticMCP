@@ -1,5 +1,5 @@
 {
-  "version": "2026-11-12",
+  "version": "2026-11-13",
   "world": {
     "quarter": "2026-09-27 to 2026-12-26",
     "settlement_tail": "2027-01-06",
@@ -49,7 +49,8 @@
       ],
       "capability_status": "planned",
       "owner": "Unassigned",
-      "tools_northfield": []
+      "tools_northfield": [],
+      "ends_at": "The Supplier ERP sales order and the order acknowledgment (855) to Northfield"
     },
     {
       "id": "P2",
@@ -79,7 +80,8 @@
       ],
       "capability_status": "planned",
       "owner": "Unassigned",
-      "tools_northfield": []
+      "tools_northfield": [],
+      "ends_at": "Northfield's programme approval and the activation record"
     },
     {
       "id": "P4",
@@ -112,7 +114,8 @@
       ],
       "capability_status": "planned",
       "owner": "Unassigned",
-      "tools_northfield": []
+      "tools_northfield": [],
+      "ends_at": "The first Wholesale order as a sales order in Supplier ERP"
     },
     {
       "id": "P5",
@@ -188,11 +191,12 @@
       ],
       "capability_status": "planned",
       "owner": "Unassigned",
-      "tools_northfield": []
+      "tools_northfield": [],
+      "ends_at": "Northfield's receiving advice matching the corrected shipment"
     },
     {
       "id": "P6",
-      "name": "P6 Charge Resolution",
+      "name": "P6 Northfield Charge Resolution",
       "status": "Built",
       "calendar": "P6",
       "seen_by": "Priya Raman, then Jordan Ellis",
@@ -268,11 +272,12 @@
         "decide_charge",
         "get_document",
         "get_access_log"
-      ]
+      ],
+      "ends_at": "Jordan Ellis's decision and, where the charge is reversed, the repayment matched in Supplier ERP"
     },
     {
       "id": "P7",
-      "name": "P7 Performance Improvement",
+      "name": "P7 Northfield Performance Improvement",
       "status": "Built",
       "calendar": "P7",
       "seen_by": "Priya Raman, then Jordan Ellis",
@@ -317,7 +322,8 @@
       "owner": "Unassigned",
       "tools_northfield": [
         "supplier_scorecard"
-      ]
+      ],
+      "ends_at": "Northfield's next scorecard on the same definition"
     },
     {
       "id": "P8",
@@ -354,7 +360,8 @@
         "supplier_document_trail",
         "get_document",
         "run_readonly_sql"
-      ]
+      ],
+      "ends_at": "The view itself; no record is created"
     },
     {
       "id": "P9",
@@ -405,11 +412,12 @@
       ],
       "capability_status": "planned",
       "owner": "Unassigned",
-      "tools_northfield": []
+      "tools_northfield": [],
+      "ends_at": "The next store activity report showing the shelf refilled"
     },
     {
       "id": "P11",
-      "name": "P11 NetSuite Ship Notice Exception",
+      "name": "P11 NetSuite Chargeback Avoidance",
       "status": "Built",
       "calendar": "P11",
       "seen_by": "Priya Raman",
@@ -455,7 +463,8 @@
       ],
       "capability_status": "planned",
       "owner": "Unassigned",
-      "tools_northfield": []
+      "tools_northfield": [],
+      "ends_at": "Northfield's receiving advice matching the corrected ship notice"
     },
     {
       "id": "P10",
@@ -658,6 +667,35 @@
       ],
       "capability_status": "planned",
       "owner": "Unassigned"
+    }
+  ],
+  "other_inventory": [
+    {
+      "id": "P10 Northfield",
+      "name": "Northfield scope on the P10 server",
+      "status": "Live"
+    },
+    {
+      "id": "P12",
+      "name": "P12 ERP-native Activation",
+      "status": "Retired",
+      "retired": "2026-11-13",
+      "reason": "Owner decision: P1, P2 and P11 show its ground"
+    },
+    {
+      "id": "ART",
+      "name": "Agentic Retail Trade",
+      "status": "Narrative"
+    },
+    {
+      "id": "FILM",
+      "name": "TG for Retail in Two Minutes",
+      "status": "Narrative"
+    },
+    {
+      "id": "P16",
+      "name": "Retailer catalogue connector",
+      "status": "Not audited"
     }
   ]
 }

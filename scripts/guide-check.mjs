@@ -55,6 +55,8 @@ const tables = (s) => { const out = []; let cur = null; for (const l of s.split(
   const invIds = inv.rows.map((r) => r[0]); const regIdOf = (x) => x.split(' ')[0]; const gridIds = grid.rows.flatMap((r) => r[0].split(/,\s*/));
   for (const id of reg) if (!invIds.map(regIdOf).includes(id)) p.push(`registry ${id} missing from Inventory`);
   for (const id of invIds) if (!gridIds.includes(id)) p.push(`inventory ${id} missing from grid`);
+  const other = Object.fromEntries((JSON.parse(readFileSync(join(ROOT, 'registry/registry.json'), 'utf8')).other_inventory || []).map((x) => [x.id, x.status]));
+  for (const r of inv.rows) { if (!reg.includes(regIdOf(r[0])) && !(r[0] in other)) p.push(`inventory ${r[0]} is not in the registry`); if (r[0] in other && other[r[0]] !== r[3]) p.push(`${r[0]} registry status ${other[r[0]]}, guide ${r[3]}`); }
   const words = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
   const stated = section('Inventory').match(/has (\w+) items/); if (!stated || words.indexOf(stated[1]) !== inv.rows.length) p.push(`Inventory says ${stated && stated[1]} items, table has ${inv.rows.length}`);
   const allowed = new Set(['Done', 'Partly', 'Not done', 'N/A']);

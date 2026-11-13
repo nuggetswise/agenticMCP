@@ -1,0 +1,78 @@
+{
+ "file": "/home/claude/agenticmcp/docs/build-guide.md",
+ "ran_at_head": "f9c8276",
+ "results": [
+  {
+   "name": "as_of_commit_current",
+   "ok": true,
+   "problems": [],
+   "info": "f9c8276"
+  },
+  {
+   "name": "commits_exist",
+   "ok": true,
+   "problems": []
+  },
+  {
+   "name": "paths_scripts_gate_checks_exist",
+   "ok": true,
+   "problems": []
+  },
+  {
+   "name": "rule_ids_in_catalogue",
+   "ok": true,
+   "problems": []
+  },
+  {
+   "name": "calls_refs_exist",
+   "ok": true,
+   "problems": [],
+   "info": "26 calls logged"
+  },
+  {
+   "name": "inventory_and_grid_complete",
+   "ok": true,
+   "problems": [],
+   "info": "18 inventory rows, 16 grid rows"
+  },
+  {
+   "name": "no_copied_world_values",
+   "ok": true,
+   "problems": []
+  },
+  {
+   "name": "proof_counts_current",
+   "ok": true,
+   "problems": []
+  },
+  {
+   "name": "artifact_links_verified",
+   "ok": true,
+   "problems": []
+  },
+  {
+   "name": "no_repeated_passages",
+   "ok": true,
+   "problems": []
+  },
+  {
+   "name": "overlap_with_replaced_docs",
+   "ok": true,
+   "problems": [],
+   "info": {
+    "docs/prototype-plan.md": {
+     "shared_8word_passages": 0,
+     "sample": []
+    },
+    "docs/database-and-server-plan.md": {
+     "shared_8word_passages": 0,
+     "sample": []
+    },
+    "docs/agent-and-mcp-strategy.md": {
+     "shared_8word_passages": 0,
+     "sample": []
+    }
+   }
+  }
+ ]
+}

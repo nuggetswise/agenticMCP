@@ -1,0 +1,9 @@
+money => FAIL no_copied_world_values: $3,356; 3,356
+stale_proof => FAIL proof_counts_current: npm run build: guide 384/0, run 385/0
+missing_registry_row => FAIL inventory_and_grid_complete: registry P14 missing from Inventory; Inventory says eighteen items, table has 17  [17 inventory rows, 16 g
+repeat => FAIL no_repeated_passages: a result that exists only in a scratchpad; result that exists only in a scratchpad does; that exists only in a sc
+fake_commit => FAIL commits_exist: abc1234
+bad_calls => FAIL calls_refs_exist: CALLS 10 to 31  [25 calls logged]
+bad_rule => FAIL rule_ids_in_catalogue: NF-4.99
+blank_cell => FAIL inventory_and_grid_complete: grid CAT A1: ""  [18 inventory rows, 16 grid rows]
+bad_status => FAIL inventory_and_grid_complete: P14 registry status Planned, guide Built  [18 inventory rows, 16 grid rows]

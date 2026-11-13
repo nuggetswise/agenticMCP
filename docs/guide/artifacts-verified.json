@@ -1,0 +1,28 @@
+{
+  "checked": "2026-11-12",
+  "method": "claude-artifacts get_artifact for each claude.ai link; curl /healthz for the server",
+  "artifacts": {
+    "N5Ly5kZWYqop1urPyH7WDp": { "title": "P1 Long-tail", "version": "1794519709-7d98" },
+    "CM4B561qshaXjHkzWNtdi8": { "title": "P2 Programme Readiness", "version": "1794507902-ed62" },
+    "FLWwR1dFDG4tposZcw2Q85": { "title": "P4 Marketplace to Wholesale", "version": "1794519714-b55e" },
+    "2Erv5An571ZHnR3WoUY5sf": { "title": "P5 Scout Shipment Watch", "version": "1794507904-ed4a" },
+    "3r1Xy87Vk4rDHDYSaKcQxo": { "title": "P 6 Northfield Charge Resolution", "version": "1794507945-ba30" },
+    "9F1PiXsrUJ54AJq1dSJMbu": { "title": "P7 Northfield Performance Improvement", "version": "1794507905-7183" },
+    "RB5p54UuQ9GFGDPxhGzU3a": { "title": "Money in Motion", "version": "1794451717-925d" },
+    "3D2tsVjwvnmMtPEoRKSpVe": { "title": "P9 Shelf Recovery", "version": "1794451627-6daf" },
+    "AhjjX49TBdZ7qbMiHkZpnx": { "title": "NetSuite Chargeback Avoidance", "version": "1794519728-45a8" },
+    "NKh7WnRwiPQSqa7vz61zYj": { "title": "ERP-native Activation", "version": "1794519717-65cb" },
+    "P6KTkzJp8rVcY5wNUvrcwS": { "title": "Agentic Retail Trade", "version": "1793932378-cb07" },
+    "RQbZQsmz433BjJCaEbU1BL": { "title": "TG for Retail in Two Minutes", "version": "1794328621-e324" },
+    "8BgJyjrA6nYLF32n9F9pxd": { "title": "EDI Review Pack", "version": "1794514253-b214" },
+    "8P9x92mrPE2heyeUTLubby": { "title": "Retail/CPG Partner Map", "version": "1793923454-a126" },
+    "XgiKckfJgecFKwjg1ywRrG": { "title": "Retail Direction: Now, Next, Later", "version": "1794327966-2f8c" },
+    "Ux8ZjNd7BTj6mdH7e5rJ2S": { "title": "SPS MAX and TrueCommerce AI: Threat Ranking (gallery title of the Prototype Plan doc)", "version": "1794449438-8fe5" },
+    "BH5yvtjF5thUSJhUjrSBun": { "title": "TG for Retail · Shared Demo Database and MCP Server Plan", "version": "1794494730-e4da" },
+    "VXoARJoJoqyv4VmGRUjFtz": { "title": "TG for Retail · Agent and MCP strategy for prototypes", "version": "1794514468-5ac5" },
+    "PFa9A3bMAn8aZUiNKFRQae": { "title": "SPS MAX and TrueCommerce AI: Threat Ranking", "version": "1794515337-ce97" },
+    "LC3ehzTGLV8yNJ1JQRkVN9": { "title": "TG-Retail-Single-Thread-Prompt.md", "version": "1794511824-2b39" },
+    "5fb2Z4j5jAZeTdMpjkQSvJ": { "title": "TG for Retail · Build Guide", "version": "this doc" }
+  },
+  "server": { "url": "https://tg-retail-demo-mcp.onrender.com", "healthz": { "status": "ok", "version": "0.2.0", "writes": false } }
+}

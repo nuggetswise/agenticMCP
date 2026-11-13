@@ -422,44 +422,32 @@
       "calendar": "P11",
       "seen_by": "Priya Raman",
       "agency": {
-        "verdict": "agent",
-        "agent": "Test Agent",
-        "job": "trade_test",
-        "reason": "The same failed test is a data defect or a mapping defect, and the fix lands on a different record",
-        "would_reverse": "Test failures that always come from the item setup"
+        "verdict": "rule-based",
+        "agent": null,
+        "job": null,
+        "reason": "The check is a rule: a live ship notice either meets Northfield's rules or is held, and each failure has one owner in NetSuite",
+        "would_reverse": "A failure whose cause could sit in more than one record, so the first move depends on which is wrong"
       },
       "customer_agent": {
-        "supplier": "Not applicable during testing: no live trade to ask about",
-        "retailer": "Not applicable"
+        "supplier": "Which live ship notices were held before sending, on which rules, and whether Northfield received the load as the corrected notice describes it",
+        "retailer": "Shared documents only: the corrected ship notice and the receiving advice"
       },
-      "erp_placement": "The failure, the diagnosis and the approval sit on the NetSuite item fulfillment",
-      "decisions": [
-        {
-          "record": "ASN-78214",
-          "as_of": "2026-11-23T10:20:00-05:00",
-          "next_step": "propose_netsuite_item_change"
-        },
-        {
-          "record": "ASN-78231",
-          "as_of": "2026-11-24T09:40:00-05:00",
-          "next_step": "propose_map_correction"
-        },
-        {
-          "record": "ASN-78214",
-          "as_of": "2026-11-23T11:00:00-05:00",
-          "next_step": "request_activation"
-        }
-      ],
+      "erp_placement": "The hold, each correction and the release sit on the NetSuite item fulfillment",
+      "decisions": [],
       "tools": [
         "lookup_retailer_rules",
-        "recommend_next_step",
+        "get_order",
+        "get_document",
         "release_ship_notice"
       ],
       "anchors": [
-        "event:test.ship_notice"
+        "order:PO-104912",
+        "document:ASN-78260",
+        "document:RCV-DC2-78260",
+        "event:tg.hold"
       ],
       "acceptance": [
-        "agent.trade_test"
+        "p11.held_then_matched"
       ],
       "capability_status": "planned",
       "owner": "Unassigned",

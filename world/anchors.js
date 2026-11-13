@@ -163,6 +163,25 @@ export function anchors(L, W) {
     t(day('2026-11-24', '11:45'), 'test.ship_notice', { po: 'PO-104731', document: 'ASN-78231', item_fulfillment: 'IF-55432', attempt: 2, item: 'AHP-8830', pack_sent: 6, pack_required: 6, netsuite_item_pack: 6, map_field: 'Item pack quantity', result: 'Passed', delivered_to_northfield: true });
     t(day('2026-11-24', '15:00'), 'programme.activated', { system: 'Northfield supplier programme', party: 'NORTHFIELD', programme: 'Wholesale, item AHP-8820', approved_by: 'Jordan Ellis', tests: 'Passed' });
     t(day('2026-11-30', '10:15'), 'erp.first_live_order', { po: 'PO-104912', system: 'Supplier ERP (NetSuite)', sales_order: 'SO-108955', item_fulfillment: 'IF-55498', document: 'ASN-78260', item: 'AHP-8820', pack_sent: 6, pack_required: 6, result: 'Delivered; receiving advice matched' });
+    // The first live order from NetSuite (P11): the ship notice is checked before it leaves, held on two Northfield rules,
+    // corrected on the item fulfillment by the two owners, released by Priya as version 2, and received as described.
+    L.aside(() => {
+    const O = A.p11 = { po: 'PO-104912', supplier: 'ASHBY', shipTo: 'DC2', site: 'ASH-WH1', stream: 'buyer', requested: '2026-12-01', poDate: iso(day('2026-11-26', '09:30')), lines: [{ line: 1, sku: 'AHP-8820', qty: 48, price: ITEM['AHP-8820'].case_price }] };
+    D.po(L, O, day('2026-11-26', '09:30')); D.ack(L, O, day('2026-11-26', '10:40'));
+    const fix = { po: O.po, system: 'Supplier ERP (NetSuite)', item_fulfillment: 'IF-55498', document: 'ASN-78260' };
+    t(day('2026-11-30', '10:20'), 'tg.hold', { ...fix, system: 'Trading Grid', version: 1, checked_by: 'API call from NetSuite before sending', sent_to_northfield: false, findings: [
+      { rule: 'NF-4.3', finding: '1 of 48 cartons has no SSCC in the ship notice', owner: 'Warehouse operations', exposure_estimate: 150 },
+      { rule: 'NF-4.7', finding: 'Ship-to DC 4 on the item fulfillment against DC 2 on the current PO', owner: 'Master-data operations', exposure_estimate: 150 }] });
+    t(day('2026-11-30', '10:45'), 'erp.correction', { ...fix, rule: 'NF-4.3', owner: 'Warehouse operations', change: 'Carton labelled and scanned; 48 of 48 cartons carry an SSCC' });
+    t(day('2026-11-30', '11:05'), 'erp.correction', { ...fix, rule: 'NF-4.7', owner: 'Master-data operations', change: 'Ship-to cross-reference corrected from DC 4 to DC 2' });
+    t(day('2026-11-30', '11:20'), 'approval', { ...fix, system: 'Trading Grid', approved_by: 'Priya Raman', what: 'Release ship notice ASN-78260 version 2 after both failures were fixed', rule: 'AP-1.3', version: 2 });
+    const dep = day('2026-11-30', '15:00');
+    ev(L, dep, 'wms.departure_scan', O.po, 'Supplier ERP (NetSuite)', 'ASHBY', 'API', { shipment: 'IF-55498', carrier: 'Lakeline Freight' });
+    D.asn(L, O, addH(dep, 0.2), { ref: 'ASN-78260', shippedAt: dep, deliveryDate: '2026-12-01', cartons: cartonsFor(W, 3501, [[1, 48]]) });
+    D.invoice(L, O, addH(dep, 1), { ref: 'INV-78260' });
+    D.receipt(L, O, day('2026-12-01', '07:30'), { ref: 'RCV-DC2-78260', asnRef: 'ASN-78260', qty: { 1: 48 } });
+    W.pay.push({ O, invRef: 'INV-78260', amount: 3456, at: day('2026-12-30', '08:00') });
+    });
   }
 
   // ---------- Week 11: six fulfilment risks before the truck leaves (P5), Tuesday 8 December 17:12 ----------

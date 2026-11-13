@@ -26,7 +26,7 @@ export const CALENDAR = (A) => [
   { id: 'P8', week: 7, moment: 'Open-order value from purchase order to payment', seen_by: 'Jordan Ellis', prototype: 'P8 Money in Motion', as_of: '2026-11-09T04:59:00.000Z', anchor: '340 open orders' },
   { id: 'P10', week: 8, moment: 'Four questions and the six-PO email', seen_by: 'Priya Raman', prototype: 'P10 Trading Grid in the customer’s AI', as_of: '2026-11-17T16:00:00.000Z', anchor: 'NR-46101 to NR-46156' },
   { id: 'P13', week: 8, moment: 'Silent order watch', seen_by: 'Priya Raman', prototype: 'P13 Silent order watch', as_of: '2026-11-18T14:00:00.000Z', anchor: 'NR-46210 to NR-46231' },
-  { id: 'P11', week: 9, moment: 'A test ship notice fails the pack rule', seen_by: 'Priya Raman', prototype: 'NetSuite Ship Notice Exception', as_of: '2026-11-23T15:10:00.000Z', anchor: 'ASN-78214' },
+  { id: 'P11', week: 10, moment: 'A live ship notice held in NetSuite and corrected before it leaves', seen_by: 'Priya Raman', prototype: 'P11 NetSuite Chargeback Avoidance', as_of: '2026-11-30T15:25:00.000Z', anchor: 'ASN-78260' },
   { id: 'P6', week: 10, moment: 'Deductions and an invoice exception', seen_by: 'Priya Raman, then Jordan Ellis', prototype: 'P6 Charge Resolution', as_of: '2026-12-01T14:00:00.000Z', anchor: 'NR-450118, NR-450390, NR-450415' },
   { id: 'P5', week: 11, moment: 'Six fulfilment risks before departure', seen_by: 'Priya Raman', prototype: 'P5 Scout Shipment Watch', as_of: '2026-12-08T22:12:00.000Z', anchor: 'NR-460207 to NR-460274' },
   { id: 'P14', week: 7, moment: 'An invoice that does not match its order and receipt', seen_by: 'Jordan Ellis', prototype: 'P14 Invoice Variance', as_of: '2026-11-10T14:00:00.000Z', anchor: 'INV-7731' },

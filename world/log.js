@@ -21,6 +21,10 @@ function segPos(text, tag) { const segs = text.split('~\n'); const st = segs.fin
 export class Log {
   constructor() { this.docs = []; this.events = []; this.seq = 0; }
 
+  /** Runs `fn` so the documents it adds take their order numbers from a separate range. Records added to the world
+   * later (Phase 1 additions) must not shift the numbering, and with it the acknowledgment delay, of the records already there. */
+  aside(fn) { const seq = this.seq, from = this.docs.length; this.sideSeq ??= 5000000; fn(); for (const x of this.docs.slice(from)) { x._n = this.sideSeq++; x.ackDelay = 2 + (x._n % 8); } this.seq = seq; }
+
   /** Adds a business document. `from` and `to` are party ids; the rest is what the X12 writer needs. */
   doc(d) { const x = { ...d, at: iso(d.at), _n: this.seq++ }; x.ackDelay = 2 + (x._n % 8); this.docs.push(x); return x; }
 

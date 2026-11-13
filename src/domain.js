@@ -26,7 +26,8 @@ export const chargeOf = (db, code, cartons = 0) => { const r = db.prepare('SELEC
 export const rule = (db, id) => { if (!id) return null; const r = db.prepare('SELECT id, owner, statement, source, basis FROM rules WHERE id = ?').get(id); return r ? { ...r } : null; };
 const nameOf = (db, id) => db.prepare('SELECT name FROM parties WHERE id = ?').get(id)?.name || id;
 const docRow = (db, d) => ({ reference: d.reference, document: `${d.name} (${d.doc_type})`, sent: fmtET(d.sent_at), from: nameOf(db, d.sender_id), to: nameOf(db, d.receiver_id), status: d.status, link: `document/${encodeURIComponent(d.doc_id)}` });
-export const normPo = (raw) => String(raw).trim().toUpperCase().replace(/^PO\s*/, '').replace(/^(\d)/, 'NR-$1');
+// A NetSuite order keeps its own number (PO-104912); every other Northfield order is NR-.
+export const normPo = (raw) => { const s = String(raw).trim().toUpperCase(); return /^PO-\d+$/.test(s) ? s : s.replace(/^PO\s*/, '').replace(/^(\d)/, 'NR-$1'); };
 
 export function ownsOrder(db, po) { const o = db.prepare('SELECT supplier_id FROM orders WHERE po = ?').get(po); return !o ? 'missing' : o.supplier_id === COMPANY ? 'own' : 'other'; }
 

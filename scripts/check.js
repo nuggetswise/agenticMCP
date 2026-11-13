@@ -137,6 +137,15 @@ eq('p1.order_value', n("SELECT count(*) n FROM invoices WHERE invoice = 'INV-770
 ok('p1.paid_before_money_in_motion', db.prepare("SELECT paid_at FROM remittance_items WHERE invoice = 'INV-7702'").get()?.paid_at < '2026-11-09');
 ok('p4.first_wholesale_order', db.prepare('SELECT programme FROM orders WHERE po = ?').get(facts.anchor.p4)?.programme === 'Wholesale' || !!db.prepare('SELECT 1 FROM orders WHERE po = ?').get(facts.anchor.p4));
 ok('p2.programme_events', n("SELECT count(*) n FROM events WHERE kind LIKE 'programme.%'") >= 5);
+{ // P11: the live NetSuite ship notice was held on two rules before it left, each fixed by its owner, released by Priya, and received as version 2 describes.
+  const J = (e) => JSON.parse(e.data); const evs = db.prepare("SELECT * FROM events WHERE po = 'PO-104912' ORDER BY at").all();
+  const hold = evs.find((e) => e.kind === 'tg.hold'), fixes = evs.filter((e) => e.kind === 'erp.correction'), rel = evs.find((e) => e.kind === 'approval');
+  const asn = db.prepare("SELECT * FROM documents WHERE doc_type = '856' AND po = 'PO-104912'").all(); const sh = db.prepare("SELECT * FROM shipments WHERE po = 'PO-104912'").get();
+  const rc = db.prepare("SELECT sum(qty) q, sum(short) s, min(received_at) at FROM receipts WHERE po = 'PO-104912'").get(); const ct = n("SELECT count(*) n FROM cartons WHERE po = 'PO-104912' AND received = 1");
+  results['p11.held_then_matched'] = !!hold && J(hold).sent_to_northfield === false && J(hold).findings.map((f) => f.rule).join() === 'NF-4.3,NF-4.7' && fixes.length === 2 && fixes.every((f) => f.at > hold.at) && !!rel && J(rel).approved_by === 'Priya Raman' && rel.at > fixes[1].at
+    && asn.length === 1 && asn[0].sent_at > rel.at && asn[0].status === 'Delivered' && (Date.parse(asn[0].sent_at) - Date.parse(sh.shipped_at)) / 60000 <= 60 && sh.ship_to === 'DC2' && rc.q === sh.cartons && rc.s === 0 && ct === sh.cartons && rc.at > asn[0].sent_at
+    && n("SELECT count(*) n FROM errors e JOIN documents d ON d.doc_id = e.doc_id WHERE d.po = 'PO-104912'") === 0;
+  ok('p11.held_then_matched', results['p11.held_then_matched']); }
 ok('p9.store_activity', n("SELECT count(*) n FROM store_activity WHERE store = '114' AND on_hand = 0") === 1);
 { const w = "> '2026-12-08T22:12:00.000Z' AND %s <= '2026-12-10T22:12:00.000Z'"; const dep = "json_extract(e.data, '$.planned_departure')";
   // Planned departures from Kinross in the 48 hours after Tuesday 8 December 17:12: Supplier ERP plans, plus buyer-order shipments Kinross loads without a replenishment plan.

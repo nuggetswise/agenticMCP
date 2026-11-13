@@ -1,7 +1,7 @@
 import { chromium } from '/opt/npm-tools/node_modules/playwright/index.mjs';
 import fs from 'fs';
 const b = await chromium.launch({ executablePath:'/usr/bin/google-chrome', args:['--no-sandbox'] });
-for (const id of ['P1','P2','P4','P5','P6','P7','P8','P9','NS','ERP']) {
+for (const id of ['P1','P2','P4','P5','P6','P7','P8','P9','P11','P12']) {
   const p = await (await b.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'})).newPage();
   await p.goto(`file:///home/claude/work/src/${id}.html`); await p.waitForTimeout(1200);
   const sels=['[data-view=rules]','#b-rules','#btnRules','button:has-text("Rules")','summary:has-text("Rules")'];

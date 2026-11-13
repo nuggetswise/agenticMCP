@@ -204,7 +204,7 @@ if (existsSync(docDir) && readdirSync(docDir).length) {
   for (const t of serverTools) ok(`docs.server names tool ${t}`, doc.server.includes(t));
   eq('docs.server names no tool the server lacks', [...new Set(doc.server.match(/\b[a-z]+(?:_[a-z]+){1,4}\b/g) || [])].filter((w) => /^(get|list|explain|check|lookup|recommend|request|compare|orders|edi|run)_/.test(w) && !serverTools.has(w) && !nfTools.has(w) && !/^(get|run)_(started|time)$/.test(w)), []);
   for (const p of REG.prototypes) {
-    ok(`docs.plan names ${p.id}`, doc.plan.includes(p.name.split(' ')[0] === 'NetSuite' ? 'NetSuite' : p.id));
+    ok(`docs.plan names ${p.id}`, doc.plan.includes(p.name.includes('NetSuite') ? 'NetSuite' : p.id));
     if (p.agency.agent) { ok(`docs.strategy names ${p.agency.agent}`, doc.strategy.includes(p.agency.agent));
       for (const d of p.decisions) ok(`docs.strategy cites ${p.id} record ${d.record} → ${d.next_step}`, doc.strategy.includes(d.record) && doc.strategy.includes(d.next_step)); }
   }

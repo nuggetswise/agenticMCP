@@ -408,10 +408,10 @@
       "tools_northfield": []
     },
     {
-      "id": "NS",
-      "name": "NetSuite Ship Notice Exception",
+      "id": "P11",
+      "name": "P11 NetSuite Ship Notice Exception",
       "status": "Built",
-      "calendar": "NS",
+      "calendar": "P11",
       "seen_by": "Priya Raman",
       "agency": {
         "verdict": "agent",

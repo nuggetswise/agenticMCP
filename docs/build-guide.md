@@ -4,7 +4,7 @@ Working copy: `docs/build-guide.md` in the repo. Reading copy: the Claude doc at
 
 ## How to use this guide
 
-This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 6bda779.
+This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 24b2c5c.
 
 - **Start here:** follow R39. It picks your next task from the Tasks tables and says what to read first. For one prototype, run `node scripts/guide-pack.mjs P5` with its ID: it prints that prototype's job, ending, v8 section, the rules that apply, its agent, tools and anchors, and its tasks in order, so you read one page and the prototype's source.
 - **Authority, highest first:**
@@ -219,6 +219,7 @@ The owner approved change items 1 to 14 on 12 November. Two are done, four are p
 | D45 | Kanmon appears on no prototype route map. Source: owner, 13 November. | — |
 | D46 | The retailer catalogue connector (P16) is outside this work, and real brands on it are acceptable; R04 does not apply to it. Source: owner, 13 November. | — |
 | D47 | The film is rebuilt as a self-playing artifact, made the way the marketing film was; the treatment is the builder's call. The video version is not audited. Source: owner, 13 November. | — |
+| D48 | Phase 0 is closed. Its rows still Open or Blocked wait only on the owner's hold on P1, P2 and P4, on P11's records entering the world in Phase 1, or on open question 7 for P8; each moves with what it waits for. Source: owner, 13 November. | An owner asking to reopen the audit |
 
 **Open questions for the owner**
 
@@ -336,7 +337,7 @@ The Pipe17 question that had to be settled first is settled. ShipHawk's question
 
 ## Tasks
 
-Phase 0 is approved but not closed. Phases 1 and 2 are partly done. Phase 3 has its specs (T3.0) but no build, and Phase 4 has not started. R39 picks the next row. A row turns Done only when its evidence is committed; cite its ID in the commit message and the CALLS entry. Status is Open, Done or Blocked; a Blocked row names the owner answer it waits for in Depends on.
+Phase 0 is closed (D48); its remaining rows wait on owner holds or on Phase 1. Phases 1 and 2 are partly done. Phase 3 has its specs (T3.0) but no build, and Phase 4 has not started. R39 picks the next row. A row turns Done only when its evidence is committed; cite its ID in the commit message and the CALLS entry. Status is Open, Done or Blocked; a Blocked row names the owner answer it waits for in Depends on.
 
 ### Phase 0 · Audit, read only
 
@@ -344,15 +345,15 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 
 | ID | Prototype | Task | Depends on | Read first | Done when | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| T0.10 | P1 | Complete P1's grid row | — | P1 link in Inventory | Every P1 cell reads Done or N/A | Open |
-| T0.11 | P2 | Complete P2's grid row | — | P2 link in Inventory | Every P2 cell reads Done or N/A | Open |
-| T0.12 | P4 | Complete P4's grid row | — | P4 link in Inventory | Every P4 cell reads Done or N/A | Open |
+| T0.10 | P1 | Complete P1's grid row | Owner releases P1 | P1 link in Inventory | Every P1 cell reads Done or N/A | Blocked |
+| T0.11 | P2 | Complete P2's grid row | Owner releases P2 | P2 link in Inventory | Every P2 cell reads Done or N/A | Blocked |
+| T0.12 | P4 | Complete P4's grid row | Owner releases P4 | P4 link in Inventory | Every P4 cell reads Done or N/A | Blocked |
 | T0.13 | P5 | Complete P5's grid row | — | P5 link; `docs/phase0/walks/` for the dead state | Evidence: `docs/phase0/P5-grid.md`; C1 in `docs/phase0/golden/t03/RESULTS.md`; CALLS 51 | Done |
 | T0.14 | P6 | Complete P6's grid row | — | P6 link in Inventory | Evidence: `docs/phase0/P6-grid.md`; CALLS 41 | Done |
 | T0.15 | P7 | Complete P7's grid row | T0.5 | P7 link; `contract/claims.json` | Evidence: `docs/phase0/P7-grid.md`; CALLS 43 | Done |
 | T0.16 | P8 | Complete P8's grid row; only C1 is left. Its three questions ran five times and fail, because the records do not carry P8's definitions of an open order, a closed order and the tolerance basis (`docs/phase0/golden/t03/RESULTS.md`) | Owner chooses: state P8's definitions on screen and in the guide, or give Northfield's connection a tool that returns them (open question 7) | P8 link; why its cells are N/A | Every P8 cell reads Done or N/A | Blocked |
 | T0.17 | P9 | Complete P9's grid row | — | P9 link in Inventory | Evidence: `docs/phase0/P9-grid.md` and the t03 golden results; CALLS 51 | Done |
-| T0.18 | P11 | Complete P11's grid row; C1 waits for its records to enter the world (`docs/phase0/P11-grid.md`) | — | P11 link in Inventory | Every P11 cell reads Done or N/A | Open |
+| T0.18 | P11 | Complete P11's grid row; only C1 is left (`docs/phase0/P11-grid.md`) | Owner approves part 2 of the registry change list, so T1.9 can add P11's records | P11 link in Inventory | Every P11 cell reads Done or N/A | Blocked |
 | T0.19 | P12 | Complete P12's grid row | — | P12 link in Inventory | Evidence: P12 retired by the owner, CALLS 32 | Done |
 | T0.2 | P10 Ashby, P10 Northfield, P16 | Audit the two server scopes and the retailer catalogue connector as prototypes | — | Server reference; `docs/phase2/` | Evidence: `docs/phase0/P10-P16-audit.md`; P16 out of scope (D46); CALLS 52 | Done |
 | T0.3 | P1, P2, P4, P5, P8, P9, P11 | Golden questions: new sets for P2, P8 and P11, more for the other four. P5 and P9 are done and P8 has run (`docs/phase0/golden/t03/`) | Owner releases P1, P2 and P4; P11's records enter the world | `docs/phase0/golden/` | Each has at least three questions with five graded runs | Blocked |
@@ -374,6 +375,8 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T1.6 | P14, P15 | World records for every Prototype specs decision row: a price variance under NF-7.11, and other suppliers' ship notices that NFD-1 would fail | — | Prototype specs: P14 and P15 | Each draft rule and each P14 decision row replays to at least one record, proposed first as a Phase 1 change list | Open |
 | T1.8 | P7 | World record for a Northfield scorecard after the corrective work | — | P7's Inventory row | Evidence: not needed once P7's ending moved to shared figures, CALLS 38 | Done |
 | T1.7 | P2 | Supplier vetting in the world: one supplier vetted by a third party, one that confirms vetting itself, and a Northfield rule that activation waits for either | — | D31; Prototype specs, Supplier vetting in P2 | The owner approves the rule wording in the EDI Review Pack, the world holds both records, and a gate check reads them | Open |
+| T1.9 | P11 | A live NetSuite ship notice that breaks a Northfield rule, held and corrected before it leaves, with Northfield's matching receiving advice; part 2 of the registry change list | Owner approves part 2 of `docs/guide/registry-change-proposal.md` | P11's Inventory row; `docs/phase0/P11-grid.md` | The world holds the records, T2.7 can anchor them, and P11's golden questions can run | Open |
+| T1.10 | World | Demo-world history for the intelligence tests: other suppliers' deduction cases with Northfield and past acknowledgment and ship-notice timings (D3 in the intelligence handoff) | Owner answers the handoff's Q3 on history scope | Project doc claude/Prototype-Intelligence-Handoff.md (project doc) | A Phase 1 change list says which records are added, which figures move (P8, its golden questions, the build checks that count Northfield's orders), and the owner approves it | Open |
 
 ### Phase 2 · Agent and customer-agent access
 
@@ -466,7 +469,7 @@ Each row is one prototype through the Phase 4 loop under Build flow. Before prop
 
 ## Proofs, open items and drift control
 
-The gate and smoke tests pass at commit 6bda779. Two of the plan's proofs have not been built or run.
+The gate and smoke tests pass at commit 24b2c5c. Two of the plan's proofs have not been built or run.
 
 | Proof | Command or location | Result |
 | --- | --- | --- |

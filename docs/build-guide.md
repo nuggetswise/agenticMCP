@@ -356,10 +356,10 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check.
   Done when the owner confirms CALLS 8: other suppliers' shipments with no receipt are P8's stuck value.
 - [ ] **T1.5** Raw X12 panels on prototypes generated from the world.
   Done when every prototype's raw X12 panel matches a document in `build/tg.db` byte for byte, checked by the contract test.
-- [ ] **T1.7** Supplier vetting in the world: one supplier vetted by a third party, one that confirms vetting itself, and a Northfield rule that activation waits for either.
-  Done when the owner approves the rule wording in the EDI Review Pack, the world holds both records, and a gate check reads them.
 - [ ] **T1.6** World records for every Prototype specs decision row: a price variance under NF-7.11, and other suppliers' ship notices that NFD-1 would fail.
   Done when the replay of each draft rule and each P14 decision row returns at least one record, proposed first as a Phase 1 change list.
+- [ ] **T1.7** Supplier vetting in the world: one supplier vetted by a third party, one that confirms vetting itself, and a Northfield rule that activation waits for either.
+  Done when the owner approves the rule wording in the EDI Review Pack, the world holds both records, and a gate check reads them.
 
 ### Phase 2 · Agent and customer-agent access
 

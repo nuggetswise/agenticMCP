@@ -104,6 +104,7 @@ Each rule has one home, here. Its ID is how `docs/guide/coverage.json` maps the 
 - **R35** Every proof and note is committed to the repo under docs/. A result that exists only in a scratchpad is not evidence.
 - **R36** Every call is logged in docs/build-log/CALLS.md with what would change it.
 - **R37** Words: Trading Grid Catalogue or TGC, never AC; Supplier readiness; banned words follow the enterprise-product-writing skill.
+- **R38** One task ID per conversation. A builder starts a fresh chat for each task, reads this guide, does that task alone and stops. Hand-off between tasks runs through this guide, the commit and its CALLS entry, never through chat history.
 
 ## Where each fact lives
 
@@ -192,6 +193,8 @@ The owner approved change items 1 to 14 on 12 November. Two are done, four are p
 | D28 | Jordan reverses the shortage charge and upholds the ship notice charge | — |
 | D29 | The world follows built screens for rule wording and record numbers where the screens already agree with each other | A screen rebuilt from the world |
 | D30 | Retailer jobs with no Trading Grid evidence stay out of prototypes: docks, carrier diversion, stores and shelves, forecasting and replenishment, shelf life, packaging, emissions, peak planning, distribution-centre stock | Trading Grid evidence for the job |
+| D31 | Supplier vetting (identity, bank details, signed terms) appears in prototypes as either a third party's result or the supplier's own confirmation that it is done. Trading Grid keeps the result or confirmation, never the underlying documents. | A named vetting partner with documented capability |
+| D32 | Competitor positions go on each prototype's task card in the Prototype Plan. Product ownership is not recorded anywhere. | — |
 
 **Open questions for the owner**
 
@@ -201,8 +204,6 @@ The owner approved change items 1 to 14 on 12 November. Two are done, four are p
 4. P7's charge on screen differs from the charge the world computes (`contract/claims.json`). Should the screen or the world change?
 5. Which verified partner capabilities enter the timeline: Orderful's carton-level 945, ShipHawk's package data, or none?
 6. Nine pages may be retired (listed in `docs/phase0/HANDOFF.md`). Keep or retire each?
-7. Supplier vetting (identity, bank details, signed terms) is left out because Trading Grid holds no such records. Confirm?
-8. Product ownership and competitor positions per prototype lived in presenter-notes files, now retired. Should they move to the Prototype Plan's portfolio table, or be dropped?
 
 ## Inventory
 
@@ -308,8 +309,28 @@ Phase 0 is approved but not closed. Phases 1 and 2 are partly done, and Phases 3
 
 ### Phase 0 · Audit, read only
 
-- [ ] **T0.1** Fill every Not done and Partly cell in the coverage grid.
-  Done when every cell reads Done or N/A. Evidence: `docs/phase0/`, under the cell's check.
+Evidence for each grid cell goes in `docs/phase0/`, under its check.
+
+- [ ] **T0.10** Complete P1's grid row.
+  Done when every P1 cell reads Done or N/A.
+- [ ] **T0.11** Complete P2's grid row.
+  Done when every P2 cell reads Done or N/A.
+- [ ] **T0.12** Complete P4's grid row.
+  Done when every P4 cell reads Done or N/A.
+- [ ] **T0.13** Complete P5's grid row.
+  Done when every P5 cell reads Done or N/A.
+- [ ] **T0.14** Complete P6's grid row.
+  Done when every P6 cell reads Done or N/A.
+- [ ] **T0.15** Complete P7's grid row.
+  Done when every P7 cell reads Done or N/A.
+- [ ] **T0.16** Complete P8's grid row.
+  Done when every P8 cell reads Done or N/A.
+- [ ] **T0.17** Complete P9's grid row.
+  Done when every P9 cell reads Done or N/A.
+- [ ] **T0.18** Complete the NetSuite journey's grid row.
+  Done when every NS cell reads Done or N/A.
+- [ ] **T0.19** Complete ERP-native Activation's grid row, unless open question 1 retires it first.
+  Done when every ERP cell reads Done or N/A, or the row is removed with the retirement.
 - [ ] **T0.2** Audit P10, the Northfield scope and the retailer catalogue connector as prototypes.
   Done when their grid rows are complete and the connector's link is recorded in Inventory.
 - [ ] **T0.3** Golden questions for P2, P8, NetSuite and ERP-native, and more for P1, P4, P5 and P9.
@@ -335,6 +356,8 @@ Phase 0 is approved but not closed. Phases 1 and 2 are partly done, and Phases 3
   Done when the owner confirms CALLS 8: other suppliers' shipments with no receipt are P8's stuck value.
 - [ ] **T1.5** Raw X12 panels on prototypes generated from the world.
   Done when every prototype's raw X12 panel matches a document in `build/tg.db` byte for byte, checked by the contract test.
+- [ ] **T1.7** Supplier vetting in the world: one supplier vetted by a third party, one that confirms vetting itself, and a Northfield rule that activation waits for either.
+  Done when the owner approves the rule wording in the EDI Review Pack, the world holds both records, and a gate check reads them.
 - [ ] **T1.6** World records for every Prototype specs decision row: a price variance under NF-7.11, and other suppliers' ship notices that NFD-1 would fail.
   Done when the replay of each draft rule and each P14 decision row returns at least one record, proposed first as a Phase 1 change list.
 
@@ -368,8 +391,28 @@ Phase 0 is approved but not closed. Phases 1 and 2 are partly done, and Phases 3
 
 ### Phase 4 · Prototype changes, one at a time
 
-- [ ] **T4.1** For each of P1, P2, P4, P5, P6, P7, P8, P9, NetSuite and ERP-native (unless retired), work through the Phase 4 loop under Build flow.
-  Done for a prototype when it has an approved change list, a walk with no script errors and a passing contract test, and the call is logged.
+Each task below is one prototype through the Phase 4 loop under Build flow. Done for each when the prototype has an approved change list, a walk with no script errors and a passing contract test, and the call is logged.
+
+- [ ] **T4.10** P1 Long-tail.
+  Done when P1 meets the Phase 4 done condition above.
+- [ ] **T4.11** P2 Programme Readiness, including supplier vetting (D31; Prototype specs, Supplier vetting).
+  Done when P2 meets the Phase 4 done condition and shows vetting as a third party's result or the supplier's confirmation.
+- [ ] **T4.12** P4 Marketplace to Wholesale.
+  Done when P4 meets the Phase 4 done condition above.
+- [ ] **T4.13** P5 Scout Shipment Watch.
+  Done when P5 meets the Phase 4 done condition above.
+- [ ] **T4.14** P6 Northfield Charge Resolution.
+  Done when P6 meets the Phase 4 done condition above.
+- [ ] **T4.15** P7 Northfield Performance Improvement.
+  Done when P7 meets the Phase 4 done condition above.
+- [ ] **T4.16** P8 Money in Motion.
+  Done when P8 meets the Phase 4 done condition above.
+- [ ] **T4.17** P9 Shelf Recovery.
+  Done when P9 meets the Phase 4 done condition above.
+- [ ] **T4.18** NetSuite Chargeback Avoidance.
+  Done when the NetSuite journey meets the Phase 4 done condition above.
+- [ ] **T4.19** ERP-native Activation, unless open question 1 retires it.
+  Done when it meets the Phase 4 done condition above, or is retired.
 - [ ] **T4.2** Portfolio entry page built from the story calendar.
   Done when the owner approves it and every link on it opens a live prototype.
 - [ ] **T4.3** Portfolio film, after the owner approves a storyboard.
@@ -493,7 +536,7 @@ Northstar presents 40 business flows across 17 views. Every flow has one disposi
 | Rules | Requirements need consistent enforcement across suppliers | P15 |
 | Rules | A changed rule can create false rejections or payment holds | P15 |
 | Supplier compliance | Repeat breaches and inconsistent follow-up | Fold into P7, as the Northfield request that opens it |
-| Onboarding | Unverified identity, bank details or unsigned terms | Left out, pending open question 7 |
+| Onboarding | Unverified identity, bank details or unsigned terms | Fold into P2 (D31): see Supplier vetting |
 | Onboarding | A supplier fails testing, the first acknowledgment or ramp-up | Fold into P2 |
 | Packaging and emissions | Packaging data, fees and emission hotspots (three flows) | Left out (D30) |
 | Agents | Replenishment, forecast critique, shelf-life triage, carrier diversion (five flows) | Left out (D30) |
@@ -615,6 +658,20 @@ Operators need to see and limit what agents do, and to try a change safely befor
    - Accepted when the change list records the trial, the drift measure and the rollback path. A live trial is not prototyped.
 
 - **Northstar sources:** agent control plane (authority, audit, override, pause, kill) and the scenario workbench (replay, approval, trial, drift, rollback).
+
+## Supplier vetting in P2
+
+Activating a supplier whose identity, bank details or terms were never checked is unsafe. Trading Grid does not do the vetting; it records who did. P2 shows one of two routes per supplier (D31).
+
+1. As Jordan, I see each supplier's vetting state before activation: Verified by a third party, Confirmed by the supplier, or Missing.
+    - Accepted when the state comes from a world record and names who verified or who confirmed.
+2. As Priya, I confirm that Ashby's vetting is done: identity, bank details and signed terms.
+    - Accepted when the confirmation is recorded with Priya as the confirming person, and no document is uploaded.
+3. Activation waits until vetting reads Verified or Confirmed.
+    - Accepted when activation stays blocked while vetting reads Missing, under the rule T1.7 adds.
+
+- **Third party:** shown as a vetting service, never a named product (R10). No vetting partner is in scope (D01).
+- **Northstar source:** supplier qualification and commercial setup.
 
 ## Partner journeys
 

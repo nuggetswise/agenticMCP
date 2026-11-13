@@ -34,7 +34,7 @@
    "section": "## How to use this doc",
    "key": "everyacceptancetestinthebriefpas",
    "item": "Every acceptance test in the brief passes in a headless run.",
-   "to": "T4.1"
+   "to": "Tasks"
   },
   {
    "doc": "docs/agent-and-mcp-strategy.md",
@@ -853,14 +853,14 @@
    "section": "## Revisions to built prototypes",
    "key": "p5scoutshipmentwatch",
    "item": "P5 Scout Shipment Watch",
-   "to": "superseded: presenter-notes files retired by the owner on 12 November; positioning goes to open question 8"
+   "to": "D32"
   },
   {
    "doc": "docs/prototype-plan.md",
    "section": "## Revisions to built prototypes",
    "key": "p7performanceimprovement",
    "item": "P7 Performance Improvement",
-   "to": "superseded: presenter-notes files retired by the owner on 12 November; positioning goes to open question 8"
+   "to": "D32"
   },
   {
    "doc": "docs/prototype-plan.md",
@@ -1042,7 +1042,7 @@
    "section": "## Standing rules for every prototype",
    "key": "productownershipcompetitorrefere",
    "item": "Product ownership, competitor references and capability positions go i",
-   "to": "superseded: presenter-notes files retired by the owner on 12 November; positioning goes to open question 8"
+   "to": "D32"
   },
   {
    "doc": "docs/prototype-plan.md",

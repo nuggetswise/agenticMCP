@@ -1,6 +1,6 @@
 {
  "file": "/home/claude/agenticmcp/docs/build-guide.md",
- "ran_at_head": "0f6c0f1",
+ "ran_at_head": "9d7551f",
  "results": [
   {
    "name": "as_of_commit_current",
@@ -27,7 +27,7 @@
    "name": "calls_refs_exist",
    "ok": true,
    "problems": [],
-   "info": "28 calls logged"
+   "info": "29 calls logged"
   },
   {
    "name": "inventory_and_grid_complete",
@@ -90,7 +90,7 @@
    "name": "retired_rules_have_a_home",
    "ok": true,
    "problems": [],
-   "info": "208 items: 105 placed in the guide, 86 pointed to their owner, 17 superseded by owner decisions"
+   "info": "208 items: 108 placed in the guide, 86 pointed to their owner, 14 superseded by owner decisions"
   },
   {
    "name": "tasks_have_ids_and_done_when",

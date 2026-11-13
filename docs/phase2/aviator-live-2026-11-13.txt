@@ -137,3 +137,9 @@ Q: How many deduction cases has Northfield opened against us this quarter, as of
  "answer": "5 deduction cases.\n\nRecords used: DC-40877, DC-40931, DC-41102, DC-41118, DC-41131."
 }
 ---
+
+--- Deployed endpoint, 13 Nov 2026 23:33 UTC, deploy dep-dbrpqi0n74is73frs8eg (commit d64ac97), AVIATOR_TOKEN (value not recorded) ---
+Ashby side, "Why was the ship notice for PO-104912 held, and what happened next?": answered from get_order. NF-4.3 (1 of 48 cartons without SSCC) and NF-4.7 (ship-to DC 4 instead of DC 2); warehouse and master-data corrections; Priya Raman approved release of ASN-78260 v2; paid in full. Records cited: PO-104912, ASN-78260, INV-78260, RCV-DC2-78260, PMT-990161, IF-55498. Matches the world.
+Northfield side, same question: called supplier_document_trail, get_document, three_way_match; answered "Not available to Northfield Retailer." The hold happened at Ashby before sending, so Northfield's tools do not show it. Correct on scope, but it said nothing about the documents Northfield does see. Open: should it say what Northfield can see?
+Ashby side, "List the deduction cases Northfield opened against SUP04.": "Not available to Ashby Supplier." No tool called.
+Aviator token on /mcp and /admin: 404 both.

@@ -12,7 +12,7 @@ Proposed on 13 November 2026 from the owner's answers recorded in the Build Guid
 - CORRECT `agency`: verdict `agent`, agent `Test Agent`, job `trade_test` become verdict `rule-based`, agent none. The live screen has no agent (Phase 0 findings).
 - CORRECT the job: a live ship notice that breaks a Northfield rule is held and corrected inside NetSuite before it leaves.
 - DELETE the three Test Agent `decisions` (ASN-78214 twice, ASN-78231) and the acceptance check `agent.trade_test` from P11. Whether the test-ship-notice records stay in the world for P2 is a separate Phase 1 call.
-- CORRECT `anchors`: `event:test.ship_notice` becomes the live order, its corrected ship notice and Northfield's receiving advice. Phase 0 found the screen's live records are not in the world, so this depends on a Phase 1 change list that adds them.
+- CORRECT `anchors`: `event:test.ship_notice` becomes the live order, its corrected ship notice and Northfield's receiving advice. The world holds one live NetSuite order whose receiving advice matched (event `erp.first_live_order`, PO-104912), but no live ship notice that was held and corrected, and the records on the live screen are not in the world. A Phase 1 change list has to add the held ship notice or move the screen onto PO-104912.
 - CORRECT `customer_agent.supplier`: "Not applicable during testing" no longer fits a live order.
 - RETAIN `erp_placement`: the hold, the correction and the approval sit on the NetSuite item fulfillment.
 
@@ -29,8 +29,8 @@ Proposed on 13 November 2026 from the owner's answers recorded in the Build Guid
 
 - P1: ADD the order acknowledgment (855) to `anchors`. RETAIN `document:INV-7702` and `p1.paid_before_money_in_motion` as world facts; they sit beyond P1's ending and P8 reads them.
 - P5: ADD the receiving advice that matches the corrected shipment to `anchors`.
-- P7: ADD Northfield's next scorecard to `anchors` if the world holds one after the corrective work; if not, that is a Phase 1 gap.
-- P9: ADD the next store activity report to `anchors`; today they stop at the order and its ship notice.
+- P7: ADD Northfield's next scorecard to `anchors` once the world holds it. Checked on 13 November: the world's two scorecards are both published before the corrective plan falls due, so the ending record is missing (T1.8).
+- P9: ADD the next store activity report to `anchors`; today they stop at the order and its ship notice. The world holds that report (store 114, the period ending 31 October).
 - P2, P6 and P8: RETAIN. P2 anchors the activation event, P6 the repayment documents, and P8 creates no record.
 
 ## Names
@@ -43,4 +43,6 @@ Proposed on 13 November 2026 from the owner's answers recorded in the Build Guid
 
 ## Not registry, and needing separate approval
 
-- The Prototype Plan's story calendar still describes P11 as a test ship notice failing the pack rule. That is a Prototype Plan edit.
+- The Prototype Plan's story calendar and portfolio table still describe P11 as a test ship notice failing the pack rule, under its old name and with no number.
+- The Prototype Plan has task cards for P10 and P13 only. Built prototypes have a portfolio row and nothing else, so T4.5 adds their cards.
+- The Prototype Plan's Delivery list still tells builders to build from the Feature Requirements document and to cite requirement IDs; the Build Guide replaced both.

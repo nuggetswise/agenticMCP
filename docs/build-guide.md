@@ -6,7 +6,7 @@ Working copy: `docs/build-guide.md` in the repo. Reading copy: the Claude doc at
 
 This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 356e2c7.
 
-- **Start here:** follow R39. It picks your next task from the Tasks tables and says what to read first.
+- **Start here:** follow R39. It picks your next task from the Tasks tables and says what to read first. For one prototype, run `node scripts/guide-pack.mjs P5` with its ID: it prints that prototype's job, ending, v8 section, the rules that apply, its agent, tools and anchors, and its tasks in order, so you read one page and the prototype's source.
 - **Authority, highest first:**
   1. Owner decisions, recorded under Decisions.
   2. The live server and the repo ([nuggetswise/agenticMCP](https://github.com/nuggetswise/agenticMCP), branch main).
@@ -58,7 +58,8 @@ Each rule has one home, here. Its ID is how `docs/guide/coverage.json` maps the 
 **Screens**
 
 - **R09** Minimal and functional: little text, smooth motion, no guided tour.
-- **R10** No OpenText product names anywhere on screen, including inside the Trading Grid box. Everything Trading Grid does is labelled Trading Grid. Product names in Decisions describe capability, never screen text. (Owner decision, 13 November.)
+- **R42** Every click moves the story to its next beat or shows the evidence behind it. A click that does neither is cut, made automatic or folded behind more detail. The main path from problem to result takes about eight actions, with one primary button showing at a time, labelled with its outcome.
+- **R10** No OpenText product names anywhere on screen, including inside the Trading Grid box. Everything Trading Grid does is labelled Trading Grid. Product names in Decisions describe capability, never screen text. A prototype's title names its business problem, so NetSuite Chargeback Avoidance stands as a title. (Owner decision, 13 November.)
 - **R11** No dates, feature IDs, durations beside buttons, green ticks, or stage labels such as detect, prioritize, act and verify.
 - **R12** No variant or scenario pickers.
 - **R13** Colours come only from the OpenText TG Retail Design System tokens.
@@ -162,7 +163,7 @@ The owner approved change items 1 to 14 on 12 November. Two are done, four are p
 | 8 | Partner Map edits; list of Retail Direction section 9 changes | Docs | Not started | — |
 | 9 | Agentic Retail Trade figures from the world or removed | 4 | Not started | — |
 | 10 | Prototype Briefs: retired P4 link, old names, P7 placeholder | Docs | Not started | — |
-| 11 | Cut repeated figures; add the record that settles the job to P1, P2 and P11 (R05) | 4 | Not started | — |
+| 11 | Cut repeated figures; add the record that settles the job to P2 and P11 (R05); P1 already shows its record (CALLS 30) | 4 | Not started | — |
 | 12 | Overlap and role proposals from the Phase 0 report | 4 | Not started | — |
 | 13 | P5: a shipment opens at once while ranking finishes behind it | 4 | Fixed only in an unpublished working copy | — |
 | 14 | Northfield scope on the same world | 2 | Done; live Northfield connector not run | Commit 5dd3748; CALLS 10 to 17 |
@@ -182,12 +183,12 @@ The owner approved change items 1 to 14 on 12 November. Two are done, four are p
 | D09 | No product names anywhere on screen (R10) | — |
 | D10 | This repo file is the working copy; the Claude doc is refreshed from it | — |
 | D11 | Live checks of ship notices and invoices against retailer rules are existing capability: Trading Grid Intelligence, through Chargeback Avoidance. P5 shows the agent layer on top; no new detection prototype. | — |
-| D12 | AI-assisted onboarding and map work run on Mapping AI Aviator, shown in P2 and P11; no new prototype | — |
+| D12 | AI-assisted onboarding and map work run on Mapping AI Aviator, shown in P2; no new prototype | — |
 | D13 | Suppliers see errors while testing before go-live through the compliance link; validation before go-live is not prototyped | — |
 | D14 | Command Center Integration Monitor does not alert on missing, out-of-order or late documents; P13 fills that gap | — |
 | D15 | No Trading Grid Insights or Trading Grid Intelligence API exists for an MCP server; MCP access goes on the roadmap, P10 shows it, and the API is its first engineering step | — |
 | D16 | No in-product question-and-answer assistant; its questions are answered through the customer's own AI in P10 | — |
-| D17 | Not building guided supplier onboarding (shown in P2 and P11) | — |
+| D17 | Not building guided supplier onboarding (shown in P2) | — |
 | D18 | Not building supplier cash watch: P8 and P6 cover it. Still unshown: a 3PL shipment whose status never reaches Supplier ERP, so no invoice is created. | — |
 | D19 | Not building stalled drop-ship order detection: drop-ship is a small share of net deduction dollars in the internal chargeback analysis | — |
 | D20 | Not building agentic trading partner mapping: Mapping AI Aviator gives parity | — |
@@ -211,6 +212,8 @@ The owner approved change items 1 to 14 on 12 November. Two are done, four are p
 | D38 | Each prototype's job and ending is worked out by the builder from v8 plus its task card; unclear cases go to the owner (R06). The owner's answers are in Inventory. | An owner answer that moves a prototype's ending |
 | D39 | One story per prototype, held on the task card, serves the prototype, the video and the presentation; every beat's screen holds up as a still frame (R41). | A video or deck that needs a line the task card lacks; the line goes on the card first |
 | D40 | P12 ERP-native Activation is retired. P1 shows its order leg, P2 its go-live and P11 its in-ERP work. Its page stays published until the owner unshares it. | A supplier-ERP job that none of those three shows |
+| D41 | Clicks are budgeted: each one serves a beat, and the main path takes about eight (R42). | A job whose evidence cannot be shown in that many steps |
+| D42 | A builder's context for one prototype is generated by the pack script from this guide and the registry; it is never a document of its own. | — |
 
 **Open questions for the owner**
 
@@ -263,33 +266,34 @@ Phase 0 is closed only when no cell reads Not done or Partly. A cell records whe
 - **A7** On-screen values checked against the world
 - **A8** Roles merged into one person after renaming
 - **A9** Walked end to end
+- **A10** Main path inside the click budget, with every click mapped to a beat (R42)
 - **C1** Golden questions, five runs, graded against SQL
 
-| ID | A1 | A2 | A3 | A4 | A5 | A6 | A7 | A8 | A9 | C1 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| P1 | Done | Not done | N/A | Not done | Not done | Done | Done | Not done | Done | Partly |
-| P2 | Partly | Not done | N/A | Not done | Partly | Done | Done | Not done | Done | Not done |
-| P4 | Partly | Not done | N/A | Not done | Done | Done | Done | Done | Done | Partly |
-| P5 | Partly | Partly | Partly | Not done | Done | Done | Done | Done | Partly | Partly |
-| P6 | Done | Partly | Done | Not done | Done | Not done | Done | Done | Done | Done |
-| P7 | Done | Partly | Done | Not done | Partly | Not done | Done | Not done | Partly | Done |
-| P8 | Not done | N/A | N/A | Not done | Not done | Not done | Done | Not done | N/A | Not done |
-| P9 | Partly | Not done | Done | Not done | Done | Not done | Done | Not done | Done | Partly |
-| P11 | Partly | Not done | N/A | Not done | Done | Done | Done | Not done | Done | Not done |
-| P12 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
-| P10 Ashby | Not done | Not done | Done | Done | N/A | Not done | N/A | Not done | Done | Done |
-| P10 Northfield | Not done | Not done | Not done | Done | N/A | Not done | N/A | Not done | Done | Done |
-| P13, P14, P15 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
-| ART | N/A | N/A | N/A | N/A | N/A | N/A | Done | N/A | N/A | N/A |
-| FILM | N/A | N/A | N/A | N/A | N/A | N/A | Partly | N/A | N/A | N/A |
-| P16 | Not done | Not done | Not done | Not done | Not done | Not done | Not done | Not done | Not done | Not done |
+| ID | A1 | A2 | A3 | A4 | A5 | A6 | A7 | A8 | A9 | A10 | C1 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| P1 | Done | Not done | N/A | Not done | Not done | Done | Done | Not done | Done | Not done | Partly |
+| P2 | Partly | Not done | N/A | Not done | Partly | Done | Done | Not done | Done | Not done | Not done |
+| P4 | Partly | Not done | N/A | Not done | Done | Done | Done | Done | Done | Not done | Partly |
+| P5 | Partly | Partly | Partly | Not done | Done | Done | Done | Done | Partly | Not done | Partly |
+| P6 | Done | Partly | Done | Not done | Done | Not done | Done | Done | Done | Not done | Done |
+| P7 | Done | Partly | Done | Not done | Partly | Not done | Done | Not done | Partly | Not done | Done |
+| P8 | Not done | N/A | N/A | Not done | Not done | Not done | Done | Not done | N/A | N/A | Not done |
+| P9 | Partly | Not done | Done | Not done | Done | Not done | Done | Not done | Done | Not done | Partly |
+| P11 | Partly | Not done | N/A | Not done | Done | Done | Done | Not done | Done | Not done | Not done |
+| P12 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
+| P10 Ashby | Not done | Not done | Done | Done | N/A | Not done | N/A | Not done | Done | N/A | Done |
+| P10 Northfield | Not done | Not done | Not done | Done | N/A | Not done | N/A | Not done | Done | N/A | Done |
+| P13, P14, P15 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
+| ART | N/A | N/A | N/A | N/A | N/A | N/A | Done | N/A | N/A | N/A | N/A |
+| FILM | N/A | N/A | N/A | N/A | N/A | N/A | Partly | N/A | N/A | N/A | N/A |
+| P16 | Not done | Not done | Not done | Not done | Not done | Not done | Not done | Not done | Not done | Not done | Not done |
 
 **Why a cell is N/A**
 
 - **A3 on P1, P2, P4 and P11:** none of these screens has an agent.
 - **P12:** retired (D40), so no check applies.
 - **P8:** view only. Nothing to walk, and no manual or agent path.
-- **A5 and A7 on the two server scopes:** a server has no screen, and its values are the world itself.
+- **A5, A7 and A10 on the two server scopes:** a server has no screen or clicks, and its values are the world itself.
 - **P13, P14 and P15:** not built. Every check applies once they are.
 - **ART and FILM:** owner decision of 12 November, A7 only.
 
@@ -304,11 +308,12 @@ Phase 0 is closed only when no cell reads Not done or Partly. A cell records whe
 | A6, A8 | Turn 3 report in FINDINGS: overlap across prototypes; collapsed roles |
 | A7 | `docs/phase0/contract-report-turn4.json`; narrative pages in FINDINGS, other live sources. Film frames not inspected. |
 | A9 | `docs/phase0/walks/` and FINDINGS turn 4. P5 dead state found; P7 manual pattern A not confirmed by hand. Server and Northfield: `npm run smoke`. |
+| A10 | Action counts are in the FINDINGS turn 4 scripted walks; the hand paths of P5 and P6 run far past the budget. No click map exists yet. |
 | C1 | `docs/phase0/golden/` (Ashby) and `docs/phase2/golden-nf/` (Northfield) |
 
 ## Partner checks
 
-The Pipe17 question that had to be settled first is settled. Two partner checks are still open: partner nodes on the route maps beyond P2, and ShipHawk's questions and journey moment. Verdicts and sources are in `docs/phase0/FINDINGS.md` under B.
+The Pipe17 question that had to be settled first is settled. Three partner checks are still open: partner nodes on the route maps beyond P2, ShipHawk's questions, and ShipHawk's journey moment. Verdicts and sources are in `docs/phase0/FINDINGS.md` under B.
 
 | Check | Status | Evidence |
 | --- | --- | --- |
@@ -390,7 +395,7 @@ New prototypes come from the Prototype specs tab. Mining Northstar for them was 
 
 ### Phase 4 · Prototype changes, one at a time
 
-Each row is one prototype through the Phase 4 loop under Build flow. Before proposing its change list, read Rules R05 to R22 and R41, the prototype's Inventory row, its business problem in v8 (R40), its source, and its task card or portfolio row in the Prototype Plan. A row is Done when its prototype has an approved change list, a walk with no script errors and a passing contract test, and the call is logged.
+Each row is one prototype through the Phase 4 loop under Build flow. Before proposing its change list, read Rules R05 to R22, R41 and R42, the prototype's Inventory row, its business problem in v8 (R40), its source, and its task card or portfolio row in the Prototype Plan. Every change list carries a click map: each click, what it changes on screen and the beat it serves. A row is Done when its prototype has an approved change list, a walk with no script errors and a passing contract test, and the call is logged.
 
 | ID | Prototype | Task | Depends on | Read first | Done when | Status |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -453,7 +458,7 @@ Each row is one prototype through the Phase 4 loop under Build flow. Before prop
 
 ## Proofs, open items and drift control
 
-The gate and smoke tests pass at commit 356e2c7. Four of the plan's proofs have not been built or run.
+The gate and smoke tests pass at commit 356e2c7. Two of the plan's proofs have not been built or run.
 
 | Proof | Command or location | Result |
 | --- | --- | --- |

@@ -29,7 +29,7 @@ Proposed on 13 November 2026 from the owner's answers recorded in the Build Guid
 
 - P1: ADD the order acknowledgment (855) to `anchors`. RETAIN `document:INV-7702` and `p1.paid_before_money_in_motion` as world facts; they sit beyond P1's ending and P8 reads them.
 - P5: ADD the receiving advice that matches the corrected shipment to `anchors`.
-- P7: ADD Northfield's next scorecard to `anchors` once the world holds it. Checked on 13 November: the world's two scorecards are both published before the corrective plan falls due, so the ending record is missing (T1.8).
+- P7: RETAIN the scorecard anchor. Its ending is now shared figures, not a later scorecard, so nothing is added (owner's task card, 13 November).
 - P9: ADD the next store activity report to `anchors`; today they stop at the order and its ship notice. The world holds that report (store 114, the period ending 31 October).
 - P2, P6 and P8: RETAIN. P2 anchors the activation event, P6 the repayment documents, and P8 creates no record.
 

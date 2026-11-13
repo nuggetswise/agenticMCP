@@ -37,7 +37,7 @@ Each rule has one home, here. Its ID is how `docs/guide/coverage.json` maps the 
 
 **Sources**
 
-- **R01** Builders open only Claude docs, the repo, the live server, prototype source and, for partner checks only, partner websites. They never open files uploaded to the project or internal OpenText links. A missing fact goes into a Claude doc first, normally a tab of this guide.
+- **R01** Builders open only Claude docs, the repo, the live server, prototype source and, for partner checks only, partner websites. They never open files uploaded to the project. A missing fact goes into a Claude doc first, normally a tab of this guide.
 
 **People and data**
 

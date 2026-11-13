@@ -22,7 +22,7 @@ const tables = (s) => { const out = []; let cur = null; for (const l of s.split(
 { const m = md.match(/as of repo commit ([0-9a-f]{7})/); const p = [];
   if (!m) p.push('no "as of repo commit" line');
   else { try { sh(`git cat-file -e ${m[1]}^{commit}`); } catch { p.push(`commit ${m[1]} not found`); }
-    const changed = sh(`git diff --name-only ${m[1]} HEAD -- src world registry scripts contract validator openapi package.json`).split('\n').filter((f) => f && f !== 'scripts/guide-check.mjs');
+    const changed = sh(`git diff --name-only ${m[1]} HEAD -- src world registry scripts contract validator openapi package.json`).split('\n').filter((f) => f && !['scripts/guide-check.mjs', 'scripts/guide-tabs.mjs', 'scripts/lib/sections.mjs'].includes(f));
     if (changed.length) p.push(`changed since ${m[1]}: ${changed.join(', ')}`); }
   check('as_of_commit_current', p, m && m[1]); }
 

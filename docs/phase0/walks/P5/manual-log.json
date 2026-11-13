@@ -1,0 +1,1246 @@
+{
+ "errs": [],
+ "log": [
+  {
+   "i": 1,
+   "click": "1 PO NR-460207 DC 2 load · Kinross Groveport 1 carton is not on the tr",
+   "ds": "mq=hero",
+   "options": [
+    "1 PO NR-460207 DC 2 load · Kinross Groveport 1 carton is not on the tr",
+    "2 PO NR-460219 Invoice · line 2 The invoice bills 180 cases of napkins",
+    "3 PO NR-460241 Collect · Kinross Joliet Northfield hasn’t been asked t",
+    "4 PO NR-460262 Allocation · Kinross Groveport Groveport has 520 mugs f",
+    "5 PO NR-460233 Labels · Kinross Joliet 12 cartons carry barcodes alrea",
+    "6 PO NR-460274 Order change by phone The buyer agreed 270 by phone, bu"
+   ]
+  },
+  {
+   "i": 2,
+   "click": "Correct to match",
+   "ds": "m=h:q|correct",
+   "options": [
+    "Correct to match",
+    "Keep as is"
+   ]
+  },
+  {
+   "i": 3,
+   "click": "Carton, then order Carton not loaded · seal in 28 min · est. $151",
+   "ds": "osel=m|floor",
+   "options": [
+    "Carton, then order Carton not loaded · seal in 28 min · est. $151",
+    "Order, then carton Wrong ship-to and lines · due by the ship notice · ",
+    "Ship without the carton Line 2 ships 159 of 160 · in-full charge est. "
+   ]
+  },
+  {
+   "i": 4,
+   "click": "Confirm · Carton, then order",
+   "ds": "m=h:order|floor",
+   "options": [
+    "Confirm · Carton, then order",
+    "Order, then carton Wrong ship-to and lines · due by the ship notice · ",
+    "Ship without the carton Line 2 ships 159 of 160 · in-full charge est. ",
+    "Carton, then order Carton not loaded · seal in 28 min · est. $151"
+   ]
+  },
+  {
+   "i": 5,
+   "click": "Send to Kinross",
+   "ds": "m=h:floor|send",
+   "options": [
+    "Send to Kinross",
+    "Ship without it"
+   ]
+  },
+  {
+   "i": 6,
+   "click": "Check the load scan",
+   "ds": "m=h:scan",
+   "options": [
+    "Check the load scan"
+   ]
+  },
+  {
+   "i": 7,
+   "click": "Write to Supplier ERP",
+   "ds": "m=h:erp",
+   "options": [
+    "Write to Supplier ERP",
+    "Included",
+    "Included",
+    "Included"
+   ]
+  },
+  {
+   "i": 8,
+   "click": "After departure · re-read load and order",
+   "ds": "m=h:recheck",
+   "options": [
+    "After departure · re-read load and order"
+   ]
+  },
+  {
+   "i": 9,
+   "click": "Build ship notice from the load",
+   "ds": "m=h:build",
+   "options": [
+    "Build ship notice from the load"
+   ]
+  },
+  {
+   "i": 10,
+   "click": "Send to Northfield",
+   "ds": "m=h:asn",
+   "options": [
+    "Send to Northfield"
+   ]
+  },
+  {
+   "i": 11,
+   "click": "At DC 2 · read the receipt",
+   "ds": "m=h:rcv",
+   "options": [
+    "At DC 2 · read the receipt"
+   ]
+  },
+  {
+   "i": 12,
+   "click": "Replay · carton misses the trailer",
+   "ds": "a=end|short",
+   "options": [
+    "Replay · carton misses the trailer",
+    "Back to all shipments"
+   ]
+  },
+  {
+   "i": 13,
+   "click": "Keep as is",
+   "ds": "m=h:q|keep",
+   "options": [
+    "Keep as is",
+    "Correct to match"
+   ]
+  },
+  {
+   "i": 14,
+   "click": "Ship without it",
+   "ds": "m=h:floor|skip",
+   "options": [
+    "Ship without it",
+    "Send to Kinross"
+   ]
+  },
+  {
+   "i": 15,
+   "click": "Ship 659 · cancel the line 2 remainder",
+   "ds": "m=h:short",
+   "options": [
+    "Ship 659 · cancel the line 2 remainder"
+   ]
+  },
+  {
+   "i": 16,
+   "click": "Included",
+   "ds": "mrow=3",
+   "options": [
+    "Included",
+    "Write to Supplier ERP"
+   ]
+  },
+  {
+   "i": 17,
+   "click": "Keep as is",
+   "ds": "m=h:erp",
+   "options": [
+    "Keep as is",
+    "Excluded"
+   ]
+  },
+  {
+   "i": 18,
+   "click": "After departure · re-read load and order",
+   "ds": "m=h:recheck",
+   "options": [
+    "After departure · re-read load and order"
+   ]
+  },
+  {
+   "i": 19,
+   "click": "Build ship notice from the load",
+   "ds": "m=h:build",
+   "options": [
+    "Build ship notice from the load"
+   ]
+  },
+  {
+   "i": 20,
+   "click": "Send to Northfield",
+   "ds": "m=h:asn",
+   "options": [
+    "Send to Northfield"
+   ]
+  },
+  {
+   "i": 21,
+   "click": "At DC 2 · read the receipt",
+   "ds": "m=h:rcv",
+   "options": [
+    "At DC 2 · read the receipt"
+   ]
+  },
+  {
+   "i": 22,
+   "click": "Replay · carton loaded",
+   "ds": "a=end|hero",
+   "options": [
+    "Replay · carton loaded",
+    "Back to all shipments"
+   ]
+  },
+  {
+   "i": 23,
+   "click": "Correct to match",
+   "ds": "m=h:q|correct",
+   "options": [
+    "Correct to match",
+    "Keep as is"
+   ]
+  },
+  {
+   "i": 24,
+   "click": "Order, then carton Wrong ship-to and lines · due by the ship notice · ",
+   "ds": "osel=m|erp",
+   "options": [
+    "Order, then carton Wrong ship-to and lines · due by the ship notice · ",
+    "Ship without the carton Line 2 ships 159 of 160 · in-full charge est. ",
+    "Carton, then order Carton not loaded · seal in 28 min · est. $151"
+   ]
+  },
+  {
+   "i": 25,
+   "click": "Confirm · Order, then carton",
+   "ds": "m=h:order|erp",
+   "options": [
+    "Confirm · Order, then carton",
+    "Ship without the carton Line 2 ships 159 of 160 · in-full charge est. ",
+    "Carton, then order Carton not loaded · seal in 28 min · est. $151",
+    "Order, then carton Wrong ship-to and lines · due by the ship notice · "
+   ]
+  },
+  {
+   "i": 26,
+   "click": "Included",
+   "ds": "mrow=0",
+   "options": [
+    "Included",
+    "Included",
+    "Included",
+    "Write to Supplier ERP"
+   ]
+  },
+  {
+   "i": 27,
+   "click": "Excluded",
+   "ds": "mrow=0",
+   "options": [
+    "Excluded",
+    "Included",
+    "Included",
+    "Write to Supplier ERP"
+   ]
+  },
+  {
+   "i": 28,
+   "click": "Included",
+   "ds": "mrow=1",
+   "options": [
+    "Included",
+    "Included",
+    "Write to Supplier ERP",
+    "Included"
+   ]
+  },
+  {
+   "i": 29,
+   "click": "Excluded",
+   "ds": "mrow=1",
+   "options": [
+    "Excluded",
+    "Included",
+    "Write to Supplier ERP",
+    "Included"
+   ]
+  },
+  {
+   "i": 30,
+   "click": "Included",
+   "ds": "mrow=2",
+   "options": [
+    "Included",
+    "Write to Supplier ERP",
+    "Included",
+    "Included"
+   ]
+  },
+  {
+   "i": 31,
+   "click": "Excluded",
+   "ds": "mrow=2",
+   "options": [
+    "Excluded",
+    "Write to Supplier ERP",
+    "Included",
+    "Included"
+   ]
+  },
+  {
+   "i": 32,
+   "click": "Write to Supplier ERP",
+   "ds": "m=h:erp",
+   "options": [
+    "Write to Supplier ERP",
+    "Included",
+    "Included",
+    "Included"
+   ]
+  },
+  {
+   "i": 33,
+   "click": "Send to Kinross",
+   "ds": "m=h:floor|send",
+   "options": [
+    "Send to Kinross",
+    "Ship without it"
+   ]
+  },
+  {
+   "i": 34,
+   "click": "Check the load scan",
+   "ds": "m=h:scan",
+   "options": [
+    "Check the load scan"
+   ]
+  },
+  {
+   "i": 35,
+   "click": "After departure · re-read load and order",
+   "ds": "m=h:recheck",
+   "options": [
+    "After departure · re-read load and order"
+   ]
+  },
+  {
+   "i": 36,
+   "click": "Build ship notice from the load",
+   "ds": "m=h:build",
+   "options": [
+    "Build ship notice from the load"
+   ]
+  },
+  {
+   "i": 37,
+   "click": "Send to Northfield",
+   "ds": "m=h:asn",
+   "options": [
+    "Send to Northfield"
+   ]
+  },
+  {
+   "i": 38,
+   "click": "At DC 2 · read the receipt",
+   "ds": "m=h:rcv",
+   "options": [
+    "At DC 2 · read the receipt"
+   ]
+  },
+  {
+   "i": 39,
+   "click": "Back to all shipments",
+   "ds": "a=end|queue",
+   "options": [
+    "Back to all shipments",
+    "Replay · carton misses the trailer"
+   ]
+  },
+  {
+   "i": 40,
+   "click": "2 PO NR-460219 Invoice · line 2 The invoice bills 180 cases of napkins",
+   "ds": "mq=inv",
+   "options": [
+    "2 PO NR-460219 Invoice · line 2 The invoice bills 180 cases of napkins",
+    "3 PO NR-460241 Collect · Kinross Joliet Northfield hasn’t been asked t",
+    "4 PO NR-460262 Allocation · Kinross Groveport Groveport has 520 mugs f",
+    "5 PO NR-460233 Labels · Kinross Joliet 12 cartons carry barcodes alrea",
+    "6 PO NR-460274 Order change by phone The buyer agreed 270 by phone, bu",
+    "1 PO NR-460207 DC 2 load · Kinross Groveport 1 carton is not on the tr"
+   ]
+  },
+  {
+   "i": 41,
+   "click": "Open invoice and shipment",
+   "ds": "m=inv:open",
+   "options": [
+    "Open invoice and shipment",
+    "3 PO NR-460241 Collect · Kinross Joliet Northfield hasn’t been asked t",
+    "4 PO NR-460262 Allocation · Kinross Groveport Groveport has 520 mugs f",
+    "5 PO NR-460233 Labels · Kinross Joliet 12 cartons carry barcodes alrea",
+    "6 PO NR-460274 Order change by phone The buyer agreed 270 by phone, bu",
+    "1 PO NR-460207 DC 2 load · Kinross Groveport 1 carton is not on the tr",
+    "2 PO NR-460219 Invoice · line 2 The invoice bills 180 cases of napkins"
+   ]
+  },
+  {
+   "i": 42,
+   "click": "Keep as is",
+   "ds": "m=inv:keep",
+   "options": [
+    "Keep as is",
+    "3 PO NR-460241 Collect · Kinross Joliet Northfield hasn’t been asked t",
+    "4 PO NR-460262 Allocation · Kinross Groveport Groveport has 520 mugs f",
+    "5 PO NR-460233 Labels · Kinross Joliet 12 cartons carry barcodes alrea",
+    "6 PO NR-460274 Order change by phone The buyer agreed 270 by phone, bu",
+    "1 PO NR-460207 DC 2 load · Kinross Groveport 1 carton is not on the tr",
+    "2 PO NR-460219 Invoice · line 2 The invoice bills 180 cases of napkins"
+   ]
+  },
+  {
+   "i": 43,
+   "click": "3 PO NR-460241 Collect · Kinross Joliet Northfield hasn’t been asked t",
+   "ds": "mq=route",
+   "options": [
+    "3 PO NR-460241 Collect · Kinross Joliet Northfield hasn’t been asked t",
+    "4 PO NR-460262 Allocation · Kinross Groveport Groveport has 520 mugs f",
+    "5 PO NR-460233 Labels · Kinross Joliet 12 cartons carry barcodes alrea",
+    "6 PO NR-460274 Order change by phone The buyer agreed 270 by phone, bu",
+    "1 PO NR-460207 DC 2 load · Kinross Groveport 1 carton is not on the tr",
+    "2 PO NR-460219 Invoice · line 2 The invoice bills 180 cases of napkins"
+   ]
+  },
+  {
+   "i": 44,
+   "click": "Open Supplier ERP shipment",
+   "ds": "m=r:open",
+   "options": [
+    "Open Supplier ERP shipment"
+   ]
+  },
+  {
+   "i": 45,
+   "click": "Send to Northfield",
+   "ds": "m=r:send",
+   "options": [
+    "Send to Northfield",
+    "Hold"
+   ]
+  },
+  {
+   "i": 46,
+   "click": "Show routing instructions",
+   "ds": "m=r:754",
+   "options": [
+    "Show routing instructions"
+   ]
+  },
+  {
+   "i": 47,
+   "click": "Open Kinross ready record",
+   "ds": "m=r:ready",
+   "options": [
+    "Open Kinross ready record"
+   ]
+  },
+  {
+   "i": 48,
+   "click": "Back to all shipments",
+   "ds": "a=end|queue",
+   "options": [
+    "Back to all shipments"
+   ]
+  },
+  {
+   "i": 49,
+   "click": "4 PO NR-460262 Allocation · Kinross Groveport Groveport has 520 mugs f",
+   "ds": "mq=alloc",
+   "options": [
+    "4 PO NR-460262 Allocation · Kinross Groveport Groveport has 520 mugs f",
+    "5 PO NR-460233 Labels · Kinross Joliet 12 cartons carry barcodes alrea",
+    "6 PO NR-460274 Order change by phone The buyer agreed 270 by phone, bu",
+    "1 PO NR-460207 DC 2 load · Kinross Groveport 1 carton is not on the tr",
+    "2 PO NR-460219 Invoice · line 2 The invoice bills 180 cases of napkins",
+    "3 PO NR-460241 Collect · Kinross Joliet Northfield hasn’t been asked t"
+   ]
+  },
+  {
+   "i": 50,
+   "click": "Open stock and open orders",
+   "ds": "m=a:open",
+   "options": [
+    "Open stock and open orders"
+   ]
+  },
+  {
+   "i": 51,
+   "filled": 1
+  },
+  {
+   "i": 51,
+   "filled": 1
+  },
+  {
+   "i": 51,
+   "click": "Apply in Supplier ERP",
+   "ds": "m=a:apply",
+   "options": [
+    "Apply in Supplier ERP"
+   ]
+  },
+  {
+   "i": 52,
+   "click": "Send warehouse order to Kinross",
+   "ds": "m=a:kin1",
+   "options": [
+    "Send warehouse order to Kinross"
+   ]
+  },
+  {
+   "i": 53,
+   "click": "Show Kinross response",
+   "ds": "m=a:kin",
+   "options": [
+    "Show Kinross response"
+   ]
+  },
+  {
+   "i": 54,
+   "click": "Send order acknowledgment",
+   "ds": "m=a:ack",
+   "options": [
+    "Send order acknowledgment"
+   ]
+  },
+  {
+   "i": 55,
+   "click": "Send to Jordan Ellis",
+   "ds": "m=a:req",
+   "options": [
+    "Send to Jordan Ellis"
+   ]
+  },
+  {
+   "i": 56,
+   "click": "Back to all shipments",
+   "ds": "a=end|queue",
+   "options": [
+    "Back to all shipments"
+   ]
+  },
+  {
+   "i": 57,
+   "click": "5 PO NR-460233 Labels · Kinross Joliet 12 cartons carry barcodes alrea",
+   "ds": "mq=lab",
+   "options": [
+    "5 PO NR-460233 Labels · Kinross Joliet 12 cartons carry barcodes alrea",
+    "6 PO NR-460274 Order change by phone The buyer agreed 270 by phone, bu",
+    "1 PO NR-460207 DC 2 load · Kinross Groveport 1 carton is not on the tr",
+    "2 PO NR-460219 Invoice · line 2 The invoice bills 180 cases of napkins",
+    "3 PO NR-460241 Collect · Kinross Joliet Northfield hasn’t been asked t",
+    "4 PO NR-460262 Allocation · Kinross Groveport Groveport has 520 mugs f"
+   ]
+  },
+  {
+   "i": 58,
+   "click": "Open label scan and SSCC history",
+   "ds": "m=lab:open",
+   "options": [
+    "Open label scan and SSCC history",
+    "6 PO NR-460274 Order change by phone The buyer agreed 270 by phone, bu",
+    "1 PO NR-460207 DC 2 load · Kinross Groveport 1 carton is not on the tr",
+    "2 PO NR-460219 Invoice · line 2 The invoice bills 180 cases of napkins",
+    "3 PO NR-460241 Collect · Kinross Joliet Northfield hasn’t been asked t",
+    "4 PO NR-460262 Allocation · Kinross Groveport Groveport has 520 mugs f",
+    "5 PO NR-460233 Labels · Kinross Joliet 12 cartons carry barcodes alrea"
+   ]
+  },
+  {
+   "i": 59,
+   "click": "Send to Kinross",
+   "ds": "m=lab:send",
+   "options": [
+    "Send to Kinross",
+    "Leave labels as they are",
+    "6 PO NR-460274 Order change by phone The buyer agreed 270 by phone, bu",
+    "1 PO NR-460207 DC 2 load · Kinross Groveport 1 carton is not on the tr",
+    "2 PO NR-460219 Invoice · line 2 The invoice bills 180 cases of napkins",
+    "3 PO NR-460241 Collect · Kinross Joliet Northfield hasn’t been asked t",
+    "4 PO NR-460262 Allocation · Kinross Groveport Groveport has 520 mugs f",
+    "5 PO NR-460233 Labels · Kinross Joliet 12 cartons carry barcodes alrea"
+   ]
+  },
+  {
+   "i": 60,
+   "click": "6 PO NR-460274 Order change by phone The buyer agreed 270 by phone, bu",
+   "ds": "mq=off",
+   "options": [
+    "6 PO NR-460274 Order change by phone The buyer agreed 270 by phone, bu",
+    "1 PO NR-460207 DC 2 load · Kinross Groveport 1 carton is not on the tr",
+    "2 PO NR-460219 Invoice · line 2 The invoice bills 180 cases of napkins",
+    "3 PO NR-460241 Collect · Kinross Joliet Northfield hasn’t been asked t",
+    "4 PO NR-460262 Allocation · Kinross Groveport Groveport has 520 mugs f",
+    "5 PO NR-460233 Labels · Kinross Joliet 12 cartons carry barcodes alrea"
+   ]
+  },
+  {
+   "i": 61,
+   "click": "Send to Jordan Ellis",
+   "ds": "m=off:send",
+   "options": [
+    "Send to Jordan Ellis",
+    "Leave the order as is",
+    "1 PO NR-460207 DC 2 load · Kinross Groveport 1 carton is not on the tr",
+    "2 PO NR-460219 Invoice · line 2 The invoice bills 180 cases of napkins",
+    "3 PO NR-460241 Collect · Kinross Joliet Northfield hasn’t been asked t",
+    "4 PO NR-460262 Allocation · Kinross Groveport Groveport has 520 mugs f",
+    "5 PO NR-460233 Labels · Kinross Joliet 12 cartons carry barcodes alrea",
+    "6 PO NR-460274 Order change by phone The buyer agreed 270 by phone, bu"
+   ]
+  },
+  {
+   "i": 62,
+   "click": "Show Northfield’s order change",
+   "ds": "m=off:860",
+   "options": [
+    "Show Northfield’s order change",
+    "1 PO NR-460207 DC 2 load · Kinross Groveport 1 carton is not on the tr",
+    "2 PO NR-460219 Invoice · line 2 The invoice bills 180 cases of napkins",
+    "3 PO NR-460241 Collect · Kinross Joliet Northfield hasn’t been asked t",
+    "4 PO NR-460262 Allocation · Kinross Groveport Groveport has 520 mugs f",
+    "5 PO NR-460233 Labels · Kinross Joliet 12 cartons carry barcodes alrea",
+    "6 PO NR-460274 Order change by phone The buyer agreed 270 by phone, bu"
+   ]
+  },
+  {
+   "i": 63,
+   "click": "Send to Northfield",
+   "ds": "m=off:ack",
+   "options": [
+    "Send to Northfield",
+    "1 PO NR-460207 DC 2 load · Kinross Groveport 1 carton is not on the tr",
+    "2 PO NR-460219 Invoice · line 2 The invoice bills 180 cases of napkins",
+    "3 PO NR-460241 Collect · Kinross Joliet Northfield hasn’t been asked t",
+    "4 PO NR-460262 Allocation · Kinross Groveport Groveport has 520 mugs f",
+    "5 PO NR-460233 Labels · Kinross Joliet 12 cartons carry barcodes alrea",
+    "6 PO NR-460274 Order change by phone The buyer agreed 270 by phone, bu"
+   ]
+  },
+  {
+   "i": 64,
+   "click": "1 PO NR-460207 DC 2 load · Kinross Groveport 1 carton is not on the tr",
+   "ds": "mq=hero",
+   "options": [
+    "1 PO NR-460207 DC 2 load · Kinross Groveport 1 carton is not on the tr",
+    "2 PO NR-460219 Invoice · line 2 The invoice bills 180 cases of napkins",
+    "3 PO NR-460241 Collect · Kinross Joliet Northfield hasn’t been asked t",
+    "4 PO NR-460262 Allocation · Kinross Groveport Groveport has 520 mugs f",
+    "5 PO NR-460233 Labels · Kinross Joliet 12 cartons carry barcodes alrea",
+    "6 PO NR-460274 Order change by phone The buyer agreed 270 by phone, bu"
+   ]
+  },
+  {
+   "i": 65,
+   "click": "Replay · carton misses the trailer",
+   "ds": "a=end|short",
+   "options": [
+    "Replay · carton misses the trailer",
+    "Back to all shipments"
+   ]
+  },
+  {
+   "i": 66,
+   "click": "Keep as is",
+   "ds": "m=h:q|keep",
+   "options": [
+    "Keep as is",
+    "Correct to match"
+   ]
+  },
+  {
+   "i": 67,
+   "click": "Ship without it",
+   "ds": "m=h:floor|skip",
+   "options": [
+    "Ship without it",
+    "Send to Kinross"
+   ]
+  },
+  {
+   "i": 68,
+   "click": "Ship 659 · cancel the line 2 remainder",
+   "ds": "m=h:short",
+   "options": [
+    "Ship 659 · cancel the line 2 remainder"
+   ]
+  },
+  {
+   "i": 69,
+   "click": "Included",
+   "ds": "mrow=3",
+   "options": [
+    "Included",
+    "Write to Supplier ERP"
+   ]
+  },
+  {
+   "i": 70,
+   "click": "Excluded",
+   "ds": "mrow=3",
+   "options": [
+    "Excluded",
+    "Keep as is"
+   ]
+  },
+  {
+   "i": 71,
+   "click": "Write to Supplier ERP",
+   "ds": "m=h:erp",
+   "options": [
+    "Write to Supplier ERP",
+    "Included"
+   ]
+  },
+  {
+   "i": 72,
+   "click": "After departure · re-read load and order",
+   "ds": "m=h:recheck",
+   "options": [
+    "After departure · re-read load and order"
+   ]
+  },
+  {
+   "i": 73,
+   "click": "Build ship notice from the load",
+   "ds": "m=h:build",
+   "options": [
+    "Build ship notice from the load"
+   ]
+  },
+  {
+   "i": 74,
+   "click": "Send to Northfield",
+   "ds": "m=h:asn",
+   "options": [
+    "Send to Northfield"
+   ]
+  },
+  {
+   "i": 75,
+   "click": "At DC 2 · read the receipt",
+   "ds": "m=h:rcv",
+   "options": [
+    "At DC 2 · read the receipt"
+   ]
+  },
+  {
+   "i": 76,
+   "click": "Replay · carton loaded",
+   "ds": "a=end|hero",
+   "options": [
+    "Replay · carton loaded",
+    "Back to all shipments"
+   ]
+  },
+  {
+   "i": 77,
+   "click": "Correct to match",
+   "ds": "m=h:q|correct",
+   "options": [
+    "Correct to match",
+    "Keep as is"
+   ]
+  },
+  {
+   "i": 78,
+   "click": "Ship without the carton Line 2 ships 159 of 160 · in-full charge est. ",
+   "ds": "osel=m|remove",
+   "options": [
+    "Ship without the carton Line 2 ships 159 of 160 · in-full charge est. ",
+    "Carton, then order Carton not loaded · seal in 28 min · est. $151",
+    "Order, then carton Wrong ship-to and lines · due by the ship notice · "
+   ]
+  },
+  {
+   "i": 79,
+   "click": "Confirm · Ship without the carton",
+   "ds": "m=h:order|remove",
+   "options": [
+    "Confirm · Ship without the carton",
+    "Carton, then order Carton not loaded · seal in 28 min · est. $151",
+    "Order, then carton Wrong ship-to and lines · due by the ship notice · ",
+    "Ship without the carton Line 2 ships 159 of 160 · in-full charge est. "
+   ]
+  },
+  {
+   "i": 80,
+   "click": "Included",
+   "ds": "mrow=0",
+   "options": [
+    "Included",
+    "Included",
+    "Included",
+    "Ship 659 · cancel the line 2 remainder",
+    "Write to Supplier ERP"
+   ]
+  },
+  {
+   "i": 81,
+   "click": "Excluded",
+   "ds": "mrow=0",
+   "options": [
+    "Excluded",
+    "Included",
+    "Included",
+    "Ship 659 · cancel the line 2 remainder",
+    "Write to Supplier ERP"
+   ]
+  },
+  {
+   "i": 82,
+   "click": "Included",
+   "ds": "mrow=1",
+   "options": [
+    "Included",
+    "Included",
+    "Ship 659 · cancel the line 2 remainder",
+    "Included",
+    "Write to Supplier ERP"
+   ]
+  },
+  {
+   "i": 83,
+   "click": "Excluded",
+   "ds": "mrow=1",
+   "options": [
+    "Excluded",
+    "Included",
+    "Ship 659 · cancel the line 2 remainder",
+    "Included",
+    "Write to Supplier ERP"
+   ]
+  },
+  {
+   "i": 84,
+   "click": "Included",
+   "ds": "mrow=2",
+   "options": [
+    "Included",
+    "Ship 659 · cancel the line 2 remainder",
+    "Included",
+    "Included",
+    "Write to Supplier ERP"
+   ]
+  },
+  {
+   "i": 85,
+   "click": "Excluded",
+   "ds": "mrow=2",
+   "options": [
+    "Excluded",
+    "Ship 659 · cancel the line 2 remainder",
+    "Included",
+    "Included",
+    "Write to Supplier ERP"
+   ]
+  },
+  {
+   "i": 86,
+   "click": "Ship 659 · cancel the line 2 remainder",
+   "ds": "m=h:short",
+   "options": [
+    "Ship 659 · cancel the line 2 remainder",
+    "Included",
+    "Included",
+    "Included",
+    "Write to Supplier ERP"
+   ]
+  },
+  {
+   "i": 87,
+   "click": "Included",
+   "ds": "mrow=0",
+   "options": [
+    "Included",
+    "Included",
+    "Included",
+    "Included",
+    "Write to Supplier ERP"
+   ]
+  },
+  {
+   "i": 88,
+   "click": "Excluded",
+   "ds": "mrow=0",
+   "options": [
+    "Excluded",
+    "Included",
+    "Included",
+    "Included",
+    "Write to Supplier ERP"
+   ]
+  },
+  {
+   "i": 89,
+   "click": "Included",
+   "ds": "mrow=1",
+   "options": [
+    "Included",
+    "Included",
+    "Included",
+    "Write to Supplier ERP",
+    "Included"
+   ]
+  },
+  {
+   "i": 90,
+   "click": "Excluded",
+   "ds": "mrow=1",
+   "options": [
+    "Excluded",
+    "Included",
+    "Included",
+    "Write to Supplier ERP",
+    "Included"
+   ]
+  },
+  {
+   "i": 91,
+   "click": "Included",
+   "ds": "mrow=2",
+   "options": [
+    "Included",
+    "Included",
+    "Write to Supplier ERP",
+    "Included",
+    "Included"
+   ]
+  },
+  {
+   "i": 92,
+   "click": "Excluded",
+   "ds": "mrow=2",
+   "options": [
+    "Excluded",
+    "Included",
+    "Write to Supplier ERP",
+    "Included",
+    "Included"
+   ]
+  },
+  {
+   "i": 93,
+   "click": "Included",
+   "ds": "mrow=3",
+   "options": [
+    "Included",
+    "Write to Supplier ERP",
+    "Included",
+    "Included",
+    "Included"
+   ]
+  },
+  {
+   "i": 94,
+   "click": "Excluded",
+   "ds": "mrow=3",
+   "options": [
+    "Excluded",
+    "Write to Supplier ERP",
+    "Included",
+    "Included",
+    "Included"
+   ]
+  },
+  {
+   "i": 95,
+   "click": "Write to Supplier ERP",
+   "ds": "m=h:erp",
+   "options": [
+    "Write to Supplier ERP",
+    "Included",
+    "Included",
+    "Included",
+    "Included"
+   ]
+  },
+  {
+   "i": 96,
+   "click": "After departure · re-read load and order",
+   "ds": "m=h:recheck",
+   "options": [
+    "After departure · re-read load and order"
+   ]
+  },
+  {
+   "i": 97,
+   "click": "Build ship notice from the load",
+   "ds": "m=h:build",
+   "options": [
+    "Build ship notice from the load"
+   ]
+  },
+  {
+   "i": 98,
+   "click": "Send to Northfield",
+   "ds": "m=h:asn",
+   "options": [
+    "Send to Northfield"
+   ]
+  },
+  {
+   "i": 99,
+   "click": "At DC 2 · read the receipt",
+   "ds": "m=h:rcv",
+   "options": [
+    "At DC 2 · read the receipt"
+   ]
+  },
+  {
+   "i": 100,
+   "click": "Replay · carton loaded",
+   "ds": "a=end|hero",
+   "options": [
+    "Replay · carton loaded",
+    "Back to all shipments"
+   ]
+  },
+  {
+   "i": 101,
+   "click": "Keep as is",
+   "ds": "m=h:q|keep",
+   "options": [
+    "Keep as is",
+    "Correct to match"
+   ]
+  },
+  {
+   "i": 102,
+   "click": "Send to Kinross",
+   "ds": "m=h:floor|send",
+   "options": [
+    "Send to Kinross",
+    "Ship without it"
+   ]
+  },
+  {
+   "i": 103,
+   "click": "Check the load scan",
+   "ds": "m=h:scan",
+   "options": [
+    "Check the load scan"
+   ]
+  },
+  {
+   "i": 104,
+   "click": "After departure · re-read load and order",
+   "ds": "m=h:recheck",
+   "options": [
+    "After departure · re-read load and order"
+   ]
+  },
+  {
+   "i": 105,
+   "click": "Build ship notice from the load",
+   "ds": "m=h:build",
+   "options": [
+    "Build ship notice from the load"
+   ]
+  },
+  {
+   "i": 106,
+   "click": "Send to Northfield",
+   "ds": "m=h:asn",
+   "options": [
+    "Send to Northfield"
+   ]
+  },
+  {
+   "i": 107,
+   "click": "At DC 2 · read the receipt",
+   "ds": "m=h:rcv",
+   "options": [
+    "At DC 2 · read the receipt"
+   ]
+  },
+  {
+   "i": 108,
+   "click": "Replay · carton misses the trailer",
+   "ds": "a=end|short",
+   "options": [
+    "Replay · carton misses the trailer",
+    "Back to all shipments"
+   ]
+  },
+  {
+   "i": 109,
+   "click": "Correct to match",
+   "ds": "m=h:q|correct",
+   "options": [
+    "Correct to match",
+    "Keep as is"
+   ]
+  },
+  {
+   "i": 110,
+   "click": "Carton, then order Carton not loaded · seal in 28 min · est. $151",
+   "ds": "osel=m|floor",
+   "options": [
+    "Carton, then order Carton not loaded · seal in 28 min · est. $151",
+    "Order, then carton Wrong ship-to and lines · due by the ship notice · ",
+    "Ship without the carton Line 2 ships 159 of 160 · in-full charge est. "
+   ]
+  },
+  {
+   "i": 111,
+   "click": "Confirm · Carton, then order",
+   "ds": "m=h:order|floor",
+   "options": [
+    "Confirm · Carton, then order",
+    "Order, then carton Wrong ship-to and lines · due by the ship notice · ",
+    "Ship without the carton Line 2 ships 159 of 160 · in-full charge est. ",
+    "Carton, then order Carton not loaded · seal in 28 min · est. $151"
+   ]
+  },
+  {
+   "i": 112,
+   "click": "Ship without it",
+   "ds": "m=h:floor|skip",
+   "options": [
+    "Ship without it",
+    "Send to Kinross"
+   ]
+  },
+  {
+   "i": 113,
+   "click": "Ship 659 · cancel the line 2 remainder",
+   "ds": "m=h:short",
+   "options": [
+    "Ship 659 · cancel the line 2 remainder",
+    "Included",
+    "Included",
+    "Included",
+    "Write to Supplier ERP"
+   ]
+  },
+  {
+   "i": 114,
+   "click": "Included",
+   "ds": "mrow=0",
+   "options": [
+    "Included",
+    "Included",
+    "Included",
+    "Included",
+    "Write to Supplier ERP"
+   ]
+  },
+  {
+   "i": 115,
+   "click": "Excluded",
+   "ds": "mrow=0",
+   "options": [
+    "Excluded",
+    "Included",
+    "Included",
+    "Included",
+    "Write to Supplier ERP"
+   ]
+  },
+  {
+   "i": 116,
+   "click": "Included",
+   "ds": "mrow=1",
+   "options": [
+    "Included",
+    "Included",
+    "Included",
+    "Write to Supplier ERP",
+    "Included"
+   ]
+  },
+  {
+   "i": 117,
+   "click": "Excluded",
+   "ds": "mrow=1",
+   "options": [
+    "Excluded",
+    "Included",
+    "Included",
+    "Write to Supplier ERP",
+    "Included"
+   ]
+  },
+  {
+   "i": 118,
+   "click": "Included",
+   "ds": "mrow=2",
+   "options": [
+    "Included",
+    "Included",
+    "Write to Supplier ERP",
+    "Included",
+    "Included"
+   ]
+  },
+  {
+   "i": 119,
+   "click": "Excluded",
+   "ds": "mrow=2",
+   "options": [
+    "Excluded",
+    "Included",
+    "Write to Supplier ERP",
+    "Included",
+    "Included"
+   ]
+  },
+  {
+   "i": 120,
+   "click": "Included",
+   "ds": "mrow=3",
+   "options": [
+    "Included",
+    "Write to Supplier ERP",
+    "Included",
+    "Included",
+    "Included"
+   ]
+  },
+  {
+   "i": 121,
+   "click": "Excluded",
+   "ds": "mrow=3",
+   "options": [
+    "Excluded",
+    "Write to Supplier ERP",
+    "Included",
+    "Included",
+    "Included"
+   ]
+  },
+  {
+   "i": 122,
+   "click": "Write to Supplier ERP",
+   "ds": "m=h:erp",
+   "options": [
+    "Write to Supplier ERP",
+    "Included",
+    "Included",
+    "Included",
+    "Included"
+   ]
+  },
+  {
+   "i": 123,
+   "stop": "loop on After departure · re-read load and order"
+  }
+ ]
+}

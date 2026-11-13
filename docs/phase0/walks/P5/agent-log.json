@@ -1,0 +1,30 @@
+{
+ "errs": [],
+ "log": [
+  {
+   "i": 1,
+   "click": "Start Scout Agent",
+   "ds": "",
+   "options": [
+    "Start Scout Agent"
+   ]
+  },
+  {
+   "i": 2,
+   "click": "1 PO NR-460207 DC 2 load · Kinross Groveport 1 carton is not on the tr",
+   "ds": "q=hero",
+   "options": [
+    "1 PO NR-460207 DC 2 load · Kinross Groveport 1 carton is not on the tr",
+    "2 PO NR-460219 Invoice · line 2 The invoice bills 180 cases of napkins",
+    "3 PO NR-460241 Collect · Kinross Joliet Northfield hasn’t been asked t",
+    "4 PO NR-460262 Allocation · Kinross Groveport Groveport has 520 mugs f",
+    "5 PO NR-460233 Labels · Kinross Joliet 12 cartons carry barcodes alrea",
+    "6 PO NR-460274 Order change by phone The buyer agreed 270 by phone, bu"
+   ]
+  },
+  {
+   "i": 3,
+   "stop": "no actions"
+  }
+ ]
+}

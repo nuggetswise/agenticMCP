@@ -276,7 +276,7 @@ Phase 0 is closed only when no cell reads Not done or Partly. A cell records whe
 | P1 | Done | Not done | N/A | Not done | Not done | Done | Done | Not done | Done | Not done | Partly |
 | P2 | Partly | Not done | N/A | Not done | Partly | Done | Done | Not done | Done | Not done | Not done |
 | P4 | Partly | Not done | N/A | Not done | Done | Done | Done | Done | Done | Not done | Partly |
-| P5 | Partly | Partly | Partly | Not done | Done | Done | Done | Done | Partly | Not done | Partly |
+| P5 | Done | Partly | Partly | Not done | Done | Done | Done | Done | Done | Done | Partly |
 | P6 | Done | Partly | Done | Not done | Done | Not done | Done | Done | Done | Not done | Done |
 | P7 | Done | Partly | Done | Not done | Partly | Not done | Done | Not done | Partly | Not done | Done |
 | P8 | Not done | N/A | N/A | Not done | Not done | Not done | Done | Not done | N/A | N/A | Not done |
@@ -342,7 +342,7 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T0.10 | P1 | Complete P1's grid row | — | P1 link in Inventory | Every P1 cell reads Done or N/A | Open |
 | T0.11 | P2 | Complete P2's grid row | — | P2 link in Inventory | Every P2 cell reads Done or N/A | Open |
 | T0.12 | P4 | Complete P4's grid row | — | P4 link in Inventory | Every P4 cell reads Done or N/A | Open |
-| T0.13 | P5 | Complete P5's grid row | — | P5 link; `docs/phase0/walks/` for the dead state | Every P5 cell reads Done or N/A | Open |
+| T0.13 | P5 | Complete P5's grid row; A1, A9 and A10 are done in `docs/phase0/P5-grid.md`, leaving A2, A3, A4 and C1 | — | P5 link; `docs/phase0/walks/` for the dead state | Every P5 cell reads Done or N/A | Open |
 | T0.14 | P6 | Complete P6's grid row | — | P6 link in Inventory | Every P6 cell reads Done or N/A | Open |
 | T0.15 | P7 | Complete P7's grid row | T0.5 | P7 link; `contract/claims.json` | Every P7 cell reads Done or N/A | Open |
 | T0.16 | P8 | Complete P8's grid row | — | P8 link; why its cells are N/A | Every P8 cell reads Done or N/A | Open |

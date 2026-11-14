@@ -1,12 +1,12 @@
 {
  "file": "/home/claude/agenticmcp/docs/build-guide.md",
- "ran_at_head": "e5f82d9",
+ "ran_at_head": "2bfa59d",
  "results": [
   {
    "name": "as_of_commit_current",
    "ok": true,
    "problems": [],
-   "info": "6e86b1e"
+   "info": "2bfa59d"
   },
   {
    "name": "commits_exist",

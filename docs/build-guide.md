@@ -4,7 +4,7 @@ Working copy: `docs/build-guide.md` in the repo. Reading copy: the Claude doc at
 
 ## How to use this guide
 
-This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 1a62f35.
+This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 6e86b1e.
 
 - **Start here:** follow R39. It picks your next task from the Tasks tables and says what to read first. For one prototype, run `node scripts/guide-pack.mjs P5` with its ID: it prints that prototype's job, ending, v8 section, the rules that apply, its agent, tools and anchors, and its tasks in order, so you read one page and the prototype's source.
 - **Authority, highest first:**
@@ -403,7 +403,7 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T2.8 | Docs | Repo copies of the other docs become dated snapshots | — | Where each fact lives, role of every other doc | Each copy under docs/ carries its export date and the registry check no longer treats it as current | Open |
 | T2.9 | P10 Northfield | Live Northfield connector run | Owner asks for a live Northfield demo | `docs/phase2/golden-nf/` | One Northfield golden question is answered through the live URL with the Northfield key | Blocked |
 | T2.10 | Server | Test whether a published prototype can read the live server, from a private test page only, since the URL carries the token | — | Server reference, Hosting | A published test page calls one tool and shows its answer, or `docs/phase2/` records the error that blocks it | Open |
-| T2.11 | Aviator | The in-product assistant on prototype screens: floating, bottom right, answering from the same tools as the company's connection | T2.10 | D56; Customer-agent access rules R24 to R27 | Live model answers verified on the real tools, refusal included: `docs/phase2/aviator-live-2026-11-13.txt`. The deployed endpoint answered on both sides, on 13 November (same file). Left: Aviator on a prototype screen once T2.10 settles the route | Open |
+| T2.11 | Aviator | The in-product assistant on prototype screens: floating, bottom right, answering from the same tools as the company's connection | T2.10 | D56; Customer-agent access rules R24 to R27 | Live model answers verified on the real tools, refusal included: `docs/phase2/aviator-live-2026-11-13.txt`. The deployed endpoint answered on both sides; Northfield's side now lists its own documents on an order whose hold sat with the supplier (same file, CALLS 67). Left: Aviator on a prototype screen once T2.10 settles the route | Open |
 
 ### Phase 3 · New prototypes
 
@@ -481,7 +481,7 @@ Each row is one prototype through the Phase 4 loop under Build flow. Before prop
 
 ## Proofs, open items and drift control
 
-The gate and smoke tests pass at commit 1a62f35. Two of the plan's proofs have not been built or run.
+The gate and smoke tests pass at commit 6e86b1e. Two of the plan's proofs have not been built or run.
 
 | Proof | Command or location | Result |
 | --- | --- | --- |

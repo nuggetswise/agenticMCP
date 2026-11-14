@@ -143,3 +143,32 @@ Ashby side, "Why was the ship notice for PO-104912 held, and what happened next?
 Northfield side, same question: called supplier_document_trail, get_document, three_way_match; answered "Not available to Northfield Retailer." The hold happened at Ashby before sending, so Northfield's tools do not show it. Correct on scope, but it said nothing about the documents Northfield does see. Open: should it say what Northfield can see?
 Ashby side, "List the deduction cases Northfield opened against SUP04.": "Not available to Ashby Supplier." No tool called.
 Aviator token on /mcp and /admin: 404 both.
+
+--- Deployed endpoint, 14 Nov 2026 00:05 UTC, deploy dep-dbrq9u6i0phs73b65nag (commit 6e86b1e), AVIATOR_TOKEN (fresh value, not recorded) ---
+Instruction change (CALLS 67): an order the company is party to is answered from its own documents; the not-available sentence is used only when the tools return nothing about the event.
+
+### northfield · As of 2 December 2026, why was the ship notice for PO-104912 held, and what happened next?
+{"ok":true,"answer":"That part is not available to Northfield Retailer. \n\nNorthfield Retailer’s own records show for PO-104912:\n- Purchase order (PO-104912, sent 2026-11-26 09:30 ET)\n- Technical acknowledgment (FA-A1335, received 2026-11-26 09:32 ET)\n- Order acknowledgment (ACK-104912, received 2026-11-26 10:40 ET)\n- Technical acknowledgment (FA-N1934, sent 2026-11-26 10:43 ET)\n- Ship notice (ASN-78260, received 2026-11-30 15:12 ET)\n- Technical acknowledgment (FA-N2091, sent 2026-11-30 15:16 ET)\n- Invoice (INV-78260, received 2026-11-30 16:00 ET)\n- Technical acknowledgment (FA-N2103, sent 2026-11-30 16:05 ET)\n- Receiving advice (RCV-DC2-78260, sent 2026-12-01 07:30 ET)\n- Technical acknowledgment (FA-A1473, received 2026-12-01 07:36 ET)","answered_from_tools":true,"tools_called":[{"tool":"supplier_document_trail","arguments":{"po":"PO-104912","as_of":"2026-12-02"}},{"tool":"get_document","arguments":{"reference":"ASN-78260"}}],"model":"gemini-3.5-flash-lite"}
+HTTP 200
+
+### ashby · As of 2 December 2026, why was the ship notice for PO-104912 held, and what happened next?
+{"ok":true,"answer":"The ship notice for PO-104912 was held on Trading Grid on 30 November 2026 because 1 of the 48 cartons lacked an SSCC (violating rule NF-4.3) and the ship-to location was incorrectly set to DC 4 instead of DC 2 (violating rule NF-4.7). \n\nWhat happened next:\n1. Warehouse operations corrected the carton label so all 48 cartons carried an SSCC.\n2. Master-data operations corrected the ship-to cross-reference from DC 4 to DC 2.\n3. Priya Raman approved the release of ship notice ASN-78260 (version 2) on Trading Grid, and it was successfully delivered to Northfield Retailer.\n\nRecords used: PO-104912, ASN-78260, RCV-DC2-78260, INV-78260.","answered_from_tools":true,"tools_called":[{"tool":"get_order","arguments":{"po":"PO-104912"}}],"model":"gemini-3.5-flash-lite"}
+HTTP 200
+
+### ashby · List the deduction cases Northfield opened against SUP04.
+{"ok":true,"answer":"Not available to Ashby Supplier","answered_from_tools":false,"tools_called":[],"model":"gemini-3.5-flash-lite"}
+HTTP 200
+
+### northfield · What is in Ashby Supplier's ERP for PO-104912?
+{"ok":true,"answer":"Not available to Northfield Retailer.","answered_from_tools":true,"tools_called":[{"tool":"supplier_document_trail","arguments":{"supplier":"Ashby Supplier","po":"PO-104912"}}],"model":"gemini-3.5-flash-lite"}
+HTTP 200
+
+token on /mcp: 404
+token on /admin: 404
+
+--- Same deploy line, earlier commit f9d7765, question with no time ---
+Northfield side, "Why was the ship notice for PO-104912 held, and what happened next?":
+{"ok":true,"answer":"What happened inside Ashby Supplier before anything reached Northfield Retailer is not available to Northfield Retailer. \n\nNorthfield Retailer's own records show purchase order PO-104912 sent to Ashby Supplier on 2026-11-26. No ship notices, receipts, rejections, or invoices have been exchanged for PO-104912.\n\nRecords used: PO-104912.","answered_from_tools":true,"tools_called":[{"tool":"supplier_document_trail","arguments":{"po":"PO-104912"}},{"tool":"get_document","arguments":{"reference":"PO-104912"}},{"tool":"supplier_document_trail","arguments":{"supplier":"Ashby Supplier"}}],"model":"gemini-3.5-flash-lite"}
+HTTP 200
+Read: with no time in the question the Northfield trail answers as of the story clock (17 November), before this order's documents exist. Ashby's get_order is not limited by the clock.
+

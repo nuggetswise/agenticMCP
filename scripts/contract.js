@@ -54,6 +54,23 @@ function ruleWording(lines) { const out = []; const ID = /\b(?:NF-\d+\.\d+|AP-\d
       const cites = ids.length > 1 || new RegExp(`\\([^)]*${id.replace('.', '\\.')}[^)]*\\)`).test(l);
       if (!cites && rest.split(' ').length >= 8 && !rest.includes(norm(r.statement)) && !norm(r.statement).includes(rest)) out.push({ rule: id, problem: 'wording differs from the catalogue', line: l.slice(0, 160), catalogue: r.statement }); } }
   return out; }
+// T1.5: a raw X12 panel must be a world document's text, byte for byte. A panel is any run of X12 segments in the source
+// that starts at ISA or ST; it passes when its segments are a contiguous run of one world document's segments. A panel
+// assembled from page variables (concatenation or ${...}) cannot be checked against the world and fails as built on the page.
+const WORLD_SEGS = db.prepare('SELECT reference, raw FROM documents').all().map((d) => ({ ref: d.reference, segs: d.raw.split('~').map((x) => x.trim()).filter(Boolean) }));
+function x12Panels(src) {
+  const out = []; const t = src.replace(/<style[\s\S]*?<\/style>/g, ' ');
+  for (const m of t.matchAll(/(?:ISA\*00\*|ST\*\d{3}\*)/g)) {
+    const end = t.slice(m.index).search(/(?:IEA\*[^~]*~|SE\*[^~]*~)/); const chunk = end < 0 ? t.slice(m.index, m.index + 600) : t.slice(m.index, m.index + end).concat(t.slice(m.index + end).match(/^[^~]*~/)[0]);
+    if (out.some((p) => p.at <= m.index && m.index < p.at + p.len)) continue;
+    const templated = /['"`]\s*\+|\+\s*['"`]|\$\{/.test(chunk);
+    const segs = chunk.replace(/<[^>]+>/g, '').replace(/\\n/g, '\n').split('~').map((x) => x.replace(/^[\s'"`,]+|[\s'"`,]+$/g, '')).filter(Boolean);
+    const set = (segs.find((x) => x.startsWith('ST*')) || '').split('*')[1] || '?';
+    let match = null; if (!templated) for (const w of WORLD_SEGS) { const i = w.segs.indexOf(segs[0]); if (i >= 0 && segs.every((x, k) => w.segs[i + k] === x)) { match = w.ref; break; } }
+    out.push({ at: m.index, len: chunk.length, set, first: segs[0].slice(0, 60), result: templated ? 'built on the page' : match ? `matches ${match}` : 'no world document has this text' });
+  }
+  return out.map(({ at, len, ...p }) => p);
+}
 const report = {}; let bad = 0;
 for (const [id, c] of Object.entries(CLAIMS)) {
   const f = join(DIR, `${id}.html`); if (!existsSync(f)) { report[id] = { screen: 'not fetched' }; bad++; continue; }
@@ -73,7 +90,8 @@ for (const [id, c] of Object.entries(CLAIMS)) {
   const srcLines = src.replace(/<style[\s\S]*?<\/style>/g, ' ').replace(/<[^>]+>/g, '\n').split(/\n|(?<=['"`]),(?=\s*['"`\[])/).map((x) => x.trim().replace(/^[\[\('"`]+|[\]\)'"`,;]+$/g, '')).filter(Boolean);
   const lines = renderedText(id) || src.replace(/<style[\s\S]*?<\/style>/g, ' ').replace(/<[^>]+>/g, '\n').split('\n').map((x) => x.trim()).filter(Boolean);
   r.text_from = renderedText(id) ? 'walk frames' : 'source'; r.dates = datesIn(lines); r.rule_wording = ruleWording(lines);
-  r.pass = !r.unknown_records.length && !r.wrong_names.length && !r.numbers.length && !r.dates.length && !r.rule_wording.length; if (!r.pass) bad++; report[id] = r;
+  r.x12_panels = x12Panels(src);
+  r.pass = !r.unknown_records.length && !r.wrong_names.length && !r.numbers.length && !r.dates.length && !r.rule_wording.length && r.x12_panels.every((x) => x.result.startsWith('matches')); if (!r.pass) bad++; report[id] = r;
 }
 writeFileSync(join(ROOT, 'build', 'contract-report.json'), JSON.stringify(report, null, 1));
 for (const [id, r] of Object.entries(report)) console.log(`${r.pass ? 'PASS' : 'FAIL'} ${id}${r.pass ? '' : ` · unknown records ${r.unknown_records?.length ?? '-'}: ${(r.unknown_records || []).slice(0, 8).join(' ')} · names ${(r.wrong_names || []).join(', ')} · numbers ${(r.numbers || []).map((n) => `${n.claim} [${n.on_screen} vs ${n.world}]`).join('; ')} · dates ${(r.dates || []).length}: ${(r.dates || []).slice(0, 6).join(' | ')} · rule wording ${(r.rule_wording || []).length}`}`);

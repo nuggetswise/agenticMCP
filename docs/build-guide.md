@@ -382,7 +382,7 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T1.2 | P7 | Settle week 6 orders and the charge figure | — | `contract/claims.json` | Evidence: the world wins and does not change (D51); the live-page contract check moves to T4.15; CALLS 54 | Done |
 | T1.3 | World | Partner records in the timeline | — | Partner checks | Evidence: no partner record is added (D52); CALLS 54 | Done |
 | T1.4 | P8 | Shipments without a receipt | — | `docs/build-log/CALLS.md` | Other suppliers' shipments with no receipt are P8's stuck value. Kept as built: the owner left the call to the builder (CALLS 63) | Done |
-| T1.5 | All screens | Raw X12 panels generated from the world | — | `build/tg.db`; `npm run contract` | Every raw X12 panel matches a world document byte for byte, checked by the contract test | Open |
+| T1.5 | All screens | Raw X12 panels generated from the world. The tools and the contract check are built; the screens' panels are not yet world text (`docs/phase1/T1.5-x12-panels.md`, CALLS 69). Each screen's panels change in its Phase 4 row | — | `build/tg.db`; `npm run contract` | Every raw X12 panel matches a world document byte for byte, checked by the contract test | Open |
 | T1.6 | P14, P15 | World records for every Prototype specs decision row: a price variance under NF-7.11, and other suppliers' ship notices that NFD-1 would fail | — | Prototype specs: P14 and P15; `docs/phase1/change-list-1.md`, its section C | Evidence: commit d286170; gate checks `nf.match.price_held`, `nf.match.price_cleared_by_change`, `nf.match.total_fault`, `nf.replay.nfd2` and `nf.replay.nfd1_reaches_other_suppliers`; CALLS 59 | Done |
 | T1.8 | P7 | World record for a Northfield scorecard after the corrective work | — | P7's Inventory row | Evidence: not needed once P7's ending moved to shared figures, CALLS 38 | Done |
 | T1.7 | P2 | Supplier vetting in the world: one supplier vetted by a third party, one that confirms vetting itself, and a Northfield rule that activation waits for either | Owner releases P2 (D48) | D31; Prototype specs, Supplier vetting in P2 | The owner approves the rule wording in the EDI Review Pack, the world holds both records, and a gate check reads them | Blocked |
@@ -507,7 +507,6 @@ The gate and smoke tests pass at commit 2bfa59d. Two of the plan's proofs have n
 | SPS Commerce publishes no MCP tool list | Nobody: a known limit | SPS publishes a tool list or schema |
 | The ship notice timing rule rests on third-party reports of one retailer's guide, which sits behind that retailer's vendor portal (FINDINGS, T0.8) | Owner, with vendor-portal access | The portal guide's wording is recorded |
 | Whether a published prototype can read the server live; prototypes carry their fixtures inline | Builder, T2.10 | The test page result is committed |
-| Raw X12 panels inside built screens are not generated from the world | Builder, T1.5 | The contract test compares them |
 | Where the live server's writes-off setting comes from | Owner, in the Render dashboard | The setting is recorded under Hosting |
 | A third of first calls to the live server return nothing and answer on retry | Owner, by deciding on a paid Render plan | Calls answer first time |
 

@@ -33,7 +33,9 @@ export class Log {
 
   /** Renders the log. Returns interchanges in send order: { text, from, to, at, doc }. */
   emit() {
-    const docs = [...this.docs].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : a._n - b._n));
+    // A document sent later than first planned keeps its place in the numbering (`numAt`), so moving it renumbers nothing else.
+    const key = (d) => d.numAt || d.at;
+    const docs = [...this.docs].sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : a._n - b._n));
     const ctl = new Map(); const next = (k, base) => { const v = (ctl.get(k) ?? base) + 1; ctl.set(k, v); return v; };
     // History documents come first in time. They count up to the period's base, so the current period keeps its numbers.
     const histN = new Map(); for (const d of docs) if (d.hist) { for (const k of [`${d.from}>${d.to}`, ...(d.no_ack ? [] : [`${d.to}>${d.from}:FA`])]) histN.set(k, (histN.get(k) || 0) + 1); }
@@ -51,10 +53,11 @@ export class Log {
       if (d.no_ack) continue;
       // The receiver's technical acknowledgment, 2 to 9 minutes later.
       const at = iso(new Date(Date.parse(d.at) + d.ackDelay * 60000));
-      acks.push({ d, fa: { type: '997', from: d.to, to: d.from, at, group_id: text.match(/\nGS\*([A-Z]{2})\*/)[1], group_ctl: d.ctl, set_id: d.type, set_ctl: '0001', result: fault && !fault.accept ? 'R' : 'A', ...(fault && !fault.accept ? fault.ak(text, d) : {}) } });
+      const numAt = d.numAt ? iso(new Date(Date.parse(d.numAt) + d.ackDelay * 60000)) : at;
+      acks.push({ d, numAt, fa: { type: '997', from: d.to, to: d.from, at, group_id: text.match(/\nGS\*([A-Z]{2})\*/)[1], group_ctl: d.ctl, set_id: d.type, set_ctl: '0001', result: fault && !fault.accept ? 'R' : 'A', ...(fault && !fault.accept ? fault.ak(text, d) : {}) } });
     }
     // Acknowledgment control numbers are allocated in the order the acknowledgments are sent.
-    acks.sort((x, y) => (x.fa.at < y.fa.at ? -1 : x.fa.at > y.fa.at ? 1 : x.d._n - y.d._n));
+    acks.sort((x, y) => (x.numAt < y.numAt ? -1 : x.numAt > y.numAt ? 1 : x.d._n - y.d._n));
     for (const { d, fa } of acks) {
       fa.ctl = nextCtl(d, `${fa.from}>${fa.to}:FA`, 500000000);
       let faText = writeInterchange(fa, { isaSender: PARTY[fa.from].isa, isaReceiver: PARTY[fa.to].isa, ctl: fa.ctl });
@@ -75,8 +78,8 @@ export const D = {
     const sup = PARTY[O.supplier];
     return L.doc({ type: '850', from: 'NORTHFIELD', to: O.supplier, at, po: O.po, programme: O.programme || 'WHSL', requested_delivery: O.requested, buyer_name: NF.name, buyer_gln: NF.gln, ship_to_name: LOC[O.shipTo].name, ship_to_gln: LOC[O.shipTo].gln, vendor_name: sup.name, vendor_gln: sup.gln, lines: O.lines.map(lineOf) });
   },
-  ack(L, O, at, { codes = {}, qty = {}, dates = {}, backorder = {}, ref } = {}) {
-    return L.doc({ type: '855', from: O.supplier, to: 'NORTHFIELD', at, po: O.po, ref: ref || `ACK-${O.po.slice(3)}`, lines: O.lines.map((l) => ({ ...lineOf(l), qty_ordered: l.qty, code: codes[l.line] || 'IA', qty: qty[l.line] ?? l.qty, date: dates[l.line] || null, backorder: backorder[l.line] || 0 })) });
+  ack(L, O, at, { codes = {}, qty = {}, dates = {}, backorder = {}, ref, numAt } = {}) {
+    return L.doc({ type: '855', from: O.supplier, to: 'NORTHFIELD', at, ...(numAt ? { numAt: iso(numAt) } : {}), po: O.po, ref: ref || `ACK-${O.po.slice(3)}`, lines: O.lines.map((l) => ({ ...lineOf(l), qty_ordered: l.qty, code: codes[l.line] || 'IA', qty: qty[l.line] ?? l.qty, date: dates[l.line] || null, backorder: backorder[l.line] || 0 })) });
   },
   change(L, O, at, seq, changes) {
     return L.doc({ type: '860', from: 'NORTHFIELD', to: O.supplier, at, po: O.po, seq, po_date: O.poDate, changes: changes.map((c) => ({ ...lineOf(O.lines.find((l) => l.line === c.line)), ...c })) });

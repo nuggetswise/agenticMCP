@@ -1,11 +1,11 @@
 {
- "checked": "2026-11-13",
+ "checked": "2026-11-14",
  "grammars": {
   "source": "github.com/bots-edi/bots-grammars",
   "path": "x12/4010",
   "commit": "6c1d8a5"
  },
- "world_x12_sha256": "ce184bf6e12c4490267f9c1161affd8c8293d667425150994a6f717d2aab0bc3",
+ "world_x12_sha256": "27f6ace95da8cbfba3f0078743df110785d2eb8b264cc50267f5e10a1513ba3b",
  "documents": 28942,
  "transaction_sets": 28942,
  "documents_with_faults": 12,

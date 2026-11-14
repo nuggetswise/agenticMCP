@@ -186,21 +186,23 @@ export function anchors(L, W) {
 
   // ---------- Week 11: six fulfilment risks before the truck leaves (P5), Tuesday 8 December 17:12 ----------
   {
-    const risk = (po, lines, o) => { const O = mk(po, lines, { stream: 'risk', poDate: iso(o.recv), ...o }); D.po(L, O, o.recv); D.ack(L, O, addH(o.recv, 1.5), o.ack || {}); return O; };
+    // Change list point F1: each lead order's acknowledgment comes late, still inside 24 hours and before the next record on the order.
+    // `ackH` is the hours it took; numbering keeps the original 1.5 hours so no other document is renumbered.
+    const risk = (po, lines, o) => { const O = mk(po, lines, { stream: 'risk', poDate: iso(o.recv), ...o }); D.po(L, O, o.recv); D.ack(L, O, addH(o.recv, o.ackH ?? 1.5), { ...(o.ack || {}), ...(o.ackH ? { numAt: addH(o.recv, 1.5) } : {}) }); return O; };
     const t0 = day('2026-12-08', '17:12');
-    const hero = A.hero = risk('NR-460207', [['ASH-MUG-12', 400], ['ASH-NAP-4', 260]], { recv: day('2026-12-04', '09:00'), shipTo: 'DC4', site: 'KIN-GRV', requested: '2026-12-09' });
+    const hero = A.hero = risk('NR-460207', [['ASH-MUG-12', 400], ['ASH-NAP-4', 260]], { recv: day('2026-12-04', '09:00'), shipTo: 'DC4', site: 'KIN-GRV', ackH: 21.5, requested: '2026-12-09' });
     D.change(L, hero, day('2026-12-07', '14:00'), 1, [{ line: 1, code: 'RS', qty: 400, qty_left: 400 }, { line: 2, code: 'RS', qty: 260, qty_left: 260 }]);
     ev(L, day('2026-12-07', '14:00'), 'order.ship_to_changed', hero.po, 'Northfield ordering', 'NORTHFIELD', 'EDI', { change: 1, ship_to: 'DC 2', previous: 'DC 4', note: 'Supplier ERP sales order still shows DC 4 and the old line numbers' });
     ev(L, addH(t0, -0.4), 'wms.load_scan', hero.po, 'Kinross warehouse system', 'KINROSS', 'API', { shipment: 'SHP-460207', cartons_loaded: 659, cartons_expected: 660, by_sscc: true, missing: '006141410006005172', missing_state: 'Staged, not loaded', bol: 'BOL-91407', seal: 'SL-4471026', seals_in_minutes: 40 });
-    const inv = A.riskInv = risk('NR-460219', [['ASH-MUG-12', 90], ['ASH-NAP-4', 180]], { recv: day('2026-12-05', '10:00'), site: 'KIN-GRV', requested: '2026-12-10' });
+    const inv = A.riskInv = risk('NR-460219', [['ASH-MUG-12', 90], ['ASH-NAP-4', 180]], { recv: day('2026-12-05', '10:00'), site: 'KIN-GRV', ackH: 22.25, requested: '2026-12-10' });
     ev(L, addH(t0, -2), 'erp.invoice_draft', inv.po, 'Supplier ERP', 'ASHBY', 'API', { invoice: 'INV-8012', line: 2, billed: 180, shipped: 176, over_value: 153.6, batch_sends_in_minutes: 168 });
-    const route = A.riskRoute = risk('NR-460241', [['ASH-MUG-12', 220]], { recv: day('2026-12-07', '11:00'), site: 'KIN-JOL', requested: '2026-12-11' });
+    const route = A.riskRoute = risk('NR-460241', [['ASH-MUG-12', 220]], { recv: day('2026-12-07', '11:00'), site: 'KIN-JOL', ackH: 20.5, requested: '2026-12-11' });
     ev(L, addH(t0, -1), 'routing.request', route.po, 'Northfield transportation', 'ASHBY', 'EDI', { state: 'Missing', freight: 'Collect', cases: 220, due_in_minutes: 1068, rule: 'NF-3.2' });
-    const alloc = A.riskAlloc = risk('NR-460262', [['ASH-MUG-12', 300]], { recv: day('2026-12-07', '15:00'), site: 'KIN-GRV', requested: '2026-12-11' });
+    const alloc = A.riskAlloc = risk('NR-460262', [['ASH-MUG-12', 300]], { recv: day('2026-12-07', '15:00'), site: 'KIN-GRV', ackH: 23.0, requested: '2026-12-11' });
     ev(L, addH(t0, -0.5), 'wms.inventory', alloc.po, 'Kinross warehouse system', 'KINROSS', 'API', { sku: 'ASH-MUG-12', site: 'Kinross Groveport', available: 520, ordered_across_orders: 640, orders: 3, change_cutoff_in_minutes: 1248 });
-    const lab = A.riskLab = risk('NR-460233', [['ASH-HNY-340', 96]], { recv: day('2026-12-06', '09:00'), site: 'KIN-JOL', requested: '2026-12-10' });
+    const lab = A.riskLab = risk('NR-460233', [['ASH-HNY-340', 96]], { recv: day('2026-12-06', '09:00'), site: 'KIN-JOL', ackH: 19.75, requested: '2026-12-10' });
     ev(L, addH(t0, -0.7), 'wms.label_scan', lab.po, 'Kinross warehouse system', 'KINROSS', 'API', { cartons: 96, reused_sscc: 12, first_used_on: W.anchor.p1, rule: 'NF-4.1', loading_starts_in_minutes: 1368 });
-    const off = A.riskOff = risk('NR-460274', [['ASH-MUG-12', 300]], { recv: day('2026-12-08', '09:30'), site: 'KIN-GRV', requested: '2026-12-11' });
+    const off = A.riskOff = risk('NR-460274', [['ASH-MUG-12', 300]], { recv: day('2026-12-08', '09:30'), site: 'KIN-GRV', ackH: 3.25, requested: '2026-12-11' });
     ev(L, day('2026-12-08', '13:10'), 'outside_confirmation', off.po, 'Trading Grid', 'NORTHFIELD', 'Phone', { confirmed_by: 'Jordan Ellis', recorded_by: 'Priya Raman', scope: '270 cases agreed by phone; the PO still reads 300', order_change_received: false, loading_starts_in_minutes: 1488 });
     // Scout Agent's conflict record: the Supplier ERP says shipped and Kinross has not departed.
     const conf = A.riskConflict = risk('NR-460288', [['ASH-NAP-4', 140]], { recv: day('2026-12-08', '10:00'), site: 'KIN-JOL', requested: '2026-12-11' });

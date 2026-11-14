@@ -1,0 +1,24 @@
+# Prompt for each no-context run (send unchanged to a fresh subagent)
+
+You are a customer's own AI assistant answering business questions through two Trading Grid connectors. All data is fictional.
+
+Rules:
+- Use ONLY the MCP tools whose names start with mcp__RetailStrategy__ (Ashby Supplier's connection) and mcp__SupplierRetail__ (Northfield Retailer's connection). Load their schemas with ToolSearch first (for example query "+RetailStrategy" and "+SupplierRetail", max_results 30).
+- Do not read local files, run shell commands, search the web, or use any other tool. Do not call mcp__RetailStrategy__run_readonly_sql. Do not call any tool that records a write or proposal (request_change, submit_dispute, release_ship_notice, decide_charge, publish_rule).
+- Answer each question through the connector named for it, from tool results only. Do not guess figures.
+- Connector note: the connectors' cached tool lists may be out of date. Tools that read records accept an "as_of" argument (ISO date or date-time, Eastern) where the question gives a time, even if a tool's schema does not list it.
+
+Questions (ID | connector | question):
+D1 | Ashby (RetailStrategy) | In the current quarter, as of the demo's default story clock (Tuesday 17 November 2026, 11:00 Eastern), how many deduction cases has Northfield opened against Ashby?
+D2 | Ashby (RetailStrategy) | In the current quarter, as of 10 December 2026, list Northfield's deduction cases against Ashby: how many are there and what is their total amount?
+N1 | Northfield (SupplierRetail) | In the current quarter, as of 10 December 2026, how many deduction cases has Northfield opened against Ashby Supplier, and what is their total amount?
+N4 | Northfield (SupplierRetail) | Replay draft rule NFD-1 against the current quarter. How many ship notices fail under the rule in force and under the draft, how many suppliers would newly fail, and what is the added charge exposure?
+N5 | Northfield (SupplierRetail) | What would draft rule NFD-2 change if published?
+P11a | Ashby (RetailStrategy) | As of 10 December 2026, Ashby's NetSuite ship notice for PO-104912 was stopped before it reached Northfield. Which two Northfield rules did it fail, on which item fulfillment, and who released the corrected version under which Ashby rule?
+P11b | Northfield (SupplierRetail) | As of 10 December 2026, did Northfield receive what Ashby's ship notice for PO-104912 said? Give the ship notice and receiving advice references, the cartons on the ship notice, the cartons received, and any shortage.
+P11c | Northfield (SupplierRetail) | As of 20 November 2026, which ship notices had Ashby sent Northfield for PO-104912?
+G8a | Northfield (SupplierRetail) | As of the end of 8 November 2026 (Eastern), how much open-order value sits at each stage from purchase order to payment across Northfield's suppliers? Put each order line's quantity in its furthest stage only: ordered and not yet acknowledged; confirmed and not shipped; shipped and not received; received and not invoiced; invoiced and not yet paid. Value at the line's purchase-order price. Count buyer purchase orders only; replenishment orders are not counted. An order is open until every unit is paid or unfilled. An order closes when its ship notice is marked complete and every shipment is received; confirmed units not shipped by then are unfilled.
+G8b | Northfield (SupplierRetail) | As of the end of 8 November 2026 (Eastern), across buyer purchase orders only (replenishment orders are not counted), which orders bill more than was received by more than a 0.5% tolerance? Compare by order line at the order price: units billed and unpaid, less units received and unpaid, less units shipped and not yet received, so units still in transit are not counted as billed above received. A line counts when its excess is above 0.5% of the line's billed value. Give the number of orders and the total excess value.
+G8c | Northfield (SupplierRetail) | Today Northfield returns unfilled value (quantity the supplier reduced or rejected at acknowledgment) to budget only when the order closes. Over orders acknowledged in the 90 days to 8 November 2026 and closed by then, how much value would have returned to budget if it were released at acknowledgment instead, across how many orders, and on average how many days earlier? Count buyer purchase orders only; replenishment orders are not counted. An order closes when its ship notice is marked complete and every shipment is received; its close date is the last receipt. Confirmed units not shipped by then are unfilled.
+
+Final reply: ONLY a single JSON object, no prose around it, with keys D1, D2, N1, N4, N5, P11a, P11b, P11c, G8a, G8b, G8c. Each value is your complete answer as a string, with figures written out (dollar amounts with a $ sign) and the record references you relied on.

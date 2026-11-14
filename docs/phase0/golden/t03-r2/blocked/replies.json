@@ -1,0 +1,10 @@
+{
+ "note": "Each run's reply in full is summarised: every question reads 'Not answered' or 'Not attempted' because the first connector calls (list_deductions, list_deduction_cases, list_draft_rules, replay_draft_rule) needed permission and nobody answered.",
+ "runs": {
+  "run1": "D1 to G8c: not answered; list_deductions needed permission, no answer",
+  "run2": "same",
+  "run3": "same",
+  "run4": "same",
+  "run5": "same"
+ }
+}

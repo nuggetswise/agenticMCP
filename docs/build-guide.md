@@ -4,7 +4,7 @@ Working copy: `docs/build-guide.md` in the repo. Reading copy: the Claude doc at
 
 ## How to use this guide
 
-This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit f3fa27d.
+This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 0d4cd2b.
 
 - **Start here:** follow R39. It picks your next task from the Tasks tables and says what to read first. For one prototype, run `node scripts/guide-pack.mjs P5` with its ID: it prints that prototype's job, ending, v8 section, the rules that apply, its agent, tools and anchors, and its tasks in order, so you read one page and the prototype's source.
 - **Authority, highest first:**
@@ -394,11 +394,11 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | ID | Prototype | Task | Depends on | Read first | Done when | Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | T2.1 | P10 Northfield | Northfield scope: shared documents, private records, refusals, writes that follow the catalogue | — | Server reference | Evidence: commit 5dd3748; `docs/phase2/golden-nf/` | Done |
-| T2.2 | P5, P6, P7, P9 | Every agent decision computed from its timeline records | — | R21; `registry/registry.json` | The A3 column reads Done for every prototype with an agent | Open |
+| T2.2 | P5, P6, P7, P9 | Every agent decision computed from its timeline records | — | R21; `registry/registry.json` | Evidence: the A3 cell reads Done for P5, P6, P7 and P9, and the gate's mutation checks pass for each agent job; CALLS 74 | Done |
 | T2.3 | Agents | Agent governance: authority limits, override, pause, audit, and replay of a changed agent rule before it goes live | — | Prototype specs, Agent governance | A gate check replays a changed agent rule and the governance golden questions pass | Open |
 | T2.4 | P5, P9 | Shelf Agent reads averages; Watch Agent reads NF-4.2 from the catalogue | — | R22 | `agents.thresholds_come_from_catalogue` covers both agents | Open |
 | T2.5 | P10 Ashby, P10 Northfield | Tool comparison includes Northfield's tools | — | Server reference, compared with published tool lists | The comparison lists both connections' tools against the published NetSuite and Salesforce schemas | Open |
-| T2.6 | P15 | Registry anchors hold the draft rule record | — | Prototype specs, P15 | `registry/registry.json` names NFD-1 under P15 and the registry check passes | Open |
+| T2.6 | P15 | Registry anchors hold the draft rule record | — | Prototype specs, P15 | Evidence: commit 0d4cd2b; P15 anchors `draft_rule:NFD-1` and the registry check reads it; CALLS 74 | Done |
 | T2.7 | Registry | Finish the registry: P11's job, agent verdict, decisions and anchors match its screen | — | Inventory; `docs/guide/registry-change-proposal.md` | Evidence: commit e02ce57; P11 has no agent and anchors the held and corrected live ship notice with its receiving advice; CALLS 58 | Done |
 | T2.8 | Docs | Repo copies of the other docs become dated snapshots | — | Where each fact lives, role of every other doc | Each copy under docs/ carries its export date and the registry check no longer treats it as current | Open |
 | T2.9 | P10 Northfield | Live Northfield connector run | Owner asks for a live Northfield demo | `docs/phase2/golden-nf/` | One Northfield golden question is answered through the live URL with the Northfield key | Blocked |
@@ -481,11 +481,11 @@ Each row is one prototype through the Phase 4 loop under Build flow. Before prop
 
 ## Proofs, open items and drift control
 
-The gate and smoke tests pass at commit f3fa27d. Two of the plan's proofs have not been built or run.
+The gate and smoke tests pass at commit 0d4cd2b. Two of the plan's proofs have not been built or run.
 
 | Proof | Command or location | Result |
 | --- | --- | --- |
-| World gate: invariants, catalogue equals the pack, thresholds from the catalogue | `npm run build` | 385 passed, 0 failed |
+| World gate: invariants, catalogue equals the pack, thresholds from the catalogue | `npm run build` | 386 passed, 0 failed |
 | Server smoke: both scopes, refusals, the shared deduction case | `npm run smoke` | 56 passed, 0 failed |
 | X12 validation | `npm run validate` | Passes, but its schemas were generated in this repo, so it does not meet the independent-schema test |
 | X12 against schemas this repo did not write | `validator/botscheck.py` with the bots-grammars X12 grammars | Every document checked; it faults exactly the documents the world rejects on a 997, and nothing else; all ten injected faults are rejected for their reason (`validator/bots-report.json`) |

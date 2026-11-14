@@ -1,4 +1,4 @@
-# Phase 1 change list 2 (proposed 14 November, not applied)
+# Phase 1 change list 2 (approved 14 November under the owner's delegation, CALLS 79; not yet applied)
 
 Nothing in `world/`, `src/` or `scripts/` changes until the owner approves this list.
 

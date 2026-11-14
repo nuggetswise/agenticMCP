@@ -412,7 +412,7 @@ New prototypes come from the Prototype specs tab. Mining Northstar for them was 
 | ID | Prototype | Task | Depends on | Read first | Done when | Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | T3.0 | Specs | Mine the Northstar prototype and teardown into the Prototype specs tab | — | — | Evidence: the Prototype specs tab; CALLS 27 and 28 | Done |
-| T3.1 | P13, P14, P15 | Check each spec against the world | Owner approves `docs/phase1/change-list-2.md` | Prototype specs; `docs/phase3/T3.1-spec-check.md` | Every record each spec needs exists, or a Phase 1 change list adds it. Checked: one P13 conflict, proposed in change list 2; CALLS 77 | Blocked |
+| T3.1 | P13, P14, P15 | Check each spec against the world | — | Prototype specs; `docs/phase3/T3.1-spec-check.md` | Every record each spec needs exists, or a Phase 1 change list adds it. Checked: one P13 conflict; change list 2 approved, not yet applied; CALLS 77 and 79 | Open |
 | T3.2 | P13, P14, P15 | Rank the specs, place them on the story calendar, and build the top one | T3.1, T2.2, T2.3 | Prototype specs; story calendar in the Prototype Plan; v8 for the business problem (R40) | The owner approves the ranking and the first new prototype passes its acceptance tests, walk and contract test | Open |
 | T3.3 | FILM | Rebuild the film as a self-playing artifact, the way the marketing film was made; each chapter tells one prototype's task card, problem to ending (R41) | Phase 4 settles the endings it tells | FILM link; the marketing film artifact; task cards | The rebuilt film passes A1, A5 and A7 and the FILM A7 cell reads Done | Open |
 

@@ -15,6 +15,7 @@ import * as D from './domain.js';
 import { TOOLS, BOUNDARY, SCOPES, ASHBY_WRITES, ASHBY_REFUSALS, NF_TOOLS, NF_WRITES, NF_REFUSALS, NF_SCOPES } from './tools.js';
 import { recordPage, documentPage, adminPage, homePage, nfOrderPage } from './pages.js';
 import * as Aviator from './aviator.js';
+import * as Scout from './scout.js';
 
 const PORT = Number(process.env.PORT || 3000);
 const TOKEN = process.env.MCP_TOKEN || randomBytes(18).toString('base64url');
@@ -190,6 +191,21 @@ const INSTRUCTIONS = {
     WRITES ? 'Writes follow Northfield’s guide: decide_charge, publish_rule and request_change record proposals Jordan Ellis approves in Trading Grid. Jordan decides every charge (NF-7.7). A rule is published only after replay_draft_rule.' : 'This connection is read-only.',
     'Answer only from tool results and cite each record with its link.'].join(' '),
 };
+// ---------- Scout (P5): a server-side agent working in an isolated session branched from the recorded world ----------
+const scoutModel = () => Scout.geminiCaller(process.env.GEMINI_API_KEY);
+const VAR = z.enum(Object.keys(Scout.VARIATIONS)).optional().describe(`Physical state at Kinross to branch with: ${Object.keys(Scout.VARIATIONS).join(', ')}. Default canonical.`);
+export const scoutView = (sess, extra = {}) => sess ? ({ session: sess.id, label: sess.label, clock: fmtET(new Date(sess.clock)), status: sess.agent.status, variation: sess.changes, awaiting: sess.proposals.filter((p) => p.state === 'Awaiting approval').map((p) => ({ id: p.id, action: p.action, does: Scout.ACTIONS[p.action].label, args: p.args, proposed_by: p.by, rationale: p.rationale, alternatives: p.alternatives, rule: Scout.ACTIONS[p.action].rule })), load: { loaded: sess.load.base_loaded + sess.load.loaded.length, of: sess.load.expected, staged: sess.load.staged, sealed: sess.load.sealed }, outcome: Scout.outcome(sess), trace: sess.trace, overhead: { model_calls: sess.agent.calls, tool_calls: sess.agent.tool_calls, ms: sess.agent.ms }, ...extra }) : { result: 'Invalid request', error: 'No such session; sessions live in memory and end when the server restarts.' };
+async function scoutStart({ variation, label } = {}) { const sess = Scout.startSession(db, { variation: Scout.VARIATIONS[variation || 'canonical'], label: label || 'Operator' }); const run = await Scout.runScout(db, sess, { callModel: scoutModel() }); return scoutView(sess, run.ok ? {} : { blocked: run.blocked || run.status }); }
+async function scoutDecide({ session, proposal, decision }) { const sess = Scout.getSession(session); if (!sess) return scoutView(null); const r = await Scout.decideAndResume(db, sess, proposal, decision, 'Priya Raman', { callModel: scoutModel() }); if (r.state === 'Refused') return { ...r, result: 'Refused' }; return scoutView(sess, r.run?.ok === false ? { blocked: r.run.blocked || r.run.status } : {}); }
+async function scoutBaseline({ variation } = {}) { const sess = Scout.startSession(db, { variation: Scout.VARIATIONS[variation || 'canonical'], label: 'Rule baseline' }); Scout.runBaseline(db, sess); return scoutView(sess); }
+async function scoutReplay({ variation } = {}) { return Scout.replay(db, { variation: Scout.VARIATIONS[variation || 'canonical'], callModel: scoutModel() }); }
+const SCOUT_TOOLS = [
+  { name: 'scout_start', title: 'Start Scout on NR-460207', description: 'Branches the demo world at Tuesday 8 December 2026 17:12 ET into an isolated session (later recorded events hidden; nothing reaches the recorded world), lets Scout Agent investigate the Kinross load scan for NR-460207 with its read tools, and returns when Scout waits for Priya Raman, finishes or hits its limit. Returns the session id, proposals awaiting approval and the full trace with who did what. Kinross and Northfield answers in a session are synthetic, from deterministic rules.', input: { variation: VAR, label: z.string().optional() }, run: scoutStart },
+  { name: 'scout_decide', title: 'Approve or reject a Scout proposal as Priya Raman', description: 'Records Priya Raman’s decision on one proposal in a Scout session. On approval the server executes it (Kinross and Northfield respond by their rules), then Scout continues from the result. An approval cannot be replayed. Only call this when the user has decided.', input: { session: z.string(), proposal: z.string().describe('Proposal id, for example SP-2'), decision: z.enum(['approve', 'reject']) }, run: scoutDecide },
+  { name: 'scout_state', title: 'Scout session state and trace', description: 'Current state of a Scout session: clock, load, proposals awaiting approval, outcome so far, trace and agent overhead.', input: { session: z.string() }, run: async ({ session }) => scoutView(Scout.getSession(session)) },
+  { name: 'scout_baseline', title: 'Rule baseline on NR-460207', description: 'Runs the deterministic rule baseline on the same branch and variation, with the same reads and actions and a labelled test approver, and returns its outcome and trace.', input: { variation: VAR }, run: scoutBaseline },
+  { name: 'scout_replay', title: 'Governance replay: baseline and Scout side by side', description: 'Runs the rule baseline and Scout on the same branch and variation, approving every proposal as a labelled test approver, and returns both outcomes, traces and Scout’s overhead. For governance review, not operation.', input: { variation: VAR }, run: scoutReplay },
+];
 function makeServer(cid) {
   const server = new McpServer({ name: cid === AS ? 'trading-grid-ashby' : 'trading-grid-northfield', title: cid === AS ? 'Trading Grid · Ashby Supplier' : 'Trading Grid · Northfield Retailer', version: '0.3.0' }, { instructions: INSTRUCTIONS[cid]() });
   for (const tool of cid === AS ? ALL_TOOLS : ALL_NF_TOOLS) {
@@ -198,6 +214,8 @@ function makeServer(cid) {
     server.registerTool(tool.name, { title: tool.title, description: tool.description, inputSchema: { ...tool.input, ...extra }, annotations: { readOnlyHint: !write, destructiveHint: false, openWorldHint: false } },
       async (args = {}) => ({ content: [{ type: 'text', text: JSON.stringify(call(cid, tool.name, args), null, 1) }] }));
   }
+  if (cid === AS) for (const t of SCOUT_TOOLS) server.registerTool(t.name, { title: t.title, description: t.description, inputSchema: t.input, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
+    async (args = {}) => { let out; try { out = await t.run(args); } catch (e) { out = { result: 'Invalid request', error: e.message }; } log(cid, t.name, [], args, out.result || out.status || 'Answered', []); return { content: [{ type: 'text', text: JSON.stringify(out, null, 1) }] }; });
   return server;
 }
 
@@ -252,6 +270,15 @@ app.post('/aviator/:token', async (req, res) => {
     res.status(out.ok ? 200 : out.status).json(out);
   } catch (e) { console.error(e); res.status(500).json({ ok: false, message: 'Aviator failed.' }); }
 });
+// Scout REST for the prototype page: the browser holds only a token; sessions, policy and the model stay on the server.
+const scoutCors = (res) => res.set({ 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'content-type' });
+app.options('/scout/:token/*splat', (req, res) => { scoutCors(res).status(204).end(); });
+const scoutRoute = (fn) => async (req, res) => { const cid = aviatorCid(req, res); if (!cid) return; scoutCors(res); if (cid !== AS) return res.status(403).json({ result: 'Not available to Northfield' }); try { const out = await fn({ ...req.body, ...req.params }); log(cid, `scout:${req.path.split('/')[3] || ''}`, [], {}, out.result || out.status || 'Answered', []); res.json(out); } catch (e) { console.error(e); res.status(400).json({ result: 'Invalid request', error: e.message }); } };
+app.post('/scout/:token/start', scoutRoute(scoutStart));
+app.post('/scout/:token/baseline', scoutRoute(scoutBaseline));
+app.post('/scout/:token/replay', scoutRoute(scoutReplay));
+app.get('/scout/:token/session/:session', scoutRoute(async ({ session }) => scoutView(Scout.getSession(session))));
+app.post('/scout/:token/session/:session/decide', scoutRoute(scoutDecide));
 app.get('/openapi.json', (req, res) => { const f = new URL('../openapi/openapi.json', import.meta.url); if (existsSync(f)) res.type('json').send(readFileSync(f)); else res.status(404).send('Not built'); });
 app.get('/admin/:token', (req, res) => { const cid = cidOf(req, res); if (cid) res.type('html').send(adminPage(adminData(cid, req.params.token))); });
 app.post('/admin/:token/scopes', (req, res) => {

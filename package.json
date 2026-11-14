@@ -16,7 +16,8 @@
     "contract": "node --no-warnings scripts/contract.js",
     "smoke": "node --no-warnings scripts/smoke.js",
     "aviator-test": "node --no-warnings scripts/aviator-test.mjs",
-    "start": "node --no-warnings src/server.js"
+    "start": "node --no-warnings src/server.js",
+    "scout": "node --no-warnings scripts/scout-test.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",

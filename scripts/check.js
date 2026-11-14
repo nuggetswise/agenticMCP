@@ -165,6 +165,12 @@ for (const p of REG.prototypes) {
   for (const d of p.decisions) { const r = A.JOBS[job] ? A.JOBS[job](ash, d.record, T(d.as_of)) : NR.JOBS[job](db, d.record, T(d.as_of)); steps.add(r.next_step); eq(`mutation ${p.id} ${d.record} @ ${d.as_of}`, r.next_step, d.next_step); ok(`mutation ${p.id} ${d.record} cites evidence`, r.evidence && Object.keys(r.evidence).length >= 2 && !!r.rule_baseline); }
   ok(`agent.${job}`, steps.size >= 2, `${steps.size} distinct next steps`);
 }
+// T2.3: a changed agent rule is replayed against the quarter's records beside the rule in force, before it goes live.
+{ const cases = ash.prepare("SELECT DISTINCT json_extract(data, '$.case') c FROM events WHERE kind = 'case.opened' AND at >= '2026-09-27'").all().map((r) => r.c); const at = T('2026-12-10T12:00:00-05:00');
+  const tight = A.replayAgentRule(ash, { job: 'deduction', change: { rule: 'AP-4.1', params: { max_amount: 50 } }, records: cases, asOf: at });
+  eq('governance.replay_shows_a_changed_authority', tight.changed.map((c) => [c.record, c.now.next_step === c.with_change.next_step, /^Claim Agent may dispute/.test(c.now.authority), /^Priya Raman decides/.test(c.with_change.authority)]), [['DC-40877', true, true, true]]);
+  eq('governance.replay_of_the_rule_in_force_changes_nothing', A.replayAgentRule(ash, { job: 'deduction', change: { rule: 'AP-4.1', params: { max_amount: 250 } }, records: cases, asOf: at }).changed.length, 0);
+  eq('governance.catalogue_unchanged_after_replay', D.param(ash, 'AP-4.1', 'max_amount'), 250); }
 // The server holds no branch on a record id: no anchor PO or case id appears in the decision code.
 { const src = readFileSync(join(ROOT, 'src', 'agents.js'), 'utf8') + readFileSync(join(ROOT, 'src', 'domain.js'), 'utf8'); const ids = src.match(/NR-\d{5,6}|DC-\d{5}|ASN-\d{5}|INV-\d{4}/g) || [];
   eq('mutation.no_record_ids_in_decision_code', ids, []); }

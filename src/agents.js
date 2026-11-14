@@ -1,7 +1,7 @@
 // Agent decisions as pure functions over the timeline. Each reads records, matches one row of its decision table and
 // returns the next step, the evidence it used and what the simplest rule would have done. Nothing here sends or changes anything.
 import { fmtET } from '../world/lib.js';
-import { normPo, rule, deductionCase, storyClock, param, chargeOf } from './domain.js';
+import { normPo, rule, deductionCase, storyClock, param, chargeOf, withRuleChange } from './domain.js';
 
 const J = (s) => (s ? JSON.parse(s) : {});
 const H = 3600000;
@@ -120,3 +120,16 @@ export function paceDecision(db, { from = '2026-09-27', to = '2026-12-26' } = {}
 }
 
 export const JOBS = { missing_document: (db, r, t) => watchDecision(db, r, t), deduction: (db, r, t) => claimDecision(db, r, t), trade_test: (db, r, t) => testDecision(db, r, t), shelf: (db, r, t) => shelfDecision(db, r, t), shipment_risk: (db, r, t) => scoutDecision(db, r, t), scorecard: (db, r, t) => { const [from, to] = String(r || '').split(/\s+to\s+/); return paceDecision(db, from && to ? { from, to } : {}, t); } };
+
+/** Replays a proposed change to an agent's rule against every record the agent would see at one time, beside the rule in force (T2.3).
+ *  `change` is { rule, params }; only parameters the catalogue already holds can change. Nothing is stored or sent. */
+export function replayAgentRule(db, { job, change, records, asOf }) {
+  const f = JOBS[job]; if (!f) return { found: false, message: `No agent job ${job}` };
+  // Compared on the next step and on who may act: a change to an authority limit moves the second, not the first.
+  const pick = (r) => ({ next_step: r.next_step, authority: r.authority });
+  const now = records.map((r) => pick(f(db, r, asOf)));
+  const proposed = withRuleChange(change, () => records.map((r) => pick(f(db, r, asOf))));
+  const rows = records.map((r, i) => ({ record: r, now: now[i], with_change: proposed[i] }));
+  const differs = (x) => x.now.next_step !== x.with_change.next_step || x.now.authority !== x.with_change.authority;
+  return { found: true, job, change, as_of: fmtET(asOf), records: rows.length, changed: rows.filter(differs), unchanged: rows.filter((x) => !differs(x)).length, changes_nothing: true };
+}

@@ -20,7 +20,10 @@ export function timeLeft(deadline, clock) {
 }
 const J = (s) => (s ? JSON.parse(s) : null);
 /** A threshold from the rule catalogue. Agents read their numbers here, never from their own constants. */
-export const param = (db, id, key) => { const r = db.prepare('SELECT params FROM rules WHERE id = ?').get(id); const p = r && r.params ? JSON.parse(r.params) : {}; if (!(key in p)) throw new Error(`Rule ${id} has no parameter ${key}`); return p[key]; };
+/** A proposed rule change replayed before it goes live (T2.3): values here stand in for the catalogue's while `withRuleChange` runs. */
+let RULE_CHANGE = null;
+export const withRuleChange = (change, fn) => { const before = RULE_CHANGE; RULE_CHANGE = change; try { return fn(); } finally { RULE_CHANGE = before; } };
+export const param = (db, id, key) => { if (RULE_CHANGE && RULE_CHANGE.rule === id && key in RULE_CHANGE.params) return RULE_CHANGE.params[key]; const r = db.prepare('SELECT params FROM rules WHERE id = ?').get(id); const p = r && r.params ? JSON.parse(r.params) : {}; if (!(key in p)) throw new Error(`Rule ${id} has no parameter ${key}`); return p[key]; };
 /** The charge a rule carries, in dollars, for a number of cartons: "$150", "$150 plus $1 per carton". */
 export const chargeOf = (db, code, cartons = 0) => { const r = db.prepare('SELECT charge FROM rules WHERE charge_code = ? AND charge IS NOT NULL ORDER BY id').get(code); if (!r) throw new Error(`No charge ${code}`); const m = r.charge.match(/\$(\d+(?:\.\d+)?)(?: plus \$(\d+(?:\.\d+)?) per carton)?/); if (!m) throw new Error(`Charge ${code} is not a fixed amount`); return Number(m[1]) + (m[2] ? Number(m[2]) * cartons : 0); };
 export const rule = (db, id) => { if (!id) return null; const r = db.prepare('SELECT id, owner, statement, source, basis FROM rules WHERE id = ?').get(id); return r ? { ...r } : null; };

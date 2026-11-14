@@ -149,7 +149,7 @@ None of these docs has been edited yet. Their governing sections come out only a
 
 ## Decisions
 
-The owner approved change items 1 to 14 on 12 November. Two are done, four are partly done, seven have not started and one closed when P12 was retired. Two of the seven were applied and then withdrawn on 12 November, until their Phase 4 change lists are approved.
+The owner approved change items 1 to 14 on 12 November. Two are done, five are partly done, six have not started and one closed when P12 was retired. Items 3 and 7 were applied and then withdrawn on 12 November, until their Phase 4 change lists are approved; item 7's world records were built later under T1.9.
 
 | # | Approved change | Phase | Status | Evidence |
 | --- | --- | --- | --- | --- |
@@ -157,9 +157,9 @@ The owner approved change items 1 to 14 on 12 November. Two are done, four are p
 | 2 | Deduction case as of; deductions total; SQL tool description | 1 | Done | CALLS 6 and 7 |
 | 3 | P1: remove dates, selector, product names; P4 selector | 4 | Withdrawn, not started | CALLS 21, 22, 25 |
 | 4 | AP-4.1 evidence-on-hand rule; P6 consent redesign, Lakeline prepaid, NF-5.5 meaning | 1, then 4 | Rule done; screen not started | CALLS 3 |
-| 5 | AP-5.1 share of prior volume; P7 week 6 orders; P7 In Full and charge figures tested | 1, then 4 | Rule done; week 6 orders absent from the world; charge conflict open | CALLS 4; `contract/claims.json` |
+| 5 | AP-5.1 share of prior volume; P7 week 6 orders; P7 In Full and charge figures tested | 1, then 4 | Rule done; the world wins on week 6 orders and the charge (D51), and the screen follows it in T4.15 | CALLS 4 and 54; `contract/claims.json` |
 | 6 | P12 ERP-native Activation: names, its own order, tests in P2 only | 4 | Closed: P12 retired (D40) | CALLS 23, 25 and 32 |
-| 7 | P11 NetSuite: its records in the world, earlier findings, keep one P5 risk | 4 | Withdrawn, not started | CALLS 24, 25 |
+| 7 | P11 NetSuite: its records in the world, earlier findings, keep one P5 risk | 1, then 4 | World records done (T1.9, D50); screen withdrawn, not started | CALLS 24, 25 and 58 |
 | 8 | Partner Map edits; list of Retail Direction section 9 changes | Docs | Not started | — |
 | 9 | Agentic Retail Trade figures from the world or removed | 4 | Not started | — |
 | 10 | Prototype Briefs: retired P4 link, old names, P7 placeholder | Docs | Not started | — |
@@ -469,7 +469,7 @@ Each row is one prototype through the Phase 4 loop under Build flow. Before prop
 - Its filesystem resets on restart, which clears the access log and any proposals.
 - The Java validator does not run on Render. Its report is committed with a hash of the X12 files, and the build fails if the built files do not match that hash.
 - `/healthz` reports the same version for every commit, so it cannot show which commit is deployed.
-- The live server reports writes off, while `render.yaml` sets no `WRITES`. The setting is presumably made in the Render dashboard; not verified.
+- The live server reported writes off on 13 November and writes on from 14 November. Writes are on unless the environment sets `WRITES=off`, and `render.yaml` sets nothing, so the change came from the Render environment; not verified there.
 
 **Compared with published tool lists**
 
@@ -492,7 +492,7 @@ The gate and smoke tests pass at commit d694ef7. Two of the plan's proofs have n
 | Contract test of on-screen values: it checks every number a screen shows and requires none | `npm run contract` | Last full report is `docs/phase0/contract-report-turn4.json`. The P7 claim was checked against a working copy, not the live page. |
 | Golden questions, Ashby agents, scorecard and deductions | `docs/phase0/golden/grade-report.json` | 49 of 50. The earlier set's grader was never committed. |
 | Golden questions, Northfield | `docs/phase2/golden-nf/grade-report.json` | 50 of 50 |
-| Live server | /healthz | ok, version 0.2.0, writes off, as last read on 13 November; not read again after the Phase 1 deploy |
+| Live server | /healthz | ok, version 0.3.0, writes on, Aviator on, read on 14 November with commit cd9717d deployed |
 | Aviator loop, tool declarations, model fallback and refusals | `npm run aviator-test` | 11 passed, 0 failed, against a stand-in model. Live with gemini-3.5-flash-lite on the built world: P11's hold answered correctly, another supplier's cases refused, Ashby's own cases counted correctly (`docs/phase2/aviator-live-2026-11-13.txt`) |
 | Property-based invariants on quantities, time order and money | — | Not built; the gate checks invariants on the one generated quarter only |
 | Fresh agent answers ten builder questions from the docs | Reader tests, 13 November. First: ten answered from the guide alone; gaps fixed in CALLS 31. Second, after the owner decisions: ten of ten correct, including where P4 ends and where P9's business problem is; gaps fixed in CALLS 34 | Passed |
@@ -507,7 +507,7 @@ The gate and smoke tests pass at commit d694ef7. Two of the plan's proofs have n
 | SPS Commerce publishes no MCP tool list | Nobody: a known limit | SPS publishes a tool list or schema |
 | The ship notice timing rule rests on third-party reports of one retailer's guide, which sits behind that retailer's vendor portal (FINDINGS, T0.8) | Owner, with vendor-portal access | The portal guide's wording is recorded |
 | Whether a published prototype can read the server live; prototypes carry their fixtures inline | Builder, T2.10 | The test page result is committed |
-| Where the live server's writes-off setting comes from | Owner, in the Render dashboard | The setting is recorded under Hosting |
+| The live server now accepts approval-gated proposals, although the README says writes are off in this release | Owner, by saying whether writes stay on | The setting is recorded under Hosting and the README agrees |
 | A third of first calls to the live server return nothing and answer on retry | Owner, by deciding on a paid Render plan | Calls answer first time |
 
 **How this guide stays current**
@@ -611,7 +611,7 @@ One held invoice can trace to a short receipt, a price beyond tolerance, a total
 | PO, receiving advice and invoice all disagree | Read the receiving advice first, then the invoice lines; propose the record that settles each line | NF-5.5, NF-7.8 |
 
 - **Simplest rule baseline:** the match shows Held with the failing rule, and Jordan fetches every record himself.
-- **World gap:** no invoice line in the world varies on price, so the price row has no record yet (T1.6).
+- **World records (T1.6):** other suppliers' invoices hold a price beyond NF-7.11, a price an accepted order change set first, a price inside tolerance, and a total that differs from its lines.
 - **Not modelled:** promotion and tax variances. The catalogue has no rule for either, so adding them needs an owner decision and a new rule.
 - **Northstar sources:** invoice reconciliation, match resolution, and the triple-mismatch case, which is the plan's mutation case.
 
@@ -636,7 +636,7 @@ When a retailer changes a supplier rule, it cannot see beforehand whose document
 4. As Priya Raman, I see a rule only once it is published.
    - Accepted when Ashby's scope never shows a draft.
 
-- **World gaps:** every ship notice NFD-1 newly fails is Ashby's, although the other suppliers send ship notices too, so the replay shows one supplier. Draft NFD-2, on price tolerance, fails nothing. Both go to T1.6.
+- **World records (T1.6):** NFD-1 now reaches other suppliers' ship notices as well as Ashby's, and NFD-2 fails a line that the tolerance in force lets through. Gate check `nf.replay.nfd1_reaches_other_suppliers` holds the first.
 - **Northstar sources:** rules library, rule authoring tested against recent receipts, and change replay with approval.
 
 ## Retailer ship notice chase

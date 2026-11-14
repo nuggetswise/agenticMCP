@@ -27,7 +27,7 @@ export const TOOLS = [
     input: { pos: z.array(z.string()).min(1).max(50).describe('PO numbers, for example NR-46101') }, run: (db, a) => D.deliveries(db, a.pos) },
   { name: 'get_order', title: 'Order record', job: 'Order lookup', rest: ['GET', '/v1/orders/{po}'], required: ['orders'], optional: ['documents', 'errors', 'deductions'],
     description: 'One Ashby order with Northfield, whole history: lines as first ordered, as now ordered and as accepted; order changes; every document in order with its status; shipments; receipts; invoices; payments; charges; and records from the Supplier ERP, the warehouse, the carrier and the deduction case.',
-    input: { po: z.string().describe('PO number, for example NR-450118') }, run: (db, a) => D.lifecycle(db, a.po) },
+    input: { po: z.string().describe('PO number, for example NR-450118'), as_of: asOf.describe('Point in time to answer as of, ISO 8601 or a date. An order Northfield had not yet sent at that time is reported as no such order. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern.') }, run: (db, a) => D.lifecycle(db, a.po, t(a.as_of)) },
   { name: 'get_document', title: 'Document with its X12', job: 'Evidence retrieval', rest: ['GET', '/v1/documents/{reference}'], required: ['documents'], optional: [],
     description: 'One exchanged document by reference: who sent it, when, its status, its control numbers, every version sent under that reference, and the X12 text as exchanged.',
     input: { reference: z.string().describe('Document reference, for example ASN-450118-2 or RCV-DC2-77355') }, run: (db, a) => D.document(db, a.reference) },

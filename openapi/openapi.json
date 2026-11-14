@@ -273,6 +273,16 @@
        "description": "PO number, for example NR-450118"
       },
       "description": "PO number, for example NR-450118"
+     },
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Point in time to answer as of, ISO 8601 or a date. An order Northfield had not yet sent at that time is reported as no such order. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+      },
+      "description": "Point in time to answer as of, ISO 8601 or a date. An order Northfield had not yet sent at that time is reported as no such order. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
      }
     ],
     "responses": {

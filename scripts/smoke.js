@@ -26,6 +26,8 @@ await withServer({ WRITES: 'off' }, 3971, async ({ base, client, tool, rest }) =
   const later = await tool('orders_needing_attention', { as_of: '2026-11-18T09:00:00-05:00', include_warehouse: true }); ok('as_of moves the answer', later.items?.[0]?.po === 'NR-46215');
   const o = await tool('get_order', { po: 'NR-450118' }); ok('order by number', o.found && o.shipments.length === 2);
   const d = await tool('get_document', { reference: 'ASN-450118-2' }); ok('document carries X12', /ISA\*/.test(JSON.stringify(d)));
+  { const pre = await tool('get_order', { po: 'NR-460207' }), post = await tool('get_order', { po: 'NR-460207', as_of: '2026-12-04T10:00:00-05:00' });
+    ok('get_order: no such order before Northfield sends it', pre.found === false && /^No such order as of/.test(pre.message) && !('order_value' in pre) && post.found === true && post.order_value > 0, JSON.stringify(pre).slice(0, 120)); }
   const x = await tool('get_order', { po: 'NR-447948' }); ok('another supplier’s order is not found', x.found === false, JSON.stringify(x).slice(0, 120));
   const c = await tool('compare_with_other_suppliers', { question: 'rank' }); ok('refusal text', JSON.stringify(c).includes('Not available to Ashby'));
   const w = await tool('request_change', { action: 'resend the ship notice', po: 'NR-46156' }); ok('read-only boundary', JSON.stringify(w).includes('Action not available'));
@@ -54,6 +56,8 @@ await withServer({}, 3972, async ({ base, tool }) => {
 await withServer({}, 3973, async ({ base, nfClient, tool, nf }) => {
   const { tools } = await nfClient.listTools(); ok('Northfield: 16 tools', tools.length === 16, String(tools.length));
   const x = (await tool('get_document', { reference: 'ASN-450118-2' })).x12, y = (await nf('get_document', { reference: 'ASN-450118-2' })).x12; ok('shared X12 is the same on both sides', !!x && x === y);
+  { const pre = await nf('supplier_document_trail', { po: 'NR-460207' }), post = await nf('supplier_document_trail', { po: 'NR-460207', as_of: '2026-12-04T10:00:00-05:00' });
+    ok('Northfield trail: no such order before it is sent', pre.found === false && /^No such order as of/.test(pre.message) && !('order_value' in pre) && !('requested_delivery' in pre) && post.found === true && post.documents.length >= 1, JSON.stringify(pre).slice(0, 120)); }
   const t = await nf('supplier_document_trail', { supplier: 'Ashby Supplier' }); ok('Northfield trail equals Ashby health', t.documents === 3412 && t.failures === 41, JSON.stringify(t).slice(0, 120));
   const refusalsNf = [await nf('get_document', { reference: 'WSA-45620' }), await nf('read_supplier_records', { question: 'Kinross load scans' }), await nf('run_readonly_sql', { sql: 'SELECT * FROM warehouse_orders' }), await nf('lookup_rules', { rule_id: 'AP-4.1' })];
   ok('Northfield refuses the 945', /Not available to Northfield/.test(JSON.stringify(refusalsNf[0]))); ok('Northfield refuses supplier records', /Not available to Northfield/.test(JSON.stringify(refusalsNf[1])));

@@ -3,7 +3,7 @@
 // warehouse, ERP, carrier and agent records stay Ashby's; Northfield's payables, draft rules and reviewer notes stay
 // Northfield's. Every answer is read as of a time; nothing here sends or changes anything.
 import { fmtET } from '../world/lib.js';
-import { normPo, rule, param, chargeOf, storyClock, timeLeft } from './domain.js';
+import { normPo, rule, param, chargeOf, storyClock, timeLeft, notYet } from './domain.js';
 import { scorecard, scorecardAsOf, QUARTER } from './score.js';
 import { et } from '../world/lib.js';
 
@@ -27,7 +27,7 @@ export const ashbyPrivate = (what) => ({ found: false, not_available: true, resu
 export function trail(db, { po: poIn, supplier, days = 30, asOf = storyClock() } = {}) {
   const T = asOf.toISOString();
   if (poIn) {
-    const po = normPo(poIn); const o = db.prepare('SELECT * FROM orders WHERE po = ?').get(po); if (!o) return { found: false, message: `No order ${po} at Northfield` };
+    const po = normPo(poIn); const o = db.prepare('SELECT * FROM orders WHERE po = ?').get(po); if (!o) return { found: false, message: `No order ${po} at Northfield` }; if (o.received_at > T) return notYet(po, asOf);
     const docs = db.prepare(`SELECT * FROM documents WHERE po = ? AND sent_at <= ? AND doc_type IN (${SHARED_SETS.map(() => '?').join(',')}) ORDER BY sent_at`).all(po, T, ...SHARED_SETS);
     const errs = db.prepare('SELECT e.*, d.reference FROM errors e JOIN documents d ON d.doc_id = e.doc_id JOIN documents r ON r.doc_id = e.reported_by WHERE d.po = ? AND r.sent_at <= ?').all(po, T);
     return { found: true, po, supplier: supplierName(db, o.supplier_id), as_of: fmtET(asOf), order_value: o.order_value, requested_delivery: o.requested_delivery,

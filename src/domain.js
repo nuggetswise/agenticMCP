@@ -155,11 +155,15 @@ export function deliveries(db, pos) {
 }
 
 /** One order: lines, changes, every document in order, shipments, receipts, invoices, payments, charges and other records. */
-export function lifecycle(db, poIn) {
+/** An order that Northfield has not yet sent does not exist at that time (CALLS 72). */
+export const notYet = (po, asOf) => ({ found: false, po, as_of: fmtET(asOf), message: `No such order as of ${fmtET(asOf)}: ${po}` });
+
+export function lifecycle(db, poIn, asOf = null) {
   const po = normPo(poIn); const own = ownsOrder(db, po);
   if (own === 'missing') return { found: false, message: `No order ${po} in Ashby’s records` };
   if (own === 'other') return { found: false, not_available: true, message: NOT_AVAILABLE };
   const o = db.prepare('SELECT * FROM orders WHERE po = ?').get(po);
+  if (asOf && o.received_at > asOf.toISOString()) return notYet(po, asOf);
   const locName = (id) => db.prepare('SELECT name FROM locations WHERE id = ?').get(id)?.name || id;
   return {
     found: true, po, retailer: 'Northfield Retailer', programme: o.programme, ship_to: locName(o.ship_to),

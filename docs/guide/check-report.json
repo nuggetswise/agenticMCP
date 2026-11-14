@@ -1,14 +1,12 @@
 {
  "file": "/home/claude/agenticmcp/docs/build-guide.md",
- "ran_at_head": "d694ef7",
+ "ran_at_head": "fa6de30",
  "results": [
   {
    "name": "as_of_commit_current",
-   "ok": false,
-   "problems": [
-    "changed since 2bfa59d: scripts/contract.js"
-   ],
-   "info": "2bfa59d"
+   "ok": true,
+   "problems": [],
+   "info": "d694ef7"
   },
   {
    "name": "commits_exist",

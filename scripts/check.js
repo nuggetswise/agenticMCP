@@ -206,7 +206,7 @@ for (const p of REG.prototypes) {
   ok(`registry ${p.id} capability status`, REG.capability_status_values.includes(p.capability_status));
   ok(`registry ${p.id} agent job`, p.agency.verdict !== 'agent' || ((!!A.JOBS[p.agency.job] || !!NR.JOBS[p.agency.job]) && p.decisions.length >= 2));
   for (const an of p.anchors) { const [k, v0] = an.split(':'); const v = v0.startsWith('$') ? facts.anchor[v0.slice(1)] : v0;
-    const hit = k === 'order' ? n('SELECT count(*) n FROM orders WHERE po = ?', v) : k === 'document' ? n('SELECT count(*) n FROM documents WHERE reference = ?', v) : n('SELECT count(*) n FROM events WHERE kind = ?', v);
+    const hit = k === 'order' ? n('SELECT count(*) n FROM orders WHERE po = ?', v) : k === 'document' ? n('SELECT count(*) n FROM documents WHERE reference = ?', v) : k === 'draft_rule' ? n('SELECT count(*) n FROM draft_rules WHERE id = ?', v) : n('SELECT count(*) n FROM events WHERE kind = ?', v);
     ok(`registry ${p.id} anchor ${an}`, hit > 0); }
   for (const t of p.acceptance) ok(`registry ${p.id} acceptance ${t} ran and passed`, results[t] === true, results[t] === undefined ? 'no such test' : 'failed');
 }

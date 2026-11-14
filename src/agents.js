@@ -6,6 +6,8 @@ import { normPo, rule, deductionCase, storyClock, param, chargeOf } from './doma
 const J = (s) => (s ? JSON.parse(s) : {});
 const H = 3600000;
 const evs = (db, po, t) => db.prepare('SELECT * FROM events WHERE po = ? AND at <= ? ORDER BY at').all(po, t).map((e) => ({ ...e, d: J(e.data) }));
+/** A rule's time window in hours, as the catalogue states it (R22). */
+const windowHours = (db, id) => { const r = db.prepare('SELECT window_hours FROM rules WHERE id = ?').get(id); if (!r || r.window_hours == null) throw new Error(`Rule ${id} has no time window`); return r.window_hours; };
 const out = (job, agent, record, asOf, o) => ({ job, agent, acting_for: 'Priya Raman', record, as_of: fmtET(asOf), ...o, authority: o.authority || 'Priya Raman approves before anything is sent', changes_nothing: true });
 
 /** Watch Agent: a required document is missing or rejected. What do the source records say, and what happens next? */
@@ -21,7 +23,7 @@ export function watchDecision(db, poIn, asOf = storyClock()) {
   let row, next, detail = {};
   if (rej) { row = 'Ship notice sent and rejected'; next = 'show_rejection_and_draft_correction'; detail = { rejection: rej.cause, rule: rule(db, rej.rule_id), draft: 'Corrected ship notice from the current PO revision' }; }
   else if (asn.length) { row = 'Ship notice delivered'; next = 'nothing_to_do'; }
-  else if (dep) { const late = asOf - new Date(dep.at) > H; row = 'Fulfilment posted and departure scanned'; next = 'draft_ship_notice_from_load_scan'; detail = { state_after_sending: late ? 'Late; stays Late after it is sent' : 'On time', rule: rule(db, 'NF-4.2') }; }
+  else if (dep) { const late = asOf - new Date(dep.at) > windowHours(db, 'NF-4.2') * H; row = 'Fulfilment posted and departure scanned'; next = 'draft_ship_notice_from_load_scan'; detail = { state_after_sending: late ? 'Late; stays Late after it is sent' : 'On time', rule: rule(db, 'NF-4.2') }; }
   else if (fulfil) { row = 'Fulfilment posted, but no shipping advice and the trailer has not departed'; next = 'hold_draft_and_ask_warehouse'; detail = { flag: 'Fulfilment posted early on the Supplier ERP record', draft_when: 'Departure is scanned' }; }
   else if (wh && !advice) { row = 'No fulfilment, no shipping advice, no departure'; next = 'ask_warehouse_for_status'; detail = { send_to_northfield: 'Nothing', warehouse_status: 'Unknown', rule: rule(db, 'KX-945') }; }
   else { row = 'Not shipped yet'; next = 'nothing_to_do'; }
@@ -63,19 +65,24 @@ export function shelfDecision(db, store, asOf = storyClock()) {
   const t = asOf.toISOString(); const s = String(store);
   const wk = db.prepare('SELECT * FROM store_activity WHERE store = ? AND sent_at <= ? ORDER BY period_end DESC').get(s, t);
   if (!wk) return { found: false, message: `No product activity for store ${store} at ${fmtET(asOf)}` };
-  const all = db.prepare('SELECT * FROM store_activity WHERE period_end = ? AND sku = ?').all(wk.period_end, wk.sku);
-  const sold = all.map((r) => r.sold).sort((a, b) => a - b); const median = sold[sold.length >> 1];
+  // AP-6.1 and AP-6.4 speak of a weekly average over AP-6.4's weeks; the average uses as many of those weeks as the records hold.
+  const avgWeeks = param(db, 'AP-6.4', 'avg_weeks');
+  const periods = db.prepare('SELECT DISTINCT period_end FROM store_activity WHERE sku = ? AND sent_at <= ? AND period_end <= ? ORDER BY period_end DESC LIMIT ?').all(wk.sku, t, wk.period_end, avgWeeks).map((r) => r.period_end);
+  const avgOf = (st) => { const r = db.prepare(`SELECT avg(sold) a FROM store_activity WHERE store = ? AND sku = ? AND period_end IN (${periods.map(() => '?').join(',')})`).get(st, wk.sku, ...periods); return r.a ?? 0; };
+  const avg = avgOf(s);
+  const all = db.prepare('SELECT DISTINCT store FROM store_activity WHERE period_end = ? AND sku = ?').all(wk.period_end, wk.sku);
+  const sold = all.map((r) => avgOf(r.store)).sort((a, b) => a - b); const median = sold[sold.length >> 1];
   const gln = db.prepare("SELECT id FROM locations WHERE name = ?").get(`Northfield Store ${s}`)?.id;
   const transit = gln ? db.prepare("SELECT sh.shipment_id, sh.sent_at FROM shipments sh JOIN orders o ON o.po = sh.po WHERE o.supplier_id = 'ASHBY' AND sh.ship_to = ? AND sh.sent_at <= ? AND EXISTS (SELECT 1 FROM shipment_lines l WHERE l.shipment_id = sh.shipment_id AND l.sku = ?) AND NOT EXISTS (SELECT 1 FROM receipts r WHERE r.shipment_id = sh.shipment_id AND r.received_at <= ?)").get(gln, t, wk.sku, t) : null;
   const stock = db.prepare("SELECT data FROM events WHERE kind = 'erp.inventory_read' AND at <= ? AND data LIKE ? ORDER BY at DESC").get(t, `%${wk.sku}%`);
-  const weeks = wk.sold ? wk.on_hand / wk.sold : Infinity;
-  const evidence = { week_ending: wk.period_end, sold: wk.sold, on_hand: wk.on_hand, chain_median_sold: median, weeks_of_supply: Number.isFinite(weeks) ? Math.round(weeks * 10) / 10 : null, ship_notice_in_transit: transit ? transit.shipment_id : 'None', ashby_available: stock ? J(stock.data).available : 'Not read' };
+  const weeks = avg ? wk.on_hand / avg : Infinity;
+  const evidence = { week_ending: wk.period_end, sold: wk.sold, weekly_average: Math.round(avg * 10) / 10, weeks_averaged: periods.length, on_hand: wk.on_hand, chain_median_weekly_average: median, weeks_of_supply: Number.isFinite(weeks) ? Math.round(weeks * 10) / 10 : null, ship_notice_in_transit: transit ? transit.shipment_id : 'None', ashby_available: stock ? J(stock.data).available : 'Not read' };
   let row, next, detail = {};
   const minAvg = param(db, 'AP-6.1', 'min_weekly_avg'), slowWeeks = param(db, 'AP-6.2', 'min_weeks_supply'), slowPct = param(db, 'AP-6.2', 'pct_of_median') / 100, keep = param(db, 'AP-6.3', 'keep_weeks'), carton = param(db, 'AP-6.4', 'carton');
-  if (wk.on_hand === 0 && wk.sold < minAvg) { row = 'Empty shelf below the minimum weekly sales'; next = 'nothing_to_do'; }
+  if (wk.on_hand === 0 && avg < minAvg) { row = 'Empty shelf below the minimum weekly sales'; next = 'nothing_to_do'; }
   else if (wk.on_hand === 0 && transit) { row = 'Empty shelf, and a ship notice to this store is already in transit'; next = 'wait_for_goods_in_transit'; detail = { in_transit: transit.shipment_id }; }
-  else if (wk.on_hand === 0) { row = 'Empty shelf, nothing in transit, Ashby has stock'; next = 'recommend_new_order'; detail = { to: 'Jordan Ellis', pairs: Math.max(carton, Math.ceil(wk.sold / carton) * carton), rules: ['AP-6.1', 'AP-6.4'] }; }
-  else if (weeks >= slowWeeks && wk.sold < median * slowPct) { row = `Slow sell-through with ${slowWeeks} or more weeks of supply`; next = 'recommend_transfer'; detail = { pairs: wk.on_hand - Math.round(keep * wk.sold), keep_weeks: keep, rules: ['AP-6.2', 'AP-6.3'] }; }
+  else if (wk.on_hand === 0) { row = 'Empty shelf, nothing in transit, Ashby has stock'; next = 'recommend_new_order'; detail = { to: 'Jordan Ellis', pairs: Math.max(carton, Math.ceil(avg / carton) * carton), rules: ['AP-6.1', 'AP-6.4'] }; }
+  else if (weeks >= slowWeeks && avg < median * slowPct) { row = `Slow sell-through with ${slowWeeks} or more weeks of supply`; next = 'recommend_transfer'; detail = { pairs: wk.on_hand - Math.round(keep * avg), keep_weeks: keep, rules: ['AP-6.2', 'AP-6.3'] }; }
   else { row = 'Selling and in stock'; next = 'nothing_to_do'; }
   return out('shelf', 'Shelf Agent', `Store ${s}`, asOf, { evidence, decision_row: row, next_step: next, ...detail, authority: 'Priya Raman approves the recommendation; Jordan Ellis decides the order', rule_baseline: 'Flags the empty shelf and recommends a carton multiple', confirmed_by: 'The next week’s product activity (852)' });
 }

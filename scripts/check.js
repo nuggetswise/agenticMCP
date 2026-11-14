@@ -95,7 +95,7 @@ none('rules.every_error_points_at_documents', 'SELECT error_id FROM errors WHERE
   for (const w of world) if (!pack.rules.some((p) => p.id === w.id)) diff.push(`${w.id} not in pack`);
   eq('rules.catalogue_equals_review_pack', diff.slice(0, 8), []); eq('rules.count_equals_review_pack', world.length, pack.rules.length); }
 { const src = readFileSync(join(ROOT, 'src', 'agents.js'), 'utf8').replace(/\/\/.*$|\/\*[\s\S]*?\*\//gm, '');
-  eq('agents.thresholds_come_from_catalogue', (src.match(/\b(?:pairs|keep_weeks|exposure_estimate|max_amount|carton)\s*:\s*\d+/g) || []).concat(src.match(/>=\s*12\b|median\s*\/\s*2|\b8\s*\*/g) || []), []); }
+  eq('agents.thresholds_come_from_catalogue', (src.match(/\b(?:pairs|keep_weeks|exposure_estimate|max_amount|carton)\s*:\s*\d+/g) || []).concat(src.match(/>=\s*12\b|median\s*\/\s*2|\b8\s*\*|>\s*H\b|\bwk\.sold\s*[<\/]/g) || []).concat(['AP-6.4\', \'avg_weeks', "windowHours(db, 'NF-4.2')"].filter((k) => !src.includes(k)).map((k) => `missing ${k}`)), []); }
 none('rules.basis_declared', "SELECT id FROM rules WHERE basis NOT IN ('public', 'adapted', 'invented') OR (basis <> 'invented' AND public_sources IN ('', '[]'))");
 none('rules.po_reference_over_22_always_rejected', "SELECT doc_id FROM documents WHERE doc_type IN ('856', '810') AND length(json_extract(body, '$.po_ref')) > 22 AND doc_id NOT IN (SELECT doc_id FROM errors)");
 

@@ -62,6 +62,9 @@ export const ASHBY_WRITES = [
   { name: 'release_ship_notice', title: 'Release a held ship notice', rule: 'AP-1.3', description: 'Asks to release a held ship notice. Under AP-1.3 only a person releases a held ship notice, after every failure on it is fixed: this always records a proposal for Priya Raman and never sends anything itself.',
     input: { document: z.string().describe('Ship notice reference'), po: z.string().optional() } },
 ];
+/** What Ashby's scope refuses, and the text it refuses with. The server and the gate (story 4 of P14) read the same values. */
+export const ASHBY_PRIVATE = { what: 'Northfield’s accounts payable, draft rules and claims reviewer notes', tables: /\b(review_notes|draft_rules|rule_replays)\b/i };
+export const refusalText = (notAvailable, what, other) => `${notAvailable}: ${what} belong to ${other}.`;
 export const ASHBY_REFUSALS = [
   { name: 'read_retailer_records', title: 'Northfield’s own records', description: 'Requests to read Northfield’s accounts payable, draft rules, claims reviewer notes or internal systems. Always answers "Not available to Ashby": those records belong to Northfield Retailer.', input: { question: z.string().describe('What the user asked to see') } },
 ];

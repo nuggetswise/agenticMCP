@@ -12,11 +12,12 @@ import { buildWorld, MAIN_DB, ASHBY_DB, NORTHFIELD_DB } from '../world/build.js'
 import { fmtET } from '../world/lib.js';
 import * as NR from './retailer.js';
 import * as D from './domain.js';
-import { TOOLS, BOUNDARY, SCOPES, ASHBY_WRITES, ASHBY_REFUSALS, NF_TOOLS, NF_WRITES, NF_REFUSALS, NF_SCOPES } from './tools.js';
+import { TOOLS, BOUNDARY, SCOPES, ASHBY_WRITES, ASHBY_REFUSALS, NF_TOOLS, NF_WRITES, NF_REFUSALS, NF_SCOPES, ASHBY_PRIVATE, refusalText } from './tools.js';
 import { recordPage, documentPage, adminPage, homePage, nfOrderPage } from './pages.js';
 import * as Aviator from './aviator.js';
 import * as Scout from './scout.js';
 import * as Watch from './watch.js';
+import * as Match from './match.js';
 import * as G from './governance.js';
 import { JOBS } from './agents.js';
 
@@ -42,7 +43,7 @@ const BY_AVIATOR = AV ? { [`${AV}-ashby`]: AS, [`${AV}-northfield`]: NF } : {};
 const aviatorCid = (req, res) => { const c = BY_TOKEN[req.params.token] || BY_AVIATOR[req.params.token]; if (!c) { res.status(404).send('Not found'); return null; } return c; };
 const OTHER = { [AS]: NF, [NF]: AS };
 const SIDE = {
-  [AS]: { party: 'ASHBY', person: 'Priya Raman', company: 'Ashby Supplier', other: 'Northfield Retailer', notAvailable: D.NOT_AVAILABLE, scopes: SCOPES, sqlDb: () => ashbyDb, records: 'records', privateTables: /\b(review_notes|draft_rules|rule_replays)\b/i, privateWhat: 'Northfield’s accounts payable, draft rules and claims reviewer notes' },
+  [AS]: { party: 'ASHBY', person: 'Priya Raman', company: 'Ashby Supplier', other: 'Northfield Retailer', notAvailable: D.NOT_AVAILABLE, scopes: SCOPES, sqlDb: () => ashbyDb, records: 'records', privateTables: ASHBY_PRIVATE.tables, privateWhat: ASHBY_PRIVATE.what },
   [NF]: { party: 'NORTHFIELD', person: 'Jordan Ellis', company: 'Northfield Retailer', other: 'Ashby Supplier', notAvailable: NR.NOT_AVAILABLE_NF, scopes: NF_SCOPES, sqlDb: () => nfDb, records: 'records/northfield', privateTables: /\b(warehouse_orders)\b/i, privateWhat: 'a supplier’s warehouse, ERP, carrier and agent records' },
 };
 const conn = (id) => { const c = db.prepare('SELECT * FROM connections WHERE id = ?').get(id); return { ...c, scopes: JSON.parse(c.scopes) }; };
@@ -62,7 +63,7 @@ const logOther = (cid, tool, what, records, w) => log(OTHER[cid], `counterparty:
 const assistantOf = (cid) => `${SIDE[cid].person}’s assistant`;
 /** Attribution for a refused or invalid write: nothing was recorded, and the log says so. */
 const refusedW = (cid, rule, outcome) => ({ agent: assistantOf(cid), rule, mode: 'approve', approver: 'None: nothing was recorded', outcome });
-const refuse = (cid, tool, args, what) => { const side = SIDE[cid]; log(cid, tool, [], args, side.notAvailable, [], WRITE_NAMES.has(tool) ? refusedW(cid, null, side.notAvailable) : undefined); return { result: side.notAvailable, message: `${side.notAvailable}: ${what} belong to ${side.other}.` }; };
+const refuse = (cid, tool, args, what) => { const side = SIDE[cid]; log(cid, tool, [], args, side.notAvailable, [], WRITE_NAMES.has(tool) ? refusedW(cid, null, side.notAvailable) : undefined); return { result: side.notAvailable, message: refusalText(side.notAvailable, what, side.other) }; };
 
 /** Masks parts of an Ashby answer the granted scopes do not cover. */
 function mask(out, has) {
@@ -152,7 +153,7 @@ export function call(cid, name, args = {}) {
     return body;
   }
   if (cid === AS && name === 'compare_with_other_suppliers') { log(cid, name, [], args, D.NOT_AVAILABLE, []); return { result: D.NOT_AVAILABLE, message: 'Other suppliers’ records are not available on Ashby’s connection.' }; }
-  if (cid === AS && name === 'read_retailer_records') return refuse(cid, name, args, 'Northfield’s accounts payable, draft rules and claims reviewer notes');
+  if (cid === AS && name === 'read_retailer_records') return refuse(cid, name, args, ASHBY_PRIVATE.what);
   if (cid === NF && name === 'read_supplier_records') return refuse(cid, name, args, 'Suppliers’ ERP, warehouse, carrier and agent records and their internal policies');
   if ([...(cid === AS ? ASHBY_WRITES : NF_WRITES), { name: 'request_change' }].some((w) => w.name === name)) return write(cid, name, args);
   if (name === 'run_readonly_sql') {
@@ -323,6 +324,38 @@ const WATCH_TOOLS = [
   { name: 'watch_baseline', title: 'Rule baseline on the open-order queue', description: 'Runs the deterministic rule baseline (the decision table for a missing document) on the same branch and facts, with the same reads and actions and a labelled test approver, over Priya’s morning, and returns its outcome and trace.', input: { variation: WVAR, facts: WFACTS_IN, policy: WPOLICY_IN }, run: watchBaseline },
   { name: 'watch_replay', title: 'Governance replay: baseline and Watch Agent side by side', description: 'Runs the rule baseline and Watch Agent on the same branch and facts, approving every proposal as a labelled test approver and moving the clock to each confirming record, and returns both outcomes, one-line traces, the steps both took (automation) and those only one took. Recorded on the change list as a trial. For governance review, not operation.', input: { variation: WVAR, facts: WFACTS_IN, detail: z.enum(['brief', 'full']).optional(), policy: WPOLICY_IN }, run: (a) => watchReplay(a) },
 ];
+// ---------- Match Agent (P14): a server-side agent on Northfield's connection, in a session branched at the P14 story moment ----------
+const MATCH_FACTS_IN = z.object({ billed_line1: z.number().int(), received_line1: z.number().int(), received_line2: z.number().int(), price_line3: z.number(), price_change_line3: z.boolean(), total_offset: z.number(), correction_on_file: z.boolean(), ashby_answer: z.enum(['corrected_invoice', 'credit_memo', 'dispute', 'no_answer']), ashby_note: z.string().max(300) }).partial().optional().describe('Facts to branch with, on top of the preset: billed_line1, received_line1, received_line2, price_line3, price_change_line3, total_offset, correction_on_file, ashby_answer (how the supplier answers), ashby_note (free text it adds). match_setup lists them with their recorded values.');
+const MATCH_VAR = z.enum(Object.keys(Match.VARIATIONS)).optional().describe(`Preset facts: ${Object.keys(Match.VARIATIONS).join(', ')}. Default canonical.`);
+const MATCH_POLICY_IN = z.record(z.enum(['suggest', 'approve', 'policy'])).optional().describe('Approval mode per action for this run, for actions Jordan Ellis may change (match_setup lists them). Locked actions keep their mode.');
+const matchFacts = (variation, facts) => ({ ...Match.VARIATIONS[variation || 'canonical'], ...(facts || {}) });
+const matchModel = () => Scout.geminiCaller(Aviator.modelRoutes());
+const matchPaused = () => G.isPaused(db, 'Match Agent');
+export const matchView = (sess, extra = {}) => sess ? ({ session: sess.id, label: sess.label, clock: fmtET(new Date(sess.clock)), status: sess.agent.status, branch_at: fmtET(sess.branch_at), facts: sess.changes,
+  ...(sess.agent.status === 'paused' ? { plain_task: { agent: 'Match Agent', agent_state: 'Paused', proposal: null, task: 'Work each held invoice by hand', message: 'Match Agent is paused, so each held invoice arrives as a plain task with no proposal.' } } : {}), ...(sess.handed_over ? { handed_over: sess.handed_over } : {}),
+  queue: Match.READS.read_queue.run(nfDb, sess).held, awaiting: sess.proposals.filter((p) => p.state === 'Awaiting approval').map((p) => ({ id: p.id, action: p.action, does: Match.ACTIONS[p.action].label, args: p.args, proposed_by: p.by, rationale: p.rationale, alternatives: p.alternatives, rules: Match.ACTIONS[p.action].rules })),
+  outcome: Match.outcome(nfDb, sess), ...(sess.simplest ? { simplest_baseline: sess.simplest } : {}), ashby_sees: Match.supplierView(sess), trace: sess.trace, overhead: { model_calls: sess.agent.calls, tool_calls: sess.agent.tool_calls, ms: sess.agent.ms, model_routes: sess.agent.routes || {} }, ...extra })
+  : { result: 'Invalid request', error: 'No such session; sessions live in memory and end when the server restarts.' };
+function drainMatch(sessionId) { const sess = Match.getSession(sessionId); if (!sess) return; for (const a of sess.audit.slice(sess.audited || 0)) log(NF, `match:${a.action}`, [], { session: a.session, proposal: a.proposal }, a.outcome, [a.session, a.proposal, a.record].filter(Boolean), { agent: a.agent, rule: a.authority_rule, mode: a.authority_mode, approver: a.approver, outcome: a.outcome }); sess.audited = sess.audit.length; }
+async function matchStart({ variation, facts, policy, label } = {}) { const sess = Match.startSession(nfDb, { facts: matchFacts(variation, facts), policy: policy || {}, label: label || 'Operator' }); const run = await Match.runMatch(nfDb, sess, { callModel: matchModel(), paused: matchPaused }); drainMatch(sess.id); return matchView(sess, run.ok ? {} : { blocked: run.blocked || run.status }); }
+async function matchDecide({ session, proposal, decision, note }) { const sess = Match.getSession(session); if (!sess) return matchView(null); const r = await Match.decideAndResume(nfDb, sess, proposal, decision, 'Jordan Ellis', { callModel: matchModel(), paused: matchPaused, note }); drainMatch(sess.id); if (r.state === 'Refused') return { ...r, result: 'Refused' }; const dec = r.decision?.approval ? { state: r.decision.state, ...r.decision.approval } : { state: r.decision?.state, by: 'Jordan Ellis', proposal, payment: Match.PAYMENT_UNCHANGED }; return matchView(sess, { decision: dec, ...(r.run?.ok === false ? { blocked: r.run.blocked || r.run.status } : {}) }); }
+async function matchBaseline({ variation, facts, policy } = {}) { const sess = Match.startSession(nfDb, { facts: matchFacts(variation, facts), policy: policy || {}, label: 'Rule baseline' }); Match.runBaseline(nfDb, sess); drainMatch(sess.id); return matchView(sess); }
+async function matchReplay({ variation, facts, policy, detail } = {}, by = assistantOf(NF)) {
+  const r = await Match.replay(nfDb, { facts: matchFacts(variation, facts), policy: policy || {}, callModel: matchModel(), paused: matchPaused });
+  for (const id of [r.baseline.session, r.agent.session]) if (id) drainMatch(id);
+  const trial = G.recordTrial(db, NF, { agent: 'Match Agent', rule: null, by, change: { policy: policy && Object.keys(policy).length ? policy : 'Policy in force (no change)', variation: variation || 'canonical', facts: r.facts },
+    result: { baseline: r.baseline.outcome, agent: r.agent.blocked ? { blocked: r.agent.blocked } : r.agent.outcome, steps: r.steps, drift_measure: r.automation, rollback: 'Nothing was changed: sessions are in memory and leave Northfield’s recorded records unchanged.' } });
+  if (detail === 'full') return { ...r, trial };
+  return { trial, variation: variation || 'canonical', facts: r.facts, evidence_cutoff: r.evidence_cutoff, simplest_baseline: r.baseline.simplest, baseline: { outcome: r.baseline.outcome, trace: brief(r.baseline.trace) }, agent: r.agent.blocked ? { blocked: r.agent.blocked, trace: brief(r.agent.trace) } : { status: r.agent.status, outcome: r.agent.outcome, overhead: r.agent.overhead, trace: brief(r.agent.trace) }, steps: r.steps, comparison: r.comparison, automation: r.automation };
+}
+const MATCH_TOOLS = [
+  { name: 'match_setup', title: 'Match Agent setup: queue, facts, approval modes and guardrails', description: 'What can be set before a Match Agent run on the P14 story moment (Tuesday 10 November 2026 09:00 ET): the invoices held at that moment with their rules, the facts with their recorded values and presets, each action with its rules, its approval mode and whether Jordan Ellis may change it, and the administrator guardrails. Changes nothing.', input: {}, run: async () => Match.setup(nfDb) },
+  { name: 'match_start', title: 'Start Match Agent on the held invoices', description: 'Branches Northfield’s records at the P14 story moment into an isolated session (later records hidden; nothing reaches the recorded world), lets Match Agent investigate the held invoices with its read tools, and returns when it waits for Jordan Ellis, finishes or hits its limit. Returns the session id, the queue, proposals awaiting approval and the trace with who did what. Supplier answers in a session are synthetic, from deterministic rules, except a recorded corrected invoice revealed at its recorded time.', input: { variation: MATCH_VAR, facts: MATCH_FACTS_IN, policy: MATCH_POLICY_IN, label: z.string().optional() }, run: matchStart },
+  { name: 'match_decide', title: 'Decide a Match Agent proposal as Jordan Ellis', description: 'Records Jordan Ellis’s decision on one proposal in a Match session: approve, reject, or edit (Edit suggestion: he sets it aside and works the invoice by hand, recorded with his name). On approval the server executes it (the supplier answers by its rules), then Match Agent continues. No payment is released by any decision. An approval cannot be replayed. Only call this when the user has decided.', input: { session: z.string(), proposal: z.string().describe('Proposal id, for example MP-1'), decision: z.enum(['approve', 'reject', 'edit']), note: z.string().optional().describe('With edit: what Jordan does instead') }, run: matchDecide },
+  { name: 'match_state', title: 'Match session state and trace', description: 'Current state of a Match session: clock, queue, proposals awaiting approval, outcome so far (line by line, with the record that settles each), what the supplier sees, trace and agent overhead.', input: { session: z.string() }, run: async ({ session }) => matchView(Match.getSession(session)) },
+  { name: 'match_baseline', title: 'Rule baseline on the held invoices', description: 'Runs the rule baseline on the same branch and facts: first the simplest baseline (the match shows Held with the failing rule), then fixed logic from the P14 decision table over the same reads and actions, with a labelled test approver. Returns its outcome and trace.', input: { variation: MATCH_VAR, facts: MATCH_FACTS_IN, policy: MATCH_POLICY_IN }, run: matchBaseline },
+  { name: 'match_replay', title: 'Governance replay: baseline and Match Agent side by side', description: 'Runs the rule baseline and Match Agent on the same branch and facts, approving every proposal as a labelled test approver, and returns both outcomes, one-line traces, the steps where the two match (automation) and the agent’s overhead. Recorded on the change list as a trial. Pass detail full for every trace field. For governance review, not operation.', input: { variation: MATCH_VAR, facts: MATCH_FACTS_IN, policy: MATCH_POLICY_IN, detail: z.enum(['brief', 'full']).optional() }, run: (a) => matchReplay(a) },
+];
 function makeServer(cid) {
   const server = new McpServer({ name: cid === AS ? 'trading-grid-ashby' : 'trading-grid-northfield', title: cid === AS ? 'Trading Grid · Ashby Supplier' : 'Trading Grid · Northfield Retailer', version: '0.3.0' }, { instructions: INSTRUCTIONS[cid]() });
   for (const t of GOV_TOOLS[cid]) server.registerTool(t.name, { title: t.title, description: t.description, inputSchema: t.input, annotations: { readOnlyHint: !t.write, destructiveHint: false, openWorldHint: false } },
@@ -348,6 +381,8 @@ function makeServer(cid) {
     async (args = {}) => { let out; try { out = await t.run(args); } catch (e) { out = { result: 'Invalid request', error: e.message }; } log(cid, t.name, [], args, out.result || out.status || 'Answered', []); return { content: [{ type: 'text', text: JSON.stringify(out, null, 1) }] }; });
   if (cid === AS) for (const t of WATCH_TOOLS) server.registerTool(t.name, { title: t.title, description: t.description, inputSchema: t.input, annotations: { readOnlyHint: t.name === 'watch_setup', destructiveHint: false, openWorldHint: false } },
     async (args = {}) => { let out; try { out = await t.run(args); } catch (e) { out = { result: 'Invalid request', error: e.message }; } log(cid, t.name, [], args, out.result || out.status || 'Answered', []); return { content: [{ type: 'text', text: JSON.stringify(out, null, 1) }] }; });
+  if (cid === NF) for (const t of MATCH_TOOLS) server.registerTool(t.name, { title: t.title, description: t.description, inputSchema: t.input, annotations: { readOnlyHint: t.name === 'match_setup' || t.name === 'match_state', destructiveHint: false, openWorldHint: false } },
+    async (args = {}) => { let out; try { out = linkify(await t.run(args), SIDE[NF]); } catch (e) { out = { result: 'Invalid request', error: e.message }; } log(cid, t.name, [], args, out.result || out.status || 'Answered', []); return { content: [{ type: 'text', text: JSON.stringify(out, null, 1) }] }; });
   return server;
 }
 

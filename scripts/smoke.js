@@ -18,8 +18,14 @@ async function withServer(env, port, fn) {
 }
 await withServer({ WRITES: 'off' }, 3971, async ({ base, client, tool, rest }) => {
   const { tools } = await client.listTools(); const names = tools.map((t) => t.name);
-  ok('19 tools listed', names.length === 19, String(names.length)); ok('no scenario tool', !names.includes('list_scenarios'));
-  ok('every tool read-only', tools.every((t) => t.annotations?.readOnlyHint === true));
+  // 19 record tools plus five Scout tools (CALLS 81). Scout tools change only an isolated in-memory session, never a Trading Grid record,
+  // but they are not marked read-only so that a client still confirms before approving on Priya's behalf.
+  const scout = names.filter((n) => n.startsWith('scout_'));
+  ok('24 tools listed: 19 record tools and 5 Scout tools', names.length === 24 && scout.length === 5, `${names.length}, ${scout.length} Scout`); ok('no scenario tool', !names.includes('list_scenarios'));
+  ok('every record tool read-only', tools.filter((t) => !t.name.startsWith('scout_')).every((t) => t.annotations?.readOnlyHint === true));
+  const before = JSON.stringify(await tool('get_access_log', { limit: 1 })).length >= 0 && (await tool('run_readonly_sql', { sql: "SELECT count(*) n FROM events WHERE po = 'NR-460207'" })).rows?.[0]?.n;
+  const sb = await tool('scout_baseline', {}); const after = (await tool('run_readonly_sql', { sql: "SELECT count(*) n FROM events WHERE po = 'NR-460207'" })).rows?.[0]?.n;
+  ok('Scout session leaves the recorded world unchanged', sb.outcome?.cartons_loaded === 659 && before === after, `${before} -> ${after}`);
   const a = await tool('orders_needing_attention'); ok('attention via MCP', a.items?.map((i) => i.po).join() === 'NR-46151,NR-46142,NR-46156,NR-46133', JSON.stringify(a).slice(0, 200));
   const r = await rest('/v1/orders/attention'); ok('REST twin equals MCP', JSON.stringify(r.items) === JSON.stringify(a.items));
   const h = await rest('/v1/health?days=30'); ok('health via REST', h.documents === 3412 && h.failures === 41);

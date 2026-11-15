@@ -264,6 +264,12 @@ const DOCS = { plan: 'prototype-plan.md', server: 'database-and-server-plan.md',
 for (const [k, f] of Object.entries(DOCS)) { const t = existsSync(join(ROOT, 'docs', f)) ? readFileSync(join(ROOT, 'docs', f), 'utf8') : '';
   ok(`docs.${k} is a dated snapshot marked not current`, /^<!-- Dated snapshot, exported \d{1,2} \w+ 20\d\d .*it is not current\./.test(t)); }
 
+// ── World coverage (D60): one file of checks per stage in scripts/checks, each given the same helpers ──────────────
+for (const f of readdirSync(join(ROOT, 'scripts', 'checks')).filter((x) => x.endsWith('.mjs')).sort()) {
+  const m = await import(join(ROOT, 'scripts', 'checks', f));
+  m.default({ db, ash, nf: new DatabaseSync(join(ROOT, 'build', 'northfield.db'), { readOnly: true }), ok, eq, none, n, T, D, NR, A, G, Scout, ROOT, results });
+}
+
 console.log(`${pass} checks passed, ${fails.length} failed`);
 for (const f of fails) console.log(`FAIL ${f}`);
 process.exit(fails.length ? 1 : 0);

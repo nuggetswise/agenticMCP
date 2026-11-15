@@ -41,6 +41,15 @@ export const locations = [
   { id: 'KIN-JOL', party_id: 'KINROSS', name: 'Kinross Joliet', gln: gln(3020), active: 1, note: '3PL warehouse' },
 ];
 export const locByGln = Object.fromEntries(locations.map((l) => [l.gln, l]));
+// One master per thing (T1.11): every store in Northfield's product activity and every supplier ship-from point is a
+// location row, so documents reference a location rather than a bare number or GLN. Kept out of \`locations\` above,
+// which the generator reads, so no existing document changes. Store 114 already exists as STORE114.
+export const STORE_NUMBER = { STORE114: '114' };
+export const moreLocations = [
+  ...[...Array.from({ length: 24 }, (_, i) => 101 + i), ...Array.from({ length: 16 }, (_, i) => 201 + i)].filter((n) => n !== 114).map((n) => ({ id: `STORE${n}`, party_id: 'NORTHFIELD', name: `Northfield Store ${n}`, gln: gln(2200 + n), active: 1, note: null, store_number: String(n) })),
+];
+/** A ship-from point for each supplier that ships from its own GLN. Its id is the GLN, the value the ship notices carry. */
+export const supplierShipPoints = (glns) => glns.map((g) => { const p = Object.values(PARTY_BY_GLN).find((x) => x.gln === g); return { id: g, party_id: p ? p.id : 'UNKNOWN', name: `${p ? p.name : g} shipping point`, gln: g, active: 1, note: 'Supplier ship-from on its ship notices', store_number: null }; });
 
 export const items = [
   { sku: 'ASH-MUG-12', supplier_id: 'ASHBY', description: 'Stoneware mug 12 oz', gtin: '10614141000125', pack: 'Case of 12', case_price: 54.0, northfield_item: '448120', on_northfield_list: 1 },
@@ -53,6 +62,8 @@ export const items = [
   { sku: 'CDP-CND-8', supplier_id: 'CEDARPINE', description: 'Soy candle 8 oz', gtin: '10614141005014', pack: 'Case of 24', case_price: 62.4, northfield_item: '452020', on_northfield_list: 1 },
 ];
 export const ITEM = Object.fromEntries(items.map((i) => [i.sku, i]));
+/** Units of the base item in one ordering unit, read from the item's pack text. */
+export const unitsPerCase = (pack) => { const m = String(pack).match(/(\d+)/); return m ? Number(m[1]) : 1; };
 export const ITEM_BY_NF = Object.fromEntries(items.map((i) => [i.northfield_item, i]));
 
 // ---------- Northfield rule catalogue ----------
@@ -166,3 +177,19 @@ export const docNames = {
 };
 export const partyByIsa = Object.fromEntries(parties.filter((p) => p.isa).map((p) => [p.isa, p]));
 export const PARTY = Object.fromEntries(parties.map((p) => [p.id, p]));
+const PARTY_BY_GLN = Object.fromEntries(parties.filter((p) => p.gln).map((p) => [p.gln, p]));
+
+// ---------- Dated values (T1.11) ----------
+// A rule, price or item attribute is read as of the date of the document it judges, as ERPNext reads an Item Price
+// between Valid From and Valid Upto and SAP reads a condition record between DATAB and DATBI. valid_to is exclusive;
+// null means open.
+export const HISTORY_START = '2026-03-01';
+export const ruleSets = [
+  { id: 'northfield-2026.1', owner: 'Northfield', published_at: '2026-02-16', valid_from: HISTORY_START, valid_to: '2026-08-01', note: 'Northfield supplier guide 2026.1. Superseded by 2026.2.' },
+  { id: 'northfield-2026.2', owner: 'Northfield', published_at: '2026-07-15', valid_from: '2026-08-01', valid_to: null, note: 'Northfield supplier guide 2026.2, in force for the quarter.' },
+  { id: 'ashby-policy', owner: 'Ashby', published_at: '2026-02-20', valid_from: HISTORY_START, valid_to: null, note: 'Ashby’s own policies.' },
+  { id: 'ashby-agreement', owner: 'Ashby agreement', published_at: '2026-02-20', valid_from: HISTORY_START, valid_to: null, note: 'Agreements Ashby has signed.' },
+  { id: 'kinross', owner: 'Ashby agreement', published_at: '2026-02-20', valid_from: HISTORY_START, valid_to: null, note: 'Ashby’s warehouse agreement with Kinross.' },
+];
+/** Rules that read differently in an earlier rule set. Wording and basis are mirrored in registry/catalogue-pack.json (rule_sets). */
+export const earlierVersions = PACK.rule_sets?.flatMap((rs) => rs.changes.map((c) => ({ rule_id: c.id, rule_set: rs.id, statement: c.statement, params: c.params || null, limit_value: c.limit ?? null }))) || [];

@@ -6,6 +6,7 @@ import { anchors, finishRisks } from './anchors.js';
 import { history } from './history.js';
 import { variance } from './variance.js';
 import { BUYER_FX, buyerSupplierId, PARTY, TED, QUARTER, ITEM } from './ref.js';
+import { STAGES } from './stages/index.js';
 
 export const T8 = '2026-11-08'; // Money in Motion's day 0
 const dayAt = (off, hm) => et(etDay(addD(et(T8, '12:00'), off)), hm);
@@ -109,8 +110,20 @@ export function build(nPre, jitter) {
   L.asideHist = true; L.aside(() => history(L, W)); L.asideHist = false;
   L.aside(() => variance(L, W));
   L.event({ at: et('2026-12-28', '09:00'), kind: 'scorecard.published', po: null, system: 'Northfield scorecard file', party: 'NORTHFIELD', channel: 'API', data: { period: '13 weeks to 26 Dec 2026', definition: 'OTIF-2026.2, cases per order line', official: 0.91, compliant_cases: 43680, cases: 48000, failing_lines: 108, network_view: 0.924, plan_rule: 'NF-9.2', plan_due_days: 30 } });
+  // ---------- stages added by world coverage (D60), after every existing stream so nothing above moves ----------
+  for (const st of STAGES) {
+    const d0 = L.docs.length, e0 = L.events.length;
+    L.aside(() => st.generate(L, { W, G, P10_WINDOW }));
+    for (const x of L.docs.slice(d0)) x.stage = st.id; for (const x of L.events.slice(e0)) x.stage = st.id;
+  }
+  const inWindow = L.docs.filter((d) => d.stage && !d.test && P10_PAIR(d) && Date.parse(d.at) > P10_WINDOW.start && Date.parse(d.at) <= P10_WINDOW.end);
+  if (inWindow.length) throw new Error(`Stage documents between Ashby and Northfield fall in P10's 30-day window, which would move its document count: ${inWindow.slice(0, 3).map((d) => `${d.stage} ${d.type} ${d.at}`).join(', ')}`);
   return { L, W, G };
 }
+
+/** P10's window: the 30 days before its clock. Stage documents between Ashby and Northfield keep out of it, so P10's count stands. */
+export const P10_WINDOW = { start: addD(CLOCK10, -30).getTime(), end: CLOCK10.getTime() };
+const P10_PAIR = (d) => (d.from === 'ASHBY' && d.to === 'NORTHFIELD') || (d.from === 'NORTHFIELD' && d.to === 'ASHBY');
 
 /** Remittances: Northfield pays each Ashby invoice 30 days after it was sent, one remittance per payment day. */
 function remittances(L, W, G) {

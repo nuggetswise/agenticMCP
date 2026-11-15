@@ -8,6 +8,8 @@ import { generate } from './generate.js';
 import { readDocuments } from './x12.js';
 import * as ref from './ref.js';
 import { etDay } from './lib.js';
+import { STAGES, STAGE_BY_TYPE } from './stages/index.js';
+import { locationRows, otherItems, ruleRows, itemRows, typedFromEvents, documentLinks } from './typed.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const BUILD = join(ROOT, 'build');
@@ -33,6 +35,9 @@ export const CALENDAR = (A) => [
   { id: 'P15', week: 14, moment: 'A draft rule replayed against the quarter before publishing', seen_by: 'Jordan Ellis', prototype: 'P15 Rule Replay', as_of: '2026-12-28T16:00:00.000Z', anchor: 'NFD-1' },
   { id: 'P7', week: 14, moment: 'Scorecard 91.0% and the corrective plan', seen_by: 'Priya Raman, then Jordan Ellis', prototype: 'P7 Performance Improvement', as_of: '2026-12-28T14:00:00.000Z', anchor: '108 failing lines' },
 ];
+
+/** The schema: the core tables, then each stage's own. */
+export const SCHEMA = () => [readFileSync(join(ROOT, 'world', 'schema.sql'), 'utf8'), ...STAGES.map((s) => s.schema || '')].join('\n');
 
 function insert(db, table, rows) {
   if (!rows.length) return;
@@ -79,8 +84,8 @@ export function derive(files, events) {
   const idCount = new Map(); const byCtl = new Map(); const byRef = new Map();
   for (const d of docs) {
     d.sender = ref.partyByIsa[d.isa_sender].id; d.receiver = ref.partyByIsa[d.isa_receiver].id;
-    const others = [d.sender, d.receiver].filter((x) => x !== 'NORTHFIELD' && x !== 'KINROSS');
-    d.partner = [d.sender, d.receiver].includes('KINROSS') ? 'KINROSS' : 'NORTHFIELD'; d.supplier = others[0] || 'ASHBY';
+    const others = [d.sender, d.receiver].filter((x) => x !== 'NORTHFIELD' && x !== 'KINROSS' && x !== 'LAKELINE');
+    d.partner = [d.sender, d.receiver].includes('KINROSS') ? 'KINROSS' : [d.sender, d.receiver].includes('LAKELINE') ? 'LAKELINE' : 'NORTHFIELD'; d.supplier = others[0] || 'ASHBY';
     // A 997 has no reference of its own in X12: it is named by its sender and interchange control number.
     if (d.type === '997') d.ref = `FA-${d.sender === 'NORTHFIELD' ? (d.receiver === 'ASHBY' ? 'N' : `N${d.receiver.slice(3)}-`) : d.sender === 'ASHBY' ? (d.receiver === 'KINROSS' ? 'AK' : 'A') : d.sender === 'KINROSS' ? 'K' : `S${d.sender.slice(3)}-`}${d.isa_ctl > 500000000 ? d.isa_ctl - 500000000 : `H${d.isa_ctl}`}`;
     const base = `${d.type}:${d.ref}`; const n = (idCount.get(base) || 0) + 1; idCount.set(base, n); d.doc_id = n === 1 ? base : `${base}#${n}`;
@@ -122,6 +127,7 @@ export function derive(files, events) {
 
   const order = new Map(); const lineKey = (po, line) => `${po}|${line}`; const line = new Map();
   const shipByRef = new Map(); const loc = (gln) => ref.locByGln[gln]?.id || gln;
+  const ctx = { docs, byCtl, byRef, loc, T, events };
   for (const d of docs) {
     const body = { ...d }; for (const k of ['raw', 'cartons', 'source', 'sender', 'receiver', 'partner', 'supplier', 'doc_id', 'status', 'answers', 'rejected', 'held', 'isa_sender', 'isa_receiver', 'test']) delete body[k];
     if (d.type === '856') body.cartons_listed = d.cartons.length;
@@ -158,13 +164,16 @@ export function derive(files, events) {
       const w = T.warehouse_orders.find((x) => x.po === d.po); if (w) { w.advice_at = d.at; w.shipped_at = d.shipped_at; }
     } else if (d.type === '852') {
       for (const it of d.items) for (const s of it.stores) T.store_activity.push({ period_start: d.period_start, period_end: d.period_end, sent_at: d.at, sku: it.sku, store: s.store, sold: s.sold, on_hand: s.on_hand });
-    }
+    } else if (STAGE_BY_TYPE[d.type]) STAGE_BY_TYPE[d.type].derive(d, T, ctx);
   }
+  for (const st of STAGES) if (st.finish) st.finish(T, ctx);
   for (const o of T.orders) { const ls = T.order_lines.filter((l) => l.po === o.po); if (ls.every((l) => l.qty_accepted != null)) o.accepted_value = Math.round(ls.reduce((a, l) => a + l.qty_accepted * l.price, 0) * 100) / 100; }
   for (const i of T.invoices) { const d = docs.find((x) => x.doc_id === i.doc_id); i.status = d.status; }
   T.documents.forEach((r, i) => { r.status = docs[i].status; r.answers_doc_id = docs[i].answers; });
   T.errors.forEach((e) => delete e._fixAt);
-  T.events = events.map((e, i) => ({ id: i + 1, at: e.at, kind: e.kind, po: e.po || null, system: e.system, party: e.party, channel: e.channel, data: e.data }));
+  T.events = events.map((e, i) => ({ id: e.id ?? i + 1, at: e.at, kind: e.kind, po: e.po || null, system: e.system, party: e.party, channel: e.channel, data: e.data }));
+  T.document_links = documentLinks(docs, ctx);
+  Object.assign(T, typedFromEvents(T.events));
   return T;
 }
 
@@ -175,13 +184,19 @@ export function buildWorld({ quiet = false } = {}) {
   const g = generate(tuning);
   if (!tuning || tuning.nPre !== g.nPre || tuning.jitter !== g.jitter) writeFileSync(join(ROOT, 'world', 'tuning.json'), JSON.stringify({ nPre: g.nPre, jitter: g.jitter }) + '\n');
   const files = writeX12(g.out);
-  const events = [...g.L.events].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
+  const sorted = [...g.L.events].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
+  // Event ids: existing records keep the ids they always had; records added by a stage take ids from a separate range.
+  const events = [...sorted.filter((e) => !e.stage).map((e, i) => ({ ...e, id: i + 1 })), ...sorted.filter((e) => e.stage).map((e, i) => ({ ...e, id: 1000001 + i }))];
   const T = derive(files, events);
   const db = new DatabaseSync(MAIN_DB);
-  db.exec(readFileSync(join(ROOT, 'world', 'schema.sql'), 'utf8'));
-  db.exec('BEGIN');
+  db.exec(SCHEMA());
+  // Declared keys are enforced on the main database at commit: the build fails if any reference has no row to point at.
+  db.exec('BEGIN'); db.exec('PRAGMA defer_foreign_keys = ON');
   insert(db, 'parties', ref.parties.map((p) => ({ id: p.id, name: p.name, kind: p.kind, gln: p.gln, isa: p.isa })));
-  insert(db, 'people', ref.people); insert(db, 'locations', ref.locations); insert(db, 'items', ref.items);
+  insert(db, 'people', ref.people); insert(db, 'locations', locationRows()); insert(db, 'items', [...ref.items, ...otherItems(T)]);
+  const rr = ruleRows(ref.rules); insert(db, 'rule_sets', rr.rule_sets); insert(db, 'rule_versions', rr.rule_versions);
+  const ir = itemRows(); insert(db, 'item_versions', ir.item_versions); insert(db, 'item_prices', ir.item_prices);
+  for (const st of STAGES) for (const [t, rows] of Object.entries(st.masters ? st.masters() : {})) insert(db, t, rows);
   insert(db, 'rules', ref.rules.map((r) => ({ id: r.id, owner: r.owner, implements: r.implements, params: r.params ? JSON.stringify(r.params) : null, rule_set: r.rule_set, topic: r.topic, doc_type: r.doc_type, statement: r.statement, window_hours: r.window_hours, limit_value: r.limit_value, charge_code: r.charge_code, charge: r.charge, source: r.source, basis: r.basis, public_sources: r.public_sources })));
   insert(db, 'calendar', CALENDAR(g.W.anchor));
   for (const [t, rows] of Object.entries(T)) insert(db, t, rows);
@@ -194,6 +209,8 @@ export function buildWorld({ quiet = false } = {}) {
   insert(db, 'draft_rules', [
     { id: 'NFD-1', created_at: '2026-11-10T15:00:00.000Z', author: 'Jordan Ellis', statement: 'Send the ship notice within 30 minutes of departure', check_kind: 'ship_notice_minutes', value: 30, charge: 150, state: 'Draft' },
     { id: 'NFD-2', created_at: '2026-11-10T15:30:00.000Z', author: 'Jordan Ellis', statement: 'Invoice line prices within 0.25% of the purchase order price', check_kind: 'price_tolerance_pct', value: 0.25, charge: 100, state: 'Draft' }]);
+  const fk = db.prepare('PRAGMA foreign_key_check').all();
+  if (fk.length) { const by = {}; for (const r of fk) { const k = `${r.table}→${r.parent}`; by[k] = (by[k] || 0) + 1; } db.exec('ROLLBACK'); throw new Error(`Declared keys without a row to point at: ${JSON.stringify(by)}`); }
   db.exec('COMMIT'); db.close();
   buildAshbyView(); buildNorthfieldView();
   const facts = { tuning: { nPre: g.nPre, jitter: g.jitter }, history: g.W.history, anchor: g.W.anchor, slots: g.W.slots, claimCases: g.W.claimCases, files: files.length, documents: T.documents.length, events: T.events.length };
@@ -204,13 +221,13 @@ export function buildWorld({ quiet = false } = {}) {
 
 /** A copy holding only what Ashby may read, for read-only SQL. */
 function buildAshbyView() {
-  const db = new DatabaseSync(ASHBY_DB);
-  db.exec(readFileSync(join(ROOT, 'world', 'schema.sql'), 'utf8'));
+  const db = new DatabaseSync(ASHBY_DB, { enableForeignKeyConstraints: false }); // a scoped copy: a reference may point at a row this company may not see
+  db.exec(SCHEMA());
   db.exec(`ATTACH DATABASE '${MAIN_DB.replace(/'/g, "''")}' AS m`);
   const own = "(SELECT po FROM m.orders WHERE supplier_id = 'ASHBY')";
   db.exec(`BEGIN;
     INSERT INTO parties SELECT * FROM m.parties WHERE id IN ('NORTHFIELD','ASHBY','KINROSS','LAKELINE');
-    INSERT INTO people SELECT * FROM m.people; INSERT INTO locations SELECT * FROM m.locations;
+    INSERT INTO people SELECT * FROM m.people; INSERT INTO locations SELECT * FROM m.locations WHERE party_id IN ('NORTHFIELD','ASHBY','KINROSS','LAKELINE');
     INSERT INTO items SELECT * FROM m.items WHERE supplier_id = 'ASHBY'; INSERT INTO rules SELECT * FROM m.rules; INSERT INTO calendar SELECT * FROM m.calendar;
     INSERT INTO documents SELECT * FROM m.documents WHERE supplier_id = 'ASHBY';
     INSERT INTO orders SELECT * FROM m.orders WHERE supplier_id = 'ASHBY';
@@ -222,6 +239,12 @@ function buildAshbyView() {
     INSERT INTO errors SELECT e.* FROM m.errors e JOIN m.documents d ON d.doc_id = e.doc_id WHERE d.supplier_id = 'ASHBY';
     INSERT INTO warehouse_orders SELECT * FROM m.warehouse_orders; INSERT INTO store_activity SELECT * FROM m.store_activity;
     INSERT INTO events SELECT * FROM m.events WHERE po IS NULL OR po IN ${own} OR po NOT LIKE 'NR-%';
+    INSERT INTO rule_sets SELECT * FROM m.rule_sets; INSERT INTO rule_versions SELECT * FROM m.rule_versions;
+    INSERT INTO item_versions SELECT * FROM m.item_versions WHERE sku IN (SELECT sku FROM items); INSERT INTO item_prices SELECT * FROM m.item_prices WHERE sku IN (SELECT sku FROM items);
+    INSERT INTO document_links SELECT * FROM m.document_links WHERE doc_id IN (SELECT doc_id FROM documents) AND prev_doc_id IN (SELECT doc_id FROM documents);
+    INSERT INTO shipment_plans SELECT * FROM m.shipment_plans WHERE event_id IN (SELECT id FROM events); INSERT INTO warehouse_scans SELECT * FROM m.warehouse_scans WHERE event_id IN (SELECT id FROM events);
+    INSERT INTO carrier_events SELECT * FROM m.carrier_events WHERE event_id IN (SELECT id FROM events);
+    ${STAGES.flatMap((st) => st.views?.ashby || []).join(';\n')}${STAGES.some((st) => st.views?.ashby?.length) ? ';' : ''}
     COMMIT;`);
   db.exec('DETACH DATABASE m'); db.exec('DROP TABLE connections; DROP TABLE access_log; DROP TABLE proposals; DROP TABLE review_notes; DROP TABLE draft_rules; DROP TABLE rule_replays; DROP TABLE agent_changes;'); db.exec('VACUUM'); db.close();
 }
@@ -230,8 +253,8 @@ function buildAshbyView() {
  * records they carry, Northfield's own systems, the deduction cases, and evidence a supplier shared into a case.
  * Ashby's ERP, warehouse, carrier and agent records, the 940 and 945, and Ashby's policies are left out. */
 function buildNorthfieldView() {
-  const db = new DatabaseSync(NORTHFIELD_DB);
-  db.exec(readFileSync(join(ROOT, 'world', 'schema.sql'), 'utf8'));
+  const db = new DatabaseSync(NORTHFIELD_DB, { enableForeignKeyConstraints: false }); // a scoped copy, as above
+  db.exec(SCHEMA());
   db.exec(`ATTACH DATABASE '${MAIN_DB.replace(/'/g, "''")}' AS m`);
   db.exec(`BEGIN;
     INSERT INTO parties SELECT * FROM m.parties WHERE kind IN ('Retailer','Supplier');
@@ -245,6 +268,12 @@ function buildNorthfieldView() {
     INSERT INTO errors SELECT * FROM m.errors; INSERT INTO store_activity SELECT * FROM m.store_activity;
     INSERT INTO events SELECT * FROM m.events WHERE party = 'NORTHFIELD' OR system = 'Northfield deduction case' OR json_extract(data, '$.in_case') IS NOT NULL;
     INSERT INTO review_notes SELECT * FROM m.review_notes; INSERT INTO draft_rules SELECT * FROM m.draft_rules;
+    INSERT INTO rule_versions SELECT * FROM m.rule_versions WHERE rule_id IN (SELECT id FROM rules); INSERT INTO rule_sets SELECT * FROM m.rule_sets WHERE id IN (SELECT rule_set FROM rule_versions);
+    INSERT INTO item_versions SELECT * FROM m.item_versions; INSERT INTO item_prices SELECT * FROM m.item_prices;
+    INSERT INTO document_links SELECT * FROM m.document_links WHERE doc_id IN (SELECT doc_id FROM documents) AND prev_doc_id IN (SELECT doc_id FROM documents);
+    INSERT INTO shipment_plans SELECT * FROM m.shipment_plans WHERE event_id IN (SELECT id FROM events); INSERT INTO warehouse_scans SELECT * FROM m.warehouse_scans WHERE event_id IN (SELECT id FROM events);
+    INSERT INTO carrier_events SELECT * FROM m.carrier_events WHERE event_id IN (SELECT id FROM events);
+    ${STAGES.flatMap((st) => st.views?.northfield || []).join(';\n')}${STAGES.some((st) => st.views?.northfield?.length) ? ';' : ''}
     COMMIT;`);
   db.exec('DETACH DATABASE m'); db.exec('DROP TABLE connections; DROP TABLE access_log; DROP TABLE proposals; DROP TABLE warehouse_orders; DROP TABLE rule_replays; DROP TABLE agent_changes;'); db.exec('VACUUM'); db.close();
 }

@@ -3,20 +3,20 @@
 // Database rows are derived from parser output only (see world/derive.js).
 // Envelope dates and times are UTC. Element separator *, segment terminator ~, component separator >.
 
-const pad = (s, n) => String(s).padEnd(n, ' ').slice(0, n);
-const z = (n, w) => String(n).padStart(w, '0');
-const d8 = (iso) => iso.slice(0, 10).replace(/-/g, '');
-const t6 = (iso) => iso.slice(11, 19).replace(/:/g, '');
-const t4 = (iso) => iso.slice(11, 16).replace(':', '');
-const iso8 = (d, t = '000000') => `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}T${t.slice(0, 2)}:${t.slice(2, 4)}:${(t.slice(4, 6) || '00')}.000Z`;
-const day8 = (d) => (d ? `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}` : null);
-const money = (n) => Number(n).toFixed(2);
-const clean = (s) => String(s ?? '').replace(/[*~>\n\r]/g, ' ').trim();
-const seg = (...e) => { while (e.length && (e[e.length - 1] === '' || e[e.length - 1] == null)) e.pop(); return e.map((x) => (x == null ? '' : String(x))).join('*'); };
+export const pad = (s, n) => String(s).padEnd(n, ' ').slice(0, n);
+export const z = (n, w) => String(n).padStart(w, '0');
+export const d8 = (iso) => iso.slice(0, 10).replace(/-/g, '');
+export const t6 = (iso) => iso.slice(11, 19).replace(/:/g, '');
+export const t4 = (iso) => iso.slice(11, 16).replace(':', '');
+export const iso8 = (d, t = '000000') => `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}T${t.slice(0, 2)}:${t.slice(2, 4)}:${(t.slice(4, 6) || '00')}.000Z`;
+export const day8 = (d) => (d ? `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}` : null);
+export const money = (n) => Number(n).toFixed(2);
+export const clean = (s) => String(s ?? '').replace(/[*~>\n\r]/g, ' ').trim();
+export const seg = (...e) => { while (e.length && (e[e.length - 1] === '' || e[e.length - 1] == null)) e.pop(); return e.map((x) => (x == null ? '' : String(x))).join('*'); };
 
 export const FUNC = { 850: 'PO', 855: 'PR', 860: 'PC', 865: 'CA', 856: 'SH', 810: 'IN', 861: 'RC', 824: 'AG', 997: 'FA', 820: 'RA', 940: 'OW', 945: 'SW', 852: 'PD' };
 
-const itemIds = (l) => ['IN', l.nf_item, 'VN', l.sku, ...(l.gtin ? ['UK', l.gtin] : [])];
+export const itemIds = (l) => ['IN', l.nf_item, 'VN', l.sku, ...(l.gtin ? ['UK', l.gtin] : [])];
 
 /** Body segments (between ST and SE) for one document. */
 const BODY = {
@@ -194,9 +194,9 @@ export function parseX12(text) {
   return out;
 }
 
-const items = (e, from) => { const o = {}; for (let i = from; i + 1 < e.length; i += 2) { if (e[i] === 'IN') o.nf_item = e[i + 1]; if (e[i] === 'VN') o.sku = e[i + 1]; if (e[i] === 'UK') o.gtin = e[i + 1]; if (e[i] === 'UP') o.upc = e[i + 1]; } return o; };
-const n1 = (segs) => Object.fromEntries(segs.filter((e) => e[0] === 'N1').map((e) => [e[1], { name: e[2], gln: e[4] }]));
-const first = (segs, tag, q) => segs.find((e) => e[0] === tag && (q == null || e[1] === q));
+export const items = (e, from) => { const o = {}; for (let i = from; i + 1 < e.length; i += 2) { if (e[i] === 'IN') o.nf_item = e[i + 1]; if (e[i] === 'VN') o.sku = e[i + 1]; if (e[i] === 'UK') o.gtin = e[i + 1]; if (e[i] === 'UP') o.upc = e[i + 1]; } return o; };
+export const n1 = (segs) => Object.fromEntries(segs.filter((e) => e[0] === 'N1').map((e) => [e[1], { name: e[2], gln: e[4] }]));
+export const first = (segs, tag, q) => segs.find((e) => e[0] === tag && (q == null || e[1] === q));
 
 /** Business reading of one transaction set. */
 const READ = {
@@ -243,4 +243,11 @@ export function readDocuments(text, source = null) {
     docs.push({ type: s.type, isa_sender: ic.sender, isa_receiver: ic.receiver, isa_ctl: ic.ctl, gs_ctl: g.ctl, st_ctl: s.ctl, at: g.at, segments: s.segs.length + 2, se_count: s.count, source, ...read(s.segs) });
   }
   return docs;
+}
+
+/** Adds a transaction set the world exchanges: its functional group, writer (body segments) and reader.
+ * Stage modules in world/stages register their documents here, so this file never needs editing per stage. */
+export function registerType(code, { func, body, read }) {
+  if (BODY[code] || READ[code]) throw new Error(`Transaction set ${code} is registered twice`);
+  FUNC[code] = func; BODY[code] = body; READ[code] = read;
 }

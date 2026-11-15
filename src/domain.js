@@ -24,6 +24,27 @@ const J = (s) => (s ? JSON.parse(s) : null);
 let RULE_CHANGE = null;
 export const withRuleChange = (change, fn) => { const before = RULE_CHANGE; RULE_CHANGE = change; try { return fn(); } finally { RULE_CHANGE = before; } };
 export const param = (db, id, key) => { if (RULE_CHANGE && RULE_CHANGE.rule === id && key in RULE_CHANGE.params) return RULE_CHANGE.params[key]; const r = db.prepare('SELECT params FROM rules WHERE id = ?').get(id); const p = r && r.params ? JSON.parse(r.params) : {}; if (!(key in p)) throw new Error(`Rule ${id} has no parameter ${key}`); return p[key]; };
+// ── Dated values (T1.11) ────────────────────────────────────────────────────────────────────────────────────────────
+// A rule, price or item attribute is read as of the date of the document it judges: valid_from at or before it, and
+// valid_to (exclusive) after it or open. ERPNext reads an Item Price this way; SAP reads a condition record this way.
+const isoOf = (at) => (typeof at === 'string' ? at : at.toISOString());
+const DATED = (table, keySql) => `SELECT * FROM ${table} WHERE ${keySql} AND valid_from <= ? AND (valid_to IS NULL OR valid_to > ?) ORDER BY valid_from DESC`;
+/** The version of a rule in force at a time, with the rule set it belongs to. */
+export const ruleAt = (db, id, at) => db.prepare(DATED('rule_versions', 'rule_id = ?')).get(id, isoOf(at), isoOf(at)) || null;
+/** A rule's threshold as it stood at a time. A proposed change being replayed (withRuleChange) still stands in for it. */
+export const paramAt = (db, id, key, at) => { if (RULE_CHANGE && RULE_CHANGE.rule === id && key in RULE_CHANGE.params) return RULE_CHANGE.params[key]; const v = ruleAt(db, id, at); if (!v) throw new Error(`Rule ${id} was not in force at ${isoOf(at)}`); const p = v.params ? JSON.parse(v.params) : {}; if (!(key in p)) throw new Error(`Rule ${id} has no parameter ${key}`); return p[key]; };
+/** An item's price on a named list at a time, such as Northfield cost. */
+export const priceAt = (db, sku, list, at) => db.prepare(DATED('item_prices', 'sku = ? AND price_list = ?')).get(sku, list, isoOf(at), isoOf(at)) || null;
+/** What an item was at a time: description, pack and units per case, and whether Northfield had accepted that version. */
+export const itemAt = (db, sku, at) => db.prepare(DATED('item_versions', 'sku = ?')).get(sku, isoOf(at), isoOf(at)) || null;
+/** The document flow around one document: what it was created from, back to its origin, and what was created from it. */
+export function documentFlow(db, docId) {
+  const one = (id) => db.prepare('SELECT doc_id, doc_type, name, reference, sent_at, status FROM documents WHERE doc_id = ?').get(id);
+  const up = []; const seen = new Set([docId]); let frontier = [docId];
+  while (frontier.length) { const next = []; for (const id of frontier) for (const l of db.prepare('SELECT prev_doc_id, kind FROM document_links WHERE doc_id = ?').all(id)) if (!seen.has(l.prev_doc_id)) { seen.add(l.prev_doc_id); up.push({ ...one(l.prev_doc_id), link: l.kind, from: id }); next.push(l.prev_doc_id); } frontier = next; }
+  const down = db.prepare('SELECT l.doc_id, l.kind FROM document_links l WHERE l.prev_doc_id = ?').all(docId).map((l) => ({ ...one(l.doc_id), link: l.kind }));
+  return { document: one(docId), created_from: up, created_next: down };
+}
 /** The charge a rule carries, in dollars, for a number of cartons: "$150", "$150 plus $1 per carton". */
 export const chargeOf = (db, code, cartons = 0) => { const r = db.prepare('SELECT charge FROM rules WHERE charge_code = ? AND charge IS NOT NULL ORDER BY id').get(code); if (!r) throw new Error(`No charge ${code}`); const m = r.charge.match(/\$(\d+(?:\.\d+)?)(?: plus \$(\d+(?:\.\d+)?) per carton)?/); if (!m) throw new Error(`Charge ${code} is not a fixed amount`); return Number(m[1]) + (m[2] ? Number(m[2]) * cartons : 0); };
 export const rule = (db, id) => { if (!id) return null; const r = db.prepare('SELECT id, owner, statement, source, basis FROM rules WHERE id = ?').get(id); return r ? { ...r } : null; };

@@ -3,7 +3,7 @@
 // warehouse, ERP, carrier and agent records stay Ashby's; Northfield's payables, draft rules and reviewer notes stay
 // Northfield's. Every answer is read as of a time; nothing here sends or changes anything.
 import { fmtET } from '../world/lib.js';
-import { normPo, rule, param, chargeOf, storyClock, timeLeft, notYet } from './domain.js';
+import { normPo, rule, param, paramAt, chargeOf, storyClock, timeLeft, notYet } from './domain.js';
 import { scorecard, scorecardAsOf, QUARTER } from './score.js';
 import { et } from '../world/lib.js';
 
@@ -122,7 +122,7 @@ export function threeWayMatch(db, ref, asOf = storyClock()) {
   const o = db.prepare('SELECT * FROM orders WHERE po = ?').get(po); if (!o) return { found: false, message: `No invoice or order ${ref} at Northfield` };
   const invs = db.prepare('SELECT * FROM invoices WHERE po = ? AND sent_at <= ? ORDER BY sent_at').all(po, T); if (!invs.length) return { found: false, message: `No invoice on ${po} at ${fmtET(asOf)}` };
   const inv = inv0 && inv0.sent_at <= T ? inv0 : invs.find((i) => !i.replaces && /Held/.test(i.status)) || invs[invs.length - 1];
-  const tol = param(db, 'NF-7.11', 'tolerance');
+  const tol = paramAt(db, 'NF-7.11', 'tolerance', inv.sent_at); // the tolerance in force when the invoice was sent
   const lines = db.prepare('SELECT * FROM order_lines WHERE po = ? ORDER BY line').all(po).map((l) => {
     const il = db.prepare('SELECT * FROM invoice_lines WHERE invoice = ? AND line = ?').get(inv.invoice, l.line);
     const shipped = db.prepare("SELECT coalesce(sum(qty),0) q FROM shipment_lines WHERE po = ? AND line = ? AND shipment_id IN (SELECT shipment_id FROM shipments WHERE sent_at <= ?)").get(po, l.line, T).q;

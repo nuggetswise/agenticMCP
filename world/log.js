@@ -39,7 +39,10 @@ export class Log {
     const ctl = new Map(); const next = (k, base) => { const v = (ctl.get(k) ?? base) + 1; ctl.set(k, v); return v; };
     // History documents come first in time. They count up to the period's base, so the current period keeps its numbers.
     const histN = new Map(); for (const d of docs) if (d.hist) { for (const k of [`${d.from}>${d.to}`, ...(d.no_ack ? [] : [`${d.to}>${d.from}:FA`])]) histN.set(k, (histN.get(k) || 0) + 1); }
-    const nextCtl = (d, k, base) => (d.hist ? next(`${k}:H`, base - histN.get(k)) : next(k, base));
+    // Documents added by a world-coverage stage are sent by the system that owns that stage (planning, transport,
+    // catalogue…) and take interchange numbers from that system's own range, so adding one never renumbers an existing
+    // interchange. Their acknowledgments likewise. Ranges: business 700,000,000 up, acknowledgments 600,000,000 up.
+    const nextCtl = (d, k, base) => (d.stage ? next(`${k}:S`, k.endsWith(':FA') ? 600000000 : 700000000) : d.hist ? next(`${k}:H`, base - histN.get(k)) : next(k, base));
     const out = []; const acks = [];
     for (const d of docs) {
       const from = PARTY[d.from], to = PARTY[d.to];

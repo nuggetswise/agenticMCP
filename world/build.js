@@ -87,7 +87,7 @@ export function derive(files, events) {
     const others = [d.sender, d.receiver].filter((x) => x !== 'NORTHFIELD' && x !== 'KINROSS' && x !== 'LAKELINE');
     d.partner = [d.sender, d.receiver].includes('KINROSS') ? 'KINROSS' : [d.sender, d.receiver].includes('LAKELINE') ? 'LAKELINE' : 'NORTHFIELD'; d.supplier = others[0] || 'ASHBY';
     // A 997 has no reference of its own in X12: it is named by its sender and interchange control number.
-    if (d.type === '997') d.ref = `FA-${d.sender === 'NORTHFIELD' ? (d.receiver === 'ASHBY' ? 'N' : `N${d.receiver.slice(3)}-`) : d.sender === 'ASHBY' ? (d.receiver === 'KINROSS' ? 'AK' : 'A') : d.sender === 'KINROSS' ? 'K' : `S${d.sender.slice(3)}-`}${d.isa_ctl > 500000000 ? d.isa_ctl - 500000000 : `H${d.isa_ctl}`}`;
+    if (d.type === '997') d.ref = `FA-${d.sender === 'NORTHFIELD' ? (d.receiver === 'ASHBY' ? 'N' : `N${d.receiver.slice(3)}-`) : d.sender === 'ASHBY' ? (d.receiver === 'KINROSS' ? 'AK' : 'A') : d.sender === 'KINROSS' ? 'K' : `S${d.sender.slice(3)}-`}${d.isa_ctl > 600000000 ? `S${d.isa_ctl - 600000000}` : d.isa_ctl > 500000000 ? d.isa_ctl - 500000000 : `H${d.isa_ctl}`}`;
     const base = `${d.type}:${d.ref}`; const n = (idCount.get(base) || 0) + 1; idCount.set(base, n); d.doc_id = n === 1 ? base : `${base}#${n}`;
     byCtl.set(`${d.sender}>${d.receiver}:${d.type}:${d.gs_ctl}`, d);
     if (d.type !== '997' && d.type !== '824') (byRef.get(`${d.type}:${d.ref}:${d.sender}`) || byRef.set(`${d.type}:${d.ref}:${d.sender}`, []).get(`${d.type}:${d.ref}:${d.sender}`)).push(d);

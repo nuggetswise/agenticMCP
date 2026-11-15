@@ -54,6 +54,16 @@ function detectors(name, sess, actor) {
 
 // What the rule baseline must reach in each case, so a regression in the baseline cannot pass silently.
 const EXPECT = { canonical: 659, free_stock: 660, no_time: 659, bad_label: 660, unforeseen_overpack_note: 659 };
+// Facts set by hand before a run: checked, and the rule baseline's outcome follows the facts, not a preset name.
+{ const run = (facts, policy) => { const s = S.startSession(db, { variation: S.factsToVariation(facts), policy }); return [S.runBaseline(db, s), s]; };
+  check(run({ free_cases: 3 })[0].cartons_loaded === 660, 'facts: 3 free cases, baseline loads 660');
+  check(run({ free_cases: 3, staging_minutes: 60 })[0].cartons_loaded === 659, 'facts: free cases but 60 minutes to stage, baseline loads 659');
+  check(run({ carton_condition: 'good', carton_contents: 'intact' })[0].cartons_loaded === 660, 'facts: carton in good condition, baseline loads 660');
+  const bad = (f) => { try { S.factsToVariation(f); return false; } catch { return true; } };
+  check(bad({ free_cases: 9999 }) && bad({ carton_condition: 'missing' }) && bad({ ship_to: 'DC 2' }) && bad({ kinross_note: 'x'.repeat(301) }), 'facts: out-of-range, unknown and over-long values are refused');
+  const [, s2] = run({}, { kinross_load: 'policy', release_ship_notice: 'policy' });
+  check(s2.proposals.find((p) => p.action === 'kinross_load')?.executed_under === 'Standing policy' && s2.proposals.find((p) => p.action === 'release_ship_notice')?.approved_by, 'policy: a Kinross load set to standing policy runs without asking; release still needs a person (AP-1.3)');
+  const su = S.setup(); check(su.facts.free_cases.recorded === 0 && su.actions.release_ship_notice.priya_may_change === false && su.guardrails.length === 3, 'setup: recorded facts, locked actions and guardrails are listed'); }
 const rows = [];
 for (const [name, v] of Object.entries(S.VARIATIONS)) {
   const s = S.startSession(db, { variation: v, label: `test ${name}` }); const o = S.runBaseline(db, s); detectors(name, s, 'baseline');

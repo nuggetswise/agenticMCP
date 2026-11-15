@@ -22,9 +22,9 @@ await withServer({ WRITES: 'off' }, 3971, async ({ base, client, tool, rest }) =
   // Trading Grid record, but they are not marked read-only so that a client still confirms before approving on Priya's behalf. Pause, resume and
   // a trial record on the change list, so they are not read-only either; get_change_list is.
   const scout = names.filter((n) => n.startsWith('scout_')); const GOVW = ['pause_agent', 'replay_agent_rule'];
-  ok('27 tools listed: 19 record tools, 5 Scout tools, 3 governance tools; no resume tool', !names.includes('resume_agent') && names.length === 27 && scout.length === 5 && [...GOVW, 'get_change_list'].every((g) => names.includes(g)), `${names.length}, ${scout.length} Scout`); ok('no scenario tool', !names.includes('list_scenarios'));
+  ok('28 tools listed: 19 record tools, 6 Scout tools, 3 governance tools; no resume tool', !names.includes('resume_agent') && names.length === 28 && scout.length === 6 && [...GOVW, 'get_change_list'].every((g) => names.includes(g)), `${names.length}, ${scout.length} Scout`); ok('no scenario tool', !names.includes('list_scenarios'));
   ok('every record tool read-only', tools.filter((t) => !t.name.startsWith('scout_') && !GOVW.includes(t.name)).every((t) => t.annotations?.readOnlyHint === true));
-  ok('governance writes are not marked read-only', tools.filter((t) => GOVW.includes(t.name) || t.name.startsWith('scout_')).every((t) => t.annotations?.readOnlyHint === false));
+  ok('governance writes are not marked read-only', tools.filter((t) => GOVW.includes(t.name) || (t.name.startsWith('scout_') && t.name !== 'scout_setup')).every((t) => t.annotations?.readOnlyHint === false));
   const before = JSON.stringify(await tool('get_access_log', { limit: 1 })).length >= 0 && (await tool('run_readonly_sql', { sql: "SELECT count(*) n FROM events WHERE po = 'NR-460207'" })).rows?.[0]?.n;
   const sb = await tool('scout_baseline', {}); const after = (await tool('run_readonly_sql', { sql: "SELECT count(*) n FROM events WHERE po = 'NR-460207'" })).rows?.[0]?.n;
   ok('Scout session leaves the recorded world unchanged', sb.outcome?.cartons_loaded === 659 && before === after, `${before} -> ${after}`);

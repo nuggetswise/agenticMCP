@@ -109,7 +109,7 @@ Each rule has one home, here. Its ID is how `docs/guide/coverage.json` maps the 
 - **R36** Every call is logged in docs/build-log/CALLS.md with what would change it.
 - **R37** Words: Trading Grid Catalogue or TGC, never AC; Supplier readiness; banned words follow the enterprise-product-writing skill.
 - **R38** A conversation may carry several tasks when they all belong to one prototype; name the prototype and its task IDs in the first message. World, server, partner and docs tasks run one per conversation. Each new chat reads this guide first, and hand-off between chats runs through this guide, the commit and its CALLS entry, never through chat history.
-- **R39** Start here. In Tasks, read the tables top to bottom and take the first row whose status is Open and whose Depends on entries are all Done; a dash means no dependency. In a chat for one prototype (R38), take every eligible row for that prototype in the same order. Read its Read first entries, do the task, and stop when its Done when holds. Commit the evidence first, then set the row to Done citing that commit, log the call in CALLS, run the check, commit and push, and refresh the Claude doc. When a commit changes repo behaviour, the guide's as-of commit moves to it in the same edit. A Blocked row waits for the owner answer it names.
+- **R39** Start here. In Tasks, read the tables top to bottom and read the open comments on the Waiting on the owner table in the Claude doc and log any answer, then take the first row whose status is Open and whose Depends on entries are all Done; a dash means no dependency. In a chat for one prototype (R38), take every eligible row for that prototype in the same order. Read its Read first entries, do the task, and stop when its Done when holds. Commit the evidence first, then set the row to Done citing that commit, log the call in CALLS, run the check, commit and push, and refresh the Claude doc. When a commit changes repo behaviour, the guide's as-of commit moves to it in the same edit. A Blocked row waits for the owner answer it names.
 
 ## Where each fact lives
 
@@ -235,15 +235,24 @@ The owner approved change items 1 to 14 on 12 November. Two are done, five are p
 | D61 | An agent in a prototype is a real agent, not a scripted one: a model on the server chooses its reads and proposes actions in a session branched from the world at the story moment, with later records hidden. The server enforces each action's approval and the administrator guardrails. Kinross and Northfield answer by deterministic rules, labelled synthetic. A rule baseline runs on the same facts and actions, and a step is called automation where the two match. P5 is first (`src/scout.js`); P6, P7 and P9 must each show why an agent is needed. Source: owner, 14 November. | A prototype whose agent adds nothing over the baseline in every variation |
 | D62 | Phase 3 starts when the first build's dependencies are Done: T3.1, T2.2 and T2.3's built parts. The other Phase 1 and 2 rows run alongside it, and a Phase 1 row is pulled forward when a spec needs one of its records. T3.4 is folded into T3.2's Done when, because its own Done when named the prototype T3.2 builds. Source: owner, 15 November. | A spec that needs a world record a deferred Phase 1 row would add |
 
-**Open questions for the owner**
+**Waiting on the owner**
 
-1. P12 is retired (D40). Unshare its page, or keep it readable as a record?
-2. The Prototype Plan's gallery card still carries the Threat Ranking title. It has to be renamed in claude.ai.
-3. Delete the three retired presenter-notes files from this project?
-4. Answered: the world wins (D51).
-5. Answered: none (D52).
-6. Nine pages may be retired (listed in `docs/phase0/HANDOFF.md`). Keep or retire each?
-7. Answered: P8 states its three definitions on screen, beside the figures they govern (CALLS 66).
+Every item that only the owner can settle, in one place. To answer, comment on the item's row in the Claude doc; a build session reads the open comments on this table before it takes a row (R39), logs each answer as a decision here and in CALLS, and unblocks the rows named. Answers given in chat are logged the same way.
+
+| ID | Question or hold | Unblocks | Answer |
+| --- | --- | --- | --- |
+| W1 | Release P1, P2 and P4 for audit and change, each or all? | T0.10, T0.11, T0.12, T0.3, T0.6, T1.7, T4.10 to T4.12 | Open |
+| W2 | Run Northfield's connector live from the owner's claude.ai account? | T2.9 | Open |
+| W3 | Approve change list 3: one new Ashby deduction under the AP-4.1 limit with its evidence in the case and no dispute yet, dated after P6's moment, so Claim Agent's acting alone and its pause can be shown end to end (`docs/phase1/change-list-3.md`) | Claim Agent's pause proven on the live server | Open |
+| W4 | Does the Scout page route keep using the Aviator key, or get its own? | The P5 live page (T4.13) | Open |
+| W5 | P12 is retired (D40). Unshare its page, or keep it readable as a record? | — | Open |
+| W6 | The Prototype Plan's gallery card still carries the Threat Ranking title; it has to be renamed in claude.ai | — | Open; the owner's action |
+| W7 | Delete the three retired presenter-notes files from this project? | — | Open |
+| W8 | Nine pages may be retired (listed in `docs/phase0/HANDOFF.md`). Keep or retire each? | — | Open |
+| W9 | Name an EDI practitioner to review the documents and the rule catalogue | The Not verified row under Proofs | Open |
+| W10 | Rotate the two Gemini keys; the secondary was pasted into a chat on 15 November | — | Open; the owner's action |
+
+Answered earlier: the world wins on P7 (D51); no partner record enters the timeline (D52); P8 states its three definitions on screen (CALLS 66).
 
 ## Inventory
 
@@ -513,7 +522,7 @@ The gate and smoke tests pass at commit fa152b2e7b. Two of the plan's proofs hav
 | Server smoke: both scopes, refusals, the shared deduction case | `npm run smoke` | 83 passed, 0 failed |
 | X12 validation | `npm run validate` | Passes, but its schemas were generated in this repo, so it does not meet the independent-schema test |
 | X12 against schemas this repo did not write | `validator/botscheck.py` with the bots-grammars X12 grammars | Every document checked; it faults exactly the documents the world rejects on a 997, and nothing else; all ten injected faults are rejected for their reason (`validator/bots-report.json`) |
-| Contract test of on-screen values: it checks every number a screen shows and requires none | `npm run contract` | Last full report is `docs/phase0/contract-report-turn4.json`. The P7 claim was checked against a working copy, not the live page. |
+| Contract test of on-screen values: it checks every number a screen shows and requires none | `npm run contract` | Run on the live pages on 15 November for P1, P2, P4, P5, P6, P7 and P8 (`docs/phase3/contract-report-2026-11-15.json`): P2 and P4 pass; P1 and P8 differ only in raw X12 panels (T1.5); P5, P6 and P7 differ in dates, rule wording and, for P7, three order numbers, each a Phase 4 row. P9, P11 and P12 were not saved for the run. |
 | Golden questions, Ashby agents, scorecard and deductions | `docs/phase0/golden/grade-report.json` | 49 of 50. The earlier set's grader was never committed. |
 | Golden questions, Northfield | `docs/phase2/golden-nf/grade-report.json` | 50 of 50 |
 | Live server | /healthz | ok, version 0.3.0, writes on, Aviator on, read on 14 November with commit cd9717d deployed |

@@ -343,6 +343,33 @@ export async function replay(db, { variation = {}, policy = {}, callModel, appro
   while (run.ok && run.status === 'waiting_for_priya' && approveAll && rounds++ < 8) { const p = sc.proposals.find((x) => x.state === 'Awaiting approval'); const r = await decideAndResume(db, sc, p.id, 'approve', 'Test approver (replay)', { callModel, paused }); run = r.run; }
   return { variation: base.changes, evidence_cutoff: fmtET(P5.branch_at), ...(trial ? { policy_trial: trial } : {}), baseline: { session: base.id, outcome: b, trace: base.trace }, scout: run.status === 'paused' ? { session: sc.id, blocked: 'Scout Agent is paused; the model did not run', trace: sc.trace } : run.ok ? { session: sc.id, status: run.status, outcome: outcome(sc), overhead: { model_calls: sc.agent.calls, tool_calls: sc.agent.tool_calls, ms: sc.agent.ms, model_routes: sc.agent.routes || {} }, trace: sc.trace } : { session: sc.id, blocked: run.blocked || run.status, trace: sc.trace } };
 }
+// Facts a presenter may set before a run, in plain names, checked and turned into variation fields. Kinross owns these facts; a
+// session only branches with them. Everything else in the world stays as recorded.
+export const FACTS = {
+  carton_condition: { field: 'carton.condition', values: ['crushed', 'good'], says: 'Condition of the staged carton' },
+  carton_contents: { field: 'carton.contents', values: ['damaged', 'intact'], says: 'Contents of the staged carton' },
+  carton_label: { field: 'carton.label', values: ['readable', 'unreadable'], says: 'Label on the staged carton' },
+  free_cases: { min: 0, max: 520, says: 'Cases of the item at Kinross Groveport not reserved for other orders' },
+  staging_minutes: { field: 'stock.0.staging_minutes', min: 1, max: 240, says: 'Minutes Kinross needs to stage a replacement case' },
+  kinross_note: { field: 'kinross_note', maxLength: 300, says: 'Free-text note Kinross adds when it answers a task' },
+};
+export function factsToVariation(facts = {}) {
+  const v = {};
+  for (const [k, val] of Object.entries(facts)) {
+    const f = FACTS[k]; if (!f) throw new Error(`No such fact: ${k}. Facts: ${Object.keys(FACTS).join(', ')}`);
+    if (f.values && !f.values.includes(val)) throw new Error(`${k} is one of: ${f.values.join(', ')}`);
+    if (f.min !== undefined && !(Number.isInteger(val) && val >= f.min && val <= f.max)) throw new Error(`${k} is a whole number from ${f.min} to ${f.max}`);
+    if (f.maxLength && (typeof val !== 'string' || val.length > f.maxLength)) throw new Error(`${k} is text of at most ${f.maxLength} characters`);
+    if (k === 'free_cases') v['stock.0.reserved'] = P5.stock[0].on_hand - val; else v[f.field] = val;
+  }
+  return v;
+}
+/** What the setup view shows: the facts with their recorded values, each action's approval mode and whether Priya may change it, and the guardrails. */
+export const setup = () => ({ branch_at: fmtET(P5.branch_at), po: P5.po,
+  facts: Object.fromEntries(Object.entries(FACTS).map(([k, f]) => [k, { says: f.says, recorded: k === 'free_cases' ? P5.stock[0].on_hand - P5.stock[0].reserved : f.field.split('.').reduce((o, key) => o[key], P5), ...(f.values ? { values: f.values } : {}), ...(f.min !== undefined ? { min: f.min, max: f.max } : {}), ...(f.maxLength ? { max_length: f.maxLength } : {}) }])),
+  presets: Object.keys(VARIATIONS),
+  actions: Object.fromEntries(Object.entries(ACTIONS).map(([k, a]) => [k, { does: a.label, rule: a.rule, mode: a.mode, priya_may_change: a.editable, modes: a.editable ? ['suggest', 'approve', 'policy'] : [a.mode] }])),
+  guardrails: GUARDRAILS, owner_note: 'Facts are Kinross’s and synthetic; approval modes are Ashby’s (Priya Raman); guardrails are the administrator’s and cannot be changed here.' });
 export const VARIATIONS = {
   canonical: {},
   free_stock: { 'stock.0.reserved': 508 },

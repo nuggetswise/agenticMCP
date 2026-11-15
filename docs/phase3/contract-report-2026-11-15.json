@@ -1,0 +1,439 @@
+{
+ "P1": {
+  "unknown_records": [],
+  "wrong_names": [],
+  "numbers": [],
+  "text_from": "source",
+  "dates": [],
+  "rule_wording": [],
+  "x12_panels": [
+   {
+    "set": "855",
+    "first": "ST*855*0001",
+    "result": "built on the page"
+   },
+   {
+    "set": "856",
+    "first": "ST*856*0001",
+    "result": "built on the page"
+   },
+   {
+    "set": "810",
+    "first": "ST*810*0001",
+    "result": "built on the page"
+   }
+  ],
+  "pass": false
+ },
+ "P2": {
+  "unknown_records": [],
+  "wrong_names": [],
+  "numbers": [],
+  "text_from": "source",
+  "dates": [],
+  "rule_wording": [],
+  "x12_panels": [],
+  "pass": true
+ },
+ "P4": {
+  "unknown_records": [],
+  "wrong_names": [],
+  "numbers": [],
+  "text_from": "source",
+  "dates": [],
+  "rule_wording": [],
+  "x12_panels": [],
+  "pass": true
+ },
+ "P5": {
+  "unknown_records": [],
+  "wrong_names": [],
+  "numbers": [],
+  "text_from": "source",
+  "dates": [
+   "2026-12-08",
+   "2026-12-09",
+   "11 Dec",
+   "11 Dec 2026",
+   "1 Oct 2026"
+  ],
+  "rule_wording": [
+   {
+    "rule": "NF-4.5",
+    "problem": "threshold $151, $451 not in the catalogue",
+    "line": "{id:'hero',wrong:'1 carton is not on the trailer, and the paperwork names DC 4 and the old lines',impact:'DC 2 can’t check the load in by scan, and Northfield c"
+   },
+   {
+    "rule": "NF-4.7",
+    "problem": "threshold $151, $451 not in the catalogue",
+    "line": "{id:'hero',wrong:'1 carton is not on the trailer, and the paperwork names DC 4 and the old lines',impact:'DC 2 can’t check the load in by scan, and Northfield c"
+   },
+   {
+    "rule": "NF-4.8",
+    "problem": "threshold $151, $451 not in the catalogue",
+    "line": "{id:'hero',wrong:'1 carton is not on the trailer, and the paperwork names DC 4 and the old lines',impact:'DC 2 can’t check the load in by scan, and Northfield c"
+   },
+   {
+    "rule": "NF-7.8",
+    "problem": "wording differs from the catalogue",
+    "line": "{id:'inv',wrong:'The invoice bills 180 cases of napkins, but 176 shipped',impact:'Northfield disputes the invoice and charges $100, and payment slows',det:[['IV",
+    "catalogue": "The invoice bills the shipped quantity at the accepted PO price; an invoice that bills more is held"
+   },
+   {
+    "rule": "NF-2.1",
+    "problem": "threshold $48.60, $48.60, $48.60 not in the catalogue",
+    "line": "{id:'alloc',wrong:'Groveport has 520 mugs for 640 ordered across 3 orders',impact:'Northfield’s order ships short, with an in-full penalty of about $48.60',det:"
+   },
+   {
+    "rule": "NF-2.2",
+    "problem": "threshold $48.60, 3%, $48.60, $48.60 not in the catalogue",
+    "line": "{id:'alloc',wrong:'Groveport has 520 mugs for 640 ordered across 3 orders',impact:'Northfield’s order ships short, with an in-full penalty of about $48.60',det:"
+   },
+   {
+    "rule": "NF-4.1",
+    "problem": "threshold $162, $162, $162 not in the catalogue",
+    "line": "{id:'lab',wrong:'12 cartons carry barcodes already used on earlier shipments',impact:'DC 2 scanners reject those cartons, and Northfield charges $162',det:[['LB"
+   },
+   {
+    "rule": "NF-4.1",
+    "problem": "wording differs from the catalogue",
+    "line": "{id:'lab',wrong:'12 cartons carry barcodes already used on earlier shipments',impact:'DC 2 scanners reject those cartons, and Northfield charges $162',det:[['LB",
+    "catalogue": "GS1-128 label on every carton; an SSCC is not reused within 18 months"
+   },
+   {
+    "rule": "NF-1.1",
+    "problem": "threshold 3%, $48.60, $48.60 not in the catalogue",
+    "line": "{id:'off',wrong:'The buyer agreed 270 by phone, but Northfield’s order still says 300',impact:'Shipping 270 counts as 30 short against the order Northfield hold"
+   },
+   {
+    "rule": "NF-1.6",
+    "problem": "threshold 3%, $48.60, $48.60 not in the catalogue",
+    "line": "{id:'off',wrong:'The buyer agreed 270 by phone, but Northfield’s order still says 300',impact:'Shipping 270 counts as 30 short against the order Northfield hold"
+   },
+   {
+    "rule": "NF-1.1",
+    "problem": "threshold 24 hours, 18 months not in the catalogue",
+    "line": "const NF=[['NF-1.1','The current PO revision is the commitment · a change counts only on an order change'],['NF-1.5','Northfield returns a technical acknowledgm"
+   },
+   {
+    "rule": "NF-1.5",
+    "problem": "threshold 24 hours, 18 months not in the catalogue",
+    "line": "const NF=[['NF-1.1','The current PO revision is the commitment · a change counts only on an order change'],['NF-1.5','Northfield returns a technical acknowledgm"
+   },
+   {
+    "rule": "NF-1.6",
+    "problem": "threshold 18 months not in the catalogue",
+    "line": "const NF=[['NF-1.1','The current PO revision is the commitment · a change counts only on an order change'],['NF-1.5','Northfield returns a technical acknowledgm"
+   },
+   {
+    "rule": "NF-2.1",
+    "problem": "threshold 24 hours, 18 months not in the catalogue",
+    "line": "const NF=[['NF-1.1','The current PO revision is the commitment · a change counts only on an order change'],['NF-1.5','Northfield returns a technical acknowledgm"
+   },
+   {
+    "rule": "NF-2.2",
+    "problem": "threshold 24 hours, 18 months not in the catalogue",
+    "line": "const NF=[['NF-1.1','The current PO revision is the commitment · a change counts only on an order change'],['NF-1.5','Northfield returns a technical acknowledgm"
+   },
+   {
+    "rule": "NF-3.2",
+    "problem": "threshold 24 hours, 18 months not in the catalogue",
+    "line": "const NF=[['NF-1.1','The current PO revision is the commitment · a change counts only on an order change'],['NF-1.5','Northfield returns a technical acknowledgm"
+   },
+   {
+    "rule": "NF-3.3",
+    "problem": "threshold 24 hours, 18 months not in the catalogue",
+    "line": "const NF=[['NF-1.1','The current PO revision is the commitment · a change counts only on an order change'],['NF-1.5','Northfield returns a technical acknowledgm"
+   },
+   {
+    "rule": "NF-3.4",
+    "problem": "threshold 24 hours, 18 months not in the catalogue",
+    "line": "const NF=[['NF-1.1','The current PO revision is the commitment · a change counts only on an order change'],['NF-1.5','Northfield returns a technical acknowledgm"
+   },
+   {
+    "rule": "NF-4.1",
+    "problem": "threshold 24 hours not in the catalogue",
+    "line": "const NF=[['NF-1.1','The current PO revision is the commitment · a change counts only on an order change'],['NF-1.5','Northfield returns a technical acknowledgm"
+   },
+   {
+    "rule": "NF-4.2",
+    "problem": "threshold 24 hours, 18 months not in the catalogue",
+    "line": "const NF=[['NF-1.1','The current PO revision is the commitment · a change counts only on an order change'],['NF-1.5','Northfield returns a technical acknowledgm"
+   },
+   {
+    "rule": "NF-4.3",
+    "problem": "threshold 24 hours, 18 months not in the catalogue",
+    "line": "const NF=[['NF-1.1','The current PO revision is the commitment · a change counts only on an order change'],['NF-1.5','Northfield returns a technical acknowledgm"
+   },
+   {
+    "rule": "NF-4.5",
+    "problem": "threshold 24 hours, 18 months not in the catalogue",
+    "line": "const NF=[['NF-1.1','The current PO revision is the commitment · a change counts only on an order change'],['NF-1.5','Northfield returns a technical acknowledgm"
+   },
+   {
+    "rule": "NF-4.7",
+    "problem": "threshold 24 hours, 18 months not in the catalogue",
+    "line": "const NF=[['NF-1.1','The current PO revision is the commitment · a change counts only on an order change'],['NF-1.5','Northfield returns a technical acknowledgm"
+   },
+   {
+    "rule": "NF-4.8",
+    "problem": "threshold 24 hours, 18 months not in the catalogue",
+    "line": "const NF=[['NF-1.1','The current PO revision is the commitment · a change counts only on an order change'],['NF-1.5','Northfield returns a technical acknowledgm"
+   },
+   {
+    "rule": "NF-7.8",
+    "problem": "threshold 24 hours, 18 months not in the catalogue",
+    "line": "const NF=[['NF-1.1','The current PO revision is the commitment · a change counts only on an order change'],['NF-1.5','Northfield returns a technical acknowledgm"
+   },
+   {
+    "rule": "AP-2027.1",
+    "problem": "not in the catalogue",
+    "line": "alloc:{nodes:{s3pl:'Kinross Groveport',r3pl:'Warehouse order · L1 300',serp:'Ashby · available, orders',rerp:'Available · Groveport 520',rtg:'Allocation · 3 ord"
+   },
+   {
+    "rule": "NF-4.5",
+    "problem": "threshold $151 not in the catalogue",
+    "line": "AS02 $151 · NF-4.5"
+   },
+   {
+    "rule": "NF-4.7",
+    "problem": "threshold $300 not in the catalogue",
+    "line": "AS03 + AS04 $300 · NF-4.7, 4.8"
+   },
+   {
+    "rule": "NF-2.1",
+    "problem": "threshold $1.15 not in the catalogue",
+    "line": "OT01 $1.15 · NF-2.1"
+   },
+   {
+    "rule": "AP-2027.1",
+    "problem": "not in the catalogue",
+    "line": "Policy AP-2027.1 · Priya Raman"
+   },
+   {
+    "rule": "NF-2.2",
+    "problem": "threshold $48.60 not in the catalogue",
+    "line": "opt(1,'Ship 270 on PO NR-460262 · cancel 30','Contract first, then charge exposure · OT01 est. $48.60 projected')+opt(0,'Ship 30 from Joliet','NF-2.2 · one ship"
+   },
+   {
+    "rule": "NF-4.5",
+    "problem": "wording differs from the catalogue",
+    "line": "S.checks=[{t:'Load scan · '+n+' of '+n+' · seal SL-4471026',r:'NF-4.5',ok:true},",
+    "catalogue": "The ship notice matches the shipment carton for carton"
+   },
+   {
+    "rule": "NF-4.7",
+    "problem": "wording differs from the catalogue",
+    "line": "{t:'Ship-to '+(ship?'DC 2':'DC 4')+' in the Supplier ERP order',r:'NF-4.7',ok:ship,charge:'AS03 est. $150'},",
+    "catalogue": "Ship-to matches the current PO"
+   },
+   {
+    "rule": "NF-4.8",
+    "problem": "wording differs from the catalogue",
+    "line": "{t:'PO lines '+(lines?'1 · 2 · 4':'1 · 2 · 3')+' in the Supplier ERP order',r:'NF-4.8',ok:lines,charge:'AS04 est. $150'},",
+    "catalogue": "Line numbers match the current PO"
+   },
+   {
+    "rule": "NF-4.3",
+    "problem": "wording differs from the catalogue",
+    "line": "{t:'SSCC per carton · '+n+' · BOL-91407',r:'NF-4.3',ok:true}];",
+    "catalogue": "SSCC on every carton, reported in the ship notice hierarchy"
+   },
+   {
+    "rule": "AP-2027.1",
+    "problem": "not in the catalogue",
+    "line": "step(pl,'b','Apply allocation policy',{st:'done',why:'AP-2027.1 · contract first, then charge exposure',det:'Priya Raman’s policy · Northfield NF-2.1, NF-2.2'})"
+   },
+   {
+    "rule": "AP-2027.1",
+    "problem": "not in the catalogue",
+    "line": "Allocation policy AP-2027.1"
+   },
+   {
+    "rule": "NF-4.2",
+    "problem": "wording differs from the catalogue",
+    "line": "Due in '+mins(Math.max(0,ASNDUE-M.clock))+' · NF-4.2",
+    "catalogue": "Send the ship notice within 1 hour of departure; a corrected ship notice must be received before the shipment reaches the DC"
+   },
+   {
+    "rule": "AP-2027.1",
+    "problem": "not in the catalogue",
+    "line": "Policy AP-2027.1 · Priya Raman"
+   },
+   {
+    "rule": "NF-4.3",
+    "problem": "threshold $150, $150 not in the catalogue",
+    "line": "S.checks=[{t:'',r:'NF-4.5',ok:true},{t:'',r:'NF-4.7',ok:ship,charge:'AS03 est. $150'},{t:'',r:'NF-4.8',ok:lines,charge:'AS04 est. $150'},{t:'',r:'NF-4.3',ok:tru"
+   },
+   {
+    "rule": "AP-2027.1",
+    "problem": "not in the catalogue",
+    "line": "log('Confirmed','Allocation applied in Supplier ERP','PO NR-460262 line 1 at '+M.a.l1+' · policy AP-2027.1 · Priya Raman',null,{rec:'alloc',at:tAt(M.clock)});"
+   }
+  ],
+  "x12_panels": [],
+  "pass": false
+ },
+ "P6": {
+  "unknown_records": [],
+  "wrong_names": [],
+  "numbers": [],
+  "text_from": "source",
+  "dates": [
+   "1 Dec 2026",
+   "6 Jan 2027",
+   "19 Nov 2026",
+   "15 Dec 2026",
+   "2 Dec 2026",
+   "3 Dec 2026",
+   "21 Dec 2026",
+   "2026-11-20",
+   "2027-01-30",
+   "9 Nov 2026",
+   "8 Nov 2026",
+   "9 Nov",
+   "Nov 06",
+   "7 Dec 2026",
+   "5 Jan 2027",
+   "18 Nov 2026",
+   "16 Dec",
+   "30 Nov 2026",
+   "1 Dec",
+   "2 Dec",
+   "24 Nov 2026",
+   "24 Aug 2027",
+   "31 Mar 2027",
+   "16 Dec 2026",
+   "22 Dec 2026"
+  ],
+  "rule_wording": [
+   {
+    "rule": "NF-5.3",
+    "problem": "threshold $150 not in the catalogue",
+    "line": "${rec==='dispute'?'The load scan proves the carton loaded before the seal (NF-5.3, NF-7.4)':'Packed is not loaded; a shortage dispute without a load scan draws "
+   },
+   {
+    "rule": "NF-7.4",
+    "problem": "threshold $150 not in the catalogue",
+    "line": "${rec==='dispute'?'The load scan proves the carton loaded before the seal (NF-5.3, NF-7.4)':'Packed is not loaded; a shortage dispute without a load scan draws "
+   },
+   {
+    "rule": "NF-10.1",
+    "problem": "threshold $108 not in the catalogue",
+    "line": "Accept with Northfield (NF-10.1); recover $108.00 goods cost from Lakeline (NF-10.2, NF-10.3)"
+   },
+   {
+    "rule": "NF-10.2",
+    "problem": "threshold $108 not in the catalogue",
+    "line": "Accept with Northfield (NF-10.1); recover $108.00 goods cost from Lakeline (NF-10.2, NF-10.3)"
+   },
+   {
+    "rule": "NF-10.3",
+    "problem": "threshold $108 not in the catalogue",
+    "line": "Accept with Northfield (NF-10.1); recover $108.00 goods cost from Lakeline (NF-10.2, NF-10.3)"
+   },
+   {
+    "rule": "SP-CL-01",
+    "problem": "not in the catalogue",
+    "line": "${ag('Claim Agent','Where did the records first diverge, and what should Ashby do about each charge?','Priya Raman · delegate Priya Raman','Ship notice, receivi"
+   },
+   {
+    "rule": "NF-7.4",
+    "problem": "threshold $250 not in the catalogue",
+    "line": "${ag('Claim Agent','Where did the records first diverge, and what should Ashby do about each charge?','Priya Raman · delegate Priya Raman','Ship notice, receivi"
+   },
+   {
+    "rule": "SP-CL-01",
+    "problem": "not in the catalogue",
+    "line": "SP-CL-01"
+   }
+  ],
+  "x12_panels": [
+   {
+    "set": "861",
+    "first": "ISA*00*          *00*          *ZZ*NORTHFIELD     *ZZ*ASHBYS",
+    "result": "no world document has this text"
+   },
+   {
+    "set": "820",
+    "first": "ST*820*0001",
+    "result": "no world document has this text"
+   }
+  ],
+  "pass": false
+ },
+ "P7": {
+  "unknown_records": [
+   "NR-461182",
+   "NR-461207",
+   "NR-461233"
+  ],
+  "wrong_names": [],
+  "numbers": [
+   {
+    "claim": "In Full charge (OT01)",
+    "on_screen": "\"$3,356\" not on screen",
+    "world": "$3,356"
+   }
+  ],
+  "text_from": "source",
+  "dates": [],
+  "rule_wording": [
+   {
+    "rule": "NF-8.2",
+    "problem": "wording differs from the catalogue",
+    "line": "['NF-8.2','In full: cases received against cases ordered per PO line, against the PO revision current at shipment. A cancelled remainder counts as not received'",
+    "catalogue": "In full: cases received against cases ordered per PO line, on the PO revision current at shipment; a cancelled remainder counts as not received"
+   },
+   {
+    "rule": "NF-8.6",
+    "problem": "wording differs from the catalogue",
+    "line": "['NF-8.6','Measured monthly; rolling 13-week scorecard; OT01 and OT02 billed quarterly'],",
+    "catalogue": "Measured monthly on a rolling 13-week scorecard; OT01 and OT02 are billed quarterly"
+   },
+   {
+    "rule": "NF-9.2",
+    "problem": "wording differs from the catalogue",
+    "line": "['NF-9.2','Below an OTIF target two months running: agree a corrective action plan within 30 days'],",
+    "catalogue": "Below a target two months running: agree a corrective action plan within 30 days"
+   }
+  ],
+  "x12_panels": [],
+  "pass": false
+ },
+ "P8": {
+  "unknown_records": [],
+  "wrong_names": [],
+  "numbers": [],
+  "engine": {
+   "orders": 340,
+   "identical_to_world": 340,
+   "differ": []
+  },
+  "text_from": "source",
+  "dates": [],
+  "rule_wording": [],
+  "x12_panels": [
+   {
+    "set": "810",
+    "first": "ST*810*0001",
+    "result": "no world document has this text"
+   },
+   {
+    "set": "865",
+    "first": "ST*865*0001",
+    "result": "no world document has this text"
+   }
+  ],
+  "pass": false
+ },
+ "P9": {
+  "screen": "not fetched"
+ },
+ "P11": {
+  "screen": "not fetched"
+ },
+ "P12": {
+  "screen": "not fetched"
+ }
+}

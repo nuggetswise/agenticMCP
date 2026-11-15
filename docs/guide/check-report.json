@@ -1,14 +1,12 @@
 {
  "file": "/home/claude/agenticmcp/docs/build-guide.md",
- "ran_at_head": "726e3d9",
+ "ran_at_head": "45e8ec8",
  "results": [
   {
    "name": "as_of_commit_current",
-   "ok": false,
-   "problems": [
-    "changed since b6d53d9: scripts/check.js, scripts/scout-test.mjs, scripts/smoke.js, src/governance.js, src/pages.js, src/scout.js, src/server.js, validator/report.json, world/build.js, world/log.js, world/replen.js, world/schema.sql"
-   ],
-   "info": "b6d53d9"
+   "ok": true,
+   "problems": [],
+   "info": "45e8ec8"
   },
   {
    "name": "commits_exist",
@@ -29,7 +27,7 @@
    "name": "calls_refs_exist",
    "ok": true,
    "problems": [],
-   "info": "86 calls logged"
+   "info": "94 calls logged"
   },
   {
    "name": "inventory_and_grid_complete",
@@ -98,7 +96,7 @@
    "name": "tasks_have_ids_and_done_when",
    "ok": true,
    "problems": [],
-   "info": "64 tasks: 27 done, 8 blocked"
+   "info": "64 tasks: 42 done, 0 blocked"
   }
  ]
 }

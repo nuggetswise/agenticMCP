@@ -4,7 +4,7 @@ Working copy: `docs/build-guide.md` in the repo. Reading copy: the Claude doc at
 
 ## How to use this guide
 
-This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 1ff456581b.
+This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 45e8ec8.
 
 - **Start here:** follow R39. It picks your next task from the Tasks tables and says what to read first. For one prototype, run `node scripts/guide-pack.mjs P5` with its ID: it prints that prototype's job, ending, v8 section, the rules that apply, its agent, tools and anchors, and its tasks in order, so you read one page and the prototype's source.
 - **Authority, highest first:**
@@ -122,6 +122,7 @@ Each kind of fact has exactly one owner. This guide points to that owner and nev
 | Per prototype: calendar moment, agency verdict, anchor records, tools, status, and a copy of its ending | `registry/registry.json` | Read the file |
 | Tool list for both connections | `src/tools.js` | Read the file; `/openapi.json` for REST |
 | On-screen numbers each prototype claims | `contract/claims.json` | `npm run contract` |
+| How records are shaped: masters, dated values, the document flow | `docs/phase1/world-model.md` | Read the file; stage modules in `world/stages/` |
 | Builder calls and what would change them | `docs/build-log/CALLS.md` | Read the file |
 | Owner decisions | This guide, under Decisions | — |
 | Phase 0 evidence | `docs/phase0/` | Findings, walks, contract report, golden questions |
@@ -351,7 +352,7 @@ The Pipe17 question that had to be settled first is settled. ShipHawk's question
 
 ## Tasks
 
-Phase 0 is closed (D48); its remaining rows wait on owner holds or on Phase 1. Phases 1 and 2 are partly done. Phase 3 has its specs (T3.0) but no build, and starts when T3.2's dependencies are Done (D62); Phase 4 has not started. R39 picks the next row. A row turns Done only when its evidence is committed; cite its ID in the commit message and the CALLS entry. Status is Open, Done or Blocked; a Blocked row names the owner answer it waits for in Depends on.
+Phase 0 is closed (D48); its remaining rows wait on owner holds or on Phase 1. Phases 1 and 2 are partly done; world coverage (T1.11 to T1.18) is being built by stage modules in `world/stages/`, merged one at a time. Phase 3 has its specs (T3.0) but no build, and starts when T3.2's dependencies are Done (D62); Phase 4 has not started. R39 picks the next row. A row turns Done only when its evidence is committed; cite its ID in the commit message and the CALLS entry. Status is Open, Done or Blocked; a Blocked row names the owner answer it waits for in Depends on.
 
 ### Phase 0 · Audit, read only
 
@@ -381,7 +382,7 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 
 | ID | Prototype | Task | Depends on | Read first | Done when | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| T1.11 | World | Typed tables, dated values and declared keys: loose event records a stage needs move to tables; rules, prices, deals and item attributes carry start and end dates | — | `docs/phase1/world-coverage.md`, Database changes; D60 | Gate passes with no fixed value moved, and a check reads a rule by the date of the document it judges | Open |
+| T1.11 | World | Typed tables, dated values and declared keys: loose event records a stage needs move to tables; rules, prices, deals and item attributes carry start and end dates | — | `docs/phase1/world-coverage.md`, Database changes; D60 | Evidence: commit 176dc05; `docs/phase1/world-model.md` records what was borrowed from ERPNext, SAP and NetSuite; `docs/phase1/world-diff-T1.11.json` shows every earlier record unchanged; gate check `model.three_way_match_uses_the_tolerance_of_the_invoice_date`; CALLS 94 | Done |
 | T1.12 | World | Catalogue as evidence: packaging hierarchy with GTIN, dimensions and weight per level, dated cost, item versions with Northfield's acceptance, sent as 832, 888 and 879 | T1.11 | `docs/phase1/world-coverage.md`, Item and price setup; GS1 packaging and GDSN standards | Both X12 checks pass, every value cites a public source or is marked invented in the EDI Review Pack, and a gate check settles a pack, label or price charge from catalogue records at the ship date | Open |
 | T1.13 | World | Promotions: 889 announcements, deal prices on order lines, off-invoice allowances on invoices, bill-back and scan-based deals settled from store sales, promotion deductions on remittance and 812 | T1.12 | `docs/phase1/world-coverage.md`, Promotions | Both X12 checks pass, and gate checks match each promotion deduction to its deal or show it unauthorised | Open |
 | T1.14 | World | Planning, inventory and order status: 830, 846 and 870 | T1.11 | `docs/phase1/world-coverage.md`, Planning and inventory | Both X12 checks pass, and a gate check judges a short-ship charge against forecast and available stock | Open |
@@ -505,11 +506,12 @@ Both connections' tools, by kind of job, against the nearest published tool. Net
 
 ## Proofs, open items and drift control
 
-The gate and smoke tests pass at commit 1ff456581b. Two of the plan's proofs have not been built or run.
+The gate and smoke tests pass at commit 45e8ec8. Two of the plan's proofs have not been built or run.
 
 | Proof | Command or location | Result |
 | --- | --- | --- |
-| World gate: invariants, catalogue equals the pack, thresholds from the catalogue | `npm run build` | 331 passed, 0 failed |
+| World gate: invariants, catalogue equals the pack, thresholds from the catalogue | `npm run build` | 462 passed, 0 failed |
+| Earlier records unchanged by a world change | `node scripts/world-diff.mjs` | Builds the world at e8f0e93 and compares every table; 0 changed at commit 45e8ec8 |
 | Server smoke: both scopes, refusals, the shared deduction case | `npm run smoke` | 83 passed, 0 failed |
 | X12 validation | `npm run validate` | Passes, but its schemas were generated in this repo, so it does not meet the independent-schema test |
 | X12 against schemas this repo did not write | `validator/botscheck.py` with the bots-grammars X12 grammars | Every document checked; it faults exactly the documents the world rejects on a 997, and nothing else; all ten injected faults are rejected for their reason (`validator/bots-report.json`) |

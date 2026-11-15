@@ -2,7 +2,7 @@
 // Usage: node scripts/guide-check.mjs [docs/build-guide.md]
 // The guide is a Claude doc; docs/build-guide.md is its Markdown export (doc menu > Export > Markdown).
 // Fails (exit 1) when the guide is stale or repeats itself. Cross-doc overlap is reported, not failed.
-import { readFileSync, existsSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { join } from 'node:path';
 import { sectionItems, key } from './lib/sections.mjs';
@@ -30,7 +30,7 @@ const tables = (s) => { const out = []; let cur = null; for (const l of s.split(
 { const p = []; for (const [, c] of md.matchAll(/[Cc]ommit ([0-9a-f]{7})\b/g)) { try { sh(`git cat-file -e ${c}^{commit}`); } catch { p.push(c); } } check('commits_exist', p); }
 
 // 3. Every repo path in backticks exists; every npm script exists; every gate check name exists
-{ const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).scripts; const gate = readFileSync(join(ROOT, 'scripts/check.js'), 'utf8'); const tools = readFileSync(join(ROOT, 'src/tools.js'), 'utf8') + readFileSync(join(ROOT, 'src/server.js'), 'utf8'); const p = [];
+{ const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).scripts; const gate = [join(ROOT, 'scripts/check.js'), ...readdirSync(join(ROOT, 'scripts/checks')).map((f) => join(ROOT, 'scripts/checks', f))].map((f) => readFileSync(f, 'utf8')).join('\n'); const tools = readFileSync(join(ROOT, 'src/tools.js'), 'utf8') + readFileSync(join(ROOT, 'src/server.js'), 'utf8'); const p = [];
   for (const [, s] of md.matchAll(/`([^`\n]+)`/g)) {
     if (/^npm run /.test(s)) { if (!pkg[s.slice(8)]) p.push(`npm script ${s}`); continue; }
     if (s.startsWith('/')) continue; // a URL path on the server, not a repo path

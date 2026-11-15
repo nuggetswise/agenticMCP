@@ -36,7 +36,7 @@ const tables = (s) => { const out = []; let cur = null; for (const l of s.split(
     if (s.startsWith('/')) continue; // a URL path on the server, not a repo path
     if (existsSync(join(ROOT, s))) continue;
     if (/^[a-z0-9_]+(\.[a-z0-9_]+)+$/.test(s)) { if (!gate.includes(`'${s}'`)) p.push(`gate check ${s}`); continue; }
-    if (/^[a-z]+(_[a-z]+)+$/.test(s)) { if (!tools.includes(`name: '${s}'`)) p.push(`tool ${s}`); continue; }
+    if (/^[a-z]+(_[a-z]+)+$/.test(s)) { if (!tools.includes(`name: '${s}'`) && !tools.includes(`registerTool('${s}'`)) p.push(`tool ${s}`); continue; }
     if (/^[\w.\-/]+$/.test(s) && (s.includes('/') || /\.(json|md|js|mjs|db)$/.test(s))) { if (!existsSync(join(ROOT, s))) p.push(`path ${s}`); } }
   check('paths_scripts_gate_checks_tools_exist', p); }
 

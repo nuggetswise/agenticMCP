@@ -4,7 +4,7 @@ Working copy: `docs/build-guide.md` in the repo. Reading copy: the Claude doc at
 
 ## How to use this guide
 
-This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 45e8ec8.
+This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 5314193af2.
 
 - **Start here:** follow R39. It picks your next task from the Tasks tables and says what to read first. For one prototype, run `node scripts/guide-pack.mjs P5` with its ID: it prints that prototype's job, ending, v8 section, the rules that apply, its agent, tools and anchors, and its tasks in order, so you read one page and the prototype's source.
 - **Authority, highest first:**
@@ -244,6 +244,7 @@ Each question also sits as a comment on its row in the Claude doc; answer there 
 2. The Prototype Plan's gallery card still carries the Threat Ranking title. It has to be renamed in claude.ai.
 3. Delete the three retired presenter-notes files from this project?
 4. Nine pages may be retired (listed in `docs/phase0/HANDOFF.md`). Keep or retire each?
+5. Phase 4 reworks of P5, P6, P7, P8, P9 and P11 were ordered in chat on 15 November. Build directly under that order, or send a change list per prototype first (R32)?
 
 
 ## Inventory
@@ -384,11 +385,11 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | --- | --- | --- | --- | --- | --- | --- |
 | T1.11 | World | Typed tables, dated values and declared keys: loose event records a stage needs move to tables; rules, prices, deals and item attributes carry start and end dates | — | `docs/phase1/world-coverage.md`, Database changes; D60 | Evidence: commit 176dc05; `docs/phase1/world-model.md` records what was borrowed from ERPNext, SAP and NetSuite; `docs/phase1/world-diff-T1.11.json` shows every earlier record unchanged; gate check `model.three_way_match_uses_the_tolerance_of_the_invoice_date`; CALLS 94 | Done |
 | T1.12 | World | Catalogue as evidence: packaging hierarchy with GTIN, dimensions and weight per level, dated cost, item versions with Northfield's acceptance, sent as 832, 888 and 879 | T1.11 | `docs/phase1/world-coverage.md`, Item and price setup; GS1 packaging and GDSN standards | Evidence: commit 72156c4, merged in 31c4d34; `world/stages/catalogue.js`; GS1 hierarchy per item, 832, 888 and 879; the gate settles pack, case-label GTIN and price questions at the ship date (`scripts/checks/20-catalogue.mjs`); CALLS 95 | Done |
-| T1.13 | World | Promotions: 889 announcements, deal prices on order lines, off-invoice allowances on invoices, bill-back and scan-based deals settled from store sales, promotion deductions on remittance and 812 | T1.12 | `docs/phase1/world-coverage.md`, Promotions | Both X12 checks pass, and gate checks match each promotion deduction to its deal or show it unauthorised | Open |
+| T1.13 | World | Promotions: 889 announcements, deal prices on order lines, off-invoice allowances on invoices, bill-back and scan-based deals settled from store sales, promotion deductions on remittance and 812 | T1.12 | `docs/phase1/world-coverage.md`, Promotions | Evidence: commit 5b5ec0f, merged in 5314193af2; `world/stages/promotions.js`; five deals on 889s, settled on a new remittance; each promotion deduction is matched to its deal or shown unauthorised (`scripts/checks/60-promotions.mjs`); CALLS 98 | Done |
 | T1.14 | World | Planning, inventory and order status: 830, 846 and 870 | T1.11 | `docs/phase1/world-coverage.md`, Planning and inventory | Evidence: commit 75c60fc, merged in 31c4d34; `world/stages/planning.js`; the gate judges each short-shipped line against the forecast in force and the stock at pick time (`scripts/checks/30-planning.mjs`); CALLS 95 | Done |
 | T1.15 | World | Transport: 753, 754, 204, 214 and 210 | T1.11 | `docs/phase1/world-coverage.md`, Transport | Evidence: commit 3dad4a1, merged in 31c4d34; `world/stages/transport.js`; RT01 and on-time decided from Lakeline's 214 milestones (`scripts/checks/40-transport.mjs`); CALLS 95 | Done |
 | T1.16 | World | Warehouse transfers (943, 944) and carton-level receiving discrepancies | T1.11 | `docs/phase1/world-coverage.md`, Warehouse and Ship and receive | Evidence: commit 6c968f4, merged in 31c4d34; `world/stages/warehouse.js`; every receiving discrepancy names its SSCC (`scripts/checks/50-warehouse.mjs`); CALLS 95 | Done |
-| T1.17 | World | Adjustments and returns: 812, 180, return-to-vendor deductions and repayments matched to the original deduction | T1.13 | `docs/phase1/world-coverage.md`, Billing and Returns | Both X12 checks pass, and every repayment points to the deduction it reverses | Open |
+| T1.17 | World | Adjustments and returns: 812, 180, return-to-vendor deductions and repayments matched to the original deduction | T1.13 | `docs/phase1/world-coverage.md`, Billing and Returns | Evidence: commit 8d4823c, merged in 5314193af2; `world/stages/returns.js`; 180s, Ashby's 812 credit memos, and every repayment linked to the deduction it reverses (`scripts/checks/65-returns.mjs`); CALLS 98 | Done |
 | T1.18 | World | Partner setup: 816 replaces the hardcoded location list, with dated closures | T1.11 | `docs/phase1/world-coverage.md`, Partner setup | Evidence: commit 891af18, merged in 31c4d34; `world/stages/partner-setup.js`; Northfield's locations are read from two 816s and the closed ship-to check reads the location as of the ship date (`scripts/checks/70-partner-setup.mjs`); CALLS 95 | Done |
 | T1.1 | World | World and server parts of approved items 1, 2 and 4, and AP-5.1 | — | Decisions | Evidence: commit 0d3fb87; CALLS 3, 4, 6 and 7 | Done |
 | T1.2 | P7 | Settle week 6 orders and the charge figure | — | `contract/claims.json` | Evidence: the world wins and does not change (D51); the live-page contract check moves to T4.15; CALLS 54 | Done |
@@ -415,7 +416,7 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T2.8 | Docs | Repo copies of the other docs become dated snapshots | — | Where each fact lives, role of every other doc | Each snapshot's first line gives its export date and says it is not current; the gate checks that line and no longer holds the snapshots to the registry or the server (CALLS 92) | Done |
 | T2.9 | P10 Northfield | Live Northfield connector run | — | `docs/phase2/golden-nf/` | N2 and N3 answered live through Northfield's connector on 15 November, both matching (`docs/phase2/golden-nf/live-2026-11-15.md`; CALLS 92) | Done |
 | T2.10 | Server | Test whether a published prototype can read the live server, from a private test page only, since the URL carries the token | — | Server reference, Hosting | Evidence: the private page Live server test ran on 15 November from the owner's account. Through the viewer's connectors it read Ashby's side (order value on NR-450118) and Northfield's side (22 shared documents); a direct call to the server failed with the browser error Load failed. So a published page reaches the server only through the viewer's connector, and holds no key (`docs/phase2/T2.10-live-page.md`; CALLS 90) | Done |
-| T2.11 | Aviator | The in-product assistant on prototype screens: floating, bottom right, answering from the same tools as the company's connection | T2.10 | D56; Customer-agent access rules R24 to R27 | Live model answers verified on the real tools, refusal included: `docs/phase2/aviator-live-2026-11-13.txt`. The deployed endpoint answered on both sides; Northfield's side now lists its own documents on an order whose hold sat with the supplier (same file, CALLS 67). Left: Aviator on a prototype screen once T2.10 settles the route | Open |
+| T2.11 | Aviator | The in-product assistant on prototype screens: floating, bottom right, answering from the same tools as the company's connection | T2.10 | D56; Customer-agent access rules R24 to R27 | Live model answers verified on the real tools (`docs/phase2/aviator-live-2026-11-13.txt`). Since commit dfef3cd Aviator is a kit piece that answers through the viewer's own connector via `ask_aviator` on both connections (CALLS 96), placed on the published P15 page and the agent kit page. Left: the owner reconnects both connectors in claude.ai so they list `ask_aviator`, then opens P15 and asks Aviator one question | Open |
 
 ### Phase 3 · New prototypes
 
@@ -425,7 +426,7 @@ New prototypes come from the Prototype specs tab. Mining Northstar for them was 
 | --- | --- | --- | --- | --- | --- | --- |
 | T3.0 | Specs | Mine the Northstar prototype and teardown into the Prototype specs tab | — | — | Evidence: the Prototype specs tab; CALLS 27 and 28 | Done |
 | T3.1 | P13, P14, P15 | Check each spec against the world | — | Prototype specs; `docs/phase3/T3.1-spec-check.md` | Every record each spec needs exists, or a Phase 1 change list adds it. Checked: one P13 conflict, fixed by change list 2 point 1 in commit 5dab23a, with gate check `time.receipt_after_ship_notice`; CALLS 77, 79 and 85 | Done |
-| T3.2 | P13, P14, P15 | Rank the specs, place them on the story calendar, and build the top one | T3.1, T2.2, T2.3 (its built parts, CALLS 79) | Prototype specs; story calendar in the Prototype Plan; v8 for the business problem (R40) | The owner approves the ranking and the first new prototype passes its acceptance tests, walk and contract test. Its agent screens follow the tg-retail-agent-prototype skill: a ranked queue beside one record, with now and after values and the two checkpoint controls of R15, and the main path stays within eight actions. Ranking approved 15 November: P13, then P14, then P15; P15 is built as a retailer screen, not an agent screen, because replaying a rule needs no agent (D61, CALLS 87) | Open |
+| T3.2 | P13, P14, P15 | Rank the specs, place them on the story calendar, and build the top one | T3.1, T2.2, T2.3 (its built parts, CALLS 79) | Prototype specs; story calendar in the Prototype Plan; v8 for the business problem (R40) | The owner approves the ranking and the first new prototype passes its acceptance tests, walk and contract test. Its agent screens follow the tg-retail-agent-prototype skill: a ranked queue beside one record, with now and after values and the two checkpoint controls of R15, and the main path stays within eight actions. Ranking approved 15 November: P13, then P14, then P15; P15 is built as a retailer screen, not an agent screen, because replaying a rule needs no agent (D61, CALLS 87). Progress: P15 built and published from the agent kit (`docs/phase3/p15/BUILD.md`, commit 29c6c94); P13's Watch Agent runtime is on branch agent/watch (commit a64a2bc, gate 630 and smoke 93 on that branch, model not yet run), not merged; P14's Match Agent runtime is being built on branch agent/match; neither screen is built (CALLS 98) | Open |
 | T3.3 | FILM | Rebuild the film as a self-playing artifact, the way the marketing film was made; each chapter tells one prototype's task card, problem to ending (R41) | Phase 4 settles the endings it tells | FILM link; the marketing film artifact; task cards | The rebuilt film passes A1, A5 and A7 and the FILM A7 cell reads Done | Open |
 
 ### Phase 4 · Prototype changes, one at a time
@@ -506,13 +507,13 @@ Both connections' tools, by kind of job, against the nearest published tool. Net
 
 ## Proofs, open items and drift control
 
-The gate and smoke tests pass at commit 45e8ec8. Two of the plan's proofs have not been built or run.
+The gate and smoke tests pass at commit 5314193af2. Two of the plan's proofs have not been built or run.
 
 | Proof | Command or location | Result |
 | --- | --- | --- |
-| World gate: invariants, catalogue equals the pack, thresholds from the catalogue | `npm run build` | 462 passed, 0 failed |
-| Earlier records unchanged by a world change | `node scripts/world-diff.mjs` | Builds the world at e8f0e93 and compares every table; 0 changed at commit 45e8ec8 |
-| Server smoke: both scopes, refusals, the shared deduction case | `npm run smoke` | 83 passed, 0 failed |
+| World gate: invariants, catalogue equals the pack, thresholds from the catalogue | `npm run build` | 655 passed, 0 failed |
+| Earlier records unchanged by a world change | `node scripts/world-diff.mjs` | Builds the world at e8f0e93 and compares every table; at commit 5314193af2 no earlier row changed but Lakeline's interchange id, re-baselined on purpose (`docs/phase1/world-diff-T1.11-T1.18.json`) |
+| Server smoke: both scopes, refusals, the shared deduction case | `npm run smoke` | 84 passed, 0 failed |
 | X12 validation | `npm run validate` | Passes, but its schemas were generated in this repo, so it does not meet the independent-schema test |
 | X12 against schemas this repo did not write | `validator/botscheck.py` with the bots-grammars X12 grammars | Every document checked; it faults exactly the documents the world rejects on a 997, and nothing else; all ten injected faults are rejected for their reason (`validator/bots-report.json`) |
 | Contract test of on-screen values: it checks every number a screen shows and requires none | `npm run contract` | Run on the live pages on 15 November for P1, P2, P4, P5, P6, P7 and P8 (`docs/phase3/contract-report-2026-11-15.json`): P2 and P4 pass; P1 and P8 differ only in raw X12 panels (T1.5); P5, P6 and P7 differ in dates, rule wording and, for P7, three order numbers, each a Phase 4 row. P9 and P11 were read but not saved as files, so only their record numbers were checked by hand: P9 shows one sales order number the world lacks, and P11 shows five record numbers the world lacks, including its ship notice number. P12 is retired. |
@@ -520,6 +521,8 @@ The gate and smoke tests pass at commit 45e8ec8. Two of the plan's proofs have n
 | Golden questions, Northfield | `docs/phase2/golden-nf/grade-report.json` | 50 of 50 |
 | Live server | /healthz | ok, version 0.3.0, writes on, Aviator on, read on 14 November with commit cd9717d deployed |
 | Aviator loop, tool declarations, model fallback and refusals | `npm run aviator-test` | 11 passed, 0 failed, against a stand-in model. Live with gemini-3.5-flash-lite on the built world: P11's hold answered correctly, another supplier's cases refused, Ashby's own cases counted correctly (`docs/phase2/aviator-live-2026-11-13.txt`) |
+| Agent kit in a real browser: two decision controls, no green or tick, Aviator closed on load and honest without a connector | `npm run kit-check` | All passed at commit 5314193af2 |
+| Agent governance golden questions | `docs/phase2/golden-gov/grade-report.json` | 25 of 25 |
 | Property-based invariants on quantities, time order and money | — | Not built; the gate checks invariants on the one generated quarter only |
 | Fresh agent answers ten builder questions from the docs | Reader tests, 13 November. First: ten answered from the guide alone; gaps fixed in CALLS 31. Second, after the owner decisions: ten of ten correct, including where P4 ends and where P9's business problem is; gaps fixed in CALLS 34 | Passed |
 | Viewer states each film chapter's problem and outcome | — | Not started |

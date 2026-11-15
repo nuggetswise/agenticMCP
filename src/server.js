@@ -225,14 +225,14 @@ export const GOV_TOOLS = { [AS]: GOV(AS), [NF]: GOV(NF) };
 
 const INSTRUCTIONS = {
   [AS]: () => ['This is Ashby Supplier’s connection to Trading Grid, the B2B network Ashby uses to trade with Northfield Retailer. All data is fictional.',
-    'It holds one quarter of trade, 27 September to 26 December 2026, with settlement to 6 January 2027. Times are US Eastern.',
+    'It holds one quarter of trade, 27 September to 26 December 2026, with settlement to 9 January 2027. Times are US Eastern.',
     'Questions about "now" are answered as of the story clock, Tuesday 17 November 2026 11:00 Eastern, unless you pass as_of. get_story_calendar lists other moments.',
     'Find records by PO number, document reference or case id. Answer only from tool results and cite each record with its link.',
     'Keep a technical acknowledgment (997) separate from business acceptance: Northfield sends no business acceptance.',
     WRITES ? 'Writes follow Ashby’s rules: submit_dispute, release_ship_notice and request_change record proposals Priya Raman approves in Trading Grid; only AP-4.1 lets Claim Agent dispute without asking. Ship notice release always stays with a person (AP-1.3).' : 'Nothing on this connection creates, changes or sends a Trading Grid record. For any action, call request_change and give the user its Trading Grid link.',
     'Records of other suppliers are not available, and Northfield’s payables, draft rules and reviewer notes are Northfield’s: say "Not available to Ashby".'].join(' '),
   [NF]: () => ['This is Northfield Retailer’s connection to Trading Grid for Jordan Ellis’s own assistant. All data is fictional.',
-    'It holds the same quarter of trade as its suppliers see, 27 September to 26 December 2026, settlement to 6 January 2027. Times are US Eastern; the default as_of is Tuesday 17 November 2026 11:00 Eastern.',
+    'It holds the same quarter of trade as its suppliers see, 27 September to 26 December 2026, settlement to 9 January 2027. Times are US Eastern; the default as_of is Tuesday 17 November 2026 11:00 Eastern.',
     'Documents exchanged with suppliers are shared: both sides see the same X12. A supplier’s ERP, warehouse, carrier and agent records are the supplier’s: say "Not available to Northfield" unless the supplier shared them into a case.',
     WRITES ? 'Writes follow Northfield’s guide: decide_charge, publish_rule and request_change record proposals Jordan Ellis approves in Trading Grid. Jordan decides every charge (NF-7.7). A rule is published only after replay_draft_rule.' : 'This connection is read-only.',
     'Answer only from tool results and cite each record with its link.'].join(' '),

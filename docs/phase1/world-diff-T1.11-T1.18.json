@@ -1,0 +1,353 @@
+{
+ "base": "e8f0e93",
+ "tables": {
+  "tg.adjustments": {
+   "base_rows": 82,
+   "changed_or_lost": 0,
+   "added": 9
+  },
+  "tg.calendar": {
+   "base_rows": 14,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.cartons": {
+   "base_rows": 56949,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.documents": {
+   "base_rows": 28942,
+   "changed_or_lost": 0,
+   "added": 9212
+  },
+  "tg.draft_rules": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.errors": {
+   "base_rows": 57,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.events": {
+   "base_rows": 9678,
+   "changed_or_lost": 0,
+   "added": 15
+  },
+  "tg.invoice_lines": {
+   "base_rows": 4319,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.invoices": {
+   "base_rows": 2375,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.items": {
+   "base_rows": 8,
+   "changed_or_lost": 0,
+   "added": 70
+  },
+  "tg.locations": {
+   "base_rows": 7,
+   "changed_or_lost": 0,
+   "added": 64
+  },
+  "tg.order_changes": {
+   "base_rows": 13,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.order_lines": {
+   "base_rows": 4355,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.orders": {
+   "base_rows": 2400,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.parties": {
+   "base_rows": 29,
+   "changed_or_lost": 1,
+   "added": 1,
+   "rebaselined": "T1.15: one column on one row. Lakeline Freight's isa changes from null to LAKELINE so it can exchange 204, 214 and 210 with Ashby; every other column and row is unchanged."
+  },
+  "tg.people": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.receipts": {
+   "base_rows": 4305,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.remittance_items": {
+   "base_rows": 1460,
+   "changed_or_lost": 0,
+   "added": 210
+  },
+  "tg.review_notes": {
+   "base_rows": 46,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.rules": {
+   "base_rows": 74,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.shipment_lines": {
+   "base_rows": 4346,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.shipments": {
+   "base_rows": 2398,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.store_activity": {
+   "base_rows": 80,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.warehouse_orders": {
+   "base_rows": 1008,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.adjustments": {
+   "base_rows": 40,
+   "changed_or_lost": 0,
+   "added": 9
+  },
+  "ashby.calendar": {
+   "base_rows": 14,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.cartons": {
+   "base_rows": 56949,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.documents": {
+   "base_rows": 23616,
+   "changed_or_lost": 0,
+   "added": 9210
+  },
+  "ashby.errors": {
+   "base_rows": 55,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.events": {
+   "base_rows": 9421,
+   "changed_or_lost": 0,
+   "added": 15
+  },
+  "ashby.invoice_lines": {
+   "base_rows": 3729,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.invoices": {
+   "base_rows": 1909,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.items": {
+   "base_rows": 6,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.locations": {
+   "base_rows": 7,
+   "changed_or_lost": 0,
+   "added": 39
+  },
+  "ashby.order_changes": {
+   "base_rows": 8,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.order_lines": {
+   "base_rows": 3725,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.orders": {
+   "base_rows": 1907,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.parties": {
+   "base_rows": 4,
+   "changed_or_lost": 1,
+   "added": 1,
+   "rebaselined": "T1.15: one column on one row. Lakeline Freight's isa changes from null to LAKELINE in Ashby's copy, as in the main database; every other column and row is unchanged."
+  },
+  "ashby.people": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.receipts": {
+   "base_rows": 3725,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.remittance_items": {
+   "base_rows": 1153,
+   "changed_or_lost": 0,
+   "added": 210
+  },
+  "ashby.rules": {
+   "base_rows": 74,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.shipment_lines": {
+   "base_rows": 3725,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.shipments": {
+   "base_rows": 1908,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.store_activity": {
+   "base_rows": 80,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.warehouse_orders": {
+   "base_rows": 1008,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.adjustments": {
+   "base_rows": 82,
+   "changed_or_lost": 0,
+   "added": 9
+  },
+  "northfield.calendar": {
+   "base_rows": 14,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.cartons": {
+   "base_rows": 56949,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.documents": {
+   "base_rows": 26926,
+   "changed_or_lost": 0,
+   "added": 2138
+  },
+  "northfield.draft_rules": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.errors": {
+   "base_rows": 57,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.events": {
+   "base_rows": 391,
+   "changed_or_lost": 0,
+   "added": 8
+  },
+  "northfield.invoice_lines": {
+   "base_rows": 4319,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.invoices": {
+   "base_rows": 2375,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.items": {
+   "base_rows": 8,
+   "changed_or_lost": 0,
+   "added": 70
+  },
+  "northfield.locations": {
+   "base_rows": 7,
+   "changed_or_lost": 0,
+   "added": 64
+  },
+  "northfield.order_changes": {
+   "base_rows": 13,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.order_lines": {
+   "base_rows": 4355,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.orders": {
+   "base_rows": 2400,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.parties": {
+   "base_rows": 27,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.people": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.receipts": {
+   "base_rows": 4305,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.remittance_items": {
+   "base_rows": 1460,
+   "changed_or_lost": 0,
+   "added": 210
+  },
+  "northfield.review_notes": {
+   "base_rows": 46,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.rules": {
+   "base_rows": 53,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.shipment_lines": {
+   "base_rows": 4346,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.shipments": {
+   "base_rows": 2398,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.store_activity": {
+   "base_rows": 80,
+   "changed_or_lost": 0,
+   "added": 0
+  }
+ },
+ "summary": "67 of 69 base tables keep every row; 0 changed without a re-baseline"
+}

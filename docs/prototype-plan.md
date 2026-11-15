@@ -49,12 +49,14 @@ Week | Date | Moment | Seen by | Prototype | Anchor record |
 5 | 26 Oct | Store activity becomes a refill order | Priya Raman | P9 | NR-451207 | 
 6 | 2 Nov | Order changed; 270 agreed by phone; two shipments follow | Priya Raman | No screen | NR-450118 | 
 7 | 8 Nov | Open-order value from purchase order to payment | Jordan Ellis | P8 | 340 open orders | 
+7 | 10 Nov | An invoice that does not match its order and receipt | Jordan Ellis | P14 | INV-7731 | 
 8 | 17 Nov | Four questions and the six-PO email | Priya Raman | P10 | NR-46101 to NR-46156 | 
 8 | 18 Nov | Silent order watch | Priya Raman | P13 | NR-46210 to NR-46231 | 
-9 | 23 Nov | A test ship notice fails the pack rule | Priya Raman | NetSuite Ship Notice Exception | ASN-78214 | 
+10 | 30 Nov | A live ship notice is held in NetSuite and corrected before it leaves | Priya Raman | P11 NetSuite Chargeback Avoidance | ASN-78260 | 
 10 | 1 Dec | Deductions and an invoice exception | Priya Raman, then Jordan Ellis | P6 | NR-450118, NR-450390, NR-450415 | 
 11 | 8 Dec | Six fulfilment risks before departure | Priya Raman | P5 | NR-460207 to NR-460274 | 
 14 | 28 Dec | Scorecard at 91.0% and the corrective plan | Priya Raman, then Jordan Ellis | P7 | 108 failing lines |
+14 | 28 Dec | A draft rule replayed against the quarter before publishing | Jordan Ellis | P15 | NFD-1 | 
 
 P10's fixed points: the four orders are NR-46151, NR-46142, NR-46156 and NR-46133; the rejection is ASN-46118 at 26 characters against 22; health is 3,412 documents with 41 failures; the six POs are NR-46101 to NR-46105 and NR-46108, five on time and NR-46108 one day late.
 

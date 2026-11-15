@@ -12,7 +12,7 @@ import { buildWorld, MAIN_DB, ASHBY_DB, NORTHFIELD_DB } from '../world/build.js'
 import { fmtET } from '../world/lib.js';
 import * as NR from './retailer.js';
 import * as D from './domain.js';
-import { TOOLS, BOUNDARY, SCOPES, ASHBY_WRITES, ASHBY_REFUSALS, NF_TOOLS, NF_WRITES, NF_REFUSALS, NF_SCOPES } from './tools.js';
+import { TOOLS, BOUNDARY, SCOPES, ASHBY_WRITES, ASHBY_REFUSALS, NF_TOOLS, NF_WRITES, NF_REFUSALS, NF_SCOPES, ASHBY_PRIVATE, refusalText } from './tools.js';
 import { recordPage, documentPage, adminPage, homePage, nfOrderPage } from './pages.js';
 import * as Aviator from './aviator.js';
 import * as Scout from './scout.js';
@@ -43,7 +43,7 @@ const BY_AVIATOR = AV ? { [`${AV}-ashby`]: AS, [`${AV}-northfield`]: NF } : {};
 const aviatorCid = (req, res) => { const c = BY_TOKEN[req.params.token] || BY_AVIATOR[req.params.token]; if (!c) { res.status(404).send('Not found'); return null; } return c; };
 const OTHER = { [AS]: NF, [NF]: AS };
 const SIDE = {
-  [AS]: { party: 'ASHBY', person: 'Priya Raman', company: 'Ashby Supplier', other: 'Northfield Retailer', notAvailable: D.NOT_AVAILABLE, scopes: SCOPES, sqlDb: () => ashbyDb, records: 'records', privateTables: /\b(review_notes|draft_rules|rule_replays)\b/i, privateWhat: 'Northfield’s accounts payable, draft rules and claims reviewer notes' },
+  [AS]: { party: 'ASHBY', person: 'Priya Raman', company: 'Ashby Supplier', other: 'Northfield Retailer', notAvailable: D.NOT_AVAILABLE, scopes: SCOPES, sqlDb: () => ashbyDb, records: 'records', privateTables: ASHBY_PRIVATE.tables, privateWhat: ASHBY_PRIVATE.what },
   [NF]: { party: 'NORTHFIELD', person: 'Jordan Ellis', company: 'Northfield Retailer', other: 'Ashby Supplier', notAvailable: NR.NOT_AVAILABLE_NF, scopes: NF_SCOPES, sqlDb: () => nfDb, records: 'records/northfield', privateTables: /\b(warehouse_orders)\b/i, privateWhat: 'a supplier’s warehouse, ERP, carrier and agent records' },
 };
 const conn = (id) => { const c = db.prepare('SELECT * FROM connections WHERE id = ?').get(id); return { ...c, scopes: JSON.parse(c.scopes) }; };
@@ -63,7 +63,7 @@ const logOther = (cid, tool, what, records, w) => log(OTHER[cid], `counterparty:
 const assistantOf = (cid) => `${SIDE[cid].person}’s assistant`;
 /** Attribution for a refused or invalid write: nothing was recorded, and the log says so. */
 const refusedW = (cid, rule, outcome) => ({ agent: assistantOf(cid), rule, mode: 'approve', approver: 'None: nothing was recorded', outcome });
-const refuse = (cid, tool, args, what) => { const side = SIDE[cid]; log(cid, tool, [], args, side.notAvailable, [], WRITE_NAMES.has(tool) ? refusedW(cid, null, side.notAvailable) : undefined); return { result: side.notAvailable, message: `${side.notAvailable}: ${what} belong to ${side.other}.` }; };
+const refuse = (cid, tool, args, what) => { const side = SIDE[cid]; log(cid, tool, [], args, side.notAvailable, [], WRITE_NAMES.has(tool) ? refusedW(cid, null, side.notAvailable) : undefined); return { result: side.notAvailable, message: refusalText(side.notAvailable, what, side.other) }; };
 
 /** Masks parts of an Ashby answer the granted scopes do not cover. */
 function mask(out, has) {
@@ -153,7 +153,7 @@ export function call(cid, name, args = {}) {
     return body;
   }
   if (cid === AS && name === 'compare_with_other_suppliers') { log(cid, name, [], args, D.NOT_AVAILABLE, []); return { result: D.NOT_AVAILABLE, message: 'Other suppliers’ records are not available on Ashby’s connection.' }; }
-  if (cid === AS && name === 'read_retailer_records') return refuse(cid, name, args, 'Northfield’s accounts payable, draft rules and claims reviewer notes');
+  if (cid === AS && name === 'read_retailer_records') return refuse(cid, name, args, ASHBY_PRIVATE.what);
   if (cid === NF && name === 'read_supplier_records') return refuse(cid, name, args, 'Suppliers’ ERP, warehouse, carrier and agent records and their internal policies');
   if ([...(cid === AS ? ASHBY_WRITES : NF_WRITES), { name: 'request_change' }].some((w) => w.name === name)) return write(cid, name, args);
   if (name === 'run_readonly_sql') {
@@ -338,7 +338,7 @@ export const matchView = (sess, extra = {}) => sess ? ({ session: sess.id, label
   : { result: 'Invalid request', error: 'No such session; sessions live in memory and end when the server restarts.' };
 function drainMatch(sessionId) { const sess = Match.getSession(sessionId); if (!sess) return; for (const a of sess.audit.slice(sess.audited || 0)) log(NF, `match:${a.action}`, [], { session: a.session, proposal: a.proposal }, a.outcome, [a.session, a.proposal, a.record].filter(Boolean), { agent: a.agent, rule: a.authority_rule, mode: a.authority_mode, approver: a.approver, outcome: a.outcome }); sess.audited = sess.audit.length; }
 async function matchStart({ variation, facts, policy, label } = {}) { const sess = Match.startSession(nfDb, { facts: matchFacts(variation, facts), policy: policy || {}, label: label || 'Operator' }); const run = await Match.runMatch(nfDb, sess, { callModel: matchModel(), paused: matchPaused }); drainMatch(sess.id); return matchView(sess, run.ok ? {} : { blocked: run.blocked || run.status }); }
-async function matchDecide({ session, proposal, decision, note }) { const sess = Match.getSession(session); if (!sess) return matchView(null); const r = await Match.decideAndResume(nfDb, sess, proposal, decision, 'Jordan Ellis', { callModel: matchModel(), paused: matchPaused, note }); drainMatch(sess.id); if (r.state === 'Refused') return { ...r, result: 'Refused' }; return matchView(sess, r.run?.ok === false ? { blocked: r.run.blocked || r.run.status } : {}); }
+async function matchDecide({ session, proposal, decision, note }) { const sess = Match.getSession(session); if (!sess) return matchView(null); const r = await Match.decideAndResume(nfDb, sess, proposal, decision, 'Jordan Ellis', { callModel: matchModel(), paused: matchPaused, note }); drainMatch(sess.id); if (r.state === 'Refused') return { ...r, result: 'Refused' }; const dec = r.decision?.approval ? { state: r.decision.state, ...r.decision.approval } : { state: r.decision?.state, by: 'Jordan Ellis', proposal, payment: Match.PAYMENT_UNCHANGED }; return matchView(sess, { decision: dec, ...(r.run?.ok === false ? { blocked: r.run.blocked || r.run.status } : {}) }); }
 async function matchBaseline({ variation, facts, policy } = {}) { const sess = Match.startSession(nfDb, { facts: matchFacts(variation, facts), policy: policy || {}, label: 'Rule baseline' }); Match.runBaseline(nfDb, sess); drainMatch(sess.id); return matchView(sess); }
 async function matchReplay({ variation, facts, policy, detail } = {}, by = assistantOf(NF)) {
   const r = await Match.replay(nfDb, { facts: matchFacts(variation, facts), policy: policy || {}, callModel: matchModel(), paused: matchPaused });
@@ -346,7 +346,7 @@ async function matchReplay({ variation, facts, policy, detail } = {}, by = assis
   const trial = G.recordTrial(db, NF, { agent: 'Match Agent', rule: null, by, change: { policy: policy && Object.keys(policy).length ? policy : 'Policy in force (no change)', variation: variation || 'canonical', facts: r.facts },
     result: { baseline: r.baseline.outcome, agent: r.agent.blocked ? { blocked: r.agent.blocked } : r.agent.outcome, steps: r.steps, drift_measure: r.automation, rollback: 'Nothing was changed: sessions are in memory and leave Northfield’s recorded records unchanged.' } });
   if (detail === 'full') return { ...r, trial };
-  return { trial, variation: variation || 'canonical', facts: r.facts, evidence_cutoff: r.evidence_cutoff, simplest_baseline: r.baseline.simplest, baseline: { outcome: r.baseline.outcome, trace: brief(r.baseline.trace) }, agent: r.agent.blocked ? { blocked: r.agent.blocked, trace: brief(r.agent.trace) } : { status: r.agent.status, outcome: r.agent.outcome, overhead: r.agent.overhead, trace: brief(r.agent.trace) }, steps: r.steps, automation: r.automation };
+  return { trial, variation: variation || 'canonical', facts: r.facts, evidence_cutoff: r.evidence_cutoff, simplest_baseline: r.baseline.simplest, baseline: { outcome: r.baseline.outcome, trace: brief(r.baseline.trace) }, agent: r.agent.blocked ? { blocked: r.agent.blocked, trace: brief(r.agent.trace) } : { status: r.agent.status, outcome: r.agent.outcome, overhead: r.agent.overhead, trace: brief(r.agent.trace) }, steps: r.steps, comparison: r.comparison, automation: r.automation };
 }
 const MATCH_TOOLS = [
   { name: 'match_setup', title: 'Match Agent setup: queue, facts, approval modes and guardrails', description: 'What can be set before a Match Agent run on the P14 story moment (Tuesday 10 November 2026 09:00 ET): the invoices held at that moment with their rules, the facts with their recorded values and presets, each action with its rules, its approval mode and whether Jordan Ellis may change it, and the administrator guardrails. Changes nothing.', input: {}, run: async () => Match.setup(nfDb) },
@@ -382,7 +382,7 @@ function makeServer(cid) {
   if (cid === AS) for (const t of WATCH_TOOLS) server.registerTool(t.name, { title: t.title, description: t.description, inputSchema: t.input, annotations: { readOnlyHint: t.name === 'watch_setup', destructiveHint: false, openWorldHint: false } },
     async (args = {}) => { let out; try { out = await t.run(args); } catch (e) { out = { result: 'Invalid request', error: e.message }; } log(cid, t.name, [], args, out.result || out.status || 'Answered', []); return { content: [{ type: 'text', text: JSON.stringify(out, null, 1) }] }; });
   if (cid === NF) for (const t of MATCH_TOOLS) server.registerTool(t.name, { title: t.title, description: t.description, inputSchema: t.input, annotations: { readOnlyHint: t.name === 'match_setup' || t.name === 'match_state', destructiveHint: false, openWorldHint: false } },
-    async (args = {}) => { let out; try { out = await t.run(args); } catch (e) { out = { result: 'Invalid request', error: e.message }; } log(cid, t.name, [], args, out.result || out.status || 'Answered', []); return { content: [{ type: 'text', text: JSON.stringify(out, null, 1) }] }; });
+    async (args = {}) => { let out; try { out = linkify(await t.run(args), SIDE[NF]); } catch (e) { out = { result: 'Invalid request', error: e.message }; } log(cid, t.name, [], args, out.result || out.status || 'Answered', []); return { content: [{ type: 'text', text: JSON.stringify(out, null, 1) }] }; });
   return server;
 }
 

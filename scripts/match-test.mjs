@@ -46,6 +46,50 @@ for (const [name, facts] of Object.entries(M.VARIATIONS)) {
   check(o.first_step === EXPECT[name], `${name}/baseline: first step ${EXPECT[name]} (got ${o.first_step})`);
   rows.push({ variation: name, actor: 'baseline', steps: o.steps.join(' > '), clear: o.proposed_clear_for_payment.join(','), held: o.lines.filter((l) => l.status !== 'clear').map((l) => `${l.line}:${l.status}`).join(' '), answer: o.requests.map((r) => r.answer).join('; '), approvals: o.approvals });
 }
+// Stand-in caller (not a model, and labelled so): it speaks the model's function-calling protocol, decides only from the tool results
+// it is handed (read_invoice, read_corrections, read_requests, read_proposals), and follows the decision table. It proves the replay,
+// approval, trace and automation plumbing end to end without a key; it says nothing about what a real model would do.
+function standIn() {
+  return async (body) => {
+    const last = body.contents.at(-1); const results = Object.fromEntries((last.parts || []).filter((x) => x.functionResponse).map((x) => [x.functionResponse.name, x.functionResponse.response.result]));
+    const fc = (calls, text) => ({ _route: 'stand-in · not a model', candidates: [{ content: { role: 'model', parts: [...calls.map(([name, args]) => ({ functionCall: { name, args } })), ...(text ? [{ text }] : [])] } }] });
+    const queue = body.contents.flatMap((c) => c.parts || []).filter((x) => x.functionResponse?.name === 'read_queue').map((x) => x.functionResponse.response.result).at(-1);
+    if (!queue) return fc([['read_queue', {}]]);
+    const inv = queue.held[0]?.invoice; if (!inv) return fc([], 'Nothing is held.');
+    const first = !body.contents.some((c) => (c.parts || []).some((x) => x.functionResponse?.name === 'read_receipts'));
+    if (!results.read_invoice) return fc([...(first ? [['read_receipts', { po: inv }]] : []), ['read_invoice', { invoice: inv }], ['read_corrections', { invoice: inv }], ['read_requests', {}], ['read_proposals', {}]]);
+    const m = results.read_invoice.match; const L = m.lines; const props = results.read_proposals.proposals.filter((x) => ['Executed', 'Suggested', 'Awaiting approval'].includes(x.state));
+    if (props.some((x) => x.state === 'Awaiting approval')) return fc([], 'A proposal waits for Jordan Ellis.');
+    const asked = results.read_requests.requests.filter((r) => r.invoice === inv && r.kind === 'correction').flatMap((r) => r.lines);
+    const rejected = /^Rejected/.test(results.read_invoice.state);
+    const corr = results.read_corrections.corrections.find((c) => !c.matched && !props.some((x) => x.action === 'match_corrected_invoice' && x.args.correction === c.reference));
+    const propose = (action, args, why) => fc([['propose_action', { action, invoice: inv, ...args, rationale: why }]]);
+    if (rejected && !corr) return fc([], 'Waiting for the resent invoice.');
+    if (m.total_fault && !rejected) return propose('reject_document_fault', {}, `read_invoice: stated total ${m.stated_total} differs from the sum of lines ${m.sum_of_lines} (NF-7.10)`);
+    if (corr) return propose('match_corrected_invoice', { correction: corr.reference }, `read_corrections: ${corr.reference} is on file (NF-7.2)`);
+    const chg = L.find((l) => l.status === 'price_set_by_change'); if (chg) return propose('clear_line_by_accepted_change', { line: chg.line }, `read_invoice: ${chg.settling_record}`);
+    const need = L.filter((l) => ['above_shipped', 'above_received', 'price_held'].includes(l.status) && !asked.includes(l.line)).map((l) => l.line);
+    if (need.length) return propose('request_credit_or_corrected_invoice', { lines: need }, `read_receipts and read_invoice: lines ${need.join(', ')} do not match`);
+    const done = props.filter((x) => x.action === 'release_for_payment_proposal').flatMap((x) => x.args.lines);
+    const clear = L.filter((l) => l.status === 'clear' && !done.includes(l.line)).map((l) => l.line);
+    if (clear.length) return propose('release_for_payment_proposal', { lines: clear }, `read_invoice: lines ${clear.join(', ')} match`);
+    return fc([], 'Proposed what the records settle; the rest stays with Jordan.');
+  };
+}
+// The stand-in must reach the baseline's outcome in every preset, through the same server gate, with every proposal approved by a labelled test approver.
+for (const [name, facts] of Object.entries(M.VARIATIONS)) {
+  const r = await M.replay(db, { facts, callModel: standIn() });
+  if (r.agent.blocked) { check(false, `${name}/stand-in: replay blocked ${r.agent.blocked}`); continue; }
+  const s = M.getSession(r.agent.session); const o = detectors(name, s, 'stand-in');
+  check(r.agent.status === 'done' && o.first_step === r.baseline.outcome.first_step && JSON.stringify(o.lines) === JSON.stringify(r.baseline.outcome.lines) && o.proposed_clear_for_payment.join() === r.baseline.outcome.proposed_clear_for_payment.join(), `${name}/stand-in: same first step and line outcome as the baseline (${o.steps.join(' > ')})`);
+  check(r.comparison && r.comparison.agent_only.length === 0 && r.comparison.baseline_only.length === 0 && r.steps.every((x) => x.automation), `${name}/stand-in: every step both took is called automation (${r.automation})`);
+  check(s.trace.filter((t) => t.type === 'ai').every((t) => t.actor === 'Match Agent') && s.trace.filter((t) => t.type === 'human').every((t) => t.actor === 'Test approver (replay)') && s.trace.filter((t) => t.type === 'external').every((t) => /\((synthetic|recorded)\)$/.test(t.actor)), `${name}/stand-in: the trace names who did each step, supplier answers labelled synthetic or recorded`);
+  rows.push({ variation: name, actor: 'stand-in (not a model)', steps: o.steps.join(' > '), clear: o.proposed_clear_for_payment.join(','), held: o.lines.filter((l) => l.status !== 'clear').map((l) => `${l.line}:${l.status}`).join(' '), answer: o.requests.map((x) => x.answer).join('; '), approvals: o.approvals });
+}
+// A free-text supplier note reaches the agent's reads but changes nothing the baseline does: the note is where a model may earn its place.
+{ const a = M.startSession(db), b = M.startSession(db, { facts: M.VARIATIONS.ashby_free_text }); const oa = M.runBaseline(db, a), ob = M.runBaseline(db, b);
+  check(JSON.stringify(oa.lines.map((l) => l.status)) === JSON.stringify(ob.lines.map((l) => l.status)) && /later truck/.test(JSON.stringify(M.read(db, b, 'read_requests'))), 'baseline: the supplier’s free-text note is readable but does not change a receiving advice or the baseline’s outcome'); }
+
 const call = process.env.GEMINI_API_KEY ? (await import('../src/scout.js')).geminiCaller(process.env.GEMINI_API_KEY) : null;
 if (!call) console.log('\nBLOCKED  Match Agent runs need GEMINI_API_KEY on this machine. Nothing was simulated in their place.');
 else for (const [name, facts] of Object.entries(M.VARIATIONS)) {

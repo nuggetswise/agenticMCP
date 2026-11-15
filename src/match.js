@@ -149,6 +149,7 @@ export function startSession(db, { facts = {}, policy = {}, label = 'Operator', 
 }
 export const getSession = (id) => SESSIONS.get(id) || null;
 function trace(s, actor, type, what, detail = {}) { s.trace.push({ n: s.trace.length + 1, clock: fmtET(iso(s.clock)), actor, type, what, ...(Object.keys(detail).length ? { detail } : {}) }); }
+export const PAYMENT_UNCHANGED = 'No payment state changed: payment release stays in Northfield accounts payable';
 const MODE_APPROVER = { policy: 'Standing policy, set by Jordan Ellis', suggest: 'None: Match Agent may only suggest; Jordan Ellis acts in accounts payable' };
 function audit(s, p, outcome) {
   const approver = p.taken_over_by || p.approved_by || (p.needs === 'approve' ? (p.state === 'Awaiting approval' ? 'Jordan Ellis (awaiting)' : p.rejected_by || 'Jordan Ellis') : MODE_APPROVER[p.needs]);
@@ -196,11 +197,18 @@ function holdsOf(db, s, c) {
   for (const l of e.lines) if (l.status === 'above_shipped') out.push({ rule: 'NF-7.8', line: l.line, value: l.billed, finding: `Line ${l.line} bills ${l.billed} cases; ${l.shipped} shipped and ${l.accepted} accepted; held value $${r2((l.billed - l.shipped) * l.invoice_price).toFixed(2)}` });
   for (const l of e.lines) if (['price_held', 'price_set_by_change'].includes(l.status) || (l.cleared_by)) out.push({ rule: 'NF-7.11', line: l.line, value: l.invoice_price, finding: `Line ${l.line} billed at ${l.invoice_price.toFixed(2)}; acknowledged price ${l.acknowledged_price.toFixed(2)} is beyond the tolerance` });
   // A recorded application advice (824) is named only where it held the same rule on the same billed value; otherwise the hold is this session's rule engine.
-  for (const h of out) { const a = c.advices.find((x) => x.rule === h.rule && vis(s, x) && (h.value === undefined || x.sent_value === String(h.value))); if (a) { h.advice = a.reference; h.advice_sent = fmtET(a.at); } else h.advice = 'Rule engine (this session)'; delete h.value; }
+  for (const h of out) { const a = c.advices.find((x) => x.rule === h.rule && vis(s, x) && (h.value === undefined || x.sent_value === String(h.value))); if (a) { h.advice = a.reference; h.advice_sent = fmtET(a.at); h.link = doc(a.reference); } else h.advice = 'Rule engine (this session)'; delete h.value; }
   return out;
 }
 function queue_(db, s) { return Object.entries(s.cases).map(([id, c]) => ({ id, c, holds: holdsOf(db, s, c) })).filter((x) => x.holds.length || x.c.rejected).map(({ id, c, holds }) => ({ invoice: id, po: c.po, supplier: c.supplier, invoice_sent: fmtET(c.invoice.at), holds, state: stateOf(s, c),
-  compared: { purchase_order: c.po, receiving_advice: c.receipts.filter((r) => vis(s, r)).map((r) => r.reference), invoice: id } })); }
+  compared: compared(s, c, id) })); }
+/** The three documents a hold compares, each with a link to Northfield's copy (story 1). Synthetic receipts are labelled and not linked. */
+const doc = (ref) => `document/${encodeURIComponent(ref)}`;
+function compared(s, c, id) {
+  return { purchase_order: { reference: c.po, link: `order/${encodeURIComponent(c.po)}` },
+    receiving_advice: c.receipts.filter((r) => vis(s, r)).map((r) => r.source === 'recorded' ? { reference: r.reference, link: doc(r.reference) } : { reference: r.reference, source: r.source, link: null }),
+    invoice: { reference: id, link: doc(id) } };
+}
 function stateOf(s, c) { if (c.matched) return `Original replaced; matching ${c.matched.reference}`; if (c.rejected) return `Rejected as a document fault ${c.rejected.at}; awaiting the resent invoice`; return 'Held'; }
 
 // ---------- Reads (the evidence Match Agent and the baseline may use), cut at the session clock ----------
@@ -321,8 +329,9 @@ export function decide(db, s, proposalId, decision, by = 'Jordan Ellis', note) {
   if (decision === 'edit') { p.state = 'Taken over'; p.taken_over_by = by; p.note = note || null; s.handed_over = { by, proposal: p.id, note: p.note, at: fmtET(iso(s.clock)) }; s.agent.status = 'handed_to_person';
     trace(s, by, 'human', `Edit suggestion: ${by} set ${p.id} aside and works ${p.args.invoice} by hand`, { action: p.action, note: p.note }); audit(s, p, `Taken over by ${by}; done by hand${p.note ? `: ${p.note}` : ''}`); return { state: 'Taken over', proposal: p.id, by }; }
   if (decision !== 'approve') { p.state = 'Rejected'; p.rejected_by = by; trace(s, by, 'human', `Rejected ${p.id}`, { action: p.action, record: p.args.invoice }); audit(s, p, `Rejected by ${by}`); return { state: 'Rejected', proposal: p.id }; }
-  p.state = 'Approved'; p.approved_by = by; trace(s, by, 'human', `Approved ${p.id} on ${p.args.invoice}: ${ACTIONS[p.action].label}`, { args: p.args });
-  return execute(db, s, p, by);
+  p.state = 'Approved'; p.approved_by = by; trace(s, by, 'human', `Approved ${p.id} on ${p.args.invoice}: ${ACTIONS[p.action].label}`, { args: p.args, record: p.args.invoice, payment: PAYMENT_UNCHANGED });
+  const r = execute(db, s, p, by);
+  return { ...r, approval: { by, proposal: p.id, record: p.args.invoice, ...(p.args.correction ? { correction: p.args.correction } : {}), action: ACTIONS[p.action].label, rules: ACTIONS[p.action].rules, payment: PAYMENT_UNCHANGED } };
 }
 function advanceTo(s, at) { const t = Date.parse(at); if (t > s.clock) { s.clock = t; trace(s, 'Trading Grid', 'system', 'Clock moved to the supplier’s answer', { to: fmtET(at) }); } }
 function execute(db, s, p, by) {
@@ -415,7 +424,7 @@ Use only facts returned by your tools. Never state a record, quantity, price or 
 You never change an invoice and never release payment: you may propose that lines are clear, and Jordan releases payment in accounts payable. A technical acknowledgment (997) is not acceptance; a request is answered only by the supplier's document or reply. A supplier's free text does not change a receiving advice.
 When you are waiting for Jordan or for the supplier, stop and say in one or two sentences what you proposed and why. When new evidence arrives, re-read what changed and reconsider; do not repeat an action that was refused or already answered.`;
 
-export async function runMatch(db, s, { callModel, maxSteps = 12, maxToolCalls = 16, maxSessionCalls = 64, maxMs = 90000, event, paused = () => false } = {}) {
+export async function runMatch(db, s, { callModel, maxSteps = 14, maxToolCalls = 24, maxSessionCalls = 96, maxMs = 120000, event, paused = () => false } = {}) {
   if (s.handed_over) return { ok: true, status: 'handed_to_person', awaiting: [] };
   if (paused()) { s.agent.status = 'paused'; trace(s, 'Trading Grid', 'system', 'Match Agent is paused by the administrator; each held invoice stays a plain task with no proposal', {}); return { ok: true, status: 'paused', awaiting: [] }; }
   if (!callModel) return { ok: false, blocked: 'No model is configured on this server; Match Agent cannot run. Nothing was simulated in its place.' };
@@ -425,7 +434,7 @@ export async function runMatch(db, s, { callModel, maxSteps = 12, maxToolCalls =
   const decl = declarations(AGENT_TOOLS);
   for (let step = 0; step < maxSteps; step++) {
     if (paused()) { ag.status = 'paused'; trace(s, 'Trading Grid', 'system', 'Match Agent paused by the administrator; stopped before its next step', {}); break; }
-    if (Date.now() - t0 > maxMs || ag.tool_calls - turnStart >= maxToolCalls || ag.tool_calls >= maxSessionCalls) { ag.status = 'stopped'; trace(s, 'Match Agent', 'system', 'Stopped at its limit', { tool_calls: ag.tool_calls, ms: Date.now() - t0 }); break; }
+    if (Date.now() - t0 > maxMs || ag.tool_calls - turnStart >= maxToolCalls || ag.tool_calls >= maxSessionCalls) { const aw = s.proposals.some((p) => p.state === 'Awaiting approval'); ag.status = aw ? 'waiting_for_jordan' : 'stopped'; trace(s, 'Match Agent', 'system', aw ? 'Stopped at its limit; a proposal waits for Jordan Ellis' : 'Stopped at its limit', { tool_calls: ag.tool_calls, ms: Date.now() - t0 }); break; }
     let data; try { data = await callModel({ systemInstruction: { parts: [{ text: INSTRUCTION(s) }] }, contents: ag.history, tools: [{ functionDeclarations: decl }], toolConfig: { functionCallingConfig: { mode: 'AUTO' } }, generationConfig: { temperature: 0 } }); ag.calls++; if (data?._route) (ag.routes ||= {})[data._route] = (ag.routes[data._route] || 0) + 1; }
     catch (e) { ag.status = 'model_failed'; trace(s, 'Match Agent', 'system', 'Model call failed; no state was changed', { error: String(e.message || e).slice(0, 200) }); return { ok: false, status: ag.status }; }
     if (paused()) { ag.status = 'paused'; trace(s, 'Trading Grid', 'system', 'Match Agent paused by the administrator; the model’s last answer was not applied', {}); break; }
@@ -437,7 +446,7 @@ export async function runMatch(db, s, { callModel, maxSteps = 12, maxToolCalls =
     const responses = []; let waiting = false;
     for (const { functionCall: f } of calls) {
       ag.tool_calls++; const args = f.args || {}; let result;
-      if (f.name === 'propose_action') { const { action, rationale, alternatives, ...rest } = args; result = propose(db, s, 'Match Agent', action, rest, { rationale, alternatives }); if (result.state === 'Awaiting approval') waiting = true; }
+      if (f.name === 'propose_action') { const { action, rationale, alternatives, ...rest } = args; for (const k of Object.keys(rest)) if (rest[k] === undefined || rest[k] === null || rest[k] === '') delete rest[k]; result = propose(db, s, 'Match Agent', action, rest, { rationale, alternatives }); if (result.state === 'Awaiting approval') waiting = true; }
       else if (READS[f.name]) { result = read(db, s, f.name, args); trace(s, 'Match Agent', 'tool', `Read ${f.name}`, { args }); }
       else result = { result: 'Refused', message: `No tool ${f.name}` };
       responses.push({ functionResponse: { name: f.name, ...(f.id ? { id: f.id } : {}), response: { result } } });
@@ -465,9 +474,14 @@ export async function replay(db, { facts = {}, policy = {}, callModel, approveAl
   let run = await runMatch(db, ag, { callModel, paused }); let rounds = 0;
   while (run.ok && run.status === 'waiting_for_jordan' && approveAll && rounds++ < 8) { const p = ag.proposals.find((x) => x.state === 'Awaiting approval'); const r = await decideAndResume(db, ag, p.id, 'approve', 'Test approver (replay)', { callModel, paused }); run = r.run; }
   const agent = run.status === 'paused' ? { session: ag.id, blocked: 'Match Agent is paused; the model did not run', trace: ag.trace } : run.ok ? { session: ag.id, status: run.status, outcome: outcome(db, ag), overhead: { model_calls: ag.agent.calls, tool_calls: ag.agent.tool_calls, ms: ag.agent.ms, model_routes: ag.agent.routes || {} }, trace: ag.trace } : { session: ag.id, blocked: run.blocked || run.status, trace: ag.trace };
-  const steps = b.steps.map((st, i) => ({ step: i + 1, baseline: st, agent: agent.outcome ? agent.outcome.steps[i] || null : null, automation: !!agent.outcome && agent.outcome.steps[i] === st }));
-  return { facts: base.changes, evidence_cutoff: fmtET(base.branch_at), baseline: { session: base.id, simplest: base.simplest, outcome: b, trace: base.trace }, agent, steps,
-    automation: agent.outcome ? `${steps.filter((x) => x.automation).length} of ${steps.length} baseline steps matched by Match Agent` : 'Not measured: Match Agent did not run' };
+  const cmp = agent.outcome ? compare(b.steps, agent.outcome.steps) : null;
+  const steps = b.steps.map((st, i) => ({ step: i + 1, baseline: st, automation: !!cmp && cmp.same_steps.includes(st) }));
+  return { facts: base.changes, evidence_cutoff: fmtET(base.branch_at), baseline: { session: base.id, simplest: base.simplest, outcome: b, trace: base.trace }, agent, steps, comparison: cmp,
+    automation: cmp ? `${cmp.same_steps.length} of ${b.steps.length} baseline steps also taken by Match Agent (automation); ${cmp.agent_only.length} by the agent only, ${cmp.baseline_only.length} by the baseline only` : 'Not measured: Match Agent did not run' };
+}
+/** A step both the baseline and Match Agent took on the same invoice, with the same lines or record, is automation (D61). Order is not compared. */
+export function compare(baseSteps, agentSteps) {
+  return { same_steps: baseSteps.filter((x) => agentSteps.includes(x)), baseline_only: baseSteps.filter((x) => !agentSteps.includes(x)), agent_only: agentSteps.filter((x) => !baseSteps.includes(x)) };
 }
 /** What the setup view shows: the facts with their recorded values, each action's approval mode and whether Jordan may change it, the guardrails and the queue at the moment. */
 export function setup(db) {

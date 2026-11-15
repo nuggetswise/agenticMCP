@@ -3,6 +3,8 @@
 // no recorded row changed, the server's guards, and story 4 (Ashby sees shared documents only).
 import { createHash } from 'node:crypto';
 import * as M from '../../src/match.js';
+import { ASHBY_PRIVATE, ASHBY_REFUSALS, refusalText } from '../../src/tools.js';
+import { NOT_AVAILABLE } from '../../src/domain.js';
 
 export default function ({ ash, nf, ok, eq }) {
   const moment = M.storyMoment(nf);
@@ -10,13 +12,21 @@ export default function ({ ash, nf, ok, eq }) {
   eq('match.story_moment_before_the_recorded_correction', [moment.at, moment.anchor, later?.invoice, later?.sent_at > moment.at], ['2026-11-10T14:00:00.000Z', 'INV-7731', 'INV-7731C', true]);
 
   // Hash of the recorded rows a session reads, before and after every session in this file.
-  const rowsHash = () => createHash('sha1').update(JSON.stringify(['invoices', 'invoice_lines', 'errors', 'order_changes', 'receipts', 'shipment_lines'].map((t) => nf.prepare(`SELECT * FROM ${t} ORDER BY 1, 2`).all())
+  const rowsHash = () => createHash('sha1').update(JSON.stringify(['invoices', 'invoice_lines', 'errors', 'order_changes', 'receipts', 'shipment_lines', 'remittance_items', 'adjustments'].map((t) => nf.prepare(`SELECT * FROM ${t} ORDER BY 1, 2`).all())
     .concat([nf.prepare("SELECT doc_id, status, sent_at FROM documents WHERE doc_type IN ('810','824','861','856','865','997') ORDER BY doc_id").all()]))).digest('hex');
   const h0 = rowsHash();
 
   // Story 1: the queue at the moment lists each held invoice with the rule that held it and the three documents compared.
   const s0 = M.startSession(nf); const q = M.read(nf, s0, 'read_queue').held;
-  eq('match.queue_at_moment', q.map((x) => [x.invoice, x.holds.map((h) => `${h.rule}:${h.advice}`), x.compared.purchase_order, x.compared.receiving_advice.length > 0, x.state]), [['INV-7731', ['NF-7.8:AA-INV-7731'], 'NR-450118', true, 'Held']]);
+  eq('match.queue_at_moment', q.map((x) => [x.invoice, x.holds.map((h) => `${h.rule}:${h.advice}`), x.compared.purchase_order.reference, x.compared.receiving_advice.length > 0, x.state]), [['INV-7731', ['NF-7.8:AA-INV-7731'], 'NR-450118', true, 'Held']]);
+  // Story 1: every hold, in every preset, names its rule, and the hold links the PO, each receiving advice and the invoice.
+  { const bad = []; for (const [name, facts] of Object.entries(M.VARIATIONS)) { const s = M.startSession(nf, { facts }); for (const h of M.read(nf, s, 'read_queue').held) {
+      const c = h.compared; if (!h.holds.length || h.holds.some((x) => !['NF-7.8', 'NF-7.10', 'NF-7.11'].includes(x.rule) || !x.finding)) bad.push(`${name} ${h.invoice}: hold without its rule`);
+      if (c.purchase_order.link !== `order/${h.po}` || c.invoice.link !== `document/${h.invoice}` || !c.receiving_advice.length || c.receiving_advice.some((r) => r.link !== `document/${r.reference}` && !(r.link === null && /^synthetic/.test(r.source)))) bad.push(`${name} ${h.invoice}: ${JSON.stringify(c)}`);
+      if (h.holds.some((x) => x.advice !== 'Rule engine (this session)' && x.link !== `document/${x.advice}`)) bad.push(`${name} ${h.invoice}: advice not linked`); } }
+    eq('match.story1_each_hold_names_its_rule_and_links_po_receipt_invoice', bad, []);
+    const rv = M.startSession(nf).cases[moment.anchor].receipts.map((r) => r.reference); const known = rv.filter((ref) => nf.prepare("SELECT 1 FROM documents WHERE reference = ? AND doc_type = '861'").get(ref));
+    eq('match.story1_linked_receiving_advice_is_a_recorded_861', [rv.length > 0, known.length === rv.length], [true, true]); }
   eq('match.queue_equals_recorded_holds', M.heldAt(nf, moment.at).map((x) => [x.invoice, x.rule]), q.flatMap((x) => x.holds.map((h) => [x.invoice, h.rule])));
   // The same rule engine, later in the quarter, holds other suppliers' invoices under NF-7.11 and NF-7.10 (T1.6).
   eq('match.rule_engine_holds_t16_variances', M.heldAt(nf, '2026-11-24T19:00:00.000Z').map((x) => `${x.invoice}:${x.rule}`), ['INV-V470001:NF-7.11', 'INV-V470004:NF-7.10']);
@@ -43,6 +53,18 @@ export default function ({ ash, nf, ok, eq }) {
   }
   const triple = runs.triple_mismatch.s; const tr = triple.reads.map((r) => r.name);
   ok('match.triple_mismatch_reads_receiving_advice_first', tr.indexOf('read_receipts') >= 0 && tr.indexOf('read_receipts') < tr.indexOf('read_invoice') && /Receiving advice RCV-/.test(runs.triple_mismatch.o.lines.find((l) => l.line === 1).settling_record), tr.join());
+  // Story 2, the mutation test: change one record and the next step switches, following the decision table.
+  { const step = (facts) => { const s = M.startSession(nf, { facts }); const n = M.nextStep(nf, s, moment.anchor); return `${n.action}${n.args?.lines ? ' ' + n.args.lines.join(',') : ''}${n.args?.line ? ' ' + n.args.line : ''}`; };
+    const one = (a, b) => Object.keys({ ...a, ...b }).filter((k) => JSON.stringify(a[k]) !== JSON.stringify(b[k]));
+    const V = M.VARIATIONS;
+    eq('match.story2_mutation_accepted_order_change_switches_hold_to_clear', [one(V.price_beyond_tolerance, V.price_set_by_change), step(V.price_beyond_tolerance), step(V.price_set_by_change)], [['price_change_line3'], 'request_credit_or_corrected_invoice 3', 'clear_line_by_accepted_change 3']);
+    // Row 5 (all three disagree): once the corrected invoice is matched, a changed receiving advice decides line 1, and the lines proposed clear change.
+    eq('match.story2_mutation_receiving_advice_changes_the_settling_record', [one(V.canonical, V.triple_mismatch), ...[V.canonical, V.triple_mismatch].map((f) => { const o = M.runBaseline(nf, M.startSession(nf, { facts: f })); const l = o.lines[0]; return `${l.status} ${/^Receiving advice RCV-/.test(l.settling_record || '') ? 'receiving advice' : l.settling_record}; clear ${o.proposed_clear_for_payment.join(',')}`; })],
+      [['received_line1'], 'clear null; clear 1,3', 'above_received receiving advice; clear 3']);
+    eq('match.story2_mutation_total_switches_to_reject', [one({ billed_line1: 270, received_line2: 120 }, V.total_differs), step({ billed_line1: 270, received_line2: 120 }), step(V.total_differs)], [['total_offset'], 'release_for_payment_proposal 1,2,3', 'reject_document_fault']);
+    // The recorded world itself: before INV-7731C is on file the next step is a request; once the clock passes its recorded time the next step matches it.
+    const s = M.startSession(nf); const before = M.nextStep(nf, s, moment.anchor); const p = M.propose(nf, s, 'Check', before.action, before.args); M.decide(nf, s, p.proposal, 'approve', 'Jordan Ellis'); const after = M.nextStep(nf, s, moment.anchor);
+    eq('match.story2_mutation_recorded_corrected_invoice_switches_request_to_match', [before.action, after.action, after.args?.correction], ['request_credit_or_corrected_invoice', 'match_corrected_invoice', 'INV-7731C']); }
   ok('match.mutation_next_step_follows_the_record', runs.canonical.o.first_step !== runs.correction_on_file.o.first_step && runs.canonical.o.lines[0].status !== runs.triple_mismatch.o.lines[0].status);
   eq('match.simplest_baseline_shows_held_with_rule', runs.canonical.s.simplest.map((x) => [x.invoice, x.shows, x.rules]), [['INV-7731', 'Held', ['NF-7.8']]]);
   eq('match.no_read_after_the_branch', leaks, []);
@@ -66,10 +88,33 @@ export default function ({ ash, nf, ok, eq }) {
     const n = runs.ashby_no_answer.s; eq('match.technical_acknowledgment_is_not_acceptance', [M.read(nf, n, 'read_requests').requests.map((r) => [r.state, r.answer]), runs.ashby_no_answer.o.lines[0].status], [[['Acknowledged (997), not answered', 'No answer']], 'above_shipped']);
     let threw = 0; for (const f of [{ billed_line1: 9999 }, { ashby_answer: 'pay' }, { po: 'NR-1' }, { ashby_note: 'x'.repeat(301) }]) { try { M.startSession(nf, { facts: f }); } catch { threw++; } } eq('match.facts_out_of_range_refused', threw, 4); }
 
+  // Story 3: approval names the person and the record, and changes no payment state, in the session or in the recorded world.
+  { const s = M.startSession(nf); const p = M.propose(nf, s, 'Match Agent', 'request_credit_or_corrected_invoice', { invoice: 'INV-7731', lines: [1, 2] }); const before = JSON.stringify(M.outcome(nf, s).payment_released);
+    const d = M.decide(nf, s, p.proposal, 'approve', 'Jordan Ellis'); const a = s.audit.filter((x) => x.proposal === p.proposal).at(-1); const t = s.trace.find((x) => x.type === 'human');
+    const pay = nf.prepare("SELECT (SELECT group_concat(status) FROM invoices WHERE po = 'NR-450118') st, (SELECT count(*) FROM remittance_items WHERE invoice LIKE 'INV-7731%') r").get();
+    eq('match.story3_approval_names_person_and_record', [d.approval?.by, d.approval?.record, a.approver, a.record, t.actor, /INV-7731/.test(t.what), t.detail.record], ['Jordan Ellis', 'INV-7731', 'Jordan Ellis', 'INV-7731', 'Jordan Ellis', true, 'INV-7731']);
+    eq('match.story3_approval_changes_no_payment_state', [d.approval?.payment, before, M.outcome(nf, s).payment_released, Object.values(M.ACTIONS).filter((x) => /payment/i.test(x.label)).map((x) => [x.mode, x.editable]), M.startSession(nf, { policy: { release_for_payment_proposal: 'approve' } }).modes.release_for_payment_proposal, [pay.st, pay.r]],
+      [M.PAYMENT_UNCHANGED, 'false', false, [['suggest', false]], 'suggest', ['Held, then replaced by INV-7731C,Delivered', nf.prepare("SELECT count(*) n FROM remittance_items WHERE invoice LIKE 'INV-7731%'").get().n]]);
+    const r = M.startSession(nf); const rp = M.propose(nf, r, 'Match Agent', 'request_credit_or_corrected_invoice', { invoice: 'INV-7731', lines: [1, 2] }); const rj = M.decide(nf, r, rp.proposal, 'reject', 'Jordan Ellis');
+    eq('match.story3_rejection_names_person_and_sends_nothing', [rj.state, r.audit.at(-1).approver, r.audit.at(-1).record, r.requests.length], ['Rejected', 'Jordan Ellis', 'INV-7731', 0]); }
+
   // Story 4: Ashby sees the hold and any request on the shared documents only; Ashby's copy holds no Northfield accounts payable records.
   { const v = M.supplierView(runs.canonical.s);
     eq('match.ashby_sees_shared_documents_only', [v.invoices[0].application_advice.map((a) => a.reference), v.requests_received.map((r) => r.kind), /"(proposals?|payment_released|settling_record|matching|state)":/.test(JSON.stringify(v)), ash.prepare("SELECT count(*) n FROM documents WHERE reference = 'AA-INV-7731'").get().n,
       ash.prepare("SELECT count(*) n FROM sqlite_master WHERE name IN ('review_notes','draft_rules','rule_replays','proposals')").get().n], [['AA-INV-7731'], ['correction'], false, 1, 0]); }
+
+  // Story 4: Ashby's scope refuses Northfield's accounts payable records and notes with its own refusal text (the server reads the same values).
+  { const s = M.startSession(nf); const p = M.propose(nf, s, 'Match Agent', 'request_credit_or_corrected_invoice', { invoice: 'INV-7731', lines: [1, 2] }); M.decide(nf, s, p.proposal, 'edit', 'Jordan Ellis', 'Private AP note: call the buyer first');
+    const v = JSON.stringify(M.supplierView(s));
+    eq('match.story4_ashby_refuses_ap_records_and_notes_with_its_own_text', [refusalText(NOT_AVAILABLE, ASHBY_PRIVATE.what, 'Northfield Retailer'), ['SELECT * FROM review_notes', 'SELECT * FROM draft_rules'].map((q) => ASHBY_PRIVATE.tables.test(q)),
+      /accounts payable/.test(ASHBY_REFUSALS.find((t) => t.name === 'read_retailer_records').description), ash.prepare("SELECT count(*) n FROM sqlite_master WHERE name IN ('review_notes','draft_rules')").get().n, /Private AP note|MP-\d|Jordan Ellis|Taken over/.test(v)],
+      ['Not available to Ashby: Northfield’s accounts payable, draft rules and claims reviewer notes belong to Northfield Retailer.', [true, true], true, 0, false]); }
+
+  // Nothing meant for a screen carries raw X12: reads, traces, outcomes, the supplier's view and setup link documents only (D63).
+  { const X12 = /ISA\*|GS\*|ST\*\d{3}\*|IEA\*|SE\*\d+\*|~\s*(BIG|IT1|TDS|BAK|BSN)\*/; const hits = [];
+    for (const [name, { s, o }] of Object.entries(runs)) for (const [what, v] of [['reads', s.reads.map((r) => r.out)], ['trace', s.trace], ['outcome', o], ['supplier view', M.supplierView(s)], ['audit', s.audit]]) if (X12.test(JSON.stringify(v))) hits.push(`${name} ${what}`);
+    if (X12.test(JSON.stringify(M.setup(nf)))) hits.push('setup');
+    eq('match.no_raw_x12_on_any_screen_output', hits, []); }
 
   eq('match.sessions_change_no_recorded_row', [viol, rowsHash() === h0], [[], true]);
 }

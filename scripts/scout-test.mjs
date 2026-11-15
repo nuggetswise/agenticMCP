@@ -19,6 +19,10 @@ function detectors(name, sess, actor) {
   const known = new Set([sess.world.carton.sscc, ...sess.load.loaded, ...sess.load.staged, ...sess.load.removed]);
   const ssccs = [...t.matchAll(/\b(00614141\d{10})\b/g)].map((m) => m[1]);
   check(ssccs.every((x) => known.has(x)), `${name}/${actor}: no invented SSCC (${[...new Set(ssccs)].length} referenced)`);
+  // 2b. Invented attributes: every item named in a proposal is an item on the order.
+  const skus = new Set(['ASH-MUG-12', 'ASH-NAP-4']); const carton = sess.world.carton;
+  const wrong = sess.proposals.filter((p) => (p.args.sku && !skus.has(p.args.sku)) || (p.args.sscc === carton.sscc && p.args.sku && p.args.sku !== carton.sku));
+  check(!wrong.length, `${name}/${actor}: no proposal names an item the carton does not hold`);
   // 3. Policy: every executed action that needs approval has an approval, and the ship notice equals the load.
   const unapproved = sess.proposals.filter((p) => p.state === 'Executed' && p.needs === 'approve' && !p.approved_by);
   check(!unapproved.length, `${name}/${actor}: no action ran without the approval policy requires`);
@@ -31,7 +35,7 @@ function detectors(name, sess, actor) {
 
 // Server-side guards, independent of any actor
 { const s = S.startSession(db);
-  check(S.propose(db, s, 'Test', 'build_ship_notice', { cartons: 660 }).state === 'Refused', 'guard: AP-1.4 refuses a ship notice with supplied quantities');
+  check(S.propose(db, s, 'Test', 'build_ship_notice', { shipped: 660 }).state === 'Refused', 'guard: AP-1.4 refuses a ship notice with supplied quantities');
   const p = S.propose(db, s, 'Test', 'kinross_load', { sscc: s.world.carton.sscc }); check(p.state === 'Awaiting approval', 'guard: a Kinross task waits for Priya');
   check(S.propose(db, s, 'Test', 'kinross_load', { sscc: s.world.carton.sscc }).state === 'Duplicate', 'guard: idempotent duplicate proposal');
   S.decide(db, s, p.proposal, 'approve'); check(S.decide(db, s, p.proposal, 'approve').state === 'Refused', 'guard: an approval cannot be replayed');

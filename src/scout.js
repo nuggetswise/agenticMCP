@@ -69,13 +69,14 @@ function trace(s, actor, type, what, detail = {}) {
 const TYPES = { system: 'System', rule: 'Fixed rule', ai: 'AI judgment', human: 'Human approval', external: 'External confirmation', tool: 'Tool call' };
 
 // ---------- Rule engine ----------
-function ruleDetect(db, s) {
+function ruleDetect(db, s, quiet) {
   const min = Math.round((Date.parse(s.world.seal_at) - s.clock) / MIN);
   const short = s.load.expected - s.load.base_loaded - s.load.loaded.length;
   const findings = [];
   if (short > 0) findings.push({ rule: 'NF-4.5', finding: `${s.load.base_loaded + s.load.loaded.length} of ${s.load.expected} cartons loaded; the ship notice must match the load carton for carton` });
   if (s.erp.ship_to !== 'DC 2') findings.push({ rule: 'NF-4.7', finding: 'Supplier ERP ship-to DC 4; Northfield’s current order (change 1) says DC 2' });
   if (s.erp.lines !== 'Current') findings.push({ rule: 'NF-4.8', finding: 'Supplier ERP sales order carries the old line numbers' });
+  if (quiet) return findings;
   trace(s, 'Rule engine', 'rule', findings.length ? `Detected ${findings.length} rule risks on NR-460207 before the seal` : 'No rule risk on NR-460207', { findings, seal_in_minutes: min });
   return findings;
 }
@@ -98,7 +99,7 @@ export const READS = {
       const documents = db.prepare('SELECT doc_type type, reference, sent_at, status FROM documents WHERE po = ? AND sent_at <= ? ORDER BY sent_at').all(po, cut).map((d) => ({ ...d, sent_at: fmtET(d.sent_at) }));
       return { po, as_of: fmtET(iso(s.clock)), evidence_cutoff: fmtET(cut), lines, order_changes: changes, northfield_current_ship_to: 'DC 2 (order change 1, EDI 860)', documents, supplier_erp_sales_order: { ship_to: s.erp.ship_to, line_numbers: s.erp.lines }, session_notices: s.notices }; } },
   read_load: { description: 'The Kinross load at door 7 for shipment SHP-460207: cartons expected and loaded by SSCC, cartons staged and not loaded, cartons removed, minutes to the trailer seal, and whether the trailer is sealed or departed.', input: {},
-    run: (db, s) => ({ shipment: s.load.shipment, expected: s.load.expected, loaded: cartonsLoaded(s), loaded_this_session: s.load.loaded, staged_not_loaded: s.load.staged, removed: s.load.removed, minutes_to_seal: Math.max(0, Math.round((Date.parse(s.world.seal_at) - s.clock) / MIN)), sealed: s.load.sealed, departed: s.load.departed, source: 'Kinross warehouse system · API' }) },
+    run: (db, s) => ({ shipment: s.load.shipment, expected: s.load.expected, loaded: cartonsLoaded(s), loaded_this_session: s.load.loaded, staged_not_loaded: s.load.staged.map((x) => x === s.world.carton.sscc ? { sscc: x, po_line: s.world.carton.line, sku: s.world.carton.sku, cases: 1 } : { sscc: x }), removed: s.load.removed, minutes_to_seal: Math.max(0, Math.round((Date.parse(s.world.seal_at) - s.clock) / MIN)), sealed: s.load.sealed, departed: s.load.departed, source: 'Kinross warehouse system · API' }) },
   read_inventory: { description: 'Kinross stock of one item at one site as Kinross reports it: on hand, reserved for other orders, free, and minutes to stage a case to a door.', input: { sku: z.string().describe('Item, for example ASH-MUG-12'), site: z.string().optional().describe('Site, default KIN-GRV (Kinross Groveport)') },
     run: (db, s, a) => { const st = s.world.stock.find((x) => x.sku === a.sku && x.site === (a.site || 'KIN-GRV')); return st ? { sku: st.sku, site: 'Kinross Groveport', on_hand: st.on_hand, reserved: st.reserved, reserved_for: st.reserved_for, free: st.on_hand - st.reserved, staging_minutes: st.staging_minutes, source: 'Kinross warehouse system · API' } : { sku: a.sku, found: false, message: 'Kinross reports no stock of this item at this site' }; } },
   read_tasks: { description: 'Every task sent to Kinross in this session with its state and Kinross’s response, including any free-text note Kinross added.', input: {},
@@ -107,6 +108,8 @@ export const READS = {
     run: (db, s, a) => a.ids?.length ? { rules: a.ids.map((id) => D.rule(db, id)).filter(Boolean) } : D.rules(db, { topic: a.topic || '' }) },
   read_policy: { description: 'What each action needs (Scout may only suggest, Priya approves, or it runs under her standing policy), the rule behind it, and the administrator guardrails no one may change.', input: {},
     run: (db, s) => ({ actions: Object.fromEntries(Object.entries(ACTIONS).map(([k, a]) => [k, { does: a.label, done_by: a.actor, rule: a.rule, needs: s.modes[k] === 'policy' ? 'Runs under Priya’s standing policy' : s.modes[k] === 'approve' ? 'Priya approves' : 'Scout may only suggest; Priya does it by hand' }])), guardrails: GUARDRAILS }) },
+  read_findings: { description: 'Rule risks the rule engine currently reports on NR-460207 (Northfield and Ashby rules), with the minutes left before the trailer seal.', input: {},
+    run: (db, s) => ({ findings: ruleDetect(db, s, true), minutes_to_seal: Math.max(0, Math.round((Date.parse(s.world.seal_at) - s.clock) / MIN)) }) },
   read_proposals: { description: 'Every action proposed in this session, with its state (awaiting approval, approved, rejected, executed, failed, refused) and its result.', input: {},
     run: (db, s) => ({ proposals: s.proposals.map((p) => ({ id: p.id, action: p.action, args: p.args, state: p.state, result: p.result || null })) }) },
 };
@@ -132,7 +135,10 @@ function validate(s, action, a) {
   if (s.load.sealed && action.startsWith('kinross_')) return 'The trailer is sealed; Kinross cannot load anything more onto it.';
   if (['kinross_load', 'kinross_relabel', 'kinross_overpack'].includes(action) && a.sscc !== c.sscc && !s.load.staged.includes(a.sscc)) return `Carton ${a.sscc || '(none)'} is not staged for this shipment.`;
   if (action === 'kinross_replace' || action === 'kinross_replace_reserved') { if (!a.sku || !(a.cases > 0)) return 'Name the item and the number of cases.'; }
-  if (action === 'build_ship_notice' && (a.quantities || a.cartons)) return 'AP-1.4: a ship notice is built only from the confirmed load scan; quantities cannot be supplied.';
+  const allowed = { kinross_load: ['sscc'], kinross_relabel: ['sscc'], kinross_overpack: ['sscc'], kinross_replace: ['sku', 'cases'], kinross_replace_reserved: ['sku', 'cases'], erp_align_order: [], build_ship_notice: [], release_ship_notice: [], request_carrier_hold: [], notify_buyer_short: ['line', 'shipped'] }[action];
+  const extra = Object.keys(a).filter((k) => !allowed.includes(k));
+  if (extra.length) return action === 'build_ship_notice' ? `AP-1.4: a ship notice is built only from the confirmed load scan; ${extra.join(', ')} cannot be supplied.` : `${action} takes only ${allowed.join(', ') || 'no arguments'}; refused ${extra.join(', ')}.`;
+  if ((action === 'kinross_replace' || action === 'kinross_replace_reserved') && a.sku !== c.sku) return `No carton needing replacement holds ${a.sku}; the staged carton holds ${c.sku}.`;
   if (action === 'release_ship_notice' && !s.asn) return 'There is no built ship notice to release.';
   if (action === 'release_ship_notice' && s.asn?.released) return 'This ship notice is already released.';
   if (action === 'notify_buyer_short' && !(a.line && a.shipped >= 0)) return 'Name the line and the quantity that ships.';
@@ -248,7 +254,7 @@ When you are waiting for Priya or for Kinross, stop and say in one or two senten
 export async function runScout(db, s, { callModel, maxSteps = 12, maxToolCalls = 24, maxMs = 90000, event } = {}) {
   if (!callModel) return { ok: false, blocked: 'No model is configured on this server; Scout cannot run. Nothing was simulated in its place.' };
   const ag = s.agent; const t0 = Date.now(); ag.status = 'running';
-  if (!ag.history.length) ag.history.push({ role: 'user', parts: [{ text: `Business event: Kinross load scan for shipment SHP-460207 shows ${s.load.base_loaded} of ${s.load.expected} cartons loaded. Clock: ${fmtET(iso(s.clock))}.` }] });
+  if (!ag.history.length) ag.history.push({ role: 'user', parts: [{ text: `Business event: Kinross load scan for shipment SHP-460207 shows ${s.load.base_loaded} of ${s.load.expected} cartons loaded. The rule engine reports: ${ruleDetect(null, s, true).map((f) => `${f.rule}: ${f.finding}`).join('; ')}. Clock: ${fmtET(iso(s.clock))}.` }] });
   else if (event) ag.history.push({ role: 'user', parts: [{ text: `New evidence at ${fmtET(iso(s.clock))}: ${event}` }] });
   const decl = declarations(AGENT_TOOLS);
   for (let step = 0; step < maxSteps; step++) {

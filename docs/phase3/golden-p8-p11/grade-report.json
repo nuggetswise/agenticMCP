@@ -1,0 +1,106 @@
+{
+ "run1.json": {
+  "G8a": {
+   "pass": true
+  },
+  "G8b": {
+   "pass": true
+  },
+  "G8c": {
+   "pass": true
+  },
+  "G11a": {
+   "pass": true
+  },
+  "G11b": {
+   "pass": true
+  },
+  "G11c": {
+   "pass": true
+  }
+ },
+ "run2.json": {
+  "G8a": {
+   "pass": true
+  },
+  "G8b": {
+   "pass": false,
+   "missing": [
+    "7",
+    "$9721.1"
+   ]
+  },
+  "G8c": {
+   "pass": true
+  },
+  "G11a": {
+   "pass": true
+  },
+  "G11b": {
+   "pass": true
+  },
+  "G11c": {
+   "pass": true
+  }
+ },
+ "run3.json": {
+  "G8a": {
+   "pass": true
+  },
+  "G8b": {
+   "pass": true
+  },
+  "G8c": {
+   "pass": true
+  },
+  "G11a": {
+   "pass": true
+  },
+  "G11b": {
+   "pass": true
+  },
+  "G11c": {
+   "pass": true
+  }
+ },
+ "run4.json": {
+  "G8a": {
+   "pass": true
+  },
+  "G8b": {
+   "pass": true
+  },
+  "G8c": {
+   "pass": true
+  },
+  "G11a": {
+   "pass": true
+  },
+  "G11b": {
+   "pass": true
+  },
+  "G11c": {
+   "pass": true
+  }
+ },
+ "run5.json": {
+  "G8a": {
+   "pass": true
+  },
+  "G8b": {
+   "pass": true
+  },
+  "G8c": {
+   "pass": true
+  },
+  "G11a": {
+   "pass": true
+  },
+  "G11b": {
+   "pass": true
+  },
+  "G11c": {
+   "pass": true
+  }
+ }
+}

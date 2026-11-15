@@ -243,7 +243,7 @@ Each question also sits as a comment on its row in the Claude doc; answer there 
 2. The Prototype Plan's gallery card still carries the Threat Ranking title. It has to be renamed in claude.ai.
 3. Delete the three retired presenter-notes files from this project?
 4. Nine pages may be retired (listed in `docs/phase0/HANDOFF.md`). Keep or retire each?
-5. Approve change list 3 (`docs/phase1/change-list-3.md`)?
+
 
 ## Inventory
 
@@ -365,12 +365,12 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T0.13 | P5 | Complete P5's grid row | — | P5 link; `docs/phase0/walks/` for the dead state | Evidence: `docs/phase0/P5-grid.md`; C1 in `docs/phase0/golden/t03/RESULTS.md`; CALLS 51 | Done |
 | T0.14 | P6 | Complete P6's grid row | — | P6 link in Inventory | Evidence: `docs/phase0/P6-grid.md`; CALLS 41 | Done |
 | T0.15 | P7 | Complete P7's grid row | T0.5 | P7 link; `contract/claims.json` | Evidence: `docs/phase0/P7-grid.md`; CALLS 43 | Done |
-| T0.16 | P8 | Complete P8's grid row; only C1 is left. Its three questions failed five runs because three definitions lived only inside the screen. With them stated, the shared records reproduce each P8 figure (`docs/phase0/P8-definitions.md`, CALLS 66). Left: five graded runs with the definitions in the question, under T0.3 | — | P8 link; why its cells are N/A | Every P8 cell reads Done or N/A | Open |
+| T0.16 | P8 | Complete P8's grid row; only C1 is left. Its three questions failed five runs because three definitions lived only inside the screen. With them stated, the shared records reproduce each P8 figure (`docs/phase0/P8-definitions.md`, CALLS 66). Left: five graded runs with the definitions in the question, under T0.3 | — | P8 link; why its cells are N/A | Five no-context runs on 15 November (`docs/phase3/golden-p8-p11/RESULTS.md`; CALLS 93): C1 passes; P8 needs a fourth definition on screen, carried to its rework | Done |
 | T0.17 | P9 | Complete P9's grid row | — | P9 link in Inventory | Evidence: `docs/phase0/P9-grid.md` and the t03 golden results; CALLS 51 | Done |
-| T0.18 | P11 | Complete P11's grid row; only C1 is left (`docs/phase0/P11-grid.md`) | T1.9 | P11 link in Inventory | Every P11 cell reads Done or N/A | Open |
+| T0.18 | P11 | Complete P11's grid row; only C1 is left (`docs/phase0/P11-grid.md`) | T1.9 | P11 link in Inventory | Five no-context runs on 15 November (`docs/phase3/golden-p8-p11/RESULTS.md`; CALLS 93): C1 passes on PO-104912 and ASN-78260 | Done |
 | T0.19 | P12 | Complete P12's grid row | — | P12 link in Inventory | Evidence: P12 retired by the owner, CALLS 32 | Done |
 | T0.2 | P10 Ashby, P10 Northfield, P16 | Audit the two server scopes and the retailer catalogue connector as prototypes | — | Server reference; `docs/phase2/` | Evidence: `docs/phase0/P10-P16-audit.md`; P16 out of scope (D46); CALLS 52 | Done |
-| T0.3 | P1, P2, P4, P5, P8, P9, P11 | Golden questions: new sets for P8 and P11. P5 and P9 are done and P8 has run (`docs/phase0/golden/t03/`). P1, P2 and P4 are out of scope (D48) | P11's records are in the world (T1.9) | `docs/phase0/golden/` | Each has at least three questions with five graded runs | Open |
+| T0.3 | P1, P2, P4, P5, P8, P9, P11 | Golden questions: new sets for P8 and P11. P5 and P9 are done and P8 has run (`docs/phase0/golden/t03/`). P1, P2 and P4 are out of scope (D48) | — | `docs/phase0/golden/` | Five no-context runs on 15 November (`docs/phase3/golden-p8-p11/RESULTS.md`; CALLS 93): P8 G8a 5/5 with a fourth definition stated, G8b 4/5, G8c 5/5; P11 three new questions 5/5 each | Done |
 | T0.4 | World | Restore the X12 check against bots-grammars as a committed script | — | `validator/` | Evidence: `validator/botscheck.py` and `validator/bots-report.json`, commit 6bda779; CALLS 48 | Done |
 | T0.5 | P7 | Confirm manual pattern A by hand | — | `docs/phase0/FINDINGS.md`, turn 4 walks | Evidence: a walker limit, not a defect; `docs/phase0/P7-grid.md`; CALLS 43 | Done |
 | T0.6 | Partners | ShipHawk's partner-only questions and journey moment, from ShipHawk's own documentation; partner nodes on every route map. ShipHawk is done; route maps are read for every built screen except P1 and P4 | — | Partner checks; Partner diligence tab; `docs/phase0/T0.6-partners.md` | Closed with P1 and P4; CALLS 90 | Done |
@@ -411,8 +411,8 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T2.5 | P10 Ashby, P10 Northfield | Tool comparison includes Northfield's tools | — | Server reference, compared with published tool lists | Evidence: the comparison table under Server reference, by kind of job; Salesforce names unverified against the official page; CALLS 76 | Done |
 | T2.6 | P15 | Registry anchors hold the draft rule record | — | Prototype specs, P15 | Evidence: commit 0d4cd2b; P15 anchors `draft_rule:NFD-1` and the registry check reads it; CALLS 74 | Done |
 | T2.7 | Registry | Finish the registry: P11's job, agent verdict, decisions and anchors match its screen | — | Inventory; `docs/guide/registry-change-proposal.md` | Evidence: commit e02ce57; P11 has no agent and anchors the held and corrected live ship notice with its receiving advice; CALLS 58 | Done |
-| T2.8 | Docs | Repo copies of the other docs become dated snapshots | — | Where each fact lives, role of every other doc | Each copy under docs/ carries its export date and the registry check no longer treats it as current | Open |
-| T2.9 | P10 Northfield | Live Northfield connector run | Owner asks for a live Northfield demo | `docs/phase2/golden-nf/` | One Northfield golden question is answered through the live URL with the Northfield key | Blocked |
+| T2.8 | Docs | Repo copies of the other docs become dated snapshots | — | Where each fact lives, role of every other doc | Each snapshot's first line gives its export date and says it is not current; the gate checks that line and no longer holds the snapshots to the registry or the server (CALLS 92) | Done |
+| T2.9 | P10 Northfield | Live Northfield connector run | — | `docs/phase2/golden-nf/` | N2 and N3 answered live through Northfield's connector on 15 November, both matching (`docs/phase2/golden-nf/live-2026-11-15.md`; CALLS 92) | Done |
 | T2.10 | Server | Test whether a published prototype can read the live server, from a private test page only, since the URL carries the token | — | Server reference, Hosting | Evidence: the private page Live server test ran on 15 November from the owner's account. Through the viewer's connectors it read Ashby's side (order value on NR-450118) and Northfield's side (22 shared documents); a direct call to the server failed with the browser error Load failed. So a published page reaches the server only through the viewer's connector, and holds no key (`docs/phase2/T2.10-live-page.md`; CALLS 90) | Done |
 | T2.11 | Aviator | The in-product assistant on prototype screens: floating, bottom right, answering from the same tools as the company's connection | T2.10 | D56; Customer-agent access rules R24 to R27 | Live model answers verified on the real tools, refusal included: `docs/phase2/aviator-live-2026-11-13.txt`. The deployed endpoint answered on both sides; Northfield's side now lists its own documents on an order whose hold sat with the supplier (same file, CALLS 67). Left: Aviator on a prototype screen once T2.10 settles the route | Open |
 
@@ -439,7 +439,7 @@ Each row is one prototype through the Phase 4 loop under Build flow. Before prop
 | T4.13 | P5 | Scout Shipment Watch | T0.13, T2.4 | Decisions item 13; the working copy is not in the repo, so rebuild the fix; `docs/phase4/agent-entry.md`, items AE-P5; rebuild the main screen with the tg-retail-agent-prototype skill, with Approve and Edit suggestion as the only decision controls; wire it to the Scout runtime (D61) | Phase 4 loop complete | Open |
 | T4.14 | P6 | Northfield Charge Resolution | T0.14 | Decisions item 4; D28; `docs/phase4/agent-entry.md`, items AE-P6 | Phase 4 loop complete | Open |
 | T4.15 | P7 | Northfield Performance Improvement | T0.15, T1.2 | Decisions item 5; D51; `docs/phase4/agent-entry.md`, items AE-P7 | Phase 4 loop complete, with the world's week 6 orders and charge on screen and P7's contract check passing against the live page | Open |
-| T4.16 | P8 | Money in Motion, view only. Put the three definitions next to their figures and correct the two label faults the definitions file lists | T0.16, T1.4 | R20; `docs/phase0/P8-definitions.md` | Phase 4 loop complete | Open |
+| T4.16 | P8 | Money in Motion, view only. Put the four definitions (the fourth: units placed by where the goods are, `docs/phase3/golden-p8-p11/RESULTS.md`) next to their figures and correct the two label faults the definitions file lists | T0.16, T1.4 | R20; `docs/phase0/P8-definitions.md` | Phase 4 loop complete | Open |
 | T4.17 | P9 | Shelf Recovery | T0.17, T2.4 | D22; `docs/phase4/agent-entry.md`, items AE-P9 | Phase 4 loop complete | Open |
 | T4.18 | P11 | NetSuite Chargeback Avoidance | T0.18 | Decisions item 7; `docs/phase4/agent-entry.md`, items AE-P11 | Phase 4 loop complete | Open |
 | T4.19 | P12 | ERP-native Activation | T0.19 | Decisions item 6 | Evidence: no loop needed after retirement, CALLS 32 | Done |
@@ -509,7 +509,7 @@ The gate and smoke tests pass at commit 067aa9c942. Two of the plan's proofs hav
 
 | Proof | Command or location | Result |
 | --- | --- | --- |
-| World gate: invariants, catalogue equals the pack, thresholds from the catalogue | `npm run build` | 401 passed, 0 failed |
+| World gate: invariants, catalogue equals the pack, thresholds from the catalogue | `npm run build` | 331 passed, 0 failed |
 | Server smoke: both scopes, refusals, the shared deduction case | `npm run smoke` | 83 passed, 0 failed |
 | X12 validation | `npm run validate` | Passes, but its schemas were generated in this repo, so it does not meet the independent-schema test |
 | X12 against schemas this repo did not write | `validator/botscheck.py` with the bots-grammars X12 grammars | Every document checked; it faults exactly the documents the world rejects on a 997, and nothing else; all ten injected faults are rejected for their reason (`validator/bots-report.json`) |

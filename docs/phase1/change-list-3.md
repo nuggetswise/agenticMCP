@@ -1,4 +1,4 @@
-# Phase 1 change list 3 (proposed 15 November; waiting on the owner, W3)
+# Phase 1 change list 3 (withdrawn 15 November: the owner chose to skip it)
 
 Nothing in `world/`, `src/` or `scripts/` changes until the owner approves this list.
 

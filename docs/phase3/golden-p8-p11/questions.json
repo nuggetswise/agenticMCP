@@ -1,0 +1,38 @@
+[
+ {
+  "id": "G8a",
+  "prototype": "P8",
+  "connector": "Northfield (SupplierRetail)",
+  "q": "As of the end of 8 November 2026 (Eastern), how much open-order value sits at each stage from purchase order to payment across Northfield's suppliers? Put each order line's quantity in its furthest stage only: ordered and not yet acknowledged; confirmed and not shipped; shipped and not received; received and not invoiced; invoiced and not yet paid. Value at the line's purchase-order price. Use these definitions. Which orders count: buyer purchase orders only; replenishment orders are not counted; an order is open until every unit is paid or unfilled. When an order closes: when its ship notice is marked complete and every shipment is received; confirmed units not shipped by then are unfilled. Billed above received: compared by order line at the order price; units still in transit are not counted as billed above received; listed above 0.5% of the line's billed value. Place units by where the goods are, not by the paperwork: units shipped and not yet received count as shipped-not-received even when already invoiced; the invoiced stage holds only received units; for suppliers that deliver directly to stores and send no receiving advice, shipped units stay in shipped-not-received until paid."
+ },
+ {
+  "id": "G8b",
+  "prototype": "P8",
+  "connector": "Northfield (SupplierRetail)",
+  "q": "As of the end of 8 November 2026 (Eastern), which invoices bill more than was received by more than a 0.5% tolerance? Give the count and the total excess value at purchase-order price. Use these definitions. Which orders count: buyer purchase orders only; replenishment orders are not counted; an order is open until every unit is paid or unfilled. When an order closes: when its ship notice is marked complete and every shipment is received; confirmed units not shipped by then are unfilled. Billed above received: compared by order line at the order price; units still in transit are not counted as billed above received; listed above 0.5% of the line's billed value."
+ },
+ {
+  "id": "G8c",
+  "prototype": "P8",
+  "connector": "Northfield (SupplierRetail)",
+  "q": "Today Northfield returns unfilled value (quantity the supplier reduced or rejected at acknowledgment) to budget only when the order closes. Over orders acknowledged in the 90 days to 8 November 2026 and closed by then, how much value would have returned to budget if it were released at acknowledgment instead, across how many orders, and on average how many days earlier? Use these definitions. Which orders count: buyer purchase orders only; replenishment orders are not counted; an order is open until every unit is paid or unfilled. When an order closes: when its ship notice is marked complete and every shipment is received; confirmed units not shipped by then are unfilled. Billed above received: compared by order line at the order price; units still in transit are not counted as billed above received; listed above 0.5% of the line's billed value."
+ },
+ {
+  "id": "G11a",
+  "prototype": "P11",
+  "connector": "Ashby (RetailStrategy)",
+  "q": "On 30 November 2026, before Ashby's NetSuite sent ship notice ASN-78260 for PO-104912 to Northfield, Trading Grid checked it. What did the check find, which Northfield rule does each finding break, and which Ashby team owns each fix?"
+ },
+ {
+  "id": "G11b",
+  "prototype": "P11",
+  "connector": "Ashby (RetailStrategy)",
+  "q": "For ship notice ASN-78260 on PO-104912: who approved the release of the corrected version, under which Ashby rule, and at what time (Eastern) was it sent to Northfield?"
+ },
+ {
+  "id": "G11c",
+  "prototype": "P11",
+  "connector": "Ashby (RetailStrategy)",
+  "q": "For PO-104912: did Northfield's receiving advice match the corrected ship notice, how many cartons were received, was any charge or deduction raised on the order, and how much was paid?"
+ }
+]

@@ -1,4 +1,4 @@
-<!-- Snapshot of the working doc at revision 10, exported for the registry check. The working doc is the source. -->
+<!-- Dated snapshot, exported 12 November 2026 from the working doc at revision 10. Kept as a record only; it is not current. The Build Guide (docs/build-guide.md) is the working copy for every fact this snapshot also states. -->
 
 # TG for Retail · Shared Demo Database and MCP Server Plan
 

@@ -258,26 +258,11 @@ for (const p of REG.prototypes) {
   for (const t of p.acceptance) ok(`registry ${p.id} acceptance ${t} ran and passed`, results[t] === true, results[t] === undefined ? 'no such test' : 'failed');
 }
 eq('registry.built_prototypes_state_their_ending', REG.prototypes.filter((p) => p.status === 'Built' && !p.ends_at).map((p) => p.id), []);
-// Doc snapshots (docs/*.md, exported from the three working docs) must agree with the registry and the server.
+// Doc snapshots (docs/*.md) are dated records, not current (T2.8): each carries its export date and says it is not current.
+// They are no longer held to agree with the registry or the server; the Build Guide is the working copy.
 const DOCS = { plan: 'prototype-plan.md', server: 'database-and-server-plan.md', strategy: 'agent-and-mcp-strategy.md' };
-const docDir = join(ROOT, 'docs');
-if (existsSync(docDir) && readdirSync(docDir).length) {
-  const doc = Object.fromEntries(Object.entries(DOCS).map(([k, f]) => [k, existsSync(join(docDir, f)) ? readFileSync(join(docDir, f), 'utf8') : '']));
-  for (const [k, text] of Object.entries(doc)) {
-    ok(`docs.${k} present`, text.length > 2000);
-    eq(`docs.${k} names only the two people and the two companies`, (text.match(NAMES) || []).slice(0, 3), []);
-    eq(`docs.${k} holds no scenario keys or retired tools`, (text.match(/list_scenarios|scenario key|scenario=|\bscn\b|\b(?:p\d+|nt)_[a-z_]+\b|list_missing_documents|get_document_trail/gi) || []).slice(0, 3), []);
-  }
-  for (const t of serverTools) ok(`docs.server names tool ${t}`, doc.server.includes(t));
-  eq('docs.server names no tool the server lacks', [...new Set(doc.server.match(/\b[a-z]+(?:_[a-z]+){1,4}\b/g) || [])].filter((w) => /^(get|list|explain|check|lookup|recommend|request|compare|orders|edi|run)_/.test(w) && !serverTools.has(w) && !nfTools.has(w) && !/^(get|run)_(started|time)$/.test(w)), []);
-  for (const p of REG.prototypes) {
-    ok(`docs.plan names ${p.id}`, doc.plan.includes(p.name.includes('NetSuite') ? 'NetSuite' : p.id));
-    if (p.agency.agent) { ok(`docs.strategy names ${p.agency.agent}`, doc.strategy.includes(p.agency.agent));
-      for (const d of p.decisions) ok(`docs.strategy cites ${p.id} record ${d.record} → ${d.next_step}`, doc.strategy.includes(d.record) && doc.strategy.includes(d.next_step)); }
-  }
-  ok('docs.plan P9 seen by Priya', !/P9[^\n]*Jordan Ellis sees|P9[^\n]*seen by Jordan/i.test(doc.plan));
-  ok('docs ship notice timing', Object.values(doc).every((t) => !/before the truck leaves/i.test(t)));
-} else ok('docs snapshots present', false, 'docs/ is empty; export the three working docs');
+for (const [k, f] of Object.entries(DOCS)) { const t = existsSync(join(ROOT, 'docs', f)) ? readFileSync(join(ROOT, 'docs', f), 'utf8') : '';
+  ok(`docs.${k} is a dated snapshot marked not current`, /^<!-- Dated snapshot, exported \d{1,2} \w+ 20\d\d .*it is not current\./.test(t)); }
 
 console.log(`${pass} checks passed, ${fails.length} failed`);
 for (const f of fails) console.log(`FAIL ${f}`);

@@ -80,9 +80,13 @@ const SET = {
 };
 // Stage modules (world/stages) bring their own sets and any segments not defined above.
 const { STAGES } = await import('../world/stages/index.js');
+// A stage's segment definitions apply to its own sets only (each schema file is per set), so two stages may define
+// the same tag for their own documents; a stage may not redefine a tag the core sets use.
+const SET_SEG = {};
 for (const st of STAGES) {
-  for (const [tag, spec] of Object.entries(st.staedi?.SEG || {})) { if (SEG[tag] && JSON.stringify(SEG[tag]) !== JSON.stringify(spec)) throw new Error(`Stage ${st.id} redefines segment ${tag}`); SEG[tag] = spec; }
-  for (const [set, items] of Object.entries(st.staedi?.SET || {})) { if (SET[set]) throw new Error(`Stage ${st.id} redefines set ${set}`); SET[set] = items; }
+  const own = st.staedi?.SEG || {};
+  for (const [tag, spec] of Object.entries(own)) if (SEG[tag] && JSON.stringify(SEG[tag]) !== JSON.stringify(spec)) throw new Error(`Stage ${st.id} redefines core segment ${tag}`);
+  for (const [set, items] of Object.entries(st.staedi?.SET || {})) { if (SET[set]) throw new Error(`Stage ${st.id} redefines set ${set}`); SET[set] = items; SET_SEG[set] = { ...SEG, ...own }; }
 }
 const BASE = { AN: 'string', ID: 'identifier', N: 'numeric', R: 'decimal', DT: 'date', TM: 'time' };
 const elTypes = new Map();
@@ -98,7 +102,7 @@ mkdirSync(OUT, { recursive: true });
 for (const [set, items] of Object.entries(SET)) {
   elTypes.clear(); const used = new Set();
   const body = struct(items, used);
-  const segs = [...used].map((tag) => `<segmentType name="${tag}"><sequence>${SEG[tag].map((sp) => `<element type="${elName(sp)}" minOccurs="${sp.endsWith('!') ? 1 : 0}"/>`).join('')}</sequence></segmentType>`).join('\n');
+  const S = SET_SEG[set] || SEG; const segs = [...used].map((tag) => `<segmentType name="${tag}"><sequence>${S[tag].map((sp) => `<element type="${elName(sp)}" minOccurs="${sp.endsWith('!') ? 1 : 0}"/>`).join('')}</sequence></segmentType>`).join('\n');
   writeFileSync(join(OUT, `${set}.xml`), `<?xml version="1.0" encoding="UTF-8"?>\n<schema xmlns="http://xlate.io/EDISchema/v4">\n<transaction><sequence>${body}</sequence></transaction>\n${[...elTypes.values()].join('\n')}\n${segs}\n</schema>\n`);
 }
 console.log(`Wrote ${Object.keys(SET).length} schemas to ${OUT}`);

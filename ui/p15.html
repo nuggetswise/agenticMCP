@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P15 Rule Replay</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
+<style>
+/* VOICE: an enterprise workspace for Northfield's compliance lead.
+   IDEA: a review queue of draft rules beside one record, as on every TG for Retail agent-era screen.
+   PICTURE: the replay itself, supplier by supplier, failing now and failing with the draft.
+   COLOUR and TYPE: OpenText TG Retail tokens through the agent kit; Inter.
+   LAYOUT: light header, queue left (380px), record right; one column under 960px. */
+body{margin:0;background:var(--tgk-bg);font-family:Inter,"Helvetica Neue",Arial,sans-serif;color:var(--tgk-body);overflow-x:clip}
+.top{display:flex;align-items:center;gap:14px;padding:10px max(16px,env(safe-area-inset-right)) 10px max(16px,env(safe-area-inset-left));background:var(--tgk-card);border-bottom:1px solid var(--tgk-divider)}
+.mark{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--tgk-from),var(--tgk-to))}
+.top b{color:var(--tgk-ink);font-size:14px}.top .ws{color:var(--tgk-muted);font-size:13px}.top .sp{flex:1}.top .who{font-size:13px;color:var(--tgk-ink)}
+main{max-width:1320px;margin:0 auto;padding:20px max(16px,env(safe-area-inset-right)) 120px max(16px,env(safe-area-inset-left))}
+h1{margin:0;font-size:22px;color:var(--tgk-ink);text-wrap:balance}.lead{margin:4px 0 18px;color:var(--tgk-muted);font-size:13.5px}
+.cols{display:grid;grid-template-columns:380px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:960px){.cols{grid-template-columns:1fr}}
+.queue{display:flex;flex-direction:column;gap:8px}.queue h2{margin:0 0 4px;font-size:14px;color:var(--tgk-ink)}
+.record{background:var(--tgk-card);border:1px solid var(--tgk-divider);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.sec h3{margin:0 0 6px}
+.exposure{display:flex;flex-wrap:wrap;gap:6px 22px;font-size:13.5px}.exposure b{color:var(--tgk-ink);font-size:18px;font-variant-numeric:tabular-nums}
+.edit{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.edit input{width:90px;font:16px Inter,Arial,sans-serif;padding:6px 8px;border:1px solid var(--tgk-track);border-radius:8px;background:var(--tgk-card);color:var(--tgk-ink)}
+.src{font-size:12px;color:var(--tgk-muted)}
+</style>
+</head>
+<body>
+<header class="top"><span class="mark" aria-hidden="true"></span><b>Trading Grid</b><span class="ws">Northfield workspace · Compliance</span><span class="sp"></span><span class="who">Jordan Ellis</span></header>
+<main>
+<h1>Rule changes replayed before suppliers see them</h1>
+<p class="lead">Each draft runs against the quarter's exchanged documents. Nothing reaches a supplier until Jordan Ellis publishes it.</p>
+<div class="cols"><section class="queue" aria-label="Draft rules"><h2>Draft rules</h2><div id="q"></div></section><section class="record" id="rec" aria-live="polite"></section></div>
+</main>
+<script src="tg-agent-kit.js"></script>
+<script>
+{
+  const K = window.TGAgentKit; K.injectCss();
+  // Recorded replays from the demo world (build at the commit named in the page source note), shown only when the
+  // viewer's connector cannot be reached; the record then carries the Simulated label.
+  const RECORDED = __P15_DATA__;
+  const S = { drafts: RECORDED.drafts, open: 0, replay: {}, edited: {}, published: {}, live: null, conn: null };
+  const money = (n) => '$' + Number(n).toLocaleString('en-US', { maximumFractionDigits: 0 });
+  const inForce = (d) => d.check_kind === 'ship_notice_minutes' ? RECORDED.rules['NF-4.2'] : RECORDED.rules['NF-7.11'];
+  const unit = (d) => d.check_kind === 'ship_notice_minutes' ? 'minutes after departure' : 'percent of the order price';
+
+  async function call(tool, input) {
+    if (S.conn === null) S.conn = await K.connector('northfield') || false;
+    if (!S.conn) return null;
+    try { return await S.conn.call(tool, input); } catch (e) { return { error: e && e.code === 'tool_error' ? 'The connector refused the request.' : 'The connector could not be reached.' }; }
+  }
+
+  function drawQueue() {
+    const q = document.getElementById('q');
+    q.replaceChildren(...S.drafts.map((d, i) => {
+      const r = S.replay[d.id];
+      const chip = S.published[d.id] ? 'Publish requested' : r ? 'Replayed' : 'Not replayed';
+      const line = r ? `${r.failing_now} failing now, ${r.failing_with_draft} with the draft` : d.statement;
+      return K.queueRow({ ref: d.id, chip, tone: S.published[d.id] ? 'done' : r ? 'live' : 'wait', line, open: i === S.open, onSelect: () => { S.open = i; draw(); } });
+    }));
+  }
+
+  async function replay(d, value) {
+    const input = value != null && value !== d.value ? { check: d.check_kind, value, charge: d.charge } : { draft: d.id };
+    const live = await call('replay_draft_rule', input);
+    const r = live && !live.error && live.found !== false ? live : null;
+    S.live = !!r;
+    S.replay[d.id] = r || (value != null && value !== d.value ? null : RECORDED.replays[d.id]);
+    S.edited[d.id] = value != null && value !== d.value ? value : null;
+    if (!S.replay[d.id]) S.replay[d.id] = { error: (live && live.error) || 'A changed value replays only through the Northfield connector.' };
+    draw();
+  }
+
+  function draw() {
+    drawQueue();
+    let table = null; const d = S.drafts[S.open], r = S.replay[d.id], rec = document.getElementById('rec'), rule = inForce(d), edited = S.edited[d.id];
+    const valueNow = edited ?? d.value;
+    const facts = [K.factRow({ text: rule.statement, system: `Rule in force · ${rule.id}`, via: 'Rule catalogue' }), K.factRow({ text: `${d.statement}${edited != null ? ` (trying ${edited} ${unit(d)})` : ''}`, system: `Draft ${d.id}`, via: 'Rule authoring' })];
+    const parts = [K.recordHeader({ title: d.id, sub: `Drafted by ${d.author} · charge ${money(d.charge)} per failing document` }), K.el('div', { class: 'sec' }, ...facts)];
+    if (r && !r.error) {
+      parts.push(K.el('div', { class: 'exposure' }, K.el('span', {}, 'Failing now ', K.el('b', { text: String(r.failing_now) })), K.el('span', {}, 'With the draft ', K.el('b', { text: String(r.failing_with_draft) })),
+        K.el('span', {}, 'Added charge exposure ', K.el('b', { text: money(r.added_exposure) })), K.el('span', {}, 'Documents replayed ', K.el('b', { text: r.documents_replayed.toLocaleString('en-US') })), S.live ? null : K.simulated({ note: 'Recorded replay from the demo world; the Northfield connector was not reached' })));
+      table = K.compareTable({ columns: ['Supplier', `Failing under ${rule.id}`, `Failing under ${d.id}`, 'Newly failing documents'], strong: 2,
+        rows: r.by_supplier.map((x) => [x.supplier, String(x.now), String(x.with_draft), x.newly_failing.length ? x.newly_failing.slice(0, 3).join(', ') + (x.with_draft - x.now > 3 ? ` and ${x.with_draft - x.now - 3} more` : '') : 'None']) });
+    } else if (r && r.error) parts.push(K.el('p', { class: 'src', text: r.error }));
+    const editRow = K.el('div', { class: 'edit' }, K.el('label', { for: 'v', text: `Try another value (${unit(d)})` }), K.el('input', { id: 'v', type: 'number', step: d.check_kind === 'ship_notice_minutes' ? '5' : '0.05', value: valueNow }),
+      K.el('button', { class: 'tgk-btn', type: 'button', onclick: () => replay(d, Number(document.getElementById('v').value)), text: 'Replay this value' }));
+    if (S.published[d.id]) parts.push(K.sentState({ text: S.published[d.id] }));
+    else if (!r || r.error) parts.push(K.decisionBar({ says: `Replay ${d.id} against the quarter's exchanged documents. Nothing is published and no supplier is charged.`, decisions: [{ label: 'Replay against the quarter', primary: true, onClick: () => replay(d) }] }));
+    else if (edited != null) parts.push(editRow, K.decisionBar({ says: `This replay tried ${edited} ${unit(d)}. Publishing applies only the draft as written, so replay the draft itself before publishing.`, decisions: [{ label: `Replay ${d.id} as written`, primary: true, onClick: () => replay(d) }] }));
+    else parts.push(editRow, K.decisionBar({ says: `Publishing ${d.id} sends it to every Northfield supplier as a new rule; ${r.failing_with_draft - r.failing_now} more documents in the quarter would have failed. Nothing already exchanged is charged again.`,
+      decisions: [{ label: 'Publish to suppliers', primary: true, onClick: async () => {
+        const out = await call('publish_rule', { draft: d.id });
+        S.published[d.id] = out && !out.error && out.result !== 'Refused' ? `Publish request recorded for Jordan Ellis's approval in Trading Grid${out.proposal ? ` · ${out.proposal}` : ''}` : out && out.message ? out.message : 'Publishing needs the Northfield connector; nothing was sent.';
+        draw(); } }, { label: 'Keep as draft', onClick: () => { S.open = (S.open + 1) % S.drafts.length; draw(); } }] }));
+    if (table) parts.push(table);
+    parts.push(K.el('div', { class: 'sec' }, K.el('h3', { class: 'tgk-label', text: 'Review' }), K.timeline({ items: [
+      { state: 'done', text: `Draft written by ${d.author}` },
+      { state: r && !r.error ? 'done' : 'next', text: `Replayed against the quarter's exchanged documents${r && !r.error ? ` · ${r.failing_with_draft} would fail` : ''}` },
+      { state: S.published[d.id] ? 'waiting' : 'next', text: 'Publish approved by Jordan Ellis in Trading Grid' },
+      { state: 'next', text: 'Suppliers see the rule and documents are judged by it' }] })));
+    rec.replaceChildren(...parts);
+  }
+  draw();
+  K.aviator({ side: 'northfield', person: 'Jordan Ellis', context: () => `Draft rule ${S.drafts[S.open].id}`, suggestions: ['Which suppliers would NFD-1 hit hardest?', 'What does NF-4.2 say today?'] });
+}
+</script>
+</body>
+</html>

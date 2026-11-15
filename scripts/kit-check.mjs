@@ -6,7 +6,8 @@ let chromium; try { ({ chromium } = await import('playwright')); } catch { const
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const page0 = resolve(process.argv[2] || join(ROOT, 'ui', 'kit-gallery.html'));
+const args = process.argv.slice(2); const RETAILER = args.includes('--retailer'); // a retailer screen: its controls are the business decision, no agent proposal
+const page0 = resolve(args.find((a) => !a.startsWith('--')) || join(ROOT, 'ui', 'kit-gallery.html'));
 const browser = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
 const page = await browser.newPage({ viewport: { width: 1440, height: 860 } });
 const errors = []; page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/fonts\.googleapis|ERR_|net::/.test(m.text())) errors.push(m.text()); });
@@ -16,14 +17,16 @@ ok('no script errors', errors.length === 0, errors.join(' | '));
 const text = await page.evaluate(() => document.body.innerText);
 ok('no banned decision control', !/\b(Take over|Snooze|Handle it myself|Dismiss)\b/.test(text), text.match(/Take over|Snooze|Handle it myself|Dismiss/)?.[0]);
 const bars = await page.$$eval('.tgk-bar .btns', (bs) => bs.map((b) => [...b.querySelectorAll('button')].map((x) => x.textContent)));
-ok('agent decision bar has exactly Approve and Edit suggestion', bars.some((b) => JSON.stringify(b) === '["Approve","Edit suggestion"]'), JSON.stringify(bars));
+ok(RETAILER ? 'a decision bar is on screen' : 'agent decision bar has exactly Approve and Edit suggestion', RETAILER ? bars.length > 0 : bars.some((b) => JSON.stringify(b) === '["Approve","Edit suggestion"]'), JSON.stringify(bars));
 const green = await page.evaluate(() => [...document.querySelectorAll('*')].some((n) => { const c = getComputedStyle(n); return [c.color, c.backgroundColor, c.borderColor].some((v) => { const m = v.match(/rgba?\((\d+), (\d+), (\d+)/); return m && +m[2] > +m[1] + 40 && +m[2] > +m[3] + 40; }); }));
 ok('no green anywhere', !green);
 ok('no tick characters', !/[✓✔✅]/.test(text));
+if (!RETAILER) {
 await page.click('.tgk-bar button:has-text("Edit suggestion")'); await page.waitForTimeout(100);
 ok('Edit suggestion makes the proposal editable and marks it as the person’s', (await page.$$('.tgk-na [contenteditable=true]')).length > 0 && /Edited by you/.test(await page.evaluate(() => document.body.innerText)));
 await page.click('.tgk-na .rm'); const left = (await page.$$('.tgk-sugg tbody tr')).length;
 ok('a row can be removed', left === 1, `${left} rows`);
+}
 ok('Aviator is closed on load', !(await page.$('.tgk-av-panel[data-open]')));
 await page.click('.tgk-av-btn'); ok('Aviator opens from the bottom-right control', !!(await page.$('.tgk-av-panel[data-open]')));
 const box = await page.$eval('.tgk-av-btn', (b) => { const r = b.getBoundingClientRect(); return { right: innerWidth - r.right, bottom: innerHeight - r.bottom }; });
@@ -31,8 +34,8 @@ ok('Aviator control sits at the bottom right', box.right <= 40 && box.bottom <= 
 await page.fill('.tgk-av-form input', 'What is the order value of NR-450118?'); await page.click('.tgk-av-form button'); await page.waitForTimeout(11500);
 const said = await page.$$eval('.tgk-av-msg[data-role=model]', (m) => m.map((x) => x.textContent).pop());
 ok('Aviator without a connector says so and invents nothing', /connector/.test(said || '') && !/\$/.test(said || ''), said);
-await page.click('.tgk-av-btn'); await page.click('.tgk-tag'); await page.waitForTimeout(300);
-ok('an interface tag opens the drawer with readable and raw tabs', !!(await page.$('.tgk-drawer[data-open]')) && (await page.$$eval('.tgk-tabs button', (b) => b.map((x) => x.textContent))).includes('Raw X12'));
-await page.screenshot({ path: join(ROOT, 'docs', 'phase2', 'kit-gallery.png'), fullPage: true });
+await page.click('.tgk-av-btn'); await page.locator('.tgk-tag').first().click(); await page.waitForTimeout(300);
+if (!RETAILER) ok('an interface tag opens the drawer with readable and raw tabs', !!(await page.$('.tgk-drawer[data-open]')) && (await page.$$eval('.tgk-tabs button', (b) => b.map((x) => x.textContent))).includes('Raw X12'));
+await page.screenshot({ path: args.includes('--shot') ? args[args.indexOf('--shot') + 1] : join(ROOT, 'docs', 'phase2', 'kit-gallery.png'), fullPage: true });
 await browser.close();
 console.log(fails ? `${fails} kit checks failed` : 'All kit checks passed'); process.exit(fails ? 1 : 0);

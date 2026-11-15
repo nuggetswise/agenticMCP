@@ -3,7 +3,7 @@
  * and calls TGAgentKit.<piece>(props), each returning a DOM element. Colours are the design system's tokens as the
  * tg-retail-workspace-prototype skill maps them; nothing here adds a colour. No green, no ticks, no dates.
  *
- * Pieces: aviator, queueRow, recordHeader, factRow, interfaceTag, drawer, nowAfter, decisionBar, roleTrace, traceLine,
+ * Pieces: aviator, queueRow, recordHeader, factRow, interfaceTag, drawer, nowAfter, compareTable, decisionBar, roleTrace, traceLine,
  * timeline, simulated, setupView, governanceView. Helpers: connector(side), injectCss().
  * The page reaches the demo server only through the viewer's own connector (claude.use('mcp')); it holds no key. */
 (function (root) {
@@ -169,6 +169,13 @@
       table, reason ? el('p', { class: 'tgk-reason' }, el('b', { text: 'Reason. ' }), reason) : null, ask));
   }
 
+  /** A comparison table of values: the same thing under the rule in force and under a change (a rule replay, a
+   * baseline beside an agent). strong names the column drawn in bold ink, as After is in the suggestion block. */
+  function compareTable({ columns, rows, strong }) {
+    return kit(el('table', { class: 'tgk-na' }, el('thead', {}, el('tr', {}, ...columns.map((c) => el('th', { text: c })))),
+      el('tbody', {}, ...rows.map((r) => el('tr', {}, ...r.map((v, i) => el('td', { class: i === strong ? 'after' : null, text: v })))))));
+  }
+
   /** The decision bar: one sentence stating exactly what Approve does, then Approve and Edit suggestion, and what happens with no decision.
    * On the retailer side pass decisions: [{label, primary, onClick}] to replace the two controls with the business decision itself. */
   function decisionBar({ says, noDecision, onApprove, onEdit, decisions, busy }) {
@@ -265,5 +272,5 @@
     return { element: wrap, ask, open: () => { panel.setAttribute('data-open', ''); btn.setAttribute('aria-expanded', 'true'); } };
   }
 
-  root.TGAgentKit = Object.freeze({ version: '1.0.0', css: CSS, injectCss, connector, el, queueRow, recordHeader, interfaceTag, factRow, drawer, nowAfter, decisionBar, sentState, roleTrace, traceLine, timeline, simulated, setupView, fromServerSetup, governanceView, aviator, SERVERS });
+  root.TGAgentKit = Object.freeze({ version: '1.1.0', css: CSS, injectCss, connector, el, queueRow, recordHeader, interfaceTag, factRow, drawer, nowAfter, compareTable, decisionBar, sentState, roleTrace, traceLine, timeline, simulated, setupView, fromServerSetup, governanceView, aviator, SERVERS });
 })(typeof window !== 'undefined' ? window : globalThis);

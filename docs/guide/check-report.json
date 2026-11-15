@@ -1,6 +1,6 @@
 {
  "file": "/home/claude/agenticmcp/docs/build-guide.md",
- "ran_at_head": "b6d53d9",
+ "ran_at_head": "b76efef",
  "results": [
   {
    "name": "as_of_commit_current",
@@ -96,7 +96,7 @@
    "name": "tasks_have_ids_and_done_when",
    "ok": true,
    "problems": [],
-   "info": "65 tasks: 26 done, 8 blocked"
+   "info": "64 tasks: 26 done, 8 blocked"
   }
  ]
 }

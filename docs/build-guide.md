@@ -27,7 +27,7 @@ This is the only plan a builder reads before working on TG for Retail prototypes
 2. The owner approves a change list.
 3. Phase 1 applies approved world changes and closes world gaps.
 4. Phase 2 makes every agent decision come from records, on both companies' connections.
-5. Once Phases 1 and 2 pass their proofs, Phase 3 builds new prototypes from the Prototype specs tab.
+5. Phase 3 builds new prototypes from the Prototype specs tab; its entry rule is D62.
 6. Phase 4 changes one built prototype at a time: propose a change list, wait for approval, build with the three skills, walk it and pass the contract test, then publish and log the call. A rejected list goes back for revision.
 
 Status lives in the task lists, not in the figure, so the figure does not go stale.
@@ -233,6 +233,7 @@ The owner approved change items 1 to 14 on 12 November. Two are done, five are p
 | D59 | The model behind Aviator runs on the server, never in a page: the key sits in the server's environment and a page posts its question to one endpoint. The owner supplied a Gemini key for testing and will rotate it; the model is gemini-3.5-flash-lite. A secondary key with gemini-3.8-flash takes over when the primary's quota is spent or the model is busy; the owner will rotate both. Source: owner, 13 and 15 November. | A decision to answer through the viewer's own connectors on a published page |
 | D60 | The world stays one relationship, Ashby and Northfield, and grows to cover every stage of procure-to-pay and order-to-cash between them, promotions included, so future prototypes find their records ready. Item data in the catalogue is evidence for avoiding and disputing charges. Values come from standards and public retailer guides first; expertise fills only the gaps, marked invented. Source: owner, 14 November. | A second relationship becoming necessary for a prototype |
 | D61 | An agent in a prototype is a real agent, not a scripted one: a model on the server chooses its reads and proposes actions in a session branched from the world at the story moment, with later records hidden. The server enforces each action's approval and the administrator guardrails. Kinross and Northfield answer by deterministic rules, labelled synthetic. A rule baseline runs on the same facts and actions, and a step is called automation where the two match. P5 is first (`src/scout.js`); P6, P7 and P9 must each show why an agent is needed. Source: owner, 14 November. | A prototype whose agent adds nothing over the baseline in every variation |
+| D62 | Phase 3 starts when the first build's dependencies are Done: T3.1, T2.2 and T2.3's built parts. The other Phase 1 and 2 rows run alongside it, and a Phase 1 row is pulled forward when a spec needs one of its records. T3.4 is folded into T3.2's Done when, because its own Done when named the prototype T3.2 builds. Source: owner, 15 November. | A spec that needs a world record a deferred Phase 1 row would add |
 
 **Open questions for the owner**
 
@@ -350,7 +351,7 @@ The Pipe17 question that had to be settled first is settled. ShipHawk's question
 
 ## Tasks
 
-Phase 0 is closed (D48); its remaining rows wait on owner holds or on Phase 1. Phases 1 and 2 are partly done. Phase 3 has its specs (T3.0) but no build, and Phase 4 has not started. R39 picks the next row. A row turns Done only when its evidence is committed; cite its ID in the commit message and the CALLS entry. Status is Open, Done or Blocked; a Blocked row names the owner answer it waits for in Depends on.
+Phase 0 is closed (D48); its remaining rows wait on owner holds or on Phase 1. Phases 1 and 2 are partly done. Phase 3 has its specs (T3.0) but no build, and starts when T3.2's dependencies are Done (D62); Phase 4 has not started. R39 picks the next row. A row turns Done only when its evidence is committed; cite its ID in the commit message and the CALLS entry. Status is Open, Done or Blocked; a Blocked row names the owner answer it waits for in Depends on.
 
 ### Phase 0 · Audit, read only
 
@@ -423,9 +424,8 @@ New prototypes come from the Prototype specs tab. Mining Northstar for them was 
 | --- | --- | --- | --- | --- | --- | --- |
 | T3.0 | Specs | Mine the Northstar prototype and teardown into the Prototype specs tab | — | — | Evidence: the Prototype specs tab; CALLS 27 and 28 | Done |
 | T3.1 | P13, P14, P15 | Check each spec against the world | — | Prototype specs; `docs/phase3/T3.1-spec-check.md` | Every record each spec needs exists, or a Phase 1 change list adds it. Checked: one P13 conflict; change list 2 approved, not yet applied; CALLS 77 and 79 | Open |
-| T3.2 | P13, P14, P15 | Rank the specs, place them on the story calendar, and build the top one | T3.1, T3.4, T2.2, T2.3 | Prototype specs; story calendar in the Prototype Plan; v8 for the business problem (R40) | The owner approves the ranking and the first new prototype passes its acceptance tests, walk and contract test | Open |
+| T3.2 | P13, P14, P15 | Rank the specs, place them on the story calendar, and build the top one | T3.1, T2.2, T2.3 (its built parts, CALLS 79) | Prototype specs; story calendar in the Prototype Plan; v8 for the business problem (R40) | The owner approves the ranking and the first new prototype passes its acceptance tests, walk and contract test. Its agent screens follow the tg-retail-agent-prototype skill: a ranked queue beside one record, with now and after values and the two checkpoint controls of R15, and the main path stays within eight actions | Open |
 | T3.3 | FILM | Rebuild the film as a self-playing artifact, the way the marketing film was made; each chapter tells one prototype's task card, problem to ending (R41) | Phase 4 settles the endings it tells | FILM link; the marketing film artifact; task cards | The rebuilt film passes A1, A5 and A7 and the FILM A7 cell reads Done | Open |
-| T3.4 | P13, P14, P15 | Build each agent screen with the tg-retail-agent-prototype skill: a ranked queue beside one record, with now and after values, and the two checkpoint controls of R15. | — | The tg-retail-agent-prototype skill | The first new prototype's checkpoint shows these controls, and its main path stays within eight actions | Open |
 
 ### Phase 4 · Prototype changes, one at a time
 

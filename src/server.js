@@ -345,16 +345,6 @@ app.post('/aviator/:token', async (req, res) => {
     res.status(out.ok ? 200 : out.status).json(out);
   } catch (e) { console.error(e); res.status(500).json({ ok: false, message: 'Aviator failed.' }); }
 });
-// Scout REST for the prototype page: the browser holds only a token; sessions, policy and the model stay on the server.
-const scoutCors = (res) => res.set({ 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'content-type' });
-app.options('/scout/:token/*splat', (req, res) => { scoutCors(res).status(204).end(); });
-const scoutRoute = (fn) => async (req, res) => { const cid = aviatorCid(req, res); if (!cid) return; scoutCors(res); if (cid !== AS) return res.status(403).json({ result: 'Not available to Northfield' }); try { const out = await fn({ ...req.body, ...req.params }); log(cid, `scout:${req.path.split('/')[3] || ''}`, [], {}, out.result || out.status || 'Answered', []); res.json(out); } catch (e) { console.error(e); res.status(400).json({ result: 'Invalid request', error: e.message }); } };
-app.get('/scout/:token/setup', scoutRoute(async () => Scout.setup()));
-app.post('/scout/:token/start', scoutRoute(scoutStart));
-app.post('/scout/:token/baseline', scoutRoute(scoutBaseline));
-app.post('/scout/:token/replay', scoutRoute((a) => scoutReplay(a, 'Priya Raman (Scout page)')));
-app.get('/scout/:token/session/:session', scoutRoute(async ({ session }) => scoutView(Scout.getSession(session))));
-app.post('/scout/:token/session/:session/decide', scoutRoute(scoutDecide));
 app.get('/openapi.json', (req, res) => { const f = new URL('../openapi/openapi.json', import.meta.url); if (existsSync(f)) res.type('json').send(readFileSync(f)); else res.status(404).send('Not built'); });
 app.get('/admin/:token', (req, res) => { const cid = cidOf(req, res); if (cid) res.type('html').send(adminPage(adminData(cid, req.params.token))); });
 app.post('/admin/:token/scopes', (req, res) => {

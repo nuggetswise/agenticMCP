@@ -34,7 +34,8 @@ export function replen(L, W, { nPre, jitter = 0 }) {
   S(46156, { r: day(-1, '18:00'), dep: day(0, '10:05'), substitute: true, asnAt: day(0, '10:12'), fixAt: day(0, '12:10'), site: 'ASH-WH1', shipTo: 'DC2', mug: true });
   // P13 queue at 09:00 on 18 Nov.
   S(46210, { r: day(0, '13:00'), ackAt: day(1, '09:20'), site: 'ASH-WH1', lines: [['ASH-MUG-12', 12], ['ASH-NAP-4', 4]] });
-  S(46215, { r: day(-2, '10:00'), dep: day(0, '18:00'), asnAt: day(1, '09:30'), invAt: day(0, '18:30'), site: 'ASH-WH1', shipTo: 'DC2', lines: [['ASH-HNY-340', 6]] });
+  S(46215, { r: day(-2, '10:00'), dep: day(0, '18:00'), asnAt: day(1, '09:30'), invAt: day(0, '18:30'), rcvAt: day(1, '11:30'), site: 'ASH-WH1', shipTo: 'DC2', lines: [['ASH-HNY-340', 6]] });
+  // Change list 2 point 1 (CALLS 79): Northfield receives NR-46215 at 11:30, after the late ship notice, so the receipt matches it. The receiving advice keeps its control number (`numAt`).
   S(46220, { r: day(-2, '15:00'), site: 'KIN-GRV', whAt: day(-1, '21:00'), dep: day(0, '18:00'), late: 17, whAdviceAt: day(1, '11:40'), shipTo: 'DC2', lines: [['ASH-MUG-12', 20]] });
   S(46226, { r: day(-3, '09:00'), dep: day(0, '09:00'), asnAt: day(0, '09:20'), invAt: day(1, '09:45'), site: 'ASH-WH1', shipTo: 'DC2', lines: [['ASH-NAP-4', 8], ['ASH-HNY-340', 4]] });
   S(46231, { r: day(-1, '09:00'), site: 'ASH-WH1', change: { at: day(0, '11:30'), ackAt: day(0, '15:00') }, lines: [['ASH-MUG-12', 15]] });
@@ -186,12 +187,14 @@ export function replenDocs(L, W, G) {
 
     // Receipt at the DC the morning after departure.
     const rcvDay = etDay(addD(O.departed, 1));
-    const rcvAt = et(rcvDay, s.rcvHm || (O.pattern === 'E' ? '16:40' : `0${7 + Math.floor(R() * 3)}:${String(Math.floor(R() * 6) * 10).padStart(2, '0')}`));
+    // The planned time is drawn for every order, so a moved receipt (`s.rcvAt`) leaves the random stream, and every other record, as it was.
+    const rcvPlanned = et(rcvDay, s.rcvHm || (O.pattern === 'E' ? '16:40' : `0${7 + Math.floor(R() * 3)}:${String(Math.floor(R() * 6) * 10).padStart(2, '0')}`));
+    const rcvAt = s.rcvAt || rcvPlanned;
     const qty = { ...ship }; const short = {}; const ns = {};
     for (const k of Object.keys(qty)) if (!qty[k]) delete qty[k];
     if (O.shortRcv) { const l = O.lines[0]; qty[l.line] = ship[l.line] - O.shortRcv; short[l.line] = O.shortRcv; ns[l.line] = cartons.filter((c) => c.line === l.line).slice(-O.shortRcv).map((c) => c.sscc); }
     L.event({ at: addH(rcvAt, -0.6), kind: 'carrier.delivery_receipt', po: O.po, system: 'Lakeline Freight', party: 'LAKELINE', channel: 'Scanned document', data: { shipment: shipId, delivered: cartons.length, exceptions: 'None', seal: 'Intact' } });
-    D.receipt(L, O, rcvAt, { ref: `RCV-${id}`, asnRef, qty, short, notScanned: ns });
+    D.receipt(L, O, rcvAt, { ref: `RCV-${id}`, asnRef, qty, short, notScanned: ns, ...(s.rcvAt ? { numAt: rcvPlanned } : {}) });
     O.rcvAt = rcvAt; O.cartons = cartons;
   }
 }

@@ -55,6 +55,8 @@ none('qty.invoice_above_shipped_is_deducted', `SELECT i.invoice, il.line, il.qty
 none('time.acknowledgment_after_order', "SELECT a.doc_id FROM documents a JOIN orders o ON o.po = a.po WHERE a.doc_type = '855' AND a.sent_at < o.received_at");
 none('time.ship_notice_after_order', 'SELECT s.shipment_id FROM shipments s JOIN orders o ON o.po = s.po WHERE s.shipped_at < o.received_at OR s.sent_at < o.received_at');
 none('time.receipt_after_departure', 'SELECT r.receipt FROM receipts r JOIN shipments s ON s.shipment_id = r.shipment_id WHERE r.received_at <= s.shipped_at');
+// Change list 2 point 1 (CALLS 79): no receipt is recorded before its shipment's first ship notice was sent, with no exceptions. A receipt with no ship notice fails too.
+none('time.receipt_after_ship_notice', "SELECT DISTINCT r.receipt, r.received_at FROM receipts r WHERE r.received_at < coalesce((SELECT min(d.sent_at) FROM documents d WHERE d.doc_type = '856' AND d.reference = r.shipment_id), '9999')");
 none('time.invoice_after_first_shipment', 'SELECT i.invoice FROM invoices i WHERE i.sent_at < (SELECT min(s.shipped_at) FROM shipments s WHERE s.po = i.po)');
 none('time.payment_after_invoice', 'SELECT r.payment, r.invoice FROM remittance_items r JOIN invoices i ON i.invoice = r.invoice WHERE r.paid_at <= i.sent_at');
 none('time.warehouse_advice_after_warehouse_order', 'SELECT ref FROM warehouse_orders WHERE advice_at IS NOT NULL AND advice_at <= sent_at');
@@ -65,8 +67,10 @@ none('time.997_two_to_nine_minutes_after', `SELECT f.doc_id, (julianday(f.sent_a
 { const rows = db.prepare("SELECT doc_id d, sender_id s, receiver_id r, doc_type = '997' fa, isa_ctl c, sent_at t FROM documents ORDER BY s, r, fa, c").all(); const bad = []; let dup = 0;
   for (let i = 1; i < rows.length; i++) { const a = rows[i - 1], b = rows[i]; if (a.s !== b.s || a.r !== b.r || a.fa !== b.fa) continue; if (b.c === a.c) dup++; if (b.t < a.t) bad.push(a.d); }
   // Change list point F1 (CALLS 68): P5's six lead acknowledgments were numbered when Ashby's ERP generated them and sent late from its outbound queue, so they and their 997s keep their place in the numbering.
-  const late = ['460207', '460219', '460233', '460241', '460262', '460274'].flatMap((n) => { const d = db.prepare("SELECT doc_id FROM documents WHERE doc_type = '855' AND po = ?").get(`NR-${n}`).doc_id; return [d, db.prepare("SELECT doc_id FROM documents WHERE doc_type = '997' AND answers_doc_id = ?").get(d).doc_id]; }).sort();
-  eq('time.control_numbers_unique', dup, 0); eq('time.control_numbers_rise_with_time_except_p5_lead_acks', bad.sort(), late); }
+  // Change list 2 point 1 (CALLS 79): RCV-46215 was moved after its ship notice and keeps its number, as does its 997.
+  const moved = (type, po) => { const d = db.prepare('SELECT doc_id FROM documents WHERE doc_type = ? AND po = ?').get(type, po).doc_id; return [d, db.prepare("SELECT doc_id FROM documents WHERE doc_type = '997' AND answers_doc_id = ?").get(d).doc_id]; };
+  const late = [...['460207', '460219', '460233', '460241', '460262', '460274'].flatMap((n) => moved('855', `NR-${n}`)), ...moved('861', 'NR-46215')].sort();
+  eq('time.control_numbers_unique', dup, 0); eq('time.control_numbers_rise_with_time_except_p5_lead_acks_and_rcv_46215', bad.sort(), late); }
 none('time.envelope_matches_body_control_numbers', "SELECT doc_id FROM documents WHERE json_extract(body, '$.isa_ctl') <> isa_ctl OR json_extract(body, '$.se_count') <> json_extract(body, '$.segments') AND status = 'Delivered' AND doc_id NOT IN (SELECT doc_id FROM errors)");
 // NF-4.2: in the current period a ship notice goes within 1 hour of departure; the only late ones are the records the story names. History before it carries late ship notices on purpose.
 { const late = db.prepare(`SELECT s.po FROM shipments s JOIN orders o ON o.po = s.po WHERE o.supplier_id = 'ASHBY' AND s.shipped_at >= '2026-09-27' AND (julianday((SELECT min(d.sent_at) FROM documents d WHERE d.doc_type = '856' AND d.reference = s.shipment_id)) - julianday(s.shipped_at)) * 24 > 1.0001 ORDER BY 1`).all().map((r) => r.po);

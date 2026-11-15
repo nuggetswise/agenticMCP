@@ -101,7 +101,7 @@ export const D = {
   },
   receipt(L, O, at, o) {
     const st = LOC[o.location || O.shipTo];
-    return L.doc({ type: '861', from: 'NORTHFIELD', to: O.supplier, at, ref: o.ref, po: O.po, asn_ref: o.asnRef, received_at: iso(at), location_name: st.name, location_gln: st.gln,
+    return L.doc({ type: '861', from: 'NORTHFIELD', to: O.supplier, at, ...(o.numAt ? { numAt: iso(o.numAt) } : {}), ref: o.ref, po: O.po, asn_ref: o.asnRef, received_at: iso(at), location_name: st.name, location_gln: st.gln,
       lines: Object.entries(o.qty).map(([line, q]) => ({ ...lineOf(O.lines.find((l) => l.line === +line)), qty: q, short: o.short?.[line] || 0, not_scanned: o.notScanned?.[line] || [] })) });
   },
   advice(L, target, at, { action = 'TR', errors }) {

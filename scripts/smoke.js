@@ -21,8 +21,8 @@ await withServer({ WRITES: 'off' }, 3971, async ({ base, client, tool, rest }) =
   // 19 record tools, five Scout tools (CALLS 81) and four governance tools (T2.3). Scout tools change only an isolated in-memory session, never a
   // Trading Grid record, but they are not marked read-only so that a client still confirms before approving on Priya's behalf. Pause, resume and
   // a trial record on the change list, so they are not read-only either; get_change_list is.
-  const scout = names.filter((n) => n.startsWith('scout_')); const GOVW = ['pause_agent', 'resume_agent', 'replay_agent_rule'];
-  ok('28 tools listed: 19 record tools, 5 Scout tools, 4 governance tools', names.length === 28 && scout.length === 5 && [...GOVW, 'get_change_list'].every((g) => names.includes(g)), `${names.length}, ${scout.length} Scout`); ok('no scenario tool', !names.includes('list_scenarios'));
+  const scout = names.filter((n) => n.startsWith('scout_')); const GOVW = ['pause_agent', 'replay_agent_rule'];
+  ok('27 tools listed: 19 record tools, 5 Scout tools, 3 governance tools; no resume tool', !names.includes('resume_agent') && names.length === 27 && scout.length === 5 && [...GOVW, 'get_change_list'].every((g) => names.includes(g)), `${names.length}, ${scout.length} Scout`); ok('no scenario tool', !names.includes('list_scenarios'));
   ok('every record tool read-only', tools.filter((t) => !t.name.startsWith('scout_') && !GOVW.includes(t.name)).every((t) => t.annotations?.readOnlyHint === true));
   ok('governance writes are not marked read-only', tools.filter((t) => GOVW.includes(t.name) || t.name.startsWith('scout_')).every((t) => t.annotations?.readOnlyHint === false));
   const before = JSON.stringify(await tool('get_access_log', { limit: 1 })).length >= 0 && (await tool('run_readonly_sql', { sql: "SELECT count(*) n FROM events WHERE po = 'NR-460207'" })).rows?.[0]?.n;
@@ -62,7 +62,7 @@ await withServer({}, 3972, async ({ base, tool }) => {
 });
 // Both scopes on one world: shared documents, private records, refusals, and one deduction case worked from both sides.
 await withServer({}, 3973, async ({ base, nfClient, tool, nf }) => {
-  const { tools } = await nfClient.listTools(); ok('Northfield: 19 tools (16 and 3 governance)', tools.length === 19 && ['pause_agent', 'resume_agent', 'get_change_list'].every((g) => tools.some((t) => t.name === g)), String(tools.length));
+  const { tools } = await nfClient.listTools(); ok('Northfield: 18 tools (16 and 2 governance), no resume tool', tools.length === 18 && !tools.some((t) => t.name === 'resume_agent') && ['pause_agent', 'get_change_list'].every((g) => tools.some((t) => t.name === g)), String(tools.length));
   const x = (await tool('get_document', { reference: 'ASN-450118-2' })).x12, y = (await nf('get_document', { reference: 'ASN-450118-2' })).x12; ok('shared X12 is the same on both sides', !!x && x === y);
   { const pre = await nf('supplier_document_trail', { po: 'NR-460207' }), post = await nf('supplier_document_trail', { po: 'NR-460207', as_of: '2026-12-04T10:00:00-05:00' });
     ok('Northfield trail: no such order before it is sent', pre.found === false && /^No such order as of/.test(pre.message) && !('order_value' in pre) && !('requested_delivery' in pre) && post.found === true && post.documents.length >= 1, JSON.stringify(pre).slice(0, 120)); }
@@ -117,8 +117,9 @@ await withServer({}, 3974, async ({ base, tool, nf }) => {
   const disp = await tool('submit_dispute', { case: 'DC-41118', as_of: '2026-12-28' }); const dl = (await tool('get_access_log', { limit: 5 })).calls.find((c) => c.tool === 'submit_dispute')?.write;
   ok('while paused, a dispute is the assistant’s proposal, not Claim Agent’s', disp.result === 'Proposal recorded' && dl?.agent === 'Priya Raman’s assistant', JSON.stringify(dl));
   ok('pause again changes nothing', (await tool('pause_agent', { agent: 'Claim Agent' })).result === 'Unchanged');
-  const rz = await tool('resume_agent', { agent: 'claim' }); const back = await tool('recommend_next_step', { job: 'deduction', record: 'DC-41118', as_of: '2026-12-28' });
-  ok('resume restores the proposal', rz.result === 'Agent resumed' && back.next_step === 'attach_load_tally_and_dispute');
+  const rq = await tool('resume_agent', { agent: 'claim' }).catch((e) => ({ result: 'Refused', error: String(e) })); ok('the assistant cannot resume an agent', /Refused|not found|Unknown/i.test(JSON.stringify(rq)), JSON.stringify(rq).slice(0, 160));
+  const rz = await fetch(`${base}/admin/smoke/agents/claim/resume`, { method: 'POST', redirect: 'manual' }); const back = await tool('recommend_next_step', { job: 'deduction', record: 'DC-41118', as_of: '2026-12-28' });
+  ok('a person resumes on the admin page, and the proposal returns', [302, 303].includes(rz.status) && back.next_step === 'attach_load_tally_and_dispute', String(rz.status));
   // Scout paused: the event arrives as a plain task and the model gets no turn (no key is needed to show it; without the pause Scout reports no model).
   await tool('pause_agent', { agent: 'Scout Agent' }); const ss = await tool('scout_start', {}); const st = await tool('scout_state', { session: ss.session });
   ok('paused Scout: plain task, no proposal, no model call', ss.status === 'paused' && ss.plain_task?.proposal === null && ss.awaiting.length === 0 && st.overhead.model_calls === 0 && !ss.blocked, JSON.stringify(ss).slice(0, 200));
@@ -128,7 +129,7 @@ await withServer({}, 3974, async ({ base, tool, nf }) => {
   ok('Northfield pauses Review Agent: no recommendation', nfp.result === 'Agent paused' && rv.review_agent.proposal === null && rv.review_agent.agent_state === 'Paused');
   ok('an agent of the other company cannot be paused', (await nf('pause_agent', { agent: 'Claim Agent' })).result === 'Invalid request');
   const cl = await tool('get_change_list', {}); const kinds = cl.entries.map((e) => `${e.kind}:${e.agent}:${e.run_by}`);
-  ok('pause and resume are on the change list with who made them', kinds.includes('pause:Claim Agent:Priya Raman’s assistant') && kinds.includes('resume:Claim Agent:Priya Raman’s assistant') && kinds.includes('resume:Scout Agent:Priya Raman') && cl.agents.find((a) => a.agent === 'Claim Agent')?.authority.rule === 'AP-4.1', JSON.stringify(kinds));
+  ok('pause and resume are on the change list with who made them', kinds.includes('pause:Claim Agent:Priya Raman’s assistant') && kinds.includes('resume:Claim Agent:Priya Raman') && !kinds.some((k) => k.startsWith('resume:') && k.endsWith('assistant')) && kinds.includes('resume:Scout Agent:Priya Raman') && cl.agents.find((a) => a.agent === 'Claim Agent')?.authority.rule === 'AP-4.1', JSON.stringify(kinds));
   // Story 2: override. Priya sets a proposal aside (Edit suggestion) and does it by hand; recorded with her name, nothing appended.
   const before = await tool('get_order', { po: 'NR-46156' }); const pr = await tool('request_change', { action: 'send corrected ship notice', po: 'NR-46156' });
   await fetch(`${base}/admin/smoke/proposals/${pr.proposal}/edit`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'note=Priya+sends+it+from+NetSuite', redirect: 'manual' });

@@ -1,12 +1,12 @@
 {
  "file": "/home/claude/agenticmcp/docs/build-guide.md",
- "ran_at_head": "d926240",
+ "ran_at_head": "726e3d9",
  "results": [
   {
    "name": "as_of_commit_current",
    "ok": false,
    "problems": [
-    "changed since b6d53d9: scripts/check.js, validator/report.json, world/log.js, world/replen.js"
+    "changed since b6d53d9: scripts/check.js, scripts/scout-test.mjs, scripts/smoke.js, src/governance.js, src/pages.js, src/scout.js, src/server.js, validator/report.json, world/build.js, world/log.js, world/replen.js, world/schema.sql"
    ],
    "info": "b6d53d9"
   },
@@ -29,7 +29,7 @@
    "name": "calls_refs_exist",
    "ok": true,
    "problems": [],
-   "info": "85 calls logged"
+   "info": "86 calls logged"
   },
   {
    "name": "inventory_and_grid_complete",

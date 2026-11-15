@@ -169,8 +169,10 @@ export function call(cid, name, args = {}) {
         ...(r.agent ? { write: { agent: r.agent, authority: { rule: r.authority_rule, mode: r.authority_mode }, approver: r.approver, outcome: r.outcome } } : {}) })) };
   }
   // Governance (T2.3): pause and resume an agent, trial a changed agent rule, read the change list.
-  if (name === 'pause_agent' || name === 'resume_agent') {
-    const r = G.setAgentState(db, cid, { agent: args.agent, state: name === 'pause_agent' ? 'paused' : 'active', by: assistantOf(cid), reason: args.reason });
+  // An assistant may pause an agent (the safe direction) but never resume one: resuming hands authority back, so only a person on the admin page does it.
+  if (name === 'resume_agent') { log(cid, name, [], args, 'Refused', [], { agent: assistantOf(cid), rule: null, mode: 'person', approver: null, outcome: 'Refused: an agent is resumed by a person on the admin page' }); return { result: 'Refused', message: 'An assistant cannot resume an agent. A person resumes it on the Trading Grid admin page.' }; }
+  if (name === 'pause_agent') {
+    const r = G.setAgentState(db, cid, { agent: args.agent, state: 'paused', by: assistantOf(cid), reason: args.reason });
     log(cid, name, [], args, r.result, r.change ? [r.change] : [], { agent: assistantOf(cid), rule: null, mode: 'person', approver: `${side.person} (asked in the assistant)`, outcome: r.result === 'Invalid request' ? r.message : `${r.agent} ${r.state.toLowerCase()}` });
     return r;
   }
@@ -211,11 +213,10 @@ const LOG_TOOL = { name: 'get_access_log', title: 'Access log', description: 'Ev
 export const ALL_TOOLS = [...TOOLS, ...BOUNDARY, ...ASHBY_WRITES, ...ASHBY_REFUSALS, SQL_TOOL, LOG_TOOL];
 export const ALL_NF_TOOLS = [...NF_TOOLS, ...NF_WRITES, ...NF_REFUSALS, NF_SQL_TOOL, LOG_TOOL];
 const WRITE_NAMES = new Set(['request_change', 'submit_dispute', 'release_ship_notice', 'decide_charge', 'publish_rule']);
-// Governance tools (T2.3). Pause, resume and a trial change no Trading Grid record but do record on the change list, so none is marked read-only.
+// Governance tools (T2.3). Pause and a trial change no Trading Grid record but do record on the change list, so none is marked read-only.
 const agentNames = (cid) => Object.keys(G.AGENTS).filter((a) => G.AGENTS[a].connection === cid).join(', ');
 const GOV = (cid) => [
   { name: 'pause_agent', title: 'Pause an agent', write: true, description: `Pauses one of ${SIDE[cid].company}’s agents (${agentNames(cid)}). While paused the agent proposes nothing: each event it would work arrives as a plain task with no proposal${cid === AS ? ', Claim Agent disputes nothing without asking, and Scout gets no model turn' : ''}. Recorded on the change list with who paused it and why. Only call this when the user asks.`, input: { agent: z.string().describe(`Agent name: ${agentNames(cid)}`), reason: z.string().optional() } },
-  { name: 'resume_agent', title: 'Resume a paused agent', write: true, description: 'Resumes a paused agent so it works new events under its rules again. Recorded on the change list. Only call this when the user asks.', input: { agent: z.string().describe(`Agent name: ${agentNames(cid)}`), reason: z.string().optional() } },
   ...(cid === AS ? [{ name: 'replay_agent_rule', title: 'Trial a changed agent rule', write: true, description: 'Replays a change to one of Ashby’s agent rules (a parameter the catalogue holds, for example AP-4.1 max_amount 50) over records beside the rule in force, lists every record whose next step or authority differs, and records the trial on the change list with who ran it, the drift measure and the rollback path. Nothing is published and the catalogue is unchanged. Deduction cases default to every case of the quarter up to as_of.',
     input: { job: z.enum(Object.keys(JOBS)).describe('Agent job, for example deduction (Claim Agent)'), rule: z.string().describe('Ashby rule id, for example AP-4.1'), params: z.record(z.number()).describe('Parameters to change, for example {"max_amount": 50}'), records: z.array(z.string()).optional().describe('Records to replay; deduction defaults to the quarter’s cases'), as_of: z.string().optional() } }] : []),
   { name: 'get_change_list', title: 'Agent change list', description: 'Each agent with its state (Active or Paused) and authority limit, and the change list newest first: every pause, resume and trial of a changed agent rule, with what changed, the replay result, who did it and when.', input: { limit: z.number().int().min(1).max(200).optional(), kind: z.enum(['pause', 'resume', 'trial']).optional() } },

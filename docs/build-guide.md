@@ -406,7 +406,7 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | --- | --- | --- | --- | --- | --- | --- |
 | T2.1 | P10 Northfield | Northfield scope: shared documents, private records, refusals, writes that follow the catalogue | — | Server reference | Evidence: commit 5dd3748; `docs/phase2/golden-nf/` | Done |
 | T2.2 | P5, P6, P7, P9 | Every agent decision computed from its timeline records | — | R21; `registry/registry.json` | Evidence: the A3 cell reads Done for P5, P6, P7 and P9, and the gate's mutation checks pass for each agent job; CALLS 74 | Done |
-| T2.3 | Agents | Agent governance: authority limits, override, pause, audit, and replay of a changed agent rule before it goes live | — | Prototype specs, Agent governance | A gate check replays a changed agent rule and the governance golden questions pass. Done: the replay, gate check `governance.replay_shows_a_changed_authority` (commit 196aaef, CALLS 78). Left: stories 1, 2 and 4 and the golden questions | Open |
+| T2.3 | Agents | Agent governance: authority limits, override, pause, audit, and replay of a changed agent rule before it goes live | — | Prototype specs, Agent governance | A gate check replays a changed agent rule and the governance golden questions pass. Done: the replay, gate check `governance.replay_shows_a_changed_authority` (commit 196aaef, CALLS 78); stories 1, 2 and 4, eleven `governance.` gate checks (merge of commit c09f769, CALLS 86, `docs/phase2/T2.3-governance.md`). Left: the governance golden questions, parked (CALLS 79), so T3.2 no longer waits on this row | Open |
 | T2.4 | P5, P9 | Shelf Agent reads averages; Watch Agent reads NF-4.2 from the catalogue | — | R22 | Evidence: commit e6cbb53; `agents.thresholds_come_from_catalogue` covers both agents; CALLS 75 | Done |
 | T2.5 | P10 Ashby, P10 Northfield | Tool comparison includes Northfield's tools | — | Server reference, compared with published tool lists | Evidence: the comparison table under Server reference, by kind of job; Salesforce names unverified against the official page; CALLS 76 | Done |
 | T2.6 | P15 | Registry anchors hold the draft rule record | — | Prototype specs, P15 | Evidence: commit 0d4cd2b; P15 anchors `draft_rule:NFD-1` and the registry check reads it; CALLS 74 | Done |
@@ -509,8 +509,8 @@ The gate and smoke tests pass at commit b6d53d992e. Two of the plan's proofs hav
 
 | Proof | Command or location | Result |
 | --- | --- | --- |
-| World gate: invariants, catalogue equals the pack, thresholds from the catalogue | `npm run build` | 390 passed, 0 failed |
-| Server smoke: both scopes, refusals, the shared deduction case | `npm run smoke` | 57 passed, 0 failed |
+| World gate: invariants, catalogue equals the pack, thresholds from the catalogue | `npm run build` | 401 passed, 0 failed |
+| Server smoke: both scopes, refusals, the shared deduction case | `npm run smoke` | 83 passed, 0 failed |
 | X12 validation | `npm run validate` | Passes, but its schemas were generated in this repo, so it does not meet the independent-schema test |
 | X12 against schemas this repo did not write | `validator/botscheck.py` with the bots-grammars X12 grammars | Every document checked; it faults exactly the documents the world rejects on a 997, and nothing else; all ten injected faults are rejected for their reason (`validator/bots-report.json`) |
 | Contract test of on-screen values: it checks every number a screen shows and requires none | `npm run contract` | Last full report is `docs/phase0/contract-report-turn4.json`. The P7 claim was checked against a working copy, not the live page. |

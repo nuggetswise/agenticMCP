@@ -1,0 +1,7 @@
+[
+ {"id": "GQ1", "connector": "Ashby (RetailStrategy)", "q": "Which agents act for Ashby Supplier, is each one active or paused, and what is Claim Agent's authority: under which rule may it act without asking Priya Raman, and up to what amount?"},
+ {"id": "GQ2", "connector": "Ashby (RetailStrategy)", "q": "Trial this change without making it live: if AP-4.1's limit for Claim Agent were lowered from $250 to $50, which of Ashby's deduction cases would move from Claim Agent acting on its own to Priya Raman deciding, and would any case's next step itself change? Name the case ids and amounts."},
+ {"id": "GQ3", "connector": "Ashby (RetailStrategy)", "q": "For Scout Agent on order NR-460207, which of Scout's actions may Priya Raman change the approval mode of, which actions are locked, and which administrator guardrails apply? Give the rule for each locked action and guardrail."},
+ {"id": "GQ4", "connector": "Ashby (RetailStrategy)", "q": "Run the rule baseline (not Scout) on NR-460207 with the recorded facts. How many of the 660 cartons does it load, and does it change any recorded Trading Grid record?"},
+ {"id": "GQ5", "connector": "Northfield (SupplierRetail)", "q": "Which agents act for Northfield Retailer, and what may each do on its own? Can Jordan Ellis's assistant pause an agent, and can it resume one?"}
+]

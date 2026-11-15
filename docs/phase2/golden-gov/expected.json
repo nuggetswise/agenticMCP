@@ -1,0 +1,7 @@
+{
+ "GQ1": {"agents": ["Watch Agent", "Claim Agent", "Test Agent", "Shelf Agent", "Scout Agent", "Pace Agent"], "rule": "AP-4.1", "limit": 250},
+ "GQ2": {"moves": [["DC-40877", 88.40]], "next_step_changes": 0},
+ "GQ3": {"locked": ["AP-5.1", "AP-1.4", "AP-1.3"], "guardrails": ["AP-1.4", "AP-7.1", "AP-3.3"], "editable_examples": ["load", "relabel", "overpack"]},
+ "GQ4": {"loaded": 659, "of": 660},
+ "GQ5": {"agents": ["Review Agent", "Match Agent"], "rule": "NF-7.7", "pause": true, "resume": false}
+}

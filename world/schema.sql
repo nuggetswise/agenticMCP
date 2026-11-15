@@ -31,8 +31,12 @@ CREATE TABLE events (id INTEGER PRIMARY KEY, at TEXT NOT NULL, kind TEXT NOT NUL
 
 -- Access: one connection per company, scopes picked by its admin. Proposals hold approval-gated writes (off in this release).
 CREATE TABLE connections (id TEXT PRIMARY KEY, company_id TEXT NOT NULL, user_name TEXT NOT NULL, scopes TEXT NOT NULL, read_only INTEGER NOT NULL, configured_by TEXT NOT NULL, configured_at TEXT NOT NULL);
-CREATE TABLE access_log (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, connection_id TEXT NOT NULL, user_name TEXT NOT NULL, tool TEXT NOT NULL, scopes_used TEXT NOT NULL, arguments TEXT NOT NULL, result TEXT NOT NULL, records TEXT NOT NULL);
-CREATE TABLE proposals (id TEXT PRIMARY KEY, connection_id TEXT NOT NULL DEFAULT 'ashby-assistant', kind TEXT NOT NULL DEFAULT 'change', approver TEXT NOT NULL DEFAULT 'Priya Raman', rule_id TEXT, created_at TEXT NOT NULL, created_by TEXT NOT NULL, action TEXT NOT NULL, target TEXT NOT NULL, payload TEXT NOT NULL, state TEXT NOT NULL, decided_by TEXT, decided_at TEXT, result_event INTEGER);
+CREATE TABLE access_log (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, connection_id TEXT NOT NULL, user_name TEXT NOT NULL, tool TEXT NOT NULL, scopes_used TEXT NOT NULL, arguments TEXT NOT NULL, result TEXT NOT NULL, records TEXT NOT NULL,
+  -- On every write (T2.3 story 1): the agent or person who proposed it, the authority it ran under (rule id and mode: suggest, approve or policy), who approved and the outcome.
+  agent TEXT, authority_rule TEXT, authority_mode TEXT, approver TEXT, outcome TEXT);
+CREATE TABLE proposals (id TEXT PRIMARY KEY, connection_id TEXT NOT NULL DEFAULT 'ashby-assistant', kind TEXT NOT NULL DEFAULT 'change', approver TEXT NOT NULL DEFAULT 'Priya Raman', rule_id TEXT, created_at TEXT NOT NULL, created_by TEXT NOT NULL, action TEXT NOT NULL, target TEXT NOT NULL, payload TEXT NOT NULL, state TEXT NOT NULL, decided_by TEXT, decided_at TEXT, result_event INTEGER, authority_mode TEXT NOT NULL DEFAULT 'approve', note TEXT);
+-- The change list (T2.3): every pause and resume of an agent and every trial of a changed agent rule, with who did it and when.
+CREATE TABLE agent_changes (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, connection_id TEXT NOT NULL, agent TEXT NOT NULL, kind TEXT NOT NULL, rule_id TEXT, change TEXT NOT NULL, result TEXT NOT NULL, run_by TEXT NOT NULL, note TEXT);
 -- Northfield's own records: reviewer notes on deduction cases, draft rules and their replays. Not shared with suppliers.
 CREATE TABLE review_notes (id INTEGER PRIMARY KEY, case_id TEXT NOT NULL, charge TEXT NOT NULL, at TEXT NOT NULL, author TEXT NOT NULL, note TEXT NOT NULL);
 CREATE TABLE draft_rules (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, author TEXT NOT NULL, statement TEXT NOT NULL, check_kind TEXT NOT NULL, value REAL NOT NULL, charge REAL, state TEXT NOT NULL);

@@ -55,7 +55,7 @@ export function startSession(db, { variation = {}, policy = {}, label = 'Operato
     goal: goal || 'Every Northfield shipment meets Northfield rules 2026.2 before its cutoff. Act for Priya Raman, within Ashby’s rules.',
     erp: { ship_to: 'DC 4', lines: 'Old line numbers' },
     load: { shipment: ld.shipment, expected: ld.cartons_expected, loaded: [], staged: [world.carton.sscc], removed: [], sealed: false, departed: false, base_loaded: ld.cartons_loaded },
-    tasks: [], proposals: [], notices: [], asn: null, events: [], trace: [], usedKeys: new Set(), agent: { history: [], status: 'idle', calls: 0, tool_calls: 0, ms: 0 } };
+    tasks: [], proposals: [], notices: [], asn: null, events: [], trace: [], audit: [], usedKeys: new Set(), agent: { history: [], status: 'idle', calls: 0, tool_calls: 0, ms: 0 } };
   SESSIONS.set(id, s);
   trace(s, 'Trading Grid', 'system', 'Session branched from the recorded world', { at: fmtET(world.branch_at), hidden: 'Every recorded event after this time', changes });
   ruleDetect(db, s);
@@ -65,6 +65,13 @@ export const getSession = (id) => SESSIONS.get(id) || null;
 
 function trace(s, actor, type, what, detail = {}) {
   s.trace.push({ n: s.trace.length + 1, clock: fmtET(iso(s.clock)), actor, type, what, ...(Object.keys(detail).length ? { detail } : {}) });
+}
+// Write attribution (T2.3 story 1): every proposal state change records who proposed, the authority (rule and mode),
+// who approved and the outcome. The server copies these into the access log.
+const MODE_APPROVER = { policy: 'Standing policy, set by Priya Raman', suggest: 'None: Scout may only suggest' };
+function audit(s, p, outcome) {
+  const approver = p.taken_over_by || p.approved_by || (p.needs === 'approve' ? (p.state === 'Awaiting approval' ? 'Priya Raman (awaiting)' : p.rejected_by || 'Priya Raman') : MODE_APPROVER[p.needs]);
+  s.audit.push({ session: s.id, proposal: p.id, action: p.action, agent: p.by, authority_rule: ACTIONS[p.action].rule, authority_mode: p.needs, approver, outcome, clock: fmtET(iso(s.clock)) });
 }
 const TYPES = { system: 'System', rule: 'Fixed rule', ai: 'AI judgment', human: 'Human approval', external: 'External confirmation', tool: 'Tool call' };
 
@@ -126,8 +133,9 @@ export function propose(db, s, by, action, args = {}, why = {}) {
   const p = { id: `SP-${s.proposals.length + 1}`, key, action, args, by, rationale: why.rationale || null, alternatives: why.alternatives || [], state: 'Awaiting approval', needs: s.modes[action], at: fmtET(iso(s.clock)) };
   s.proposals.push(p);
   trace(s, by, by === 'Scout' ? 'ai' : 'rule', `Proposed: ${def.label}`, { proposal: p.id, args, rationale: p.rationale, alternatives: p.alternatives, needs: p.needs });
-  if (p.needs === 'suggest') { p.state = 'Suggested'; return { state: 'Suggested', proposal: p.id, message: 'Scout may only suggest this action; Priya does it by hand.' }; }
+  if (p.needs === 'suggest') { p.state = 'Suggested'; audit(s, p, 'Suggested; Priya does it by hand'); return { state: 'Suggested', proposal: p.id, message: 'Scout may only suggest this action; Priya does it by hand.' }; }
   if (p.needs === 'policy') return execute(db, s, p, 'Standing policy');
+  audit(s, p, 'Awaiting approval');
   return { state: 'Awaiting approval', proposal: p.id, approver: 'Priya Raman', rule: def.rule };
 }
 function validate(s, action, a) {
@@ -147,11 +155,14 @@ function validate(s, action, a) {
   if (left < -60 && action !== 'release_ship_notice') return 'The shipment has left.';
   return null;
 }
-export function decide(db, s, proposalId, decision, by = 'Priya Raman') {
+export function decide(db, s, proposalId, decision, by = 'Priya Raman', note) {
   const p = s.proposals.find((x) => x.id === proposalId);
   if (!p) return { state: 'Refused', message: `No proposal ${proposalId}` };
   if (p.state !== 'Awaiting approval') return { state: 'Refused', message: `${proposalId} is ${p.state.toLowerCase()}; an approval cannot be replayed.` };
-  if (decision !== 'approve') { p.state = 'Rejected'; trace(s, by, 'human', `Rejected ${p.id}`, { action: p.action }); return { state: 'Rejected', proposal: p.id }; }
+  // Edit suggestion (R15): the person sets this proposal aside and does the case by hand. Scout stops proposing in this session.
+  if (decision === 'edit') { p.state = 'Taken over'; p.taken_over_by = by; p.note = note || null; s.handed_over = { by, proposal: p.id, note: p.note, at: fmtET(iso(s.clock)) }; s.agent.status = 'handed_to_person';
+    trace(s, by, 'human', `Edit suggestion: ${by} set ${p.id} aside and does the case by hand`, { action: p.action, note: p.note }); audit(s, p, `Taken over by ${by}; done by hand${p.note ? `: ${p.note}` : ''}`); return { state: 'Taken over', proposal: p.id, by }; }
+  if (decision !== 'approve') { p.state = 'Rejected'; p.rejected_by = by; trace(s, by, 'human', `Rejected ${p.id}`, { action: p.action }); audit(s, p, 'Rejected'); return { state: 'Rejected', proposal: p.id }; }
   p.state = 'Approved'; p.approved_by = by; trace(s, by, 'human', `Approved ${p.id}: ${ACTIONS[p.action].label}`, { args: p.args });
   return execute(db, s, p, by);
 }
@@ -208,6 +219,7 @@ function execute(db, s, p, by) {
     default: r = { state: 'Refused', response: 'Unknown action' };
   }
   p.state = ['Completed', 'Delivered', 'Sent'].includes(r.state) ? 'Executed' : 'Failed'; p.result = r; p.executed_under = by;
+  audit(s, p, `${p.state}: ${r.response || r.state}`);
   return { state: p.state, proposal: p.id, result: r };
 }
 function sealIfDue(s, force) { if (s.load.sealed) return; if (force || s.clock >= Date.parse(s.world.seal_at)) { s.clock = Math.max(s.clock, Date.parse(s.world.seal_at)); s.load.sealed = true; trace(s, 'Kinross', 'external', `Trailer sealed with ${cartonsLoaded(s)} of ${s.load.expected} cartons`, { seal: 'SL-4471026' }); } }
@@ -254,16 +266,22 @@ When you are waiting for Priya or for Kinross, stop and say in one or two senten
 
 /** Runs Scout until it waits for a person, finishes, or hits a limit. `callModel(body)` returns a Gemini response (server-side only). */
 // Limits: per turn (until Scout waits or finishes) and per session, so a long case is not cut off by earlier turns' reads.
-export async function runScout(db, s, { callModel, maxSteps = 12, maxToolCalls = 16, maxSessionCalls = 64, maxMs = 90000, event } = {}) {
+export async function runScout(db, s, { callModel, maxSteps = 12, maxToolCalls = 16, maxSessionCalls = 64, maxMs = 90000, event, paused = () => false } = {}) {
+  // Pause and override are enforced here, before any model call: a paused Scout, or a case a person took over, gets no model turn.
+  if (s.handed_over) return { ok: true, status: 'handed_to_person', awaiting: [] };
+  if (paused()) { s.agent.status = 'paused'; trace(s, 'Trading Grid', 'system', 'Scout Agent is paused by the administrator; the event stays a plain task with no proposal', {}); return { ok: true, status: 'paused', awaiting: [] }; }
   if (!callModel) return { ok: false, blocked: 'No model is configured on this server; Scout cannot run. Nothing was simulated in its place.' };
   const ag = s.agent; const t0 = Date.now(); const turnStart = ag.tool_calls; ag.status = 'running';
   if (!ag.history.length) ag.history.push({ role: 'user', parts: [{ text: `Business event: Kinross load scan for shipment SHP-460207 shows ${s.load.base_loaded} of ${s.load.expected} cartons loaded. The rule engine reports: ${ruleDetect(null, s, true).map((f) => `${f.rule}: ${f.finding}`).join('; ')}. Clock: ${fmtET(iso(s.clock))}.` }] });
   else if (event) ag.history.push({ role: 'user', parts: [{ text: `New evidence at ${fmtET(iso(s.clock))}: ${event}` }] });
   const decl = declarations(AGENT_TOOLS);
   for (let step = 0; step < maxSteps; step++) {
+    if (paused()) { ag.status = 'paused'; trace(s, 'Trading Grid', 'system', 'Scout Agent paused by the administrator; stopped before its next step', {}); break; }
     if (Date.now() - t0 > maxMs || ag.tool_calls - turnStart >= maxToolCalls || ag.tool_calls >= maxSessionCalls) { ag.status = 'stopped'; trace(s, 'Scout', 'system', 'Stopped at its limit', { tool_calls: ag.tool_calls, ms: Date.now() - t0 }); break; }
     let data; try { data = await callModel({ systemInstruction: { parts: [{ text: INSTRUCTION(s) }] }, contents: ag.history, tools: [{ functionDeclarations: decl }], toolConfig: { functionCallingConfig: { mode: 'AUTO' } }, generationConfig: { temperature: 0 } }); ag.calls++; if (data?._route) (ag.routes ||= {})[data._route] = (ag.routes[data._route] || 0) + 1; }
     catch (e) { ag.status = 'model_failed'; trace(s, 'Scout', 'system', 'Model call failed; no state was changed', { error: String(e.message || e).slice(0, 200) }); return { ok: false, status: ag.status }; }
+    // A pause that lands while the model is answering: nothing it returned is applied.
+    if (paused()) { ag.status = 'paused'; trace(s, 'Trading Grid', 'system', 'Scout Agent paused by the administrator; the model’s last answer was not applied', {}); break; }
     const content = data?.candidates?.[0]?.content; const parts = content?.parts || []; const calls = parts.filter((p) => p.functionCall);
     const text = parts.map((p) => p.text || '').join('').trim();
     if (content) ag.history.push(content);
@@ -285,9 +303,10 @@ export async function runScout(db, s, { callModel, maxSteps = 12, maxToolCalls =
 }
 
 /** Approve or reject, then hand Scout what happened as new evidence and let it continue. */
-export async function decideAndResume(db, s, proposalId, decision, by, opts) {
-  const r = decide(db, s, proposalId, decision, by);
+export async function decideAndResume(db, s, proposalId, decision, by, opts = {}) {
+  const r = decide(db, s, proposalId, decision, by, opts.note);
   if (r.state === 'Refused') return r;
+  if (r.state === 'Taken over') return { decision: r, run: { ok: true, status: s.agent.status } };
   const ev = r.result ? `${proposalId} ${decision === 'approve' ? 'approved by ' + by : 'rejected'}; result: ${JSON.stringify(r.result)}` : `${proposalId} rejected by ${by}`;
   const run = await runScout(db, s, { ...opts, event: ev });
   return { decision: r, run };
@@ -309,12 +328,20 @@ export function geminiCaller(routes = modelRoutes(), fetchImpl = fetch) {
 }
 
 /** Governance replay: the same branch and variation, baseline and Scout side by side, approvals by a labelled test approver. */
-export async function replay(db, { variation = {}, policy = {}, callModel, approveAll = true } = {}) {
+export async function replay(db, { variation = {}, policy = {}, callModel, approveAll = true, paused = () => false } = {}) {
   const base = startSession(db, { variation, policy, label: 'Replay · baseline' }); const b = runBaseline(db, base);
+  // A changed policy (T2.3 story 4) is replayed beside the policy in force: the baseline runs under both, and the actions whose authority differs are listed.
+  const changed = Object.keys(policy || {}).length; let trial = null;
+  if (changed) { const inForce = startSession(db, { variation, label: 'Replay · baseline, policy in force' }); const bf = runBaseline(db, inForce);
+    const asked = Object.entries(policy).map(([action, mode]) => ({ action, rule: ACTIONS[action]?.rule || null, from: ACTIONS[action]?.mode || null, to: mode, applied: base.modes[action] === mode && ACTIONS[action]?.mode !== mode }));
+    const pick = (ss) => ss.proposals.map((p) => `${p.action}|${p.needs}|${p.state}`);
+    trial = { asked, refused: asked.filter((a) => !a.applied).map((a) => `${a.action}: ${!ACTIONS[a.action] ? 'no such action' : a.from === a.to ? 'already in force' : `${a.rule} is locked (${a.from})`}`),
+      in_force: { session: inForce.id, outcome: bf }, with_change: { session: base.id, outcome: b },
+      differs: [...new Set([...pick(inForce), ...pick(base)])].filter((k) => pick(inForce).includes(k) !== pick(base).includes(k)).map((k) => { const [action, needs, state] = k.split('|'); return { action, needs, state, under: pick(base).includes(k) ? 'change' : 'rule in force' }; }) }; }
   const sc = startSession(db, { variation, policy, label: 'Replay · Scout' });
-  let run = await runScout(db, sc, { callModel }); let rounds = 0;
-  while (run.ok && run.status === 'waiting_for_priya' && approveAll && rounds++ < 8) { const p = sc.proposals.find((x) => x.state === 'Awaiting approval'); const r = await decideAndResume(db, sc, p.id, 'approve', 'Test approver (replay)', { callModel }); run = r.run; }
-  return { variation: base.changes, evidence_cutoff: fmtET(P5.branch_at), baseline: { session: base.id, outcome: b, trace: base.trace }, scout: run.ok ? { session: sc.id, status: run.status, outcome: outcome(sc), overhead: { model_calls: sc.agent.calls, tool_calls: sc.agent.tool_calls, ms: sc.agent.ms, model_routes: sc.agent.routes || {} }, trace: sc.trace } : { session: sc.id, blocked: run.blocked || run.status, trace: sc.trace } };
+  let run = await runScout(db, sc, { callModel, paused }); let rounds = 0;
+  while (run.ok && run.status === 'waiting_for_priya' && approveAll && rounds++ < 8) { const p = sc.proposals.find((x) => x.state === 'Awaiting approval'); const r = await decideAndResume(db, sc, p.id, 'approve', 'Test approver (replay)', { callModel, paused }); run = r.run; }
+  return { variation: base.changes, evidence_cutoff: fmtET(P5.branch_at), ...(trial ? { policy_trial: trial } : {}), baseline: { session: base.id, outcome: b, trace: base.trace }, scout: run.status === 'paused' ? { session: sc.id, blocked: 'Scout Agent is paused; the model did not run', trace: sc.trace } : run.ok ? { session: sc.id, status: run.status, outcome: outcome(sc), overhead: { model_calls: sc.agent.calls, tool_calls: sc.agent.tool_calls, ms: sc.agent.ms, model_routes: sc.agent.routes || {} }, trace: sc.trace } : { session: sc.id, blocked: run.blocked || run.status, trace: sc.trace } };
 }
 export const VARIATIONS = {
   canonical: {},

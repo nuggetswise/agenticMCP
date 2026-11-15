@@ -10,6 +10,8 @@ import { parseX12 } from '../world/x12.js';
 import * as D from '../src/domain.js';
 import * as A from '../src/agents.js';
 import * as NR from '../src/retailer.js';
+import * as G from '../src/governance.js';
+import * as Scout from '../src/scout.js';
 import { scorecard, buyerFixture, normOrder } from '../src/score.js';
 import { TOOLS, BOUNDARY, ASHBY_WRITES, ASHBY_REFUSALS, NF_TOOLS, NF_WRITES, NF_REFUSALS } from '../src/tools.js';
 import { corpusHash } from './corpus.js';
@@ -175,6 +177,41 @@ for (const p of REG.prototypes) {
   eq('governance.replay_shows_a_changed_authority', tight.changed.map((c) => [c.record, c.now.next_step === c.with_change.next_step, /^Claim Agent may dispute/.test(c.now.authority), /^Priya Raman decides/.test(c.with_change.authority)]), [['DC-40877', true, true, true]]);
   eq('governance.replay_of_the_rule_in_force_changes_nothing', A.replayAgentRule(ash, { job: 'deduction', change: { rule: 'AP-4.1', params: { max_amount: 250 } }, records: cases, asOf: at }).changed.length, 0);
   eq('governance.catalogue_unchanged_after_replay', D.param(ash, 'AP-4.1', 'max_amount'), 250); }
+// T2.3 stories 1, 2 and 4, on a scratch database holding the governance tables (the built world is read-only here).
+{ const gdb = new DatabaseSync(':memory:'); gdb.exec(readFileSync(join(ROOT, 'world', 'schema.sql'), 'utf8')); gdb.exec(`ATTACH DATABASE '${ASHBY_DB.replace(/'/g, "''")}' AS a; INSERT INTO rules SELECT * FROM a.rules; DETACH DATABASE a;`); const at = T('2026-12-10T12:00:00-05:00');
+  const noModel = async () => { throw new Error('the model must not be called'); };
+  // Story 1: every Scout proposal state change carries agent, authority (rule and mode), approver and outcome, in every variation.
+  const missing = []; let entries = 0;
+  for (const [name, v] of Object.entries(Scout.VARIATIONS)) { const s = Scout.startSession(db, { variation: v, label: `gate ${name}` }); Scout.runBaseline(db, s);
+    for (const p of s.proposals) if (!s.audit.some((a) => a.proposal === p.id && a.outcome.startsWith(p.state))) missing.push(`${name} ${p.id} ${p.state}: no final entry`);
+    for (const a of s.audit) { entries++; if (!a.agent || !a.authority_rule || !['suggest', 'approve', 'policy'].includes(a.authority_mode) || !a.approver || !a.outcome) missing.push(`${name} ${a.proposal}`); } }
+  ok('governance.every_scout_write_names_agent_authority_approver_outcome', !missing.length && entries > 20, `${entries} entries; ${missing.slice(0, 3).join('; ')}`);
+  { const s = Scout.startSession(db); Scout.decide(db, s, Scout.propose(db, s, 'Scout', 'erp_align_order').proposal, 'approve'); const r = Scout.propose(db, s, 'Scout', 'build_ship_notice'); const a = s.audit.find((x) => x.proposal === r.proposal);
+    eq('governance.standing_policy_write_names_the_policy', [r.state, a?.authority_rule, a?.authority_mode, a?.approver], ['Executed', 'AP-1.4', 'policy', 'Standing policy, set by Priya Raman']); }
+  // Story 2: pause turns the agent's proposal into a plain task, stops AP-4.1's acting without asking and keeps the model from running; resume restores it.
+  { const before = A.claimDecision(ash, 'DC-40877', at);
+    const p = G.setAgentState(gdb, G.AS, { agent: 'Claim Agent', state: 'paused', by: 'Priya Raman', reason: 'gate' });
+    const task = G.plainTask(gdb, before, 'Claim Agent');
+    eq('governance.pause_turns_a_proposal_into_a_plain_task', [p.result, G.isPaused(gdb, 'Claim Agent'), task.proposal, 'next_step' in task, 'authority' in task, task.record], ['Agent paused', true, null, false, false, 'DC-40877']);
+    eq('governance.paused_claim_agent_does_not_act_without_asking', [G.mayActWithoutAsking(gdb, 'Claim Agent', true), G.mayActWithoutAsking(gdb, 'Watch Agent', true)], [false, true]);
+    const r = G.setAgentState(gdb, G.AS, { agent: 'Claim Agent', state: 'active', by: 'Priya Raman' }); const log = G.changeList(gdb, G.AS, { kind: undefined }).entries;
+    eq('governance.resume_restores_and_both_are_logged', [r.result, G.isPaused(gdb, 'Claim Agent'), log.map((e) => [e.kind, e.agent, e.run_by])], ['Agent resumed', false, [['resume', 'Claim Agent', 'Priya Raman'], ['pause', 'Claim Agent', 'Priya Raman']]]);
+    eq('governance.pause_is_per_connection', G.setAgentState(gdb, G.NF, { agent: 'Claim Agent', state: 'paused', by: 'Jordan Ellis' }).result, 'Invalid request'); }
+  { G.setAgentState(gdb, G.AS, { agent: 'Scout', state: 'paused', by: 'Priya Raman' }); const s = Scout.startSession(db);
+    const run = await Scout.runScout(db, s, { callModel: noModel, paused: () => G.isPaused(gdb, 'Scout Agent') });
+    eq('governance.paused_scout_gets_no_model_turn', [run.status, s.agent.calls, s.proposals.length], ['paused', 0, 0]); G.setAgentState(gdb, G.AS, { agent: 'Scout Agent', state: 'active', by: 'Priya Raman' }); }
+  { const s = Scout.startSession(db); const p = Scout.propose(db, s, 'Scout', 'kinross_load', { sscc: s.world.carton.sscc });
+    const d = Scout.decide(db, s, p.proposal, 'edit', 'Priya Raman', 'Calls Kinross herself'); const a = s.audit.at(-1); const run = await Scout.runScout(db, s, { callModel: noModel });
+    eq('governance.override_is_recorded_with_who_made_it', [d.state, a.approver, /^Taken over by Priya Raman/.test(a.outcome), s.handed_over?.by, run.status, s.agent.calls, Scout.decide(db, s, p.proposal, 'approve').state], ['Taken over', 'Priya Raman', true, 'Priya Raman', 'handed_to_person', 0, 'Refused']); }
+  // Story 4: a trial of a changed agent rule is a change-list entry: what changed, the replay result, drift, rollback, who ran it and when.
+  { const t = G.trialAgentRule(gdb, ash, G.AS, { job: 'deduction', rule: 'AP-4.1', params: { max_amount: 50 }, as_of: '2026-12-10T12:00:00-05:00' }, 'Gate check');
+    const e = G.changeList(gdb, G.AS, { kind: 'trial' }).entries[0];
+    eq('governance.trial_recorded_on_the_change_list', [t.trial, e?.id, e?.kind, e?.agent, e?.rule, e?.change, e?.result.changed.map((c) => c.record), e?.run_by, !!e?.at, /^1 of \d+ records/.test(e?.result.drift_measure), /still holds AP-4.1/.test(e?.result.rollback)],
+      [e?.id, t.trial, 'trial', 'Claim Agent', 'AP-4.1', { rule: 'AP-4.1', from: { max_amount: 250 }, to: { max_amount: 50 } }, ['DC-40877'], 'Gate check', true, true, true]);
+    eq('governance.trial_refuses_rules_it_cannot_change', [G.trialAgentRule(gdb, ash, G.AS, { job: 'deduction', rule: 'NF-7.4', params: { x: 1 } }, 'g').result, G.trialAgentRule(gdb, ash, G.AS, { job: 'deduction', rule: 'AP-4.1', params: { limit: 1 } }, 'g').result, G.changeList(gdb, G.AS, { kind: 'trial' }).entries.length], ['Invalid request', 'Invalid request', 1]);
+    const sr = await Scout.replay(db, { policy: { kinross_load: 'policy', release_ship_notice: 'policy' }, callModel: null });
+    eq('governance.scout_policy_trial_shows_authority_beside_the_policy_in_force', [sr.policy_trial.asked.map((a) => [a.action, a.applied]), sr.policy_trial.differs.some((d) => d.action === 'kinross_load' && d.needs === 'policy' && d.under === 'change'), sr.policy_trial.in_force.outcome.approvals > sr.policy_trial.with_change.outcome.approvals],
+      [[['kinross_load', true], ['release_ship_notice', false]], true, true]); } }
 // The server holds no branch on a record id: no anchor PO or case id appears in the decision code.
 { const src = readFileSync(join(ROOT, 'src', 'agents.js'), 'utf8') + readFileSync(join(ROOT, 'src', 'domain.js'), 'utf8'); const ids = src.match(/NR-\d{5,6}|DC-\d{5}|ASN-\d{5}|INV-\d{4}/g) || [];
   eq('mutation.no_record_ids_in_decision_code', ids, []); }

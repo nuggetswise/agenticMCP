@@ -18,11 +18,13 @@ async function withServer(env, port, fn) {
 }
 await withServer({ WRITES: 'off' }, 3971, async ({ base, client, tool, rest }) => {
   const { tools } = await client.listTools(); const names = tools.map((t) => t.name);
-  // 19 record tools plus five Scout tools (CALLS 81). Scout tools change only an isolated in-memory session, never a Trading Grid record,
-  // but they are not marked read-only so that a client still confirms before approving on Priya's behalf.
-  const scout = names.filter((n) => n.startsWith('scout_'));
-  ok('24 tools listed: 19 record tools and 5 Scout tools', names.length === 24 && scout.length === 5, `${names.length}, ${scout.length} Scout`); ok('no scenario tool', !names.includes('list_scenarios'));
-  ok('every record tool read-only', tools.filter((t) => !t.name.startsWith('scout_')).every((t) => t.annotations?.readOnlyHint === true));
+  // 19 record tools, five Scout tools (CALLS 81) and four governance tools (T2.3). Scout tools change only an isolated in-memory session, never a
+  // Trading Grid record, but they are not marked read-only so that a client still confirms before approving on Priya's behalf. Pause, resume and
+  // a trial record on the change list, so they are not read-only either; get_change_list is.
+  const scout = names.filter((n) => n.startsWith('scout_')); const GOVW = ['pause_agent', 'resume_agent', 'replay_agent_rule'];
+  ok('28 tools listed: 19 record tools, 5 Scout tools, 4 governance tools', names.length === 28 && scout.length === 5 && [...GOVW, 'get_change_list'].every((g) => names.includes(g)), `${names.length}, ${scout.length} Scout`); ok('no scenario tool', !names.includes('list_scenarios'));
+  ok('every record tool read-only', tools.filter((t) => !t.name.startsWith('scout_') && !GOVW.includes(t.name)).every((t) => t.annotations?.readOnlyHint === true));
+  ok('governance writes are not marked read-only', tools.filter((t) => GOVW.includes(t.name) || t.name.startsWith('scout_')).every((t) => t.annotations?.readOnlyHint === false));
   const before = JSON.stringify(await tool('get_access_log', { limit: 1 })).length >= 0 && (await tool('run_readonly_sql', { sql: "SELECT count(*) n FROM events WHERE po = 'NR-460207'" })).rows?.[0]?.n;
   const sb = await tool('scout_baseline', {}); const after = (await tool('run_readonly_sql', { sql: "SELECT count(*) n FROM events WHERE po = 'NR-460207'" })).rows?.[0]?.n;
   ok('Scout session leaves the recorded world unchanged', sb.outcome?.cartons_loaded === 659 && before === after, `${before} -> ${after}`);
@@ -60,7 +62,7 @@ await withServer({}, 3972, async ({ base, tool }) => {
 });
 // Both scopes on one world: shared documents, private records, refusals, and one deduction case worked from both sides.
 await withServer({}, 3973, async ({ base, nfClient, tool, nf }) => {
-  const { tools } = await nfClient.listTools(); ok('Northfield: 16 tools', tools.length === 16, String(tools.length));
+  const { tools } = await nfClient.listTools(); ok('Northfield: 19 tools (16 and 3 governance)', tools.length === 19 && ['pause_agent', 'resume_agent', 'get_change_list'].every((g) => tools.some((t) => t.name === g)), String(tools.length));
   const x = (await tool('get_document', { reference: 'ASN-450118-2' })).x12, y = (await nf('get_document', { reference: 'ASN-450118-2' })).x12; ok('shared X12 is the same on both sides', !!x && x === y);
   { const pre = await nf('supplier_document_trail', { po: 'NR-460207' }), post = await nf('supplier_document_trail', { po: 'NR-460207', as_of: '2026-12-04T10:00:00-05:00' });
     ok('Northfield trail: no such order before it is sent', pre.found === false && /^No such order as of/.test(pre.message) && !('order_value' in pre) && !('requested_delivery' in pre) && post.found === true && post.documents.length >= 1, JSON.stringify(pre).slice(0, 120)); }
@@ -90,8 +92,62 @@ await withServer({}, 3973, async ({ base, nfClient, tool, nf }) => {
   ok('case shows who drafted, approved and decided', /"drafted_by":"Claim Agent"/.test(h) && /"approved_by":"Priya Raman"/.test(h) && /"decided_by":"Jordan Ellis"/.test(h), h.slice(0, 200));
   const l1 = await tool('get_access_log', { limit: 50 }), l2 = await nf('get_access_log', { limit: 50 });
   ok('Northfield’s decision is in Ashby’s log', l1.calls.some((c) => c.tool === 'counterparty:decide_charge')); ok('Ashby’s dispute is in Northfield’s log', l2.calls.some((c) => c.tool === 'counterparty:submit_dispute'));
+  // T2.3 story 1: every write on both logs names agent, authority, approver and outcome.
+  { const isWrite = (c) => /^(request_change|submit_dispute|release_ship_notice|decide_charge|publish_rule|approve_proposal|reject_proposal|edit_proposal|pause_agent|resume_agent|replay_agent_rule|counterparty:.*|scout:.*)$/.test(c.tool);
+    const all = [...(await tool('get_access_log', { limit: 200 })).calls, ...(await nf('get_access_log', { limit: 200 })).calls].filter(isWrite);
+    const bare = all.filter((c) => !c.write || !c.write.agent || !c.write.authority?.mode || !c.write.approver || !c.write.outcome);
+    ok('every write names agent, authority, approver and outcome', all.length >= 8 && !bare.length, `${all.length} writes, ${bare.length} bare: ${bare.map((c) => c.tool).join(', ')}`);
+    const w = (cs, f) => cs.find(f)?.write; const as = (await tool('get_access_log', { limit: 200 })).calls, ns = (await nf('get_access_log', { limit: 200 })).calls;
+    const dp = w(as, (c) => c.tool === 'submit_dispute' && c.result === 'Proposal recorded'), da = w(as, (c) => c.tool === 'approve_proposal' && c.records.includes(d.proposal)), nd = w(ns, (c) => c.tool === 'approve_proposal' && c.records.includes(dc.proposal)), cp = w(as, (c) => c.tool === 'counterparty:decide_charge');
+    ok('dispute write: Claim Agent under AP-4.1, Priya approves', dp?.agent === 'Claim Agent' && dp?.authority.rule === 'AP-4.1' && dp?.authority.mode === 'approve' && da?.approver === 'Priya Raman' && /^Approved/.test(da?.outcome), JSON.stringify([dp, da]));
+    ok('charge decision: NF-7.7, Jordan approves, shown on Ashby’s log too', nd?.authority.rule === 'NF-7.7' && nd?.approver === 'Jordan Ellis' && cp?.approver === 'Jordan Ellis' && /Reversed/.test(cp?.outcome), JSON.stringify([nd, cp]));
+    ok('case history shows authority and outcome', /"authority":\{"rule":"AP-4.1","mode":"approve"\}/.test(h) && /"outcome":"Dispute submitted"/.test(h), h.slice(0, 300)); }
   for (const p of ['/admin/nfsmoke', '/records/northfield/order/NR-450118']) ok(`page ${p}`, (await fetch(base + p)).status === 200);
   await fetch(`${base}/admin/nfsmoke/reset`, { method: 'POST', redirect: 'manual' });
   ok('reset clears both sides', (await nf('review_deduction_case', { case: 'DC-41118', as_of: '2027-01-06' })).disputes.length === 0);
+});
+// T2.3 stories 1, 2 and 4 through the connections: pause and resume, override, the trial record and Scout write attribution.
+await withServer({}, 3974, async ({ base, tool, nf }) => {
+  // Story 2: pause. Claim Agent's proposal becomes a plain task; resume brings it back. Every change is on the change list with who made it.
+  const live = await tool('recommend_next_step', { job: 'deduction', record: 'DC-41118', as_of: '2026-12-28' });
+  const pz = await tool('pause_agent', { agent: 'Claim Agent', reason: 'smoke' });
+  const paused = await tool('recommend_next_step', { job: 'deduction', record: 'DC-41118', as_of: '2026-12-28' });
+  ok('paused agent proposes nothing: a plain task', live.next_step === 'attach_load_tally_and_dispute' && pz.result === 'Agent paused' && paused.proposal === null && !('next_step' in paused) && !('authority' in paused) && paused.agent_state === 'Paused' && paused.record === 'DC-41118', JSON.stringify(paused).slice(0, 200));
+  const other = await tool('recommend_next_step', { job: 'missing_document', record: 'NR-46156', as_of: '2026-11-18T09:00:00-05:00' }); ok('pause is per agent', !!other.next_step && other.agent_state === undefined);
+  const disp = await tool('submit_dispute', { case: 'DC-41118', as_of: '2026-12-28' }); const dl = (await tool('get_access_log', { limit: 5 })).calls.find((c) => c.tool === 'submit_dispute')?.write;
+  ok('while paused, a dispute is the assistant’s proposal, not Claim Agent’s', disp.result === 'Proposal recorded' && dl?.agent === 'Priya Raman’s assistant', JSON.stringify(dl));
+  ok('pause again changes nothing', (await tool('pause_agent', { agent: 'Claim Agent' })).result === 'Unchanged');
+  const rz = await tool('resume_agent', { agent: 'claim' }); const back = await tool('recommend_next_step', { job: 'deduction', record: 'DC-41118', as_of: '2026-12-28' });
+  ok('resume restores the proposal', rz.result === 'Agent resumed' && back.next_step === 'attach_load_tally_and_dispute');
+  // Scout paused: the event arrives as a plain task and the model gets no turn (no key is needed to show it; without the pause Scout reports no model).
+  await tool('pause_agent', { agent: 'Scout Agent' }); const ss = await tool('scout_start', {}); const st = await tool('scout_state', { session: ss.session });
+  ok('paused Scout: plain task, no proposal, no model call', ss.status === 'paused' && ss.plain_task?.proposal === null && ss.awaiting.length === 0 && st.overhead.model_calls === 0 && !ss.blocked, JSON.stringify(ss).slice(0, 200));
+  await fetch(`${base}/admin/smoke/agents/Scout%20Agent/resume`, { method: 'POST', redirect: 'manual' });
+  const s2 = await tool('scout_start', {}); ok('resumed Scout reaches the model step again', s2.status !== 'paused' && !!s2.blocked, JSON.stringify(s2.blocked));
+  const nfp = await nf('pause_agent', { agent: 'Review Agent' }); const rv = await nf('review_deduction_case', { case: 'DC-40877', as_of: '2027-01-06' });
+  ok('Northfield pauses Review Agent: no recommendation', nfp.result === 'Agent paused' && rv.review_agent.proposal === null && rv.review_agent.agent_state === 'Paused');
+  ok('an agent of the other company cannot be paused', (await nf('pause_agent', { agent: 'Claim Agent' })).result === 'Invalid request');
+  const cl = await tool('get_change_list', {}); const kinds = cl.entries.map((e) => `${e.kind}:${e.agent}:${e.run_by}`);
+  ok('pause and resume are on the change list with who made them', kinds.includes('pause:Claim Agent:Priya Raman’s assistant') && kinds.includes('resume:Claim Agent:Priya Raman’s assistant') && kinds.includes('resume:Scout Agent:Priya Raman') && cl.agents.find((a) => a.agent === 'Claim Agent')?.authority.rule === 'AP-4.1', JSON.stringify(kinds));
+  // Story 2: override. Priya sets a proposal aside (Edit suggestion) and does it by hand; recorded with her name, nothing appended.
+  const before = await tool('get_order', { po: 'NR-46156' }); const pr = await tool('request_change', { action: 'send corrected ship notice', po: 'NR-46156' });
+  await fetch(`${base}/admin/smoke/proposals/${pr.proposal}/edit`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'note=Priya+sends+it+from+NetSuite', redirect: 'manual' });
+  const after = await tool('get_order', { po: 'NR-46156' }); const ov = (await tool('get_access_log', { limit: 20 })).calls.find((c) => c.tool === 'edit_proposal');
+  ok('override recorded with who made it, nothing appended', ov?.write.approver === 'Priya Raman' && /^Taken over by Priya Raman; done by hand: Priya sends it from NetSuite/.test(ov?.write.outcome) && ov?.result === 'Taken over' && JSON.stringify(after.other_records) === JSON.stringify(before.other_records), JSON.stringify(ov));
+  ok('an overridden proposal cannot then be approved', (await fetch(`${base}/admin/smoke/proposals/${pr.proposal}/approve`, { method: 'POST', redirect: 'manual' })).status === 302 && JSON.stringify((await tool('get_order', { po: 'NR-46156' })).other_records) === JSON.stringify(before.other_records));
+  // Story 4: the trial record, readable back with get_change_list.
+  const tr = await tool('replay_agent_rule', { job: 'deduction', rule: 'AP-4.1', params: { max_amount: 50 }, as_of: '2026-12-10T12:00:00-05:00' });
+  const te = (await tool('get_change_list', { kind: 'trial' })).entries.find((e) => e.id === tr.trial);
+  ok('trial of a changed agent rule recorded on the change list', tr.result === 'Trial recorded' && te?.agent === 'Claim Agent' && te?.change.from.max_amount === 250 && te?.change.to.max_amount === 50 && te?.result.changed.map((c) => c.record).join() === 'DC-40877' && te?.run_by === 'Priya Raman’s assistant' && !!te?.at && !!te?.result.drift_measure && !!te?.result.rollback, String(JSON.stringify(te)).slice(0, 300));
+  ok('the trial publishes nothing', /^Claim Agent may dispute/.test((await tool('recommend_next_step', { job: 'deduction', record: 'DC-40877', as_of: '2026-12-10T12:00:00-05:00' })).authority));
+  ok('a trial of another company’s rule is refused', (await tool('replay_agent_rule', { job: 'deduction', rule: 'NF-7.4', params: { x: 1 } })).result === 'Invalid request');
+  const sr = await tool('scout_replay', { policy: { kinross_load: 'policy' } }); const se = (await tool('get_change_list', { kind: 'trial' })).entries.find((e) => e.id === sr.trial);
+  ok('Scout replay of a changed policy recorded as a trial', se?.agent === 'Scout Agent' && se?.rule === 'AP-3.2' && se?.result.authority_differs.some((d) => d.action === 'kinross_load') && !!se?.result.drift_measure, String(JSON.stringify(se)).slice(0, 300));
+  // Story 1: Scout session writes reach the access log with their attribution.
+  const sl = (await tool('get_access_log', { limit: 200 })).calls.filter((c) => c.tool.startsWith('scout:'));
+  ok('Scout writes on the access log with agent, authority, approver, outcome', sl.length >= 5 && sl.every((c) => c.write?.agent && c.write.authority.rule && ['suggest', 'approve', 'policy'].includes(c.write.authority.mode) && c.write.approver && c.write.outcome) && sl.some((c) => c.write.authority.mode === 'policy' && /^Standing policy/.test(c.write.approver)), `${sl.length}`);
+  for (const p of ['/admin/smoke', '/admin/nfsmoke']) ok(`governance page ${p}`, (await fetch(base + p)).status === 200);
+  await fetch(`${base}/admin/smoke/reset`, { method: 'POST', redirect: 'manual' });
+  const cr = await tool('get_change_list', {}); ok('reset clears the change list and resumes every agent', cr.entries.length === 0 && cr.agents.every((a) => a.state === 'Active') && (await nf('get_change_list', {})).agents.every((a) => a.state === 'Active'));
 });
 console.log(`${pass} smoke checks passed, ${fails.length} failed`); for (const f of fails) console.log(`FAIL ${f}`); process.exit(fails.length ? 1 : 0);

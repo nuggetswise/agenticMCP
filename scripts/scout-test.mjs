@@ -45,6 +45,11 @@ function detectors(name, sess, actor) {
     ok1(S.propose(db, g, 'Test', 'erp_align_order')); S.propose(db, g, 'Test', 'build_ship_notice'); ok1(S.propose(db, g, 'Test', 'kinross_overpack', { sscc: g.world.carton.sscc }));
     check(S.propose(db, g, 'Test', 'release_ship_notice').state === 'Refused', 'guard: AP-1.4 refuses releasing a ship notice built for an earlier load');
     check(S.propose(db, g, 'Test', 'build_ship_notice').state === 'Executed' && g.asn.cartons === 660, 'guard: the ship notice can be rebuilt from the new load'); }
+  // T2.3: a paused Scout gets no model turn; a proposal a person takes over (Edit suggestion) stops Scout in that session; every state change is attributed.
+  { const never = async () => { throw new Error('model called'); }; const ps = S.startSession(db); const r = await S.runScout(db, ps, { callModel: never, paused: () => true });
+    check(r.status === 'paused' && ps.agent.calls === 0 && !ps.proposals.length, 'guard: a paused Scout gets no model turn and proposes nothing');
+    const es = S.startSession(db); const ep = S.propose(db, es, 'Scout', 'kinross_load', { sscc: es.world.carton.sscc }); S.decide(db, es, ep.proposal, 'edit', 'Priya Raman');
+    check((await S.runScout(db, es, { callModel: never })).status === 'handed_to_person' && es.audit.at(-1).approver === 'Priya Raman', 'guard: Edit suggestion hands the case to Priya and Scout stops'); }
   let threw = false; try { S.startSession(db, { variation: { 'erp.ship_to': 'DC 2' } }); } catch { threw = true; } check(threw, 'guard: a replay may only change declared physical fields'); }
 
 // What the rule baseline must reach in each case, so a regression in the baseline cannot pass silently.

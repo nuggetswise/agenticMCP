@@ -223,7 +223,7 @@ function buildAshbyView() {
     INSERT INTO warehouse_orders SELECT * FROM m.warehouse_orders; INSERT INTO store_activity SELECT * FROM m.store_activity;
     INSERT INTO events SELECT * FROM m.events WHERE po IS NULL OR po IN ${own} OR po NOT LIKE 'NR-%';
     COMMIT;`);
-  db.exec('DETACH DATABASE m'); db.exec('DROP TABLE connections; DROP TABLE access_log; DROP TABLE proposals; DROP TABLE review_notes; DROP TABLE draft_rules; DROP TABLE rule_replays;'); db.exec('VACUUM'); db.close();
+  db.exec('DETACH DATABASE m'); db.exec('DROP TABLE connections; DROP TABLE access_log; DROP TABLE proposals; DROP TABLE review_notes; DROP TABLE draft_rules; DROP TABLE rule_replays; DROP TABLE agent_changes;'); db.exec('VACUUM'); db.close();
 }
 
 /** A copy holding only what Northfield may read, for read-only SQL: every supplier's exchanged documents and the
@@ -246,7 +246,7 @@ function buildNorthfieldView() {
     INSERT INTO events SELECT * FROM m.events WHERE party = 'NORTHFIELD' OR system = 'Northfield deduction case' OR json_extract(data, '$.in_case') IS NOT NULL;
     INSERT INTO review_notes SELECT * FROM m.review_notes; INSERT INTO draft_rules SELECT * FROM m.draft_rules;
     COMMIT;`);
-  db.exec('DETACH DATABASE m'); db.exec('DROP TABLE connections; DROP TABLE access_log; DROP TABLE proposals; DROP TABLE warehouse_orders; DROP TABLE rule_replays;'); db.exec('VACUUM'); db.close();
+  db.exec('DETACH DATABASE m'); db.exec('DROP TABLE connections; DROP TABLE access_log; DROP TABLE proposals; DROP TABLE warehouse_orders; DROP TABLE rule_replays; DROP TABLE agent_changes;'); db.exec('VACUUM'); db.close();
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) buildWorld();

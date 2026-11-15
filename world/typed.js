@@ -88,6 +88,7 @@ export const ORIGINS = new Set(['850', '852', ...STAGES.flatMap((s) => s.origins
 
 /** Each document's predecessor, read from the documents themselves (references and time), never from the generator. */
 export function documentLinks(docs, ctx) {
+  const ALSO_PREV = STAGES.filter((s) => s.alsoPrev);
   const byPo = new Map(); const byId = new Map(docs.map((d) => [d.doc_id, d]));
   for (const d of docs) if (d.po) (byPo.get(d.po) || byPo.set(d.po, []).get(d.po)).push(d);
   const latest = (po, type, before, f = () => true) => { let r = null; for (const x of byPo.get(po) || []) if (x.type === type && x.at <= before && x !== null && f(x)) r = x; return r; };
@@ -109,6 +110,9 @@ export function documentLinks(docs, ctx) {
       case '820': for (const i of d.items) add(d, inv810.get(i.invoice), 'pays'); break;
       default: { const s = STAGE_BY_TYPE[d.type]; if (s?.prev) for (const p of s.prev(d, { ...ctx, latest, byId, byPo })) add(d, typeof p.doc === 'object' ? p.doc : byId.get(p.doc_id), p.kind); }
     }
+    // A stage may add further predecessors to any document, its own or a core one (T1.13: a remittance that takes a
+    // promotion deduction also names the deal it settles). Only adds links; the core links above are unchanged.
+    for (const s of ALSO_PREV) for (const p of s.alsoPrev(d, { ...ctx, latest, byId, byPo }) || []) add(d, typeof p.doc === 'object' ? p.doc : byId.get(p.doc_id), p.kind);
   }
   return links;
 }

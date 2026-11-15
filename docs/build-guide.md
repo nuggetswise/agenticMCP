@@ -109,7 +109,7 @@ Each rule has one home, here. Its ID is how `docs/guide/coverage.json` maps the 
 - **R36** Every call is logged in docs/build-log/CALLS.md with what would change it.
 - **R37** Words: Trading Grid Catalogue or TGC, never AC; Supplier readiness; banned words follow the enterprise-product-writing skill.
 - **R38** A conversation may carry several tasks when they all belong to one prototype; name the prototype and its task IDs in the first message. World, server, partner and docs tasks run one per conversation. Each new chat reads this guide first, and hand-off between chats runs through this guide, the commit and its CALLS entry, never through chat history.
-- **R39** Start here. In Tasks, read the tables top to bottom and read the open comments on the Waiting on the owner table in the Claude doc and log any answer, then take the first row whose status is Open and whose Depends on entries are all Done; a dash means no dependency. In a chat for one prototype (R38), take every eligible row for that prototype in the same order. Read its Read first entries, do the task, and stop when its Done when holds. Commit the evidence first, then set the row to Done citing that commit, log the call in CALLS, run the check, commit and push, and refresh the Claude doc. When a commit changes repo behaviour, the guide's as-of commit moves to it in the same edit. A Blocked row waits for the owner answer it names.
+- **R39** Start here. In Tasks, read the tables top to bottom and read the open comments in the Claude doc and log any answer, then take the first row whose status is Open and whose Depends on entries are all Done; a dash means no dependency. In a chat for one prototype (R38), take every eligible row for that prototype in the same order. Read its Read first entries, do the task, and stop when its Done when holds. Commit the evidence first, then set the row to Done citing that commit, log the call in CALLS, run the check, commit and push, and refresh the Claude doc. When a commit changes repo behaviour, the guide's as-of commit moves to it in the same edit. A Blocked row waits for the owner answer it names.
 
 ## Where each fact lives
 
@@ -219,7 +219,7 @@ The owner approved change items 1 to 14 on 12 November. Two are done, five are p
 | D45 | Kanmon appears on no prototype route map. Source: owner, 13 November. | — |
 | D46 | The retailer catalogue connector (P16) is outside this work, and real brands on it are acceptable; R04 does not apply to it. Source: owner, 13 November. | — |
 | D47 | The film is rebuilt as a self-playing artifact, made the way the marketing film was; the treatment is the builder's call. The video version is not audited. Source: owner, 13 November. | — |
-| D48 | Phase 0 is closed. Its rows still Open or Blocked wait only on the owner's hold on P1, P2 and P4, on P11's records entering the world in Phase 1, or on open question 7 for P8; each moves with what it waits for. Source: owner, 13 November. | An owner asking to reopen the audit |
+| D48 | Phase 0 is closed. P1, P2 and P4 need no further work (owner, 15 November), so their audit, world and change rows are closed as not needed. The rows still Open wait only on P11's records entering the world in Phase 1, or on open question 7 for P8; each moves with what it waits for. Source: owner, 13 November. | An owner asking to reopen the audit |
 | D49 | Demo-world history for the intelligence tests is a closed prior period, before anything the world holds today and settled before every window the world reads; current-quarter figures stay stable unless a change list re-baselines one on purpose. Source: owner, 13 November, answering the handoff's Q3. | A test that needs the history inside the current quarter |
 | D50 | Part 2 of the registry change list is approved. P11's held and corrected ship notice goes onto the world's existing live NetSuite order, and P11's screen moves onto those records in Phase 4. Source: owner, 13 November. | — |
 | D51 | P7: the world wins over the screen on week 6 orders and the OTIF charge; the screen changes in T4.15 and the world does not. Source: owner, 13 November, answering open question 4. | — |
@@ -235,24 +235,15 @@ The owner approved change items 1 to 14 on 12 November. Two are done, five are p
 | D61 | An agent in a prototype is a real agent, not a scripted one: a model on the server chooses its reads and proposes actions in a session branched from the world at the story moment, with later records hidden. The server enforces each action's approval and the administrator guardrails. Kinross and Northfield answer by deterministic rules, labelled synthetic. A rule baseline runs on the same facts and actions, and a step is called automation where the two match. P5 is first (`src/scout.js`); P6, P7 and P9 must each show why an agent is needed. Source: owner, 14 November. | A prototype whose agent adds nothing over the baseline in every variation |
 | D62 | Phase 3 starts when the first build's dependencies are Done: T3.1, T2.2 and T2.3's built parts. The other Phase 1 and 2 rows run alongside it, and a Phase 1 row is pulled forward when a spec needs one of its records. T3.4 is folded into T3.2's Done when, because its own Done when named the prototype T3.2 builds. Source: owner, 15 November. | A spec that needs a world record a deferred Phase 1 row would add |
 
-**Waiting on the owner**
+**Open questions for the owner**
 
-Every item that only the owner can settle, in one place. To answer, comment on the item's row in the Claude doc; a build session reads the open comments on this table before it takes a row (R39), logs each answer as a decision here and in CALLS, and unblocks the rows named. Answers given in chat are logged the same way.
+Each question also sits as a comment on its row in the Claude doc; answer there or in chat.
 
-| ID | Question or hold | Unblocks | Answer |
-| --- | --- | --- | --- |
-| W1 | Release P1, P2 and P4 for audit and change, each or all? | T0.10, T0.11, T0.12, T0.3, T0.6, T1.7, T4.10 to T4.12 | Open |
-| W2 | Run Northfield's connector live from the owner's claude.ai account? | T2.9 | Open |
-| W3 | Approve change list 3: one new Ashby deduction under the AP-4.1 limit with its evidence in the case and no dispute yet, dated after P6's moment, so Claim Agent's acting alone and its pause can be shown end to end (`docs/phase1/change-list-3.md`) | Claim Agent's pause proven on the live server | Open |
-| W4 | Does the Scout page route keep using the Aviator key, or get its own? | The P5 live page (T4.13) | Open |
-| W5 | P12 is retired (D40). Unshare its page, or keep it readable as a record? | — | Open |
-| W6 | The Prototype Plan's gallery card still carries the Threat Ranking title; it has to be renamed in claude.ai | — | Open; the owner's action |
-| W7 | Delete the three retired presenter-notes files from this project? | — | Open |
-| W8 | Nine pages may be retired (listed in `docs/phase0/HANDOFF.md`). Keep or retire each? | — | Open |
-| W9 | Name an EDI practitioner to review the documents and the rule catalogue | The Not verified row under Proofs | Open |
-| W10 | Rotate the two Gemini keys; the secondary was pasted into a chat on 15 November | — | Open; the owner's action |
-
-Answered earlier: the world wins on P7 (D51); no partner record enters the timeline (D52); P8 states its three definitions on screen (CALLS 66).
+1. P12 is retired (D40). Unshare its page, or keep it readable as a record?
+2. The Prototype Plan's gallery card still carries the Threat Ranking title. It has to be renamed in claude.ai.
+3. Delete the three retired presenter-notes files from this project?
+4. Nine pages may be retired (listed in `docs/phase0/HANDOFF.md`). Keep or retire each?
+5. Approve change list 3 (`docs/phase1/change-list-3.md`)?
 
 ## Inventory
 
@@ -368,9 +359,9 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 
 | ID | Prototype | Task | Depends on | Read first | Done when | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| T0.10 | P1 | Complete P1's grid row | Owner releases P1 | P1 link in Inventory | Every P1 cell reads Done or N/A | Blocked |
-| T0.11 | P2 | Complete P2's grid row | Owner releases P2 | P2 link in Inventory | Every P2 cell reads Done or N/A | Blocked |
-| T0.12 | P4 | Complete P4's grid row | Owner releases P4 | P4 link in Inventory | Every P4 cell reads Done or N/A | Blocked |
+| T0.10 | P1 | Complete P1's grid row | — | P1 link in Inventory | Not needed; CALLS 90 | Done |
+| T0.11 | P2 | Complete P2's grid row | — | P2 link in Inventory | Not needed; CALLS 90 | Done |
+| T0.12 | P4 | Complete P4's grid row | — | P4 link in Inventory | Not needed; CALLS 90 | Done |
 | T0.13 | P5 | Complete P5's grid row | — | P5 link; `docs/phase0/walks/` for the dead state | Evidence: `docs/phase0/P5-grid.md`; C1 in `docs/phase0/golden/t03/RESULTS.md`; CALLS 51 | Done |
 | T0.14 | P6 | Complete P6's grid row | — | P6 link in Inventory | Evidence: `docs/phase0/P6-grid.md`; CALLS 41 | Done |
 | T0.15 | P7 | Complete P7's grid row | T0.5 | P7 link; `contract/claims.json` | Evidence: `docs/phase0/P7-grid.md`; CALLS 43 | Done |
@@ -379,10 +370,10 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T0.18 | P11 | Complete P11's grid row; only C1 is left (`docs/phase0/P11-grid.md`) | T1.9 | P11 link in Inventory | Every P11 cell reads Done or N/A | Open |
 | T0.19 | P12 | Complete P12's grid row | — | P12 link in Inventory | Evidence: P12 retired by the owner, CALLS 32 | Done |
 | T0.2 | P10 Ashby, P10 Northfield, P16 | Audit the two server scopes and the retailer catalogue connector as prototypes | — | Server reference; `docs/phase2/` | Evidence: `docs/phase0/P10-P16-audit.md`; P16 out of scope (D46); CALLS 52 | Done |
-| T0.3 | P1, P2, P4, P5, P8, P9, P11 | Golden questions: new sets for P2, P8 and P11, more for the other four. P5 and P9 are done and P8 has run (`docs/phase0/golden/t03/`) | Owner releases P1, P2 and P4; P11's records enter the world | `docs/phase0/golden/` | Each has at least three questions with five graded runs | Blocked |
+| T0.3 | P1, P2, P4, P5, P8, P9, P11 | Golden questions: new sets for P8 and P11. P5 and P9 are done and P8 has run (`docs/phase0/golden/t03/`). P1, P2 and P4 are out of scope (D48) | P11's records are in the world (T1.9) | `docs/phase0/golden/` | Each has at least three questions with five graded runs | Open |
 | T0.4 | World | Restore the X12 check against bots-grammars as a committed script | — | `validator/` | Evidence: `validator/botscheck.py` and `validator/bots-report.json`, commit 6bda779; CALLS 48 | Done |
 | T0.5 | P7 | Confirm manual pattern A by hand | — | `docs/phase0/FINDINGS.md`, turn 4 walks | Evidence: a walker limit, not a defect; `docs/phase0/P7-grid.md`; CALLS 43 | Done |
-| T0.6 | Partners | ShipHawk's partner-only questions and journey moment, from ShipHawk's own documentation; partner nodes on every route map. ShipHawk is done; route maps are read for every built screen except P1 and P4 | Owner releases P1 and P4 | Partner checks; Partner diligence tab; `docs/phase0/T0.6-partners.md` | The Partner checks table has no Not done or Partly row | Blocked |
+| T0.6 | Partners | ShipHawk's partner-only questions and journey moment, from ShipHawk's own documentation; partner nodes on every route map. ShipHawk is done; route maps are read for every built screen except P1 and P4 | — | Partner checks; Partner diligence tab; `docs/phase0/T0.6-partners.md` | Closed with P1 and P4; CALLS 90 | Done |
 | T0.7 | FILM | Read the film's frames | — | FILM link in Inventory | Superseded: the film is rebuilt as an artifact under T3.3 (D47); CALLS 52 | Done |
 | T0.8 | World | Find the ship notice timing rule in a retailer's own published EDI guide | — | D23; NF-4.2 in the EDI Review Pack | Evidence: no openly published retailer guide states it; FINDINGS, T0.8 section; CALLS 37 | Done |
 
@@ -405,7 +396,7 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T1.5 | All screens | Raw X12 panels generated from the world. The tools and the contract check are built; the screens' panels are not yet world text (`docs/phase1/T1.5-x12-panels.md`, CALLS 69). Each screen's panels change in its Phase 4 row | — | `build/tg.db`; `npm run contract` | Every raw X12 panel matches a world document byte for byte, checked by the contract test | Open |
 | T1.6 | P14, P15 | World records for every Prototype specs decision row: a price variance under NF-7.11, and other suppliers' ship notices that NFD-1 would fail | — | Prototype specs: P14 and P15; `docs/phase1/change-list-1.md`, its section C | Evidence: commit d286170; gate checks `nf.match.price_held`, `nf.match.price_cleared_by_change`, `nf.match.total_fault`, `nf.replay.nfd2` and `nf.replay.nfd1_reaches_other_suppliers`; CALLS 59 | Done |
 | T1.8 | P7 | World record for a Northfield scorecard after the corrective work | — | P7's Inventory row | Evidence: not needed once P7's ending moved to shared figures, CALLS 38 | Done |
-| T1.7 | P2 | Supplier vetting in the world: one supplier vetted by a third party, one that confirms vetting itself, and a Northfield rule that activation waits for either | Owner releases P2 (D48) | D31; Prototype specs, Supplier vetting in P2 | The owner approves the rule wording in the EDI Review Pack, the world holds both records, and a gate check reads them | Blocked |
+| T1.7 | P2 | Supplier vetting in the world: one supplier vetted by a third party, one that confirms vetting itself, and a Northfield rule that activation waits for either | — | D31; Prototype specs, Supplier vetting in P2 | Not needed; CALLS 90 | Done |
 | T1.9 | P11 | A live NetSuite ship notice that breaks a Northfield rule, held and corrected before it leaves, with Northfield's matching receiving advice | — | P11's Inventory row; `docs/phase0/P11-grid.md`; `docs/phase1/change-list-1.md`, its section A | Evidence: commit e02ce57; gate check `p11.held_then_matched`; CALLS 58 | Done |
 | T1.10 | World | Demo-world history for the intelligence tests: other suppliers' deduction cases with Northfield and past acknowledgment and ship-notice timings (D3 in the intelligence handoff), scoped by D49 | — | Project doc claude/Prototype-Intelligence-Handoff.md (project doc); `docs/phase1/change-list-1.md`, its section B | Evidence: commit d286170; `world/history.js`; figures the list marked stable are unchanged on a fresh run; CALLS 59. Left: the three reworded golden questions have new expected values but no five graded runs | Done |
 
@@ -422,7 +413,7 @@ Evidence for each grid cell goes in `docs/phase0/`, under its check. For a grid-
 | T2.7 | Registry | Finish the registry: P11's job, agent verdict, decisions and anchors match its screen | — | Inventory; `docs/guide/registry-change-proposal.md` | Evidence: commit e02ce57; P11 has no agent and anchors the held and corrected live ship notice with its receiving advice; CALLS 58 | Done |
 | T2.8 | Docs | Repo copies of the other docs become dated snapshots | — | Where each fact lives, role of every other doc | Each copy under docs/ carries its export date and the registry check no longer treats it as current | Open |
 | T2.9 | P10 Northfield | Live Northfield connector run | Owner asks for a live Northfield demo | `docs/phase2/golden-nf/` | One Northfield golden question is answered through the live URL with the Northfield key | Blocked |
-| T2.10 | Server | Test whether a published prototype can read the live server, from a private test page only, since the URL carries the token | — | Server reference, Hosting | A published test page calls one tool and shows its answer, or `docs/phase2/` records the error that blocks it | Open |
+| T2.10 | Server | Test whether a published prototype can read the live server, from a private test page only, since the URL carries the token | — | Server reference, Hosting | Evidence: the private page Live server test ran on 15 November from the owner's account. Through the viewer's connectors it read Ashby's side (order value on NR-450118) and Northfield's side (22 shared documents); a direct call to the server failed with the browser error Load failed. So a published page reaches the server only through the viewer's connector, and holds no key (`docs/phase2/T2.10-live-page.md`; CALLS 90) | Done |
 | T2.11 | Aviator | The in-product assistant on prototype screens: floating, bottom right, answering from the same tools as the company's connection | T2.10 | D56; Customer-agent access rules R24 to R27 | Live model answers verified on the real tools, refusal included: `docs/phase2/aviator-live-2026-11-13.txt`. The deployed endpoint answered on both sides; Northfield's side now lists its own documents on an order whose hold sat with the supplier (same file, CALLS 67). Left: Aviator on a prototype screen once T2.10 settles the route | Open |
 
 ### Phase 3 · New prototypes
@@ -442,9 +433,9 @@ Each row is one prototype through the Phase 4 loop under Build flow. Before prop
 
 | ID | Prototype | Task | Depends on | Read first | Done when | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| T4.10 | P1 | Long-tail | T0.10 | P1's Inventory row; Decisions item 3 | Phase 4 loop complete | Open |
-| T4.11 | P2 | Programme Readiness, with supplier vetting | T0.11, T1.7 | D31; Prototype specs, Supplier vetting in P2 | Loop complete, and vetting shows as a third party's result or the supplier's confirmation | Open |
-| T4.12 | P4 | Marketplace to Wholesale | T0.12 | Decisions item 3 | Phase 4 loop complete | Open |
+| T4.10 | P1 | Long-tail | — | P1's Inventory row; Decisions item 3 | Not needed; CALLS 90 | Done |
+| T4.11 | P2 | Programme Readiness, with supplier vetting | — | D31; Prototype specs, Supplier vetting in P2 | Closed with P2; CALLS 90 | Done |
+| T4.12 | P4 | Marketplace to Wholesale | — | Decisions item 3 | Not needed; CALLS 90 | Done |
 | T4.13 | P5 | Scout Shipment Watch | T0.13, T2.4 | Decisions item 13; the working copy is not in the repo, so rebuild the fix; `docs/phase4/agent-entry.md`, items AE-P5; rebuild the main screen with the tg-retail-agent-prototype skill, with Approve and Edit suggestion as the only decision controls; wire it to the Scout runtime (D61) | Phase 4 loop complete | Open |
 | T4.14 | P6 | Northfield Charge Resolution | T0.14 | Decisions item 4; D28; `docs/phase4/agent-entry.md`, items AE-P6 | Phase 4 loop complete | Open |
 | T4.15 | P7 | Northfield Performance Improvement | T0.15, T1.2 | Decisions item 5; D51; `docs/phase4/agent-entry.md`, items AE-P7 | Phase 4 loop complete, with the world's week 6 orders and charge on screen and P7's contract check passing against the live page | Open |
@@ -522,7 +513,7 @@ The gate and smoke tests pass at commit 7ce583b206. Two of the plan's proofs hav
 | Server smoke: both scopes, refusals, the shared deduction case | `npm run smoke` | 83 passed, 0 failed |
 | X12 validation | `npm run validate` | Passes, but its schemas were generated in this repo, so it does not meet the independent-schema test |
 | X12 against schemas this repo did not write | `validator/botscheck.py` with the bots-grammars X12 grammars | Every document checked; it faults exactly the documents the world rejects on a 997, and nothing else; all ten injected faults are rejected for their reason (`validator/bots-report.json`) |
-| Contract test of on-screen values: it checks every number a screen shows and requires none | `npm run contract` | Run on the live pages on 15 November for P1, P2, P4, P5, P6, P7 and P8 (`docs/phase3/contract-report-2026-11-15.json`): P2 and P4 pass; P1 and P8 differ only in raw X12 panels (T1.5); P5, P6 and P7 differ in dates, rule wording and, for P7, three order numbers, each a Phase 4 row. P9, P11 and P12 were not saved for the run. |
+| Contract test of on-screen values: it checks every number a screen shows and requires none | `npm run contract` | Run on the live pages on 15 November for P1, P2, P4, P5, P6, P7 and P8 (`docs/phase3/contract-report-2026-11-15.json`): P2 and P4 pass; P1 and P8 differ only in raw X12 panels (T1.5); P5, P6 and P7 differ in dates, rule wording and, for P7, three order numbers, each a Phase 4 row. P9 and P11 were read but not saved as files, so only their record numbers were checked by hand: P9 shows one sales order number the world lacks, and P11 shows five record numbers the world lacks, including its ship notice number. P12 is retired. |
 | Golden questions, Ashby agents, scorecard and deductions | `docs/phase0/golden/grade-report.json` | 49 of 50. The earlier set's grader was never committed. |
 | Golden questions, Northfield | `docs/phase2/golden-nf/grade-report.json` | 50 of 50 |
 | Live server | /healthz | ok, version 0.3.0, writes on, Aviator on, read on 14 November with commit cd9717d deployed |

@@ -480,7 +480,7 @@ export async function runWatch(db, s, { callModel, maxSteps = 14, maxToolCalls =
   if (paused()) { s.agent.status = 'paused'; trace(s, 'Trading Grid', 'system', 'Watch Agent is paused by the administrator; the queue arrives as plain tasks with no proposal', {}); return { ok: true, status: 'paused', awaiting: [] }; }
   if (!callModel) return { ok: false, blocked: 'No model is configured on this server; Watch Agent cannot run. Nothing was simulated in its place.' };
   const ag = s.agent; const t0 = Date.now(); const turnStart = ag.tool_calls; ag.status = 'running';
-  if (!ag.history.length) ag.history.push({ role: 'user', parts: [{ text: `Business event: Priya Raman started Watch Agent on Ashby’s open Northfield orders. Clock: ${fmtET(iso(s.clock))}.` }] });
+  if (!ag.history.length) ag.history.push({ role: 'user', parts: [{ text: `Business event: the morning check of Ashby’s open Northfield orders against the documents Northfield requires. Clock: ${fmtET(iso(s.clock))}.` }] });
   else if (event) ag.history.push({ role: 'user', parts: [{ text: `New evidence at ${fmtET(iso(s.clock))}: ${event}` }] });
   const decl = declarations(AGENT_TOOLS);
   for (let step = 0; step < maxSteps; step++) {

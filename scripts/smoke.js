@@ -18,18 +18,26 @@ async function withServer(env, port, fn) {
 }
 await withServer({ WRITES: 'off' }, 3971, async ({ base, client, tool, rest }) => {
   const { tools } = await client.listTools(); const names = tools.map((t) => t.name);
-  // 19 record tools, five Scout tools (CALLS 81) and four governance tools (T2.3). Scout tools change only an isolated in-memory session, never a
+  // 19 record tools, six Scout tools (CALLS 81), six Watch tools (P13) and three governance tools (T2.3). Scout tools change only an isolated in-memory session, never a
   // Trading Grid record, but they are not marked read-only so that a client still confirms before approving on Priya's behalf. Pause, resume and
   // a trial record on the change list, so they are not read-only either; get_change_list is.
-  const scout = names.filter((n) => n.startsWith('scout_')); const GOVW = ['pause_agent', 'replay_agent_rule'];
-  ok('29 tools listed: 19 record tools, 6 Scout tools, 3 governance tools and Aviator; no resume tool', !names.includes('resume_agent') && names.length === 29 && names.includes('ask_aviator') && scout.length === 6 && [...GOVW, 'get_change_list'].every((g) => names.includes(g)), `${names.length}, ${scout.length} Scout`); ok('no scenario tool', !names.includes('list_scenarios'));
-  ok('every record tool read-only', tools.filter((t) => !t.name.startsWith('scout_') && !GOVW.includes(t.name)).every((t) => t.annotations?.readOnlyHint === true));
-  ok('governance writes are not marked read-only', tools.filter((t) => GOVW.includes(t.name) || (t.name.startsWith('scout_') && t.name !== 'scout_setup')).every((t) => t.annotations?.readOnlyHint === false));
+  const scout = names.filter((n) => n.startsWith('scout_')); const watch = names.filter((n) => n.startsWith('watch_')); const GOVW = ['pause_agent', 'replay_agent_rule'];
+  ok('35 tools listed: 19 record tools, 6 Scout tools, 6 Watch tools, 3 governance tools and Aviator; no resume tool', !names.includes('resume_agent') && names.length === 35 && names.includes('ask_aviator') && scout.length === 6 && watch.length === 6 && [...GOVW, 'get_change_list'].every((g) => names.includes(g)), `${names.length}, ${scout.length} Scout, ${watch.length} Watch`); ok('no scenario tool', !names.includes('list_scenarios'));
+  ok('every record tool read-only', tools.filter((t) => !t.name.startsWith('scout_') && !t.name.startsWith('watch_') && !GOVW.includes(t.name)).every((t) => t.annotations?.readOnlyHint === true));
+  ok('governance writes are not marked read-only', tools.filter((t) => GOVW.includes(t.name) || (t.name.startsWith('scout_') && t.name !== 'scout_setup') || (t.name.startsWith('watch_') && t.name !== 'watch_setup')).every((t) => t.annotations?.readOnlyHint === false) && tools.find((t) => t.name === 'watch_setup')?.annotations?.readOnlyHint === true);
   { const av = await tool('ask_aviator', { question: 'What is the order value of NR-450118?' }); const lg = await tool('get_access_log', { limit: 3 });
     ok('Aviator reached through the connector: answers or says it has no key, and logs the call', (av.ok === true || /no model key/.test(av.message || '')) && JSON.stringify(lg).includes('ask_aviator'), JSON.stringify(av).slice(0, 160)); }
   const before = JSON.stringify(await tool('get_access_log', { limit: 1 })).length >= 0 && (await tool('run_readonly_sql', { sql: "SELECT count(*) n FROM events WHERE po = 'NR-460207'" })).rows?.[0]?.n;
   const sb = await tool('scout_baseline', {}); const after = (await tool('run_readonly_sql', { sql: "SELECT count(*) n FROM events WHERE po = 'NR-460207'" })).rows?.[0]?.n;
   ok('Scout session leaves the recorded world unchanged', sb.outcome?.cartons_loaded === 659 && before === after, `${before} -> ${after}`);
+  // Watch Agent (P13): a baseline, a start (no model key here) and an explicit clock advance leave every recorded record of the five orders unchanged.
+  { const P13 = ['NR-46210', 'NR-46215', 'NR-46220', 'NR-46226', 'NR-46231']; const snap = async () => JSON.stringify(await Promise.all(P13.map(async (po) => { const o = await tool('get_order', { po, as_of: '2026-12-31' }); delete o.read_at; return o; })));
+    const w0 = await snap(); const su = await tool('watch_setup', {}); const wb = await tool('watch_baseline', {}); const ws = await tool('watch_start', {}); const wa = await tool('watch_state', { session: wb.session, advance_minutes: 2000 }); const w1 = await snap();
+    ok('watch_setup lists facts, Priya’s window and guardrails', su.facts?.kinross_window_hours?.recorded === 48 && su.guardrails?.length === 3 && su.actions?.release_document?.priya_may_change === false, JSON.stringify(su).slice(0, 160));
+    ok('watch baseline reaches the P13 end state', JSON.stringify(wb.outcome?.sent_on_time) === JSON.stringify(['NR-46210 855', 'NR-46226 810', 'NR-46220 856']) && JSON.stringify(wb.outcome?.sent_late) === '["NR-46215 856"]' && wb.outcome?.nothing_to_chase?.join() === 'NR-46231' && wb.outcome?.violations?.length === 0, JSON.stringify(wb.outcome).slice(0, 200));
+    ok('watch_start without a model key says so and simulates nothing', !!ws.blocked && ws.awaiting.length === 0 && ws.queue.rows.length === 4, JSON.stringify(ws.blocked));
+    ok('watch_state advances the clock and reveals the confirming 861', /RCV-46220/.test(JSON.stringify(wa.arrived || [])) && wa.queue.rows.find((r) => r.po === 'NR-46220' && r.document === '856')?.closed === true, JSON.stringify(wa.arrived).slice(0, 200));
+    ok('Watch session leaves the recorded world unchanged', w0 === w1 && w0.length > 1000, `${w0.length} vs ${w1.length}`); }
   const a = await tool('orders_needing_attention'); ok('attention via MCP', a.items?.map((i) => i.po).join() === 'NR-46151,NR-46142,NR-46156,NR-46133', JSON.stringify(a).slice(0, 200));
   const r = await rest('/v1/orders/attention'); ok('REST twin equals MCP', JSON.stringify(r.items) === JSON.stringify(a.items));
   const h = await rest('/v1/health?days=30'); ok('health via REST', h.documents === 3412 && h.failures === 41);
@@ -95,7 +103,7 @@ await withServer({}, 3973, async ({ base, nfClient, tool, nf }) => {
   const l1 = await tool('get_access_log', { limit: 50 }), l2 = await nf('get_access_log', { limit: 50 });
   ok('Northfield’s decision is in Ashby’s log', l1.calls.some((c) => c.tool === 'counterparty:decide_charge')); ok('Ashby’s dispute is in Northfield’s log', l2.calls.some((c) => c.tool === 'counterparty:submit_dispute'));
   // T2.3 story 1: every write on both logs names agent, authority, approver and outcome.
-  { const isWrite = (c) => /^(request_change|submit_dispute|release_ship_notice|decide_charge|publish_rule|approve_proposal|reject_proposal|edit_proposal|pause_agent|resume_agent|replay_agent_rule|counterparty:.*|scout:.*)$/.test(c.tool);
+  { const isWrite = (c) => /^(request_change|submit_dispute|release_ship_notice|decide_charge|publish_rule|approve_proposal|reject_proposal|edit_proposal|pause_agent|resume_agent|replay_agent_rule|counterparty:.*|scout:.*|watch:.*)$/.test(c.tool);
     const all = [...(await tool('get_access_log', { limit: 200 })).calls, ...(await nf('get_access_log', { limit: 200 })).calls].filter(isWrite);
     const bare = all.filter((c) => !c.write || !c.write.agent || !c.write.authority?.mode || !c.write.approver || !c.write.outcome);
     ok('every write names agent, authority, approver and outcome', all.length >= 8 && !bare.length, `${all.length} writes, ${bare.length} bare: ${bare.map((c) => c.tool).join(', ')}`);
@@ -146,6 +154,14 @@ await withServer({}, 3974, async ({ base, tool, nf }) => {
   ok('a trial of another company’s rule is refused', (await tool('replay_agent_rule', { job: 'deduction', rule: 'NF-7.4', params: { x: 1 } })).result === 'Invalid request');
   const sr = await tool('scout_replay', { policy: { kinross_load: 'policy' } }); const se = (await tool('get_change_list', { kind: 'trial' })).entries.find((e) => e.id === sr.trial);
   ok('Scout replay of a changed policy recorded as a trial', se?.agent === 'Scout Agent' && se?.rule === 'AP-3.2' && se?.result.authority_differs.some((d) => d.action === 'kinross_load') && !!se?.result.drift_measure, String(JSON.stringify(se)).slice(0, 300));
+  // Watch Agent paused: the queue arrives as plain tasks and the model gets no turn; resumed, it reaches the model step again.
+  await tool('pause_agent', { agent: 'Watch Agent' }); const wp = await tool('watch_start', {});
+  ok('paused Watch Agent: plain tasks, no proposal, no model call', wp.status === 'paused' && wp.plain_task?.proposal === null && wp.plain_task?.queue?.length === 4 && wp.awaiting.length === 0 && wp.overhead.model_calls === 0, JSON.stringify(wp).slice(0, 200));
+  await fetch(`${base}/admin/smoke/agents/Watch%20Agent/resume`, { method: 'POST', redirect: 'manual' }); ok('resumed Watch Agent reaches the model step again', !!(await tool('watch_start', {})).blocked);
+  const wr = await tool('watch_replay', { variation: 'kinross_unreachable' }); const wt = (await tool('get_change_list', { kind: 'trial' })).entries.find((e) => e.id === wr.trial);
+  ok('Watch replay recorded as a trial with the baseline outcome', wt?.agent === 'Watch Agent' && wt?.result.baseline.escalated.includes('NR-46220') && !!wt?.result.drift_measure && !!wr.watch?.blocked, String(JSON.stringify(wt)).slice(0, 200));
+  const wl = (await tool('get_access_log', { limit: 200 })).calls.filter((c) => c.tool.startsWith('watch:'));
+  ok('Watch writes on the access log with agent, authority, approver, outcome', wl.length >= 5 && wl.every((c) => c.write?.agent && c.write.authority.rule && ['suggest', 'approve', 'policy'].includes(c.write.authority.mode) && c.write.approver && c.write.outcome) && wl.some((c) => c.write.authority.rule === 'AP-1.3' && c.write.approver === 'Test approver (replay)'), `${wl.length}`);
   // Story 1: Scout session writes reach the access log with their attribution.
   const sl = (await tool('get_access_log', { limit: 200 })).calls.filter((c) => c.tool.startsWith('scout:'));
   ok('Scout writes on the access log with agent, authority, approver, outcome', sl.length >= 5 && sl.every((c) => c.write?.agent && c.write.authority.rule && ['suggest', 'approve', 'policy'].includes(c.write.authority.mode) && c.write.approver && c.write.outcome) && sl.some((c) => c.write.authority.mode === 'policy' && /^Standing policy/.test(c.write.approver)), `${sl.length}`);

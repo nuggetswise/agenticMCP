@@ -192,9 +192,9 @@ const INSTRUCTIONS = {
     'Answer only from tool results and cite each record with its link.'].join(' '),
 };
 // ---------- Scout (P5): a server-side agent working in an isolated session branched from the recorded world ----------
-const scoutModel = () => Scout.geminiCaller(process.env.GEMINI_API_KEY);
+const scoutModel = () => Scout.geminiCaller(Aviator.modelRoutes());
 const VAR = z.enum(Object.keys(Scout.VARIATIONS)).optional().describe(`Physical state at Kinross to branch with: ${Object.keys(Scout.VARIATIONS).join(', ')}. Default canonical.`);
-export const scoutView = (sess, extra = {}) => sess ? ({ session: sess.id, label: sess.label, clock: fmtET(new Date(sess.clock)), status: sess.agent.status, variation: sess.changes, awaiting: sess.proposals.filter((p) => p.state === 'Awaiting approval').map((p) => ({ id: p.id, action: p.action, does: Scout.ACTIONS[p.action].label, args: p.args, proposed_by: p.by, rationale: p.rationale, alternatives: p.alternatives, rule: Scout.ACTIONS[p.action].rule })), load: { loaded: sess.load.base_loaded + sess.load.loaded.length, of: sess.load.expected, staged: sess.load.staged, sealed: sess.load.sealed }, outcome: Scout.outcome(sess), trace: sess.trace, overhead: { model_calls: sess.agent.calls, tool_calls: sess.agent.tool_calls, ms: sess.agent.ms }, ...extra }) : { result: 'Invalid request', error: 'No such session; sessions live in memory and end when the server restarts.' };
+export const scoutView = (sess, extra = {}) => sess ? ({ session: sess.id, label: sess.label, clock: fmtET(new Date(sess.clock)), status: sess.agent.status, variation: sess.changes, awaiting: sess.proposals.filter((p) => p.state === 'Awaiting approval').map((p) => ({ id: p.id, action: p.action, does: Scout.ACTIONS[p.action].label, args: p.args, proposed_by: p.by, rationale: p.rationale, alternatives: p.alternatives, rule: Scout.ACTIONS[p.action].rule })), load: { loaded: sess.load.base_loaded + sess.load.loaded.length, of: sess.load.expected, staged: sess.load.staged, sealed: sess.load.sealed }, outcome: Scout.outcome(sess), trace: sess.trace, overhead: { model_calls: sess.agent.calls, tool_calls: sess.agent.tool_calls, ms: sess.agent.ms, model_routes: sess.agent.routes || {} }, ...extra }) : { result: 'Invalid request', error: 'No such session; sessions live in memory and end when the server restarts.' };
 async function scoutStart({ variation, label } = {}) { const sess = Scout.startSession(db, { variation: Scout.VARIATIONS[variation || 'canonical'], label: label || 'Operator' }); const run = await Scout.runScout(db, sess, { callModel: scoutModel() }); return scoutView(sess, run.ok ? {} : { blocked: run.blocked || run.status }); }
 async function scoutDecide({ session, proposal, decision }) { const sess = Scout.getSession(session); if (!sess) return scoutView(null); const r = await Scout.decideAndResume(db, sess, proposal, decision, 'Priya Raman', { callModel: scoutModel() }); if (r.state === 'Refused') return { ...r, result: 'Refused' }; return scoutView(sess, r.run?.ok === false ? { blocked: r.run.blocked || r.run.status } : {}); }
 async function scoutBaseline({ variation } = {}) { const sess = Scout.startSession(db, { variation: Scout.VARIATIONS[variation || 'canonical'], label: 'Rule baseline' }); Scout.runBaseline(db, sess); return scoutView(sess); }
@@ -226,7 +226,7 @@ const app = express();
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false }));
 app.get('/', (req, res) => res.type('html').send(homePage()));
-app.get('/healthz', (req, res) => res.json({ status: 'ok', version: '0.3.0', writes: WRITES, connections: [AS, NF], aviator: !!process.env.GEMINI_API_KEY }));
+app.get('/healthz', (req, res) => res.json({ status: 'ok', version: '0.3.0', writes: WRITES, connections: [AS, NF], aviator: !!process.env.GEMINI_API_KEY, model_routes: Aviator.modelRoutes().map((r) => `${r.route} · ${r.model}`) }));
 const cidOf = (req, res) => { const c = BY_TOKEN[req.params.token]; if (!c) { res.status(404).send('Not found'); return null; } return c; };
 
 app.post('/mcp/:token', async (req, res) => {
@@ -267,7 +267,7 @@ app.post('/aviator/:token', async (req, res) => {
   const cid = aviatorCid(req, res); if (!cid) return; cors(res);
   const tools = cid === AS ? TOOLS : NF_TOOLS; const side = SIDE[cid]; const q = req.body?.question;
   try {
-    const out = await Aviator.ask({ question: q, history: Array.isArray(req.body?.history) ? req.body.history : [], tools, callTool: (name, args) => call(cid, name, args), side: { person: side.person, company: side.company, other: side.other }, clock: fmtET(D.storyClock()), apiKey: process.env.GEMINI_API_KEY });
+    const out = await Aviator.ask({ question: q, history: Array.isArray(req.body?.history) ? req.body.history : [], tools, callTool: (name, args) => call(cid, name, args), side: { person: side.person, company: side.company, other: side.other }, clock: fmtET(D.storyClock()), routes: Aviator.modelRoutes() });
     log(cid, 'aviator', [], { question: String(q || '').slice(0, 300) }, out.ok ? `Answered from ${out.tools_called.length} tool call(s)` : out.message, []);
     res.status(out.ok ? 200 : out.status).json(out);
   } catch (e) { console.error(e); res.status(500).json({ ok: false, message: 'Aviator failed.' }); }

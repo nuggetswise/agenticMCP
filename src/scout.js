@@ -11,7 +11,7 @@ import { createHash } from 'node:crypto';
 import { P5, VARIATION_FIELDS } from '../world/p5-physical.js';
 import { fmtET } from '../world/lib.js';
 import * as D from './domain.js';
-import { declarations, AVIATOR_MODELS } from './aviator.js';
+import { declarations, modelRoutes } from './aviator.js';
 
 const MIN = 60000;
 const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -262,7 +262,7 @@ export async function runScout(db, s, { callModel, maxSteps = 12, maxToolCalls =
   const decl = declarations(AGENT_TOOLS);
   for (let step = 0; step < maxSteps; step++) {
     if (Date.now() - t0 > maxMs || ag.tool_calls - turnStart >= maxToolCalls || ag.tool_calls >= maxSessionCalls) { ag.status = 'stopped'; trace(s, 'Scout', 'system', 'Stopped at its limit', { tool_calls: ag.tool_calls, ms: Date.now() - t0 }); break; }
-    let data; try { data = await callModel({ systemInstruction: { parts: [{ text: INSTRUCTION(s) }] }, contents: ag.history, tools: [{ functionDeclarations: decl }], toolConfig: { functionCallingConfig: { mode: 'AUTO' } }, generationConfig: { temperature: 0 } }); ag.calls++; }
+    let data; try { data = await callModel({ systemInstruction: { parts: [{ text: INSTRUCTION(s) }] }, contents: ag.history, tools: [{ functionDeclarations: decl }], toolConfig: { functionCallingConfig: { mode: 'AUTO' } }, generationConfig: { temperature: 0 } }); ag.calls++; if (data?._route) (ag.routes ||= {})[data._route] = (ag.routes[data._route] || 0) + 1; }
     catch (e) { ag.status = 'model_failed'; trace(s, 'Scout', 'system', 'Model call failed; no state was changed', { error: String(e.message || e).slice(0, 200) }); return { ok: false, status: ag.status }; }
     const content = data?.candidates?.[0]?.content; const parts = content?.parts || []; const calls = parts.filter((p) => p.functionCall);
     const text = parts.map((p) => p.text || '').join('').trim();
@@ -294,9 +294,18 @@ export async function decideAndResume(db, s, proposalId, decision, by, opts) {
 }
 
 /** The server-side model caller, using the same key and models as Aviator. Never reaches a page. */
-export function geminiCaller(apiKey, fetchImpl = fetch, models = AVIATOR_MODELS) {
-  if (!apiKey) return null;
-  return async (body) => { let err; for (const m of models) for (let attempt = 0; attempt < 2; attempt++) { if (attempt) await new Promise((r) => setTimeout(r, 2500)); const r = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey }, body: JSON.stringify(body) }); if (r.ok) return r.json(); err = `${r.status} ${(await r.text()).slice(0, 200)}`; if (r.status !== 503) break; } throw new Error(`Model did not answer: ${err}`); };
+export function geminiCaller(routes = modelRoutes(), fetchImpl = fetch) {
+  if (typeof routes === 'string') routes = [{ key: routes, model: 'gemini-3.5-flash-lite', route: 'primary' }];
+  if (!routes?.length) return null;
+  return async (body) => { let err;
+    for (const rt of routes) for (let attempt = 0; attempt < 2; attempt++) {
+      if (attempt) await new Promise((r) => setTimeout(r, 2500));
+      const r = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${rt.model}:generateContent`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': rt.key }, body: JSON.stringify(body) });
+      if (r.ok) { const j = await r.json(); j._route = `${rt.route} · ${rt.model}`; return j; }
+      err = `${rt.route} ${rt.model}: ${r.status} ${(await r.text()).slice(0, 160)}`;
+      if (r.status !== 503) break; // 429 and 404 go straight to the next route; 503 retries once first
+    }
+    throw new Error(`Model did not answer: ${err}`); };
 }
 
 /** Governance replay: the same branch and variation, baseline and Scout side by side, approvals by a labelled test approver. */
@@ -305,7 +314,7 @@ export async function replay(db, { variation = {}, policy = {}, callModel, appro
   const sc = startSession(db, { variation, policy, label: 'Replay · Scout' });
   let run = await runScout(db, sc, { callModel }); let rounds = 0;
   while (run.ok && run.status === 'waiting_for_priya' && approveAll && rounds++ < 8) { const p = sc.proposals.find((x) => x.state === 'Awaiting approval'); const r = await decideAndResume(db, sc, p.id, 'approve', 'Test approver (replay)', { callModel }); run = r.run; }
-  return { variation: base.changes, evidence_cutoff: fmtET(P5.branch_at), baseline: { session: base.id, outcome: b, trace: base.trace }, scout: run.ok ? { session: sc.id, status: run.status, outcome: outcome(sc), overhead: { model_calls: sc.agent.calls, tool_calls: sc.agent.tool_calls, ms: sc.agent.ms }, trace: sc.trace } : { session: sc.id, blocked: run.blocked || run.status, trace: sc.trace } };
+  return { variation: base.changes, evidence_cutoff: fmtET(P5.branch_at), baseline: { session: base.id, outcome: b, trace: base.trace }, scout: run.ok ? { session: sc.id, status: run.status, outcome: outcome(sc), overhead: { model_calls: sc.agent.calls, tool_calls: sc.agent.tool_calls, ms: sc.agent.ms, model_routes: sc.agent.routes || {} }, trace: sc.trace } : { session: sc.id, blocked: run.blocked || run.status, trace: sc.trace } };
 }
 export const VARIATIONS = {
   canonical: {},

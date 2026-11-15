@@ -6,6 +6,12 @@ import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
 const API = 'https://generativelanguage.googleapis.com/v1beta/models';
+// Model routes in order: the primary key with its models, then the secondary key with its model. A quota (429) or busy (503)
+// answer moves to the next route, so a spent primary key falls back to the secondary. Keys never leave the server.
+export const modelRoutes = (env = process.env) => [
+  ...(env.GEMINI_API_KEY ? (env.GEMINI_MODEL || 'gemini-3.5-flash-lite').split(',').map((m) => ({ key: env.GEMINI_API_KEY, model: m.trim(), route: 'primary' })) : []),
+  ...(env.GEMINI_API_KEY_SECONDARY ? (env.GEMINI_MODEL_SECONDARY || 'gemini-3.8-flash').split(',').map((m) => ({ key: env.GEMINI_API_KEY_SECONDARY, model: m.trim(), route: 'secondary' })) : []),
+].filter((r) => r.model);
 export const AVIATOR_MODELS = (process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite').split(',').map((s) => s.trim()).filter(Boolean);
 
 const strip = (s) => { if (Array.isArray(s)) return s.map(strip); if (!s || typeof s !== 'object') return s; const o = {}; for (const [k, v] of Object.entries(s)) if (!['$schema', 'additionalProperties', 'default'].includes(k)) o[k] = strip(v); return o; };
@@ -20,8 +26,9 @@ You cannot send, approve, dispute or change anything. When asked to act, say wha
 Keep answers short: the answer first, then the records.`;
 
 /** One question, answered by the model calling the connection's read tools. `callTool(name, args)` runs a tool exactly as the connection would. */
-export async function ask({ question, history = [], tools, callTool, side, clock, apiKey, fetchImpl = fetch, models = AVIATOR_MODELS, maxTurns = 8 }) {
-  if (!apiKey) return { ok: false, status: 503, message: 'Aviator has no model key on this server.' };
+export async function ask({ question, history = [], tools, callTool, side, clock, apiKey, fetchImpl = fetch, models = AVIATOR_MODELS, routes, maxTurns = 8 }) {
+  routes ||= apiKey ? models.map((m) => ({ key: apiKey, model: m })) : [];
+  if (!routes.length) return { ok: false, status: 503, message: 'Aviator has no model key on this server.' };
   if (!question || !String(question).trim()) return { ok: false, status: 400, message: 'Ask a question.' };
   const contents = [...history.slice(-8).map((h) => ({ role: h.role === 'model' ? 'model' : 'user', parts: [{ text: String(h.text).slice(0, 4000) }] })), { role: 'user', parts: [{ text: String(question).slice(0, 4000) }] }];
   // On the last step the model may call no more tools, so it answers from what it has already read.
@@ -29,15 +36,15 @@ export async function ask({ question, history = [], tools, callTool, side, clock
   const called = []; let model = null;
   for (let turn = 0; turn < maxTurns; turn++) {
     let data = null, err = null;
-    for (const m of model ? [model] : models) {
-      const r = await fetchImpl(`${API}/${m}:generateContent`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey }, body: JSON.stringify(body(turn === maxTurns - 1)) });
-      if (r.ok) { data = await r.json(); model = m; break; }
+    for (const rt of model ? [model, ...routes.filter((x) => x !== model)] : routes) {
+      const r = await fetchImpl(`${API}/${rt.model}:generateContent`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': rt.key }, body: JSON.stringify(body(turn === maxTurns - 1)) });
+      if (r.ok) { data = await r.json(); model = rt; break; }
       err = { status: r.status, text: (await r.text()).slice(0, 300) }; if (![404, 429, 500, 503].includes(r.status)) break; // unknown or busy model: try the next one
     }
     if (!data) return { ok: false, status: 502, message: `The model did not answer (${err?.status}).`, detail: err?.text, tools_called: called };
     const content = data.candidates?.[0]?.content; const parts = content?.parts || [];
     const calls = parts.filter((p) => p.functionCall);
-    if (!calls.length) { const text = parts.map((p) => p.text || '').join('').trim(); return { ok: true, answer: text || 'No answer.', answered_from_tools: called.length > 0, tools_called: called, model }; }
+    if (!calls.length) { const text = parts.map((p) => p.text || '').join('').trim(); return { ok: true, answer: text || 'No answer.', answered_from_tools: called.length > 0, tools_called: called, model: model.model, route: model.route }; }
     contents.push(content);
     const known = new Set(tools.map((t) => t.name));
     contents.push({ role: 'user', parts: calls.map(({ functionCall: f }) => { const result = known.has(f.name) ? callTool(f.name, f.args || {}) : { result: 'Refused', message: `Aviator has no tool ${f.name}` }; called.push({ tool: f.name, arguments: f.args || {} }); return { functionResponse: { name: f.name, ...(f.id ? { id: f.id } : {}), response: { result } } }; }) });

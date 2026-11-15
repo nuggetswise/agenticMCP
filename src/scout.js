@@ -227,7 +227,7 @@ export function runBaseline(db, s, approve = (p) => decide(db, s, p, 'approve', 
   const act = (action, args) => { const r = propose(db, s, 'Baseline', action, args); return r.state === 'Awaiting approval' ? approve(r.proposal) : r; };
   const ld = read(db, s, 'read_load'); const ord = read(db, s, 'read_order');
   if (ord.supplier_erp_sales_order.ship_to !== 'DC 2' || ord.supplier_erp_sales_order.line_numbers !== 'Current') act('erp_align_order', {});
-  for (const sscc of ld.staged_not_loaded) {
+  for (const { sscc } of ld.staged_not_loaded) {
     const r = act('kinross_load', { sscc }); if (r.state === 'Executed') continue;
     const reason = r.result?.response || '';
     if (/label/i.test(reason)) { if (act('kinross_relabel', { sscc }).state === 'Executed') continue; }
@@ -293,7 +293,7 @@ export async function decideAndResume(db, s, proposalId, decision, by, opts) {
 /** The server-side model caller, using the same key and models as Aviator. Never reaches a page. */
 export function geminiCaller(apiKey, fetchImpl = fetch, models = AVIATOR_MODELS) {
   if (!apiKey) return null;
-  return async (body) => { let err; for (const m of models) { const r = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey }, body: JSON.stringify(body) }); if (r.ok) return r.json(); err = `${r.status} ${(await r.text()).slice(0, 200)}`; if (![404, 429, 500, 503].includes(r.status)) break; } throw new Error(`Model did not answer: ${err}`); };
+  return async (body) => { let err; for (const m of models) for (let attempt = 0; attempt < 2; attempt++) { if (attempt) await new Promise((r) => setTimeout(r, 2500)); const r = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey }, body: JSON.stringify(body) }); if (r.ok) return r.json(); err = `${r.status} ${(await r.text()).slice(0, 200)}`; if (r.status !== 503) break; } throw new Error(`Model did not answer: ${err}`); };
 }
 
 /** Governance replay: the same branch and variation, baseline and Scout side by side, approvals by a labelled test approver. */

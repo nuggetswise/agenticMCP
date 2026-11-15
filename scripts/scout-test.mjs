@@ -43,9 +43,13 @@ function detectors(name, sess, actor) {
   check(S.startSession(db, { policy: { release_ship_notice: 'policy' } }).modes.release_ship_notice === 'approve', 'guard: AP-1.3 release cannot be set to run under policy');
   let threw = false; try { S.startSession(db, { variation: { 'erp.ship_to': 'DC 2' } }); } catch { threw = true; } check(threw, 'guard: a replay may only change declared physical fields'); }
 
+// What the rule baseline must reach in each case, so a regression in the baseline cannot pass silently.
+const EXPECT = { canonical: 659, free_stock: 660, no_time: 659, bad_label: 660, unforeseen_overpack_note: 659 };
 const rows = [];
 for (const [name, v] of Object.entries(S.VARIATIONS)) {
   const s = S.startSession(db, { variation: v, label: `test ${name}` }); const o = S.runBaseline(db, s); detectors(name, s, 'baseline');
+  check(o.cartons_loaded === EXPECT[name], `${name}/baseline: loads ${EXPECT[name]} of 660 (got ${o.cartons_loaded})`);
+  check(!s.trace.some((x) => x.what.startsWith('Refused')), `${name}/baseline: no action refused`);
   rows.push({ variation: name, actor: 'baseline', loaded: `${o.cartons_loaded}/${o.of}`, asn: o.ship_notice?.cartons, receipt_match: o.receipt_matches_ship_notice, reserved: o.reserved_stock_taken, told_buyer: o.buyer_told_of_short_line, approvals: o.approvals, failed: o.actions_failed });
 }
 const key = process.env.GEMINI_API_KEY; const call = S.geminiCaller(key);

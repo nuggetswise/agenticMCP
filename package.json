@@ -18,6 +18,7 @@
     "aviator-test": "node --no-warnings scripts/aviator-test.mjs",
     "start": "node --no-warnings src/server.js",
     "scout": "node --no-warnings scripts/scout-test.mjs",
+    "watch": "node --no-warnings scripts/watch-test.mjs",
     "kit-check": "node --no-warnings scripts/kit-check.mjs"
   },
   "dependencies": {

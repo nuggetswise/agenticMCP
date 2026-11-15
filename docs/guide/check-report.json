@@ -1,14 +1,12 @@
 {
  "file": "/home/claude/agenticmcp/docs/build-guide.md",
- "ran_at_head": "728f19e",
+ "ran_at_head": "cea8773",
  "results": [
   {
    "name": "as_of_commit_current",
-   "ok": false,
-   "problems": [
-    "changed since 196aaef: package.json, scripts/scout-test.mjs, src/scout.js, src/server.js, world/p5-physical.js"
-   ],
-   "info": "196aaef"
+   "ok": true,
+   "problems": [],
+   "info": "cea8773"
   },
   {
    "name": "commits_exist",

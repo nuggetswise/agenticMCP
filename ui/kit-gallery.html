@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TG for Retail agent kit</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
+<style>
+body{margin:0;background:var(--tgk-bg);font-family:Inter,"Helvetica Neue",Arial,sans-serif;color:var(--tgk-body);padding:28px max(16px,env(safe-area-inset-right)) 120px max(16px,env(safe-area-inset-left))}
+main{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1{margin:0;font-size:22px;color:var(--tgk-ink)}p.lead{margin:4px 0 0;color:var(--tgk-muted);max-width:70ch}
+section.piece{display:grid;grid-template-columns:240px 1fr;gap:18px;align-items:start}
+section.piece>div:first-child h2{margin:0 0 4px;font-size:14px;color:var(--tgk-ink)}section.piece>div:first-child p{margin:0;font-size:12.5px;color:var(--tgk-muted)}
+.stage{background:var(--tgk-card);border:1px solid var(--tgk-divider);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+@media (max-width:860px){section.piece{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<header><h1>TG for Retail agent kit</h1><p class="lead">Every reusable piece of an agent prototype, drawn with values from the demo world's Scout case on order NR-460207. Aviator sits at the bottom right and answers through your Trading Grid connector.</p></header>
+<div id="pieces"></div>
+</main>
+<script src="tg-agent-kit.js"></script>
+<script>
+(() => {
+  const K = window.TGAgentKit; K.injectCss();
+  const box = document.getElementById('pieces');
+  const piece = (name, says, ...nodes) => { const s = K.el('section', { class: 'piece' }, K.el('div', {}, K.el('h2', { text: name }), K.el('p', { text: says })), K.el('div', { class: 'stage' }, ...nodes)); box.append(s); };
+  const x12 = 'ISA*00*          *00*          *ZZ*KINROSS        *ZZ*ASHBYSUP       *261208*2212*U*00401*000001412*0*P*>~\nGS*SW*KINROSS*ASHBYSUP*20261208*221200*1412*X*004010~\nST*945*0001~\nW06*N*W945-460207*20261208*SHP-460207**NR-460207~';
+  const doc = { title: 'Kinross load scan for NR-460207', tabs: [{ label: 'Readable', content: 'Kinross Groveport scanned 659 of 660 cartons onto the trailer. One staged carton is crushed with damaged contents.' }, { label: 'API response', content: '{\n "shipment": "SHP-460207",\n "cartons_loaded": 659,\n "cartons_expected": 660,\n "by_sscc": true\n}' }, { label: 'Raw X12', content: x12 }] };
+
+  piece('Queue row', 'One state chip and one line stating the row’s own problem in values. Only the row with a running deadline shows its clock.',
+    K.queueRow({ ref: 'NR-460207', chip: 'Ready for review', tone: 'live', line: '659 of 660 cartons loaded; one carton crushed', clock: 'Trailer seals in 48 min', open: true }),
+    K.queueRow({ ref: 'NR-460231', chip: 'Waiting on Kinross', tone: 'wait', line: 'Ship-to on the sales order is DC 4; the order says DC 2' }),
+    K.queueRow({ ref: 'NR-460262', chip: 'Rule failed', tone: 'fail', line: '640 ordered across three orders; 520 available at Groveport' }));
+  piece('Record header', 'The business reference as title, and the running deadline in red where the world holds one.',
+    K.recordHeader({ title: 'NR-460207', deadline: 'Trailer seals in 48 min', sub: 'Northfield DC 2 · 660 cartons of ASH-MUG-12' }));
+  piece('Fact and interface tag', 'Each fact leads with its values and ends with a muted tag naming the system and interface. The tag opens the document, readable first, then raw.',
+    K.factRow({ text: 'Kinross scanned 659 of 660 cartons onto the trailer', system: 'Kinross scan', via: 'API', doc }),
+    K.factRow({ text: 'The order asks for 660 cartons to DC 2', system: 'Purchase order', via: 'EDI 850', doc: { title: 'Purchase order NR-460207', tabs: [{ label: 'Readable', content: 'Northfield orders 660 cases of ASH-MUG-12 for DC 2.' }, { label: 'Raw X12', content: 'BEG*00*SA*NR-460207**20261201~' }] } }));
+  let rows = [{ action: 'Overpack the crushed carton', now: '659 loaded', after: '660 loaded', goesTo: 'Kinross Logistics', via: 'API' }, { action: 'Build the ship notice', now: 'Not built', after: '660 cartons', goesTo: 'Trading Grid', via: 'EDI 856' }];
+  const sugg = K.el('div'); const bar = K.el('div');
+  const draw = (editing) => {
+    sugg.replaceChildren(K.nowAfter({ agent: 'Scout Agent', rows, editable: editing, reason: 'Kinross confirmed the contents are intact under the crushed outer carton, so an overpack keeps all 660 cartons on this trailer.', onChange: (r) => { rows = r; } }));
+    bar.replaceChildren(editing ? K.decisionBar({ says: `Approve sends ${rows.length} task${rows.length === 1 ? '' : 's'} as you edited ${rows.length === 1 ? 'it' : 'them'}. Nothing goes to Northfield.`, onApprove: () => bar.replaceChildren(K.sentState({ text: 'Sent to Kinross Logistics · waiting for its confirmation' })), onEdit: () => {} })
+      : K.decisionBar({ says: 'Approve sends one task to Kinross Logistics and builds the ship notice in Trading Grid. Nothing goes to Northfield.', noDecision: 'No decision before the trailer seals: the order ships 659 of 660 cartons.', onApprove: () => bar.replaceChildren(K.sentState({ text: 'Sent to Kinross Logistics · waiting for its confirmation' })), onEdit: () => draw(true) }));
+  };
+  draw(false);
+  piece('Now and after, with the decision bar', 'The agent’s suggestion as values, the reason in one sentence, and exactly two controls. Edit suggestion hands the case to the person: cells become editable and removing every row declines it.', sugg, bar);
+  piece('Retailer decision bar', 'On the retailer side the controls are the business decision itself.',
+    K.decisionBar({ says: 'Reversing the charge pays $108.00 back to Ashby on the next remittance. Upholding it closes the case.', decisions: [{ label: 'Reverse', primary: true, onClick: () => {} }, { label: 'Uphold', onClick: () => {} }] }));
+  piece('Trace line and roles', 'Each line of the server’s trace as it happened, with who recommended, who authorised and who carried out each action.',
+    K.traceLine({ kind: 'rule', actor: 'Rule', text: 'Load scan 659 of 660 fails NF-4.13 against the order' }),
+    K.traceLine({ kind: 'agent', actor: 'Scout Agent', text: 'Read the Kinross note and the free stock at Groveport' }),
+    K.traceLine({ kind: 'outside', actor: 'Kinross', text: 'Contents intact under the crushed carton', synthetic: true }),
+    K.traceLine({ kind: 'person', actor: 'Priya Raman', text: 'Approved the overpack task', roles: { recommended: 'Scout Agent', authorised: 'Priya Raman', carriedOut: 'Kinross Logistics' } }));
+  piece('Review timeline', 'Done, waiting and next. The last line is the record that settles the job, shown as settled only once it exists.',
+    K.timeline({ items: [{ state: 'done', text: 'Kinross scan arrived · Scout Agent read the Supplier ERP, Kinross scans and EDI documents' }, { state: 'done', text: 'Priya Raman approved the overpack task' }, { state: 'waiting', text: 'Kinross confirms the overpacked carton is loaded' }, { state: 'next', text: 'Northfield receives 660 cartons as the ship notice describes' }] }));
+  piece('Simulated label', 'On a task card when the model could not answer and the last recorded real run is replayed. Never on a live run.', K.simulated());
+  piece('Setup view', 'What may be set before a run: outside facts and each action’s approval mode. Locked actions and guardrails show as locked. Changing a fact never changes the recorded world.',
+    K.setupView({ title: 'Scout setup for NR-460207', lead: 'Values Kinross reports at 17:12. Start a run to see Scout and the rule baseline act on them.', setup: { facts: { carton_condition: { says: 'Condition of the staged carton', recorded: 'crushed', values: ['crushed', 'good'] }, free_cases: { says: 'Cases not reserved for other orders', recorded: 0, min: 0, max: 520 }, kinross_note: { says: 'Kinross’s free-text note', recorded: null, max_length: 300 } }, actions: { kinross_load: { does: 'Ask Kinross to load a staged carton', rule: 'AP-3.2', mode: 'approve', priya_may_change: true, modes: ['suggest', 'approve', 'policy'] }, release_ship_notice: { does: 'Release the ship notice to Northfield', rule: 'AP-1.3', mode: 'approve', priya_may_change: false, modes: ['approve'] } }, guardrails: [{ id: 'AP-1.4', text: 'Never edit a ship notice to match the order; build it only from the confirmed load scan.' }] }, onStart: () => {} }));
+  piece('Governance view', 'The rule baseline beside the agent on the same facts. A step both reach is automation; the agent is credited only where its result differs.',
+    K.governanceView({ title: 'Rule baseline and Scout Agent, Kinross note offering an overpack', rows: [{ step: 'Flag the short load', baseline: 'Flagged', agent: 'Flagged' }, { step: 'Read the Kinross note', baseline: 'Not read', agent: 'Overpack offered' }, { step: 'Cartons loaded', baseline: '659', agent: '660' }], baseline: { outcome: '659 of 660 cartons' }, agent: { name: 'Scout Agent', outcome: '660 of 660 cartons' } }));
+  K.aviator({ side: 'ashby', person: 'Priya Raman', context: () => 'NR-460207', suggestions: ['What is the order value of NR-450118?', 'Which of my orders need attention?'] });
+})();
+</script>
+</body>
+</html>

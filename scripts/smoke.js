@@ -22,9 +22,11 @@ await withServer({ WRITES: 'off' }, 3971, async ({ base, client, tool, rest }) =
   // Trading Grid record, but they are not marked read-only so that a client still confirms before approving on Priya's behalf. Pause, resume and
   // a trial record on the change list, so they are not read-only either; get_change_list is.
   const scout = names.filter((n) => n.startsWith('scout_')); const GOVW = ['pause_agent', 'replay_agent_rule'];
-  ok('28 tools listed: 19 record tools, 6 Scout tools, 3 governance tools; no resume tool', !names.includes('resume_agent') && names.length === 28 && scout.length === 6 && [...GOVW, 'get_change_list'].every((g) => names.includes(g)), `${names.length}, ${scout.length} Scout`); ok('no scenario tool', !names.includes('list_scenarios'));
+  ok('29 tools listed: 19 record tools, 6 Scout tools, 3 governance tools and Aviator; no resume tool', !names.includes('resume_agent') && names.length === 29 && names.includes('ask_aviator') && scout.length === 6 && [...GOVW, 'get_change_list'].every((g) => names.includes(g)), `${names.length}, ${scout.length} Scout`); ok('no scenario tool', !names.includes('list_scenarios'));
   ok('every record tool read-only', tools.filter((t) => !t.name.startsWith('scout_') && !GOVW.includes(t.name)).every((t) => t.annotations?.readOnlyHint === true));
   ok('governance writes are not marked read-only', tools.filter((t) => GOVW.includes(t.name) || (t.name.startsWith('scout_') && t.name !== 'scout_setup')).every((t) => t.annotations?.readOnlyHint === false));
+  { const av = await tool('ask_aviator', { question: 'What is the order value of NR-450118?' }); const lg = await tool('get_access_log', { limit: 3 });
+    ok('Aviator reached through the connector: answers or says it has no key, and logs the call', (av.ok === true || /no model key/.test(av.message || '')) && JSON.stringify(lg).includes('ask_aviator'), JSON.stringify(av).slice(0, 160)); }
   const before = JSON.stringify(await tool('get_access_log', { limit: 1 })).length >= 0 && (await tool('run_readonly_sql', { sql: "SELECT count(*) n FROM events WHERE po = 'NR-460207'" })).rows?.[0]?.n;
   const sb = await tool('scout_baseline', {}); const after = (await tool('run_readonly_sql', { sql: "SELECT count(*) n FROM events WHERE po = 'NR-460207'" })).rows?.[0]?.n;
   ok('Scout session leaves the recorded world unchanged', sb.outcome?.cartons_loaded === 659 && before === after, `${before} -> ${after}`);
@@ -62,7 +64,7 @@ await withServer({}, 3972, async ({ base, tool }) => {
 });
 // Both scopes on one world: shared documents, private records, refusals, and one deduction case worked from both sides.
 await withServer({}, 3973, async ({ base, nfClient, tool, nf }) => {
-  const { tools } = await nfClient.listTools(); ok('Northfield: 18 tools (16 and 2 governance), no resume tool', tools.length === 18 && !tools.some((t) => t.name === 'resume_agent') && ['pause_agent', 'get_change_list'].every((g) => tools.some((t) => t.name === g)), String(tools.length));
+  const { tools } = await nfClient.listTools(); ok('Northfield: 19 tools (16, 2 governance and Aviator), no resume tool', tools.length === 19 && tools.some((t) => t.name === 'ask_aviator') && !tools.some((t) => t.name === 'resume_agent') && ['pause_agent', 'get_change_list'].every((g) => tools.some((t) => t.name === g)), String(tools.length));
   const x = (await tool('get_document', { reference: 'ASN-450118-2' })).x12, y = (await nf('get_document', { reference: 'ASN-450118-2' })).x12; ok('shared X12 is the same on both sides', !!x && x === y);
   { const pre = await nf('supplier_document_trail', { po: 'NR-460207' }), post = await nf('supplier_document_trail', { po: 'NR-460207', as_of: '2026-12-04T10:00:00-05:00' });
     ok('Northfield trail: no such order before it is sent', pre.found === false && /^No such order as of/.test(pre.message) && !('order_value' in pre) && !('requested_delivery' in pre) && post.found === true && post.documents.length >= 1, JSON.stringify(pre).slice(0, 120)); }

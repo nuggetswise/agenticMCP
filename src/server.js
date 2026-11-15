@@ -289,6 +289,17 @@ function makeServer(cid) {
     server.registerTool(tool.name, { title: tool.title, description: tool.description, inputSchema: { ...tool.input, ...extra }, annotations: { readOnlyHint: !write, destructiveHint: false, openWorldHint: false } },
       async (args = {}) => ({ content: [{ type: 'text', text: JSON.stringify(call(cid, tool.name, args), null, 1) }] }));
   }
+  // Aviator for a Trading Grid page: the page reaches it through the viewer's own connector and holds no key (T2.10, T2.11).
+  server.registerTool('ask_aviator', { title: 'Ask Aviator', description: `Aviator, Trading Grid's in-product assistant, answers one question for ${SIDE[cid].person} at ${SIDE[cid].company}. The model runs on the server with this connection's read tools only, so the same scopes, refusals and access log apply; it cites the records it used and never writes: an action goes back to the screen for approval. Used by Trading Grid prototype pages; an assistant connected directly should call the read tools itself.`,
+    inputSchema: { question: z.string().describe('The question in the person\'s own words'), history: z.array(z.object({ role: z.enum(['user', 'model']), text: z.string() })).optional().describe('Earlier turns of this conversation, oldest first'), context: z.string().optional().describe('The record open on the screen, such as a PO number, so a short question can be answered about it') },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false } },
+    async ({ question, history = [], context } = {}) => {
+      const tools = cid === AS ? TOOLS : NF_TOOLS; const side = SIDE[cid];
+      const q = context ? `${question}\n(On screen: ${context})` : question;
+      let out; try { out = await Aviator.ask({ question: q, history, tools, callTool: (name, args) => call(cid, name, args), side: { person: side.person, company: side.company, other: side.other }, clock: fmtET(D.storyClock()), routes: Aviator.modelRoutes() }); } catch (e) { out = { ok: false, message: 'Aviator failed.' }; }
+      log(cid, 'ask_aviator', [], { question: String(question || '').slice(0, 300) }, out.ok ? `Answered from ${out.tools_called.length} tool call(s)` : out.message, []);
+      return { content: [{ type: 'text', text: JSON.stringify(out, null, 1) }] };
+    });
   if (cid === AS) for (const t of SCOUT_TOOLS) server.registerTool(t.name, { title: t.title, description: t.description, inputSchema: t.input, annotations: { readOnlyHint: t.name === 'scout_setup', destructiveHint: false, openWorldHint: false } },
     async (args = {}) => { let out; try { out = await t.run(args); } catch (e) { out = { result: 'Invalid request', error: e.message }; } log(cid, t.name, [], args, out.result || out.status || 'Answered', []); return { content: [{ type: 'text', text: JSON.stringify(out, null, 1) }] }; });
   return server;

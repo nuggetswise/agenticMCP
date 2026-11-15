@@ -38,7 +38,7 @@ export class Log {
     const docs = [...this.docs].sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : a._n - b._n));
     const ctl = new Map(); const next = (k, base) => { const v = (ctl.get(k) ?? base) + 1; ctl.set(k, v); return v; };
     // History documents come first in time. They count up to the period's base, so the current period keeps its numbers.
-    const histN = new Map(); for (const d of docs) if (d.hist) { for (const k of [`${d.from}>${d.to}`, ...(d.no_ack ? [] : [`${d.to}>${d.from}:FA`])]) histN.set(k, (histN.get(k) || 0) + 1); }
+    const histN = new Map(); for (const d of docs) if (d.hist && !d.stage) { for (const k of [`${d.from}>${d.to}`, ...(d.no_ack ? [] : [`${d.to}>${d.from}:FA`])]) histN.set(k, (histN.get(k) || 0) + 1); }
     // Documents added by a world-coverage stage are sent by the system that owns that stage (planning, transport,
     // catalogue…) and take interchange numbers from that system's own range, so adding one never renumbers an existing
     // interchange. Their acknowledgments likewise. Ranges: business 700,000,000 up, acknowledgments 600,000,000 up.

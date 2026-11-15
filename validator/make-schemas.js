@@ -78,6 +78,12 @@ const SET = {
   945: ['W06!', L('N1+'), 'G62+', L('LX!+', L('W12+')), 'W03'],
   852: ['XQ!', L('N1+'), L('LIN!+', L('ZA+', 'SDQ+')), 'CTT'],
 };
+// Stage modules (world/stages) bring their own sets and any segments not defined above.
+const { STAGES } = await import('../world/stages/index.js');
+for (const st of STAGES) {
+  for (const [tag, spec] of Object.entries(st.staedi?.SEG || {})) { if (SEG[tag] && JSON.stringify(SEG[tag]) !== JSON.stringify(spec)) throw new Error(`Stage ${st.id} redefines segment ${tag}`); SEG[tag] = spec; }
+  for (const [set, items] of Object.entries(st.staedi?.SET || {})) { if (SET[set]) throw new Error(`Stage ${st.id} redefines set ${set}`); SET[set] = items; }
+}
 const BASE = { AN: 'string', ID: 'identifier', N: 'numeric', R: 'decimal', DT: 'date', TM: 'time' };
 const elTypes = new Map();
 const elName = (spec) => { const [t, mn, mx] = spec.replace('!', '').split(' '); const n = `E_${t}_${mn}_${mx}`; elTypes.set(n, `<elementType name="${n}" base="${BASE[t]}" minLength="${mn}" maxLength="${mx}"/>`); return n; };

@@ -46,7 +46,9 @@ export class Log {
     const out = []; const acks = [];
     for (const d of docs) {
       const from = PARTY[d.from], to = PARTY[d.to];
-      d.ctl = nextCtl(d, `${d.from}>${d.to}`, 1000);
+      // A stage document (D60) takes control numbers from its own range on the pair, so adding it renumbers no existing
+      // document: 700,000,000 up, and 600,000,000 up for its 997s (the same ranges as main after dfef3cd).
+      d.ctl = nextCtl(d, `${d.from}>${d.to}${d.stage ? ':S' : ''}`, d.stage ? 700000000 : 1000);
       if (typeof d.answers_gs === 'function') d.answers_gs = d.answers_gs();
       let text = writeInterchange(d, { isaSender: from.isa, isaReceiver: to.isa, ctl: d.ctl });
       if (d.test) text = text.replace(/\*0\*P\*>~/, '*0*T*>~');
@@ -62,7 +64,7 @@ export class Log {
     // Acknowledgment control numbers are allocated in the order the acknowledgments are sent.
     acks.sort((x, y) => (x.numAt < y.numAt ? -1 : x.numAt > y.numAt ? 1 : x.d._n - y.d._n));
     for (const { d, fa } of acks) {
-      fa.ctl = nextCtl(d, `${fa.from}>${fa.to}:FA`, 500000000);
+      fa.ctl = nextCtl(d, `${fa.from}>${fa.to}:FA${d.stage ? ':S' : ''}`, d.stage ? 600000000 : 500000000);
       let faText = writeInterchange(fa, { isaSender: PARTY[fa.from].isa, isaReceiver: PARTY[fa.to].isa, ctl: fa.ctl });
       if (d.test) faText = faText.replace(/\*0\*P\*>~/, '*0*T*>~');
       out.push({ text: faText, from: fa.from, to: fa.to, at: fa.at, type: '997' });

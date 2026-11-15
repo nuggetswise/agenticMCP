@@ -23,10 +23,11 @@ import { docNames } from '../ref.js';
 import partnerSetup from './partner-setup.js';
 import catalogue from './catalogue.js';
 import planning from './planning.js';
+import transport from './transport.js';
 import warehouse from './warehouse.js';
 
 // Order is fixed: masters first (partner setup, catalogue), then the trade stages. A stage added later goes at the end.
-export const STAGES = [partnerSetup, catalogue, planning, warehouse];
+export const STAGES = [partnerSetup, catalogue, planning, transport, warehouse];
 
 for (const s of STAGES) for (const [code, def] of Object.entries(s.docs || {})) { registerType(code, def); docNames[code] = def.name; }
 export const STAGE_BY_TYPE = Object.fromEntries(STAGES.flatMap((s) => Object.keys(s.docs || {}).map((c) => [c, s])));

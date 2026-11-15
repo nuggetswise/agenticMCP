@@ -16,6 +16,10 @@ export const seg = (...e) => { while (e.length && (e[e.length - 1] === '' || e[e
 
 export const FUNC = { 850: 'PO', 855: 'PR', 860: 'PC', 865: 'CA', 856: 'SH', 810: 'IN', 861: 'RC', 824: 'AG', 997: 'FA', 820: 'RA', 940: 'OW', 945: 'SW', 852: 'PD' };
 
+/** X12 version (GS08) per transaction set. 004010 unless a stage registers a set that exists only in a later release
+ * (753 and 754 are in bots-grammars from 004030). ISA12 stays 00401, as NEXCOM's 754 samples send GS08 004030 under ISA12 00401. */
+const VERSION = {};
+
 export const itemIds = (l) => ['IN', l.nf_item, 'VN', l.sku, ...(l.gtin ? ['UK', l.gtin] : [])];
 
 /** Body segments (between ST and SE) for one document. */
@@ -165,7 +169,7 @@ export function writeInterchange(d, { isaSender, isaReceiver, ctl }) {
   const st = z(1, 4);
   const lines = [
     `ISA*00*${pad('', 10)}*00*${pad('', 10)}*ZZ*${pad(isaSender, 15)}*ZZ*${pad(isaReceiver, 15)}*${d8(d.at).slice(2)}*${t4(d.at)}*U*00401*${z(ctl, 9)}*0*P*>`,
-    seg('GS', FUNC[d.type], isaSender, isaReceiver, d8(d.at), t6(d.at), ctl, 'X', '004010'),
+    seg('GS', FUNC[d.type], isaSender, isaReceiver, d8(d.at), t6(d.at), ctl, 'X', VERSION[d.type] || '004010'),
     seg('ST', d.type, st),
     ...body,
     seg('SE', body.length + 2, st),
@@ -240,14 +244,14 @@ export function readDocuments(text, source = null) {
   for (const ic of parseX12(text)) for (const g of ic.groups) for (const s of g.sets) {
     const read = READ[s.type];
     if (!read) throw new Error(`No reader for transaction set ${s.type}`);
-    docs.push({ type: s.type, isa_sender: ic.sender, isa_receiver: ic.receiver, isa_ctl: ic.ctl, gs_ctl: g.ctl, st_ctl: s.ctl, at: g.at, segments: s.segs.length + 2, se_count: s.count, source, ...read(s.segs) });
+    docs.push({ type: s.type, isa_sender: ic.sender, isa_receiver: ic.receiver, isa_ctl: ic.ctl, gs_ctl: g.ctl, st_ctl: s.ctl, at: g.at, segments: s.segs.length + 2, se_count: s.count, source, ...(g.version !== '004010' ? { x12_version: g.version } : {}), ...read(s.segs) });
   }
   return docs;
 }
 
 /** Adds a transaction set the world exchanges: its functional group, writer (body segments) and reader.
  * Stage modules in world/stages register their documents here, so this file never needs editing per stage. */
-export function registerType(code, { func, body, read }) {
+export function registerType(code, { func, body, read, version }) {
   if (BODY[code] || READ[code]) throw new Error(`Transaction set ${code} is registered twice`);
-  FUNC[code] = func; BODY[code] = body; READ[code] = read;
+  FUNC[code] = func; BODY[code] = body; READ[code] = read; if (version) VERSION[code] = version;
 }

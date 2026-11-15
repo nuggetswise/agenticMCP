@@ -1,0 +1,4 @@
+{
+ "tg.parties": "T1.15: one column on one row. Lakeline Freight's isa changes from null to LAKELINE so it can exchange 204, 214 and 210 with Ashby; every other column and row is unchanged.",
+ "ashby.parties": "T1.15: one column on one row. Lakeline Freight's isa changes from null to LAKELINE in Ashby's copy, as in the main database; every other column and row is unchanged."
+}

@@ -64,9 +64,10 @@ const dockOpen = (o) => et(o.requested_delivery, o.ship_to === 'DC4' ? '07:00' :
 
 /**
  * Orders needing attention at a time: rejected documents, and required documents not sent as their deadline nears.
- * Northfield documents only unless warehouse is true, which adds the Kinross shipping advice.
+ * Northfield documents only unless warehouse is true, which adds the Kinross shipping advice, due kinrossHours after the 940
+ * (KX-945's 24 by default; P13's Watch Agent passes Priya's window).
  */
-export function attention(db, asOf = storyClock(), { warehouse = false } = {}) {
+export function attention(db, asOf = storyClock(), { warehouse = false, kinrossHours = 24 } = {}) {
   const t = asOf.toISOString(); const out = []; const checked = [];
   const since = new Date(asOf.getTime() - 12 * 24 * H).toISOString();
   const orders = db.prepare("SELECT * FROM orders WHERE supplier_id = ? AND stream <> 'store' AND received_at <= ? AND received_at >= ? ORDER BY po").all(COMPANY, t, since);
@@ -96,7 +97,7 @@ export function attention(db, asOf = storyClock(), { warehouse = false } = {}) {
     }
     if (warehouse) {
       const w = db.prepare('SELECT * FROM warehouse_orders WHERE po = ? AND sent_at <= ?').get(o.po, t);
-      if (w && !(w.advice_at && w.advice_at <= t)) { const due = new Date(Date.parse(w.sent_at) + 24 * H); if (due - asOf <= 8 * H) add('Warehouse shipping advice (945) not received from Kinross', 'KX-945', due, [w.ref], { warehouse_status: 'Unknown', warehouse_order_sent: fmtET(w.sent_at) }); }
+      if (w && !(w.advice_at && w.advice_at <= t)) { const due = new Date(Date.parse(w.sent_at) + kinrossHours * H); if (due - asOf <= 8 * H) add('Warehouse shipping advice (945) not received from Kinross', 'KX-945', due, [w.ref], { warehouse_status: 'Unknown', warehouse_order_sent: fmtET(w.sent_at) }); }
     }
     const cha = of('865').pop();
     if (cha && asOf - new Date(cha.sent_at) <= 48 * H) checked.push({ po: o.po, item: 'Business acceptance of the change acknowledgment', state: 'Not expected', rule: rule(db, 'NF-1.5'), evidence: 'Technical acknowledgment (997) received', link: `order/${encodeURIComponent(o.po)}` });

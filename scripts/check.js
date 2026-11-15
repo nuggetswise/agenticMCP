@@ -66,8 +66,9 @@ none('time.warehouse_advice_after_warehouse_order', 'SELECT ref FROM warehouse_o
 none('time.one_997_per_document', `SELECT d.doc_id, count(f.doc_id) k FROM documents d LEFT JOIN documents f ON f.answers_doc_id = d.doc_id AND f.doc_type = '997' WHERE d.doc_type <> '997' GROUP BY d.doc_id HAVING k <> 1`);
 none('time.997_two_to_nine_minutes_after', `SELECT f.doc_id, (julianday(f.sent_at) - julianday(d.sent_at)) * 1440 m FROM documents f JOIN documents d ON d.doc_id = f.answers_doc_id WHERE f.doc_type = '997' AND (m < 1.99 OR m > 9.01 OR f.sender_id <> d.receiver_id)`);
 // Interchange control numbers rise with time within each sender, receiver and number range.
-{ const rows = db.prepare("SELECT doc_id d, sender_id s, receiver_id r, doc_type = '997' fa, isa_ctl c, sent_at t FROM documents ORDER BY s, r, fa, c").all(); const bad = []; let dup = 0;
-  for (let i = 1; i < rows.length; i++) { const a = rows[i - 1], b = rows[i]; if (a.s !== b.s || a.r !== b.r || a.fa !== b.fa) continue; if (b.c === a.c) dup++; if (b.t < a.t) bad.push(a.d); }
+// A stage document (D60) is numbered from its stage's own range on the pair (world/log.js), so each range rises on its own.
+{ const rows = db.prepare("SELECT doc_id d, sender_id s, receiver_id r, doc_type = '997' fa, CASE WHEN doc_type = '997' THEN isa_ctl >= 600000000 ELSE isa_ctl >= 700000000 END rg, isa_ctl c, sent_at t FROM documents ORDER BY s, r, fa, rg, c").all(); const bad = []; let dup = 0;
+  for (let i = 1; i < rows.length; i++) { const a = rows[i - 1], b = rows[i]; if (a.s !== b.s || a.r !== b.r || a.fa !== b.fa) continue; if (b.c === a.c) dup++; if (a.rg !== b.rg) continue; if (b.t < a.t) bad.push(a.d); }
   // Change list point F1 (CALLS 68): P5's six lead acknowledgments were numbered when Ashby's ERP generated them and sent late from its outbound queue, so they and their 997s keep their place in the numbering.
   // Change list 2 point 1 (CALLS 79): RCV-46215 was moved after its ship notice and keeps its number, as does its 997.
   const moved = (type, po) => { const d = db.prepare('SELECT doc_id FROM documents WHERE doc_type = ? AND po = ?').get(type, po).doc_id; return [d, db.prepare("SELECT doc_id FROM documents WHERE doc_type = '997' AND answers_doc_id = ?").get(d).doc_id]; };

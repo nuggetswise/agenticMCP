@@ -17,7 +17,7 @@ export const parties = [
   { id: 'NORTHFIELD', name: 'Northfield Retailer', kind: 'Retailer', gln: '0614141000050', isa: 'NORTHFIELD' },
   { id: 'ASHBY', name: 'Ashby Supplier', kind: 'Supplier', gln: '0614141002085', isa: 'ASHBYSUP' },
   { id: 'KINROSS', name: 'Kinross Logistics', kind: '3PL warehouse', gln: '0614141003006', isa: 'KINROSS' },
-  { id: 'LAKELINE', name: 'Lakeline Freight', kind: 'Carrier', gln: gln(3900), isa: null },
+  { id: 'LAKELINE', name: 'Lakeline Freight', kind: 'Carrier', gln: gln(3900), isa: 'LAKELINE' }, // T1.15: interchange id so it exchanges 204, 214 and 210 with Ashby
   { id: 'BROOKLINE', name: 'Brookline Goods', kind: 'Supplier', gln: '0614141004003', isa: 'BROOKLINE' },
   { id: 'CEDARPINE', name: 'Cedar & Pine Home', kind: 'Supplier', gln: '0614141005000', isa: 'CEDARPINE' },
   // The other suppliers in Northfield's open-order view (Money in Motion). Index matches the order fixtures.

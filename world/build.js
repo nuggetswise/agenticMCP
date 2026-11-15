@@ -87,7 +87,7 @@ export function derive(files, events) {
     const others = [d.sender, d.receiver].filter((x) => x !== 'NORTHFIELD' && x !== 'KINROSS' && x !== 'LAKELINE');
     d.partner = [d.sender, d.receiver].includes('KINROSS') ? 'KINROSS' : [d.sender, d.receiver].includes('LAKELINE') ? 'LAKELINE' : 'NORTHFIELD'; d.supplier = others[0] || 'ASHBY';
     // A 997 has no reference of its own in X12: it is named by its sender and interchange control number.
-    if (d.type === '997') d.ref = `FA-${d.sender === 'NORTHFIELD' ? (d.receiver === 'ASHBY' ? 'N' : `N${d.receiver.slice(3)}-`) : d.sender === 'ASHBY' ? (d.receiver === 'KINROSS' ? 'AK' : 'A') : d.sender === 'KINROSS' ? 'K' : `S${d.sender.slice(3)}-`}${d.isa_ctl > 500000000 ? d.isa_ctl - 500000000 : `H${d.isa_ctl}`}`;
+    if (d.type === '997') d.ref = `FA-${d.sender === 'NORTHFIELD' ? (d.receiver === 'ASHBY' ? 'N' : `N${d.receiver.slice(3)}-`) : d.sender === 'ASHBY' ? (d.receiver === 'KINROSS' ? 'AK' : d.receiver === 'LAKELINE' ? 'AL' : 'A') : d.sender === 'KINROSS' ? 'K' : d.sender === 'LAKELINE' ? 'L' : `S${d.sender.slice(3)}-`}${d.isa_ctl > 500000000 ? d.isa_ctl - 500000000 : `H${d.isa_ctl}`}`;
     const base = `${d.type}:${d.ref}`; const n = (idCount.get(base) || 0) + 1; idCount.set(base, n); d.doc_id = n === 1 ? base : `${base}#${n}`;
     byCtl.set(`${d.sender}>${d.receiver}:${d.type}:${d.gs_ctl}`, d);
     if (d.type !== '997' && d.type !== '824') (byRef.get(`${d.type}:${d.ref}:${d.sender}`) || byRef.set(`${d.type}:${d.ref}:${d.sender}`, []).get(`${d.type}:${d.ref}:${d.sender}`)).push(d);
@@ -251,7 +251,8 @@ function buildAshbyView() {
 
 /** A copy holding only what Northfield may read, for read-only SQL: every supplier's exchanged documents and the
  * records they carry, Northfield's own systems, the deduction cases, and evidence a supplier shared into a case.
- * Ashby's ERP, warehouse, carrier and agent records, the 940 and 945, and Ashby's policies are left out. */
+ * Ashby's ERP, warehouse, carrier and agent records, the 940 and 945, Ashby's exchanges with its carrier (204, 214, 210
+ * and their 997s, T1.15) and Ashby's policies are left out. */
 function buildNorthfieldView() {
   const db = new DatabaseSync(NORTHFIELD_DB, { enableForeignKeyConstraints: false }); // a scoped copy, as above
   db.exec(SCHEMA());
@@ -260,7 +261,7 @@ function buildNorthfieldView() {
     INSERT INTO parties SELECT * FROM m.parties WHERE kind IN ('Retailer','Supplier');
     INSERT INTO people SELECT * FROM m.people; INSERT INTO locations SELECT * FROM m.locations; INSERT INTO items SELECT * FROM m.items;
     INSERT INTO rules SELECT * FROM m.rules WHERE owner NOT LIKE 'Ashby%'; INSERT INTO calendar SELECT * FROM m.calendar;
-    INSERT INTO documents SELECT * FROM m.documents WHERE doc_type NOT IN ('940','945');
+    INSERT INTO documents SELECT * FROM m.documents WHERE doc_type NOT IN ('940','945') AND partner_id <> 'LAKELINE';
     INSERT INTO orders SELECT * FROM m.orders; INSERT INTO order_lines SELECT * FROM m.order_lines; INSERT INTO order_changes SELECT * FROM m.order_changes;
     INSERT INTO shipments SELECT * FROM m.shipments; INSERT INTO shipment_lines SELECT * FROM m.shipment_lines; INSERT INTO cartons SELECT * FROM m.cartons;
     INSERT INTO receipts SELECT * FROM m.receipts; INSERT INTO invoices SELECT * FROM m.invoices; INSERT INTO invoice_lines SELECT * FROM m.invoice_lines;

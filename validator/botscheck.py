@@ -4,7 +4,8 @@ Usage: python3 -I validator/botscheck.py <bots-grammars checkout> [build/tg.db] 
 Get the grammars with: git clone --depth 1 https://github.com/bots-edi/bots-grammars
 The grammars are data (Python literals); bots itself is not needed. A stub stands in for bots.botsconfig.
 
-Checks per transaction set, using x12/4010 grammars:
+Checks per transaction set, using the grammar directory of the set's version (GS08): x12/4010 for 004010, x12/4030 for
+004030 (753 and 754 exist in bots-grammars only from 4030):
   structure  segment order and repeats against the grammar's nested structure (MIN, MAX, LEVEL)
   records    every element against its record definition: mandatory, length, format (N, R, DT, TM, ID/AN), element count
   envelope   SE01 equals the segments from ST to SE; SE02 equals ST02
@@ -16,7 +17,7 @@ import json, os, re, sqlite3, sys, types, datetime, importlib.util, hashlib
 GRAMMARS, DB, OUT = (sys.argv[1:] + [None, None, None])[:3]
 DB = DB or 'build/tg.db'
 OUT = OUT or 'validator/bots-report.json'
-DIR = os.path.join(GRAMMARS, 'x12', '4010')
+def vdir(version): return os.path.join(GRAMMARS, 'x12', version[2:6] if version else '4010')  # 004030 -> x12/4030
 
 # stub for bots.botsconfig: the grammar files only use these four names
 bots = types.ModuleType('bots'); cfg = types.ModuleType('bots.botsconfig')
@@ -24,15 +25,20 @@ for n in ('ID', 'MIN', 'MAX', 'LEVEL'): setattr(cfg, n, n)
 cfg.__all__ = ['ID', 'MIN', 'MAX', 'LEVEL']
 bots.botsconfig = cfg; sys.modules['bots'] = bots; sys.modules['bots.botsconfig'] = cfg
 
-def load(name):
-    spec = importlib.util.spec_from_file_location(name, os.path.join(DIR, name + '.py'))
+def load(name, version='004010'):
+    spec = importlib.util.spec_from_file_location(name, os.path.join(vdir(version), name + '.py'))
     m = importlib.util.module_from_spec(spec); sys.modules[name] = m; spec.loader.exec_module(m); return m
 
-RECORDS = load('records004010').recorddefs
+# Each grammar file imports its own records module (records004010, records004030) by name, so load that first.
+_records = {}
+def records(version):
+    if version not in _records: _records[version] = load('records' + version, version).recorddefs
+    return _records[version]
+RECORDS = records('004010')
 _struct = {}
-def structure(ts):
-    if ts not in _struct: _struct[ts] = load(ts + '004010').structure
-    return _struct[ts]
+def structure(ts, version='004010'):
+    if (ts, version) not in _struct: records(version); _struct[(ts, version)] = load(ts + version, version).structure
+    return _struct[(ts, version)]
 
 def check_value(v, name, length, fmt):
     if isinstance(length, tuple): lo, hi = length
@@ -55,8 +61,8 @@ def check_value(v, name, length, fmt):
     if n < lo: return f'{name} too short ({n} < {lo})'
     return None
 
-def check_record(seg, comp):
-    tag = seg[0]; defs = RECORDS.get(tag)
+def check_record(seg, comp, recs=None):
+    tag = seg[0]; defs = (recs or RECORDS).get(tag)
     if defs is None: return [f'{tag} unknown segment']
     fields = defs[1:]; errs = []
     if len(seg) - 1 > len(fields): errs.append(f'{tag} has {len(seg)-1} elements, {len(fields)} allowed')
@@ -89,15 +95,16 @@ def walk(entries, segs, i, errs):
         if count < ent['MIN']: errs.append(f"{ent['ID']} required, missing at segment {i + 1}")
     return i
 
-def check_set(segs, comp):
+def check_set(segs, comp, version='004010'):
     errs = []
     ts = segs[0][1] if segs and segs[0][0] == 'ST' and len(segs[0]) > 1 else None
     if not ts: return None, ['no ST']
-    try: st = structure(ts)
-    except FileNotFoundError: return ts, [f'no grammar for {ts}']
+    try: st = structure(ts, version)
+    except FileNotFoundError: return ts, [f'no grammar for {ts} in {version}']
     end = walk(st, segs, 0, errs)
     if end < len(segs): errs.append(f'{segs[end][0]} not allowed at segment {end + 1}')
-    for s in segs: errs += check_record(s, comp)
+    recs = records(version)
+    for s in segs: errs += check_record(s, comp, recs)
     se = segs[-1]
     if se[0] == 'SE':
         if len(se) > 1 and se[1] != str(len(segs)): errs.append(f'SE01 says {se[1]} segments, set has {len(segs)}')
@@ -109,19 +116,20 @@ def sets_in(raw):
     if not raw.startswith('ISA') or len(raw) < 106: return [], '>'
     el, comp, term = raw[3], raw[104], raw[105]
     segs = [s.strip() for s in raw.split(term) if s.strip()]
-    out, cur = [], None
+    out, cur, version = [], None, '004010'
     for s in segs:
         p = s.split(el)
+        if p[0] == 'GS' and len(p) > 8: version = p[8]
         if p[0] == 'ST': cur = [p]
         elif cur is not None:
             cur.append(p)
-            if p[0] == 'SE': out.append(cur); cur = None
+            if p[0] == 'SE': out.append((cur, version)); cur = None
     return out, comp
 
 def run(raw):
     sets, comp = sets_in(raw)
     if not sets: return [('?', ['no transaction set in interchange'])]
-    return [check_set(s, comp) for s in sets]
+    return [check_set(s, comp, v) for s, v in sets]
 
 db = sqlite3.connect(f'file:{DB}?mode=ro', uri=True)
 docs = db.execute('SELECT doc_id, doc_type, raw FROM documents WHERE raw IS NOT NULL ORDER BY doc_id').fetchall()
@@ -182,7 +190,7 @@ for name, fn, reason in INJ:
 
 report = {
     'checked': datetime.date.today().isoformat(),
-    'grammars': {'source': 'github.com/bots-edi/bots-grammars', 'path': 'x12/4010',
+    'grammars': {'source': 'github.com/bots-edi/bots-grammars', 'path': 'x12/4010 and x12/4030, by GS08',
                  'commit': os.popen(f'git -C {GRAMMARS} log -1 --format=%h').read().strip()},
     'world_x12_sha256': hashlib.sha256(''.join(r for _, _, r in docs).encode()).hexdigest(),
     'documents': len(docs), 'transaction_sets': sets_checked,

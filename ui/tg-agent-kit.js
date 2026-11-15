@@ -43,9 +43,9 @@
 /* drawer */
 .tgk-drawer{position:fixed;inset:0 0 0 auto;width:min(560px,100vw);background:var(--tgk-card);box-shadow:-12px 0 32px rgba(15,27,45,.18);z-index:60;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .22s ease}
 .tgk-drawer[data-open]{transform:none}.tgk-drawer header{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid var(--tgk-divider)}
-.tgk-drawer h3{margin:0;font-size:15px;color:var(--tgk-ink)}.tgk-tabs{display:flex;gap:4px;padding:10px 18px 0}.tgk-tabs button{font:600 12.5px var(--tgk-font);border:0;background:none;padding:6px 10px;border-bottom:2px solid transparent;color:var(--tgk-muted);cursor:pointer}
-.tgk-tabs button[aria-selected=true]{color:var(--tgk-action);border-bottom-color:var(--tgk-action)}.tgk-drawer .body{padding:14px 18px;overflow:auto;flex:1}
-.tgk-drawer pre{font:12.5px/1.5 var(--tgk-mono);white-space:pre-wrap;word-break:break-all;background:var(--tgk-subtle);border:1px solid var(--tgk-divider);border-radius:8px;padding:12px;margin:0;color:var(--tgk-ink)}
+.tgk-drawer h3{margin:0;font-size:15px;color:var(--tgk-ink)}
+.tgk-drawer .body{padding:14px 18px;overflow:auto;flex:1}
+.tgk-doc{display:grid;grid-template-columns:max-content 1fr;gap:8px 16px;margin:0}.tgk-doc dt{color:var(--tgk-muted);font-size:12.5px}.tgk-doc dd{margin:0;color:var(--tgk-ink)}.tgk-doc-text{margin:0 0 10px;color:var(--tgk-ink)}
 /* now and after */
 .tgk-sugg{border:1px solid var(--tgk-divider);border-radius:12px;background:var(--tgk-card);padding:14px 16px}
 .tgk-sugg .head{display:flex;align-items:center;gap:10px;margin-bottom:10px}.tgk-sugg .head b{color:var(--tgk-ink);font-size:14px}
@@ -126,25 +126,30 @@
   /** The record header: business reference as title, the running deadline in red where one exists. */
   function recordHeader({ title, deadline, sub }) { return kit(el('div', { class: 'tgk-rhead' }, el('h2', { text: title }), deadline ? el('span', { class: 'deadline', text: deadline }) : null, sub ? el('span', { class: 'sub', text: sub }) : null)); }
 
-  /** The interface tag: system and interface in muted 11px text, no box; opens the document in the drawer. */
+  /** The interface tag: system and interface in muted 11px text, no box; opens the readable document in the drawer, and nothing more. */
   function interfaceTag({ system, via, doc }) {
     const label = [system, via].filter(Boolean).join(' · ');
-    return el('button', { class: 'tgk-tag', type: 'button', title: doc ? `Open ${doc.title}` : label, onclick: doc ? () => drawer(doc) : null, text: label });
+    return el('button', { class: 'tgk-tag', type: 'button', 'data-doc': doc ? 'readable' : null, title: doc ? `Open ${doc.title}` : label, onclick: doc ? () => drawer(doc) : null, text: label });
   }
 
   /** One fact the agent found, in values, ending with its interface tag. */
   function factRow({ text, system, via, doc }) { return kit(el('div', { class: 'tgk-fact' }, el('span', { class: 'text', text }), interfaceTag({ system, via, doc }))); }
 
   let openDrawer = null;
-  /** A drawer holding one document: readable first, then its raw format (raw X12, API request and response). */
-  function drawer({ title, tabs }) {
+  /** A drawer holding one readable document: its trade name and reference as the title, then its business values.
+   * Pass fields as [label, value] pairs, or content as a short readable text or Node. Nothing else is shown: no raw X12,
+   * no segment text, no request or response payload, no format tabs. A legacy tabs list is read for its Readable tab only. */
+  const RAW_X12 = /(^|[^A-Za-z0-9])(?:ISA|GS|ST|SE|GE|IEA|[A-Z][A-Z0-9]{1,2})\*[^\n]{0,80}?\*/;
+  function drawer({ title, fields, content, tabs }) {
     injectCss(); if (openDrawer) openDrawer.remove();
-    const body = el('div', { class: 'body' }); const bar = el('div', { class: 'tgk-tabs', role: 'tablist' });
-    const show = (i) => { body.replaceChildren(typeof tabs[i].content === 'string' ? el('pre', { text: tabs[i].content }) : tabs[i].content); [...bar.children].forEach((b, j) => b.setAttribute('aria-selected', String(i === j))); };
-    tabs.forEach((t, i) => bar.append(el('button', { type: 'button', role: 'tab', onclick: () => show(i), text: t.label })));
+    if (content == null && !fields && Array.isArray(tabs)) { const t = tabs.find((x) => /readable/i.test(x.label)) || tabs[0]; content = t && t.content; }
+    const body = el('div', { class: 'body' });
+    if (fields) body.append(el('dl', { class: 'tgk-doc' }, ...fields.flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { text: String(v) })])));
+    if (content != null) body.append(typeof content === 'string' ? el('p', { class: 'tgk-doc-text', text: content }) : content);
+    if (RAW_X12.test(body.textContent)) { body.replaceChildren(el('p', { class: 'tgk-doc-text', text: 'This document is shown in readable form only.' })); }
     const close = () => { d.removeAttribute('data-open'); setTimeout(() => d.remove(), 240); openDrawer = null; };
-    const d = kit(el('aside', { class: 'tgk-drawer', role: 'dialog', 'aria-label': title }, el('header', {}, el('h3', { text: title }), el('button', { class: 'tgk-btn', type: 'button', onclick: close, text: 'Close' })), bar, body));
-    document.body.append(d); show(0); requestAnimationFrame(() => d.setAttribute('data-open', '')); openDrawer = d;
+    const d = kit(el('aside', { class: 'tgk-drawer', role: 'dialog', 'aria-label': title }, el('header', {}, el('h3', { text: title }), el('button', { class: 'tgk-btn', type: 'button', onclick: close, text: 'Close' })), body));
+    document.body.append(d); requestAnimationFrame(() => d.setAttribute('data-open', '')); openDrawer = d;
     document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); } });
     return d;
   }
@@ -272,5 +277,5 @@
     return { element: wrap, ask, open: () => { panel.setAttribute('data-open', ''); btn.setAttribute('aria-expanded', 'true'); } };
   }
 
-  root.TGAgentKit = Object.freeze({ version: '1.1.0', css: CSS, injectCss, connector, el, queueRow, recordHeader, interfaceTag, factRow, drawer, nowAfter, compareTable, decisionBar, sentState, roleTrace, traceLine, timeline, simulated, setupView, fromServerSetup, governanceView, aviator, SERVERS });
+  root.TGAgentKit = Object.freeze({ version: '1.2.0', css: CSS, injectCss, connector, el, queueRow, recordHeader, interfaceTag, factRow, drawer, nowAfter, compareTable, decisionBar, sentState, roleTrace, traceLine, timeline, simulated, setupView, fromServerSetup, governanceView, aviator, SERVERS });
 })(typeof window !== 'undefined' ? window : globalThis);

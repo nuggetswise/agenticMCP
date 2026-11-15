@@ -26,8 +26,7 @@ section.piece>div:first-child h2{margin:0 0 4px;font-size:14px;color:var(--tgk-i
   const K = window.TGAgentKit; K.injectCss();
   const box = document.getElementById('pieces');
   const piece = (name, says, ...nodes) => { const s = K.el('section', { class: 'piece' }, K.el('div', {}, K.el('h2', { text: name }), K.el('p', { text: says })), K.el('div', { class: 'stage' }, ...nodes)); box.append(s); };
-  const x12 = 'ISA*00*          *00*          *ZZ*KINROSS        *ZZ*ASHBYSUP       *261208*2212*U*00401*000001412*0*P*>~\nGS*SW*KINROSS*ASHBYSUP*20261208*221200*1412*X*004010~\nST*945*0001~\nW06*N*W945-460207*20261208*SHP-460207**NR-460207~';
-  const doc = { title: 'Kinross load scan for NR-460207', tabs: [{ label: 'Readable', content: 'Kinross Groveport scanned 659 of 660 cartons onto the trailer. One staged carton is crushed with damaged contents.' }, { label: 'API response', content: '{\n "shipment": "SHP-460207",\n "cartons_loaded": 659,\n "cartons_expected": 660,\n "by_sscc": true\n}' }, { label: 'Raw X12', content: x12 }] };
+  const doc = { title: 'Kinross load scan for NR-460207', fields: [['From', 'Kinross Logistics, Groveport'], ['Order', 'NR-460207'], ['Cartons loaded', '659 of 660'], ['Exception', 'One staged carton crushed, contents damaged']] };
 
   piece('Queue row', 'One state chip and one line stating the row’s own problem in values. Only the row with a running deadline shows its clock.',
     K.queueRow({ ref: 'NR-460207', chip: 'Ready for review', tone: 'live', line: '659 of 660 cartons loaded; one carton crushed', clock: 'Trailer seals in 48 min', open: true }),
@@ -35,9 +34,9 @@ section.piece>div:first-child h2{margin:0 0 4px;font-size:14px;color:var(--tgk-i
     K.queueRow({ ref: 'NR-460262', chip: 'Rule failed', tone: 'fail', line: '640 ordered across three orders; 520 available at Groveport' }));
   piece('Record header', 'The business reference as title, and the running deadline in red where the world holds one.',
     K.recordHeader({ title: 'NR-460207', deadline: 'Trailer seals in 48 min', sub: 'Northfield DC 2 · 660 cartons of ASH-MUG-12' }));
-  piece('Fact and interface tag', 'Each fact leads with its values and ends with a muted tag naming the system and interface. The tag opens the document, readable first, then raw.',
+  piece('Fact and interface tag', 'Each fact leads with its values and ends with a muted tag naming the system and interface. The tag opens the readable document: its trade name and business values, nothing more.',
     K.factRow({ text: 'Kinross scanned 659 of 660 cartons onto the trailer', system: 'Kinross scan', via: 'API', doc }),
-    K.factRow({ text: 'The order asks for 660 cartons to DC 2', system: 'Purchase order', via: 'EDI 850', doc: { title: 'Purchase order NR-460207', tabs: [{ label: 'Readable', content: 'Northfield orders 660 cases of ASH-MUG-12 for DC 2.' }, { label: 'Raw X12', content: 'BEG*00*SA*NR-460207**20261201~' }] } }));
+    K.factRow({ text: 'The order asks for 660 cartons to DC 2', system: 'Purchase order', via: 'EDI 850', doc: { title: 'Purchase order NR-460207', fields: [['Buyer', 'Northfield Retailer'], ['Ship to', 'Northfield DC 2'], ['Item', 'ASH-MUG-12'], ['Quantity', '660 cases']] } }));
   let rows = [{ action: 'Overpack the crushed carton', now: '659 loaded', after: '660 loaded', goesTo: 'Kinross Logistics', via: 'API' }, { action: 'Build the ship notice', now: 'Not built', after: '660 cartons', goesTo: 'Trading Grid', via: 'EDI 856' }];
   const sugg = K.el('div'); const bar = K.el('div');
   const draw = (editing) => {

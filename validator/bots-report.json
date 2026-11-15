@@ -1,13 +1,13 @@
 {
- "checked": "2026-11-14",
+ "checked": "2026-11-15",
  "grammars": {
   "source": "github.com/bots-edi/bots-grammars",
-  "path": "x12/4010",
+  "path": "x12/4010 and x12/4030, by GS08",
   "commit": "6c1d8a5"
  },
- "world_x12_sha256": "27f6ace95da8cbfba3f0078743df110785d2eb8b264cc50267f5e10a1513ba3b",
- "documents": 28942,
- "transaction_sets": 28942,
+ "world_x12_sha256": "b4b6c47cf2630d8be4a9924b7a2261da3f97231dd29c483ac4510958ed69cd06",
+ "documents": 38126,
+ "transaction_sets": 38126,
  "documents_with_faults": 12,
  "faults_by_reason": {
   "Nn too long (n > n)": 4,

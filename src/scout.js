@@ -119,7 +119,7 @@ export function read(db, s, name, args = {}) { const r = READS[name]; if (!r) re
 const keyOf = (action, args) => createHash('sha1').update(JSON.stringify([action, args])).digest('hex').slice(0, 16);
 export function propose(db, s, by, action, args = {}, why = {}) {
   const def = ACTIONS[action]; if (!def) return { state: 'Refused', message: `No action ${action}` };
-  const key = keyOf(action, args);
+  const key = keyOf(action, action === 'build_ship_notice' ? { load: cartonsLoaded(s) } : args);
   const open = s.proposals.find((p) => p.key === key && ['Awaiting approval', 'Executed', 'Approved'].includes(p.state));
   if (open) return { state: 'Duplicate', proposal: open.id, message: `The same action is already ${open.state.toLowerCase()} (${open.id}).` };
   const bad = validate(s, action, args); if (bad) { trace(s, 'Trading Grid', 'rule', `Refused ${action}`, { by, reason: bad }); return { state: 'Refused', message: bad }; }
@@ -141,6 +141,8 @@ function validate(s, action, a) {
   if ((action === 'kinross_replace' || action === 'kinross_replace_reserved') && a.sku !== c.sku) return `No carton needing replacement holds ${a.sku}; the staged carton holds ${c.sku}.`;
   if (action === 'release_ship_notice' && !s.asn) return 'There is no built ship notice to release.';
   if (action === 'release_ship_notice' && s.asn?.released) return 'This ship notice is already released.';
+  if (action === 'release_ship_notice' && s.asn.cartons !== cartonsLoaded(s)) return `AP-1.4: ${s.asn.reference} was built for ${s.asn.cartons} cartons and the load is now ${cartonsLoaded(s)}; build the ship notice again from the load before releasing.`;
+  if (action === 'build_ship_notice' && s.asn?.released) return 'The ship notice is already released; it cannot be rebuilt.';
   if (action === 'notify_buyer_short' && !(a.line && a.shipped >= 0)) return 'Name the line and the quantity that ships.';
   if (left < -60 && action !== 'release_ship_notice') return 'The shipment has left.';
   return null;
@@ -189,9 +191,9 @@ function execute(db, s, p, by) {
     case 'notify_buyer_short': { s.notices.push(`Email to Jordan Ellis: line ${a.line} ships ${a.shipped}; remainder cancelled under NF-2.1`); trace(s, 'Trading Grid', 'system', 'Email delivered to Jordan Ellis', { line: a.line, shipped: a.shipped }); r = { state: 'Delivered', response: 'Email delivered to Jordan Ellis. Northfield decides the cancellation on its order.' }; break; }
     case 'build_ship_notice': {
       const fails = ruleCheckAsn(s); if (fails.length) { trace(s, 'Rule engine', 'rule', 'Ship notice not built', { failures: fails }); r = { state: 'Failed', response: 'Rule engine refused the build', failures: fails }; break; }
-      sealIfDue(s); const loaded = cartonsLoaded(s);
+      sealIfDue(s); const loaded = cartonsLoaded(s); const replaced = s.asn?.reference;
       s.asn = { reference: `ASN-460207-S${s.id.slice(3, 7)}`, built_from: 'Kinross load scan (confirmed)', cartons: loaded, line_1: 400 - (s.load.expected - loaded), line_2: 260, ship_to: 'DC 2', lines: 'Current', removed: s.load.removed, released: false, synthetic: true };
-      trace(s, 'Rule engine', 'rule', `Ship notice built from the load scan: ${loaded} cartons`, { asn: s.asn.reference, checks: ['NF-4.5 matches the load', 'NF-4.7 ship-to DC 2', 'NF-4.8 current line numbers'] });
+      trace(s, 'Rule engine', 'rule', `Ship notice built from the load scan: ${loaded} cartons${replaced ? ` (replaces the unreleased build for an earlier load)` : ''}`, { asn: s.asn.reference, checks: ['NF-4.5 matches the load', 'NF-4.7 ship-to DC 2', 'NF-4.8 current line numbers'] });
       r = { state: 'Completed', response: `Built ${s.asn.reference} for ${loaded} cartons; not sent`, asn: s.asn }; break; }
     case 'release_ship_notice': {
       sealIfDue(s, true); s.asn.released = true; s.asn.released_by = by;

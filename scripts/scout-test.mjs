@@ -41,6 +41,10 @@ function detectors(name, sess, actor) {
   S.decide(db, s, p.proposal, 'approve'); check(S.decide(db, s, p.proposal, 'approve').state === 'Refused', 'guard: an approval cannot be replayed');
   check(S.propose(db, s, 'Test', 'kinross_load', { sscc: '006141410009999999' }).state === 'Refused', 'guard: a task for a carton not staged is refused');
   check(S.startSession(db, { policy: { release_ship_notice: 'policy' } }).modes.release_ship_notice === 'approve', 'guard: AP-1.3 release cannot be set to run under policy');
+  { const g = S.startSession(db, { variation: S.VARIATIONS.unforeseen_overpack_note }); const ok1 = (r) => (r.state === 'Awaiting approval' ? S.decide(db, g, r.proposal, 'approve') : r);
+    ok1(S.propose(db, g, 'Test', 'erp_align_order')); S.propose(db, g, 'Test', 'build_ship_notice'); ok1(S.propose(db, g, 'Test', 'kinross_overpack', { sscc: g.world.carton.sscc }));
+    check(S.propose(db, g, 'Test', 'release_ship_notice').state === 'Refused', 'guard: AP-1.4 refuses releasing a ship notice built for an earlier load');
+    check(S.propose(db, g, 'Test', 'build_ship_notice').state === 'Executed' && g.asn.cartons === 660, 'guard: the ship notice can be rebuilt from the new load'); }
   let threw = false; try { S.startSession(db, { variation: { 'erp.ship_to': 'DC 2' } }); } catch { threw = true; } check(threw, 'guard: a replay may only change declared physical fields'); }
 
 // What the rule baseline must reach in each case, so a regression in the baseline cannot pass silently.

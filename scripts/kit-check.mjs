@@ -33,8 +33,8 @@ ok('no raw X12 in the visible text', !rawHit(text) && !/\braw X12\b/i.test(text)
 if (!RETAILER) {
 await page.click('.tgk-bar button:has-text("Edit suggestion")'); await page.waitForTimeout(100);
 ok('Edit suggestion makes the proposal editable and marks it as the person’s', (await page.$$('.tgk-na [contenteditable=true]')).length > 0 && /Edited by you/.test(await page.evaluate(() => document.body.innerText)));
-await page.click('.tgk-na .rm'); const left = (await page.$$('.tgk-sugg tbody tr')).length;
-ok('a row can be removed', left === 1, `${left} rows`);
+const before = (await page.$$('.tgk-sugg tbody tr')).length; await page.click('.tgk-na .rm'); await page.waitForTimeout(100); const left = (await page.$$('.tgk-sugg tbody tr')).length;
+ok('a row can be removed', left === before - 1, `${before} to ${left} rows`);
 }
 ok('Aviator is closed on load', !(await page.$('.tgk-av-panel[data-open]')));
 await page.click('.tgk-av-btn'); ok('Aviator opens from the bottom-right control', !!(await page.$('.tgk-av-panel[data-open]')));

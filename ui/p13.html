@@ -70,7 +70,7 @@ details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}
     if (r.late || /Late|Overdue/.test(r.state)) return [r.state, 'fail'];
     return [r.state, 'wait'];
   }
-  const lineOf = (r) => r.nothing ? `${TRADE[r.document]}: Northfield returns a technical acknowledgment only` : `${TRADE[r.document] || r.document}: ${r.what}`;
+  const lineOf = (r) => r.nothing ? `${TRADE[r.document]}: Northfield returns a technical acknowledgment only` : r.what;
 
   function drawQueue() {
     const list = queueList(); const q = document.getElementById('q');
@@ -115,7 +115,11 @@ details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}
   async function approve(r, props) {
     S.busy = true; draw(); let v = null;
     if (S.live) { for (const p of props) { const out = await call('watch_decide', { session: S.view.session, proposal: p.id, decision: 'approve' }); if (out && out.session) v = out; else if (out) { S.notice = out.failed || out.message || 'The decision was refused.'; } } }
-    else { v = RECORDED.final; }
+    else if (RECORDED.final) { // the recorded run, one order at a time: this order takes its recorded state after approval
+      const f = RECORDED.final, cur = S.view, mine = (x) => x.po === r.po;
+      v = { ...cur, queue: { ...cur.queue, rows: cur.queue.rows.map((x) => mine(x) ? (f.queue.rows.find((y) => y.id === x.id) || x) : x) },
+        awaiting: (cur.awaiting || []).filter((p) => p.args.po !== r.po), trace: [...cur.trace, ...f.trace.slice(cur.trace.length).filter((t) => String(t.what).includes(r.po) || JSON.stringify(t.detail || {}).includes(r.po))],
+        confirmations_pending: [...(cur.confirmations_pending || []).filter((c) => c.po !== r.po), ...(f.confirmations_pending || []).filter(mine)] }; }
     if (v) S.view = v; S.decided[r.po] = 'approved'; S.busy = false; S.editing = false; draw(); setTimeout(() => comeBack(r.po), 2500);
   }
   async function takeOver(r, props, edited) {
@@ -158,7 +162,7 @@ details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}
       if (!S.rows || S.rowsFor !== r.po) { S.rows = base.map((x) => ({ ...x })); S.rowsFor = r.po; }
       const reason = props.map((p) => p.rationale).filter(Boolean)[0];
       parts.push(K.nowAfter({ agent: 'Watch Agent', rows: S.editing ? S.rows : base, editable: S.editing, reason: short(reason), chip: S.editing ? 'Edited by you' : 'Ready for review', onChange: (rows) => { S.rows = rows; draw(); } }));
-      if (S.sim) parts.push(K.simulated({ note: 'The Ashby connector was not reached; this is the last recorded real run' }));
+      if (S.sim) parts.push(K.el('div', {}, K.simulated({ note: 'The Ashby connector was not reached; this is the last recorded real run' })));
       const rows = S.editing ? S.rows : base;
       parts.push(K.decisionBar({ says: says(rows), busy: S.busy,
         noDecision: r.time_left && !/^Overdue/.test(r.time_left) ? `No decision with ${r.time_left.replace(/ left$/, '')} to go: the ${(TRADE[r.document] || 'document').toLowerCase()} misses ${r.rule}.` : null,

@@ -251,14 +251,15 @@ Use only facts returned by your tools. Never state a record, quantity or confirm
 When you are waiting for Priya or for Kinross, stop and say in one or two sentences what you proposed and why. When new evidence arrives, re-read what changed and reconsider your plan; do not repeat an action a party has already rejected for the same reason.`;
 
 /** Runs Scout until it waits for a person, finishes, or hits a limit. `callModel(body)` returns a Gemini response (server-side only). */
-export async function runScout(db, s, { callModel, maxSteps = 12, maxToolCalls = 24, maxMs = 90000, event } = {}) {
+// Limits: per turn (until Scout waits or finishes) and per session, so a long case is not cut off by earlier turns' reads.
+export async function runScout(db, s, { callModel, maxSteps = 12, maxToolCalls = 16, maxSessionCalls = 64, maxMs = 90000, event } = {}) {
   if (!callModel) return { ok: false, blocked: 'No model is configured on this server; Scout cannot run. Nothing was simulated in its place.' };
-  const ag = s.agent; const t0 = Date.now(); ag.status = 'running';
+  const ag = s.agent; const t0 = Date.now(); const turnStart = ag.tool_calls; ag.status = 'running';
   if (!ag.history.length) ag.history.push({ role: 'user', parts: [{ text: `Business event: Kinross load scan for shipment SHP-460207 shows ${s.load.base_loaded} of ${s.load.expected} cartons loaded. The rule engine reports: ${ruleDetect(null, s, true).map((f) => `${f.rule}: ${f.finding}`).join('; ')}. Clock: ${fmtET(iso(s.clock))}.` }] });
   else if (event) ag.history.push({ role: 'user', parts: [{ text: `New evidence at ${fmtET(iso(s.clock))}: ${event}` }] });
   const decl = declarations(AGENT_TOOLS);
   for (let step = 0; step < maxSteps; step++) {
-    if (Date.now() - t0 > maxMs || ag.tool_calls >= maxToolCalls) { ag.status = 'stopped'; trace(s, 'Scout', 'system', 'Stopped at its limit', { tool_calls: ag.tool_calls, ms: Date.now() - t0 }); break; }
+    if (Date.now() - t0 > maxMs || ag.tool_calls - turnStart >= maxToolCalls || ag.tool_calls >= maxSessionCalls) { ag.status = 'stopped'; trace(s, 'Scout', 'system', 'Stopped at its limit', { tool_calls: ag.tool_calls, ms: Date.now() - t0 }); break; }
     let data; try { data = await callModel({ systemInstruction: { parts: [{ text: INSTRUCTION(s) }] }, contents: ag.history, tools: [{ functionDeclarations: decl }], toolConfig: { functionCallingConfig: { mode: 'AUTO' } }, generationConfig: { temperature: 0 } }); ag.calls++; }
     catch (e) { ag.status = 'model_failed'; trace(s, 'Scout', 'system', 'Model call failed; no state was changed', { error: String(e.message || e).slice(0, 200) }); return { ok: false, status: ag.status }; }
     const content = data?.candidates?.[0]?.content; const parts = content?.parts || []; const calls = parts.filter((p) => p.functionCall);

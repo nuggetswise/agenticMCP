@@ -9,7 +9,9 @@ import { STAGE_BY_TYPE, STAGES } from './stages/index.js';
 // ---------- masters ----------
 export function locationRows() {
   const supplierPoints = ref.supplierShipPoints(ref.parties.filter((p) => p.kind === 'Supplier' && p.id !== 'ASHBY').map((p) => p.gln));
-  return [...ref.locations.map((l) => ({ ...l, store_number: ref.STORE_NUMBER[l.id] ?? null })), ...ref.moreLocations, ...supplierPoints];
+  // A party whose locations a stage reads from its documents (T1.18: Northfield's 816) gets its rows from that stage's derive().
+  const derived = new Set(STAGES.flatMap((s) => s.derivesLocationsOf || []));
+  return [...ref.locations.map((l) => ({ ...l, store_number: ref.STORE_NUMBER[l.id] ?? null })), ...ref.moreLocations, ...supplierPoints].filter((l) => !derived.has(l.party_id));
 }
 
 /** Other suppliers' items, from Northfield's open-order fixture (P8) and the closed prior period. Each gets one master row

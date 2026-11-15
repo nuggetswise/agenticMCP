@@ -64,7 +64,7 @@ await withServer({}, 3972, async ({ base, tool }) => {
 });
 // Both scopes on one world: shared documents, private records, refusals, and one deduction case worked from both sides.
 await withServer({}, 3973, async ({ base, nfClient, tool, nf }) => {
-  const { tools } = await nfClient.listTools(); ok('Northfield: 19 tools (16, 2 governance and Aviator), no resume tool', tools.length === 19 && tools.some((t) => t.name === 'ask_aviator') && !tools.some((t) => t.name === 'resume_agent') && ['pause_agent', 'get_change_list'].every((g) => tools.some((t) => t.name === g)), String(tools.length));
+  const { tools } = await nfClient.listTools(); ok('Northfield: 25 tools (16, 2 governance, Aviator and 6 Match), no resume tool', tools.length === 25 && tools.filter((t) => t.name.startsWith('match_')).length === 6 && tools.some((t) => t.name === 'ask_aviator') && !tools.some((t) => t.name === 'resume_agent') && ['pause_agent', 'get_change_list'].every((g) => tools.some((t) => t.name === g)), String(tools.length));
   const x = (await tool('get_document', { reference: 'ASN-450118-2' })).x12, y = (await nf('get_document', { reference: 'ASN-450118-2' })).x12; ok('shared X12 is the same on both sides', !!x && x === y);
   { const pre = await nf('supplier_document_trail', { po: 'NR-460207' }), post = await nf('supplier_document_trail', { po: 'NR-460207', as_of: '2026-12-04T10:00:00-05:00' });
     ok('Northfield trail: no such order before it is sent', pre.found === false && /^No such order as of/.test(pre.message) && !('order_value' in pre) && !('requested_delivery' in pre) && post.found === true && post.documents.length >= 1, JSON.stringify(pre).slice(0, 120)); }
@@ -152,5 +152,23 @@ await withServer({}, 3974, async ({ base, tool, nf }) => {
   for (const p of ['/admin/smoke', '/admin/nfsmoke']) ok(`governance page ${p}`, (await fetch(base + p)).status === 200);
   await fetch(`${base}/admin/smoke/reset`, { method: 'POST', redirect: 'manual' });
   const cr = await tool('get_change_list', {}); ok('reset clears the change list and resumes every agent', cr.entries.length === 0 && cr.agents.every((a) => a.state === 'Active') && (await nf('get_change_list', {})).agents.every((a) => a.state === 'Active'));
+});
+// P14 Match Agent on Northfield's connection: six tools there and none on Ashby's, a session leaves the recorded world unchanged,
+// its writes carry attribution on Northfield's access log, and Ashby's scope refuses Northfield's accounts payable records.
+await withServer({}, 3975, async ({ client, nfClient, tool, nf }) => {
+  const asNames = (await client.listTools()).tools.map((t) => t.name); ok('Match: Ashby’s connection lists no match_* tool', !asNames.some((n) => n.startsWith('match_')));
+  const su = await nf('match_setup', {}); ok('Match: setup lists the held queue at the moment, facts, modes and guardrails', su.as_of === '2026-11-10T14:00:00.000Z' && su.queue_at_moment.map((q) => `${q.invoice}:${q.holds.map((h) => h.rule)}`).join() === 'INV-7731:NF-7.8' && su.facts.billed_line1.recorded === 300 && su.actions.release_for_payment_proposal.mode === 'suggest' && su.actions.release_for_payment_proposal.jordan_may_change === false && su.guardrails.length === 3, JSON.stringify(su.queue_at_moment).slice(0, 200));
+  const sql = "SELECT (SELECT count(*) FROM invoices) i, (SELECT count(*) FROM documents WHERE po = 'NR-450118') d, (SELECT count(*) FROM errors) e, (SELECT group_concat(status) FROM invoices WHERE po = 'NR-450118') st";
+  const before = JSON.stringify((await nf('run_readonly_sql', { sql })).rows), tw0 = JSON.stringify((await nf('three_way_match', { reference: 'INV-7731', as_of: '2026-11-10T09:00:00-05:00' })).lines);
+  const mb = await nf('match_baseline', {}); const mt = await nf('match_baseline', { variation: 'triple_mismatch' });
+  const after = JSON.stringify((await nf('run_readonly_sql', { sql })).rows), tw1 = JSON.stringify((await nf('three_way_match', { reference: 'INV-7731', as_of: '2026-11-10T09:00:00-05:00' })).lines);
+  ok('Match: a session leaves the recorded world unchanged', mb.outcome?.first_step === 'request_credit_or_corrected_invoice' && mb.outcome?.payment_released === false && mt.outcome?.proposed_clear_for_payment.join() === '3' && before === after && tw0 === tw1, `${before} -> ${after}`);
+  const ms = await nf('match_start', {}); ok('Match: start without a model key says so and simulates nothing', !!ms.blocked && ms.awaiting.length === 0 && ms.overhead.model_calls === 0, JSON.stringify(ms.blocked));
+  ok('Match: Ashby sees the hold and requests only', JSON.stringify(mb.ashby_sees).includes('AA-INV-7731') && !/"(proposal|proposals|payment_released|settling_record|lines_status)":/.test(JSON.stringify(mb.ashby_sees)));
+  const ml = (await nf('get_access_log', { limit: 200 })).calls.filter((c) => c.tool.startsWith('match:'));
+  ok('Match: writes on Northfield’s access log with agent, authority, approver and outcome', ml.length >= 5 && ml.every((c) => c.write?.agent && c.write.authority.rule && ['suggest', 'approve', 'policy'].includes(c.write.authority.mode) && c.write.approver && c.write.outcome) && ml.some((c) => c.write.authority.mode === 'suggest' && /Jordan Ellis acts/.test(c.write.approver)) && ml.some((c) => c.write.approver === 'Test approver (replay)' || /^Standing policy/.test(c.write.approver)), `${ml.length}`);
+  ok('Match: Ashby’s access log holds no Match entry', !(await tool('get_access_log', { limit: 200 })).calls.some((c) => c.tool.startsWith('match')));
+  const ap = await tool('read_retailer_records', { question: 'Northfield accounts payable match for INV-7731' }); ok('Match: Ashby’s scope refuses Northfield’s accounts payable records', ap.result === 'Not available to Ashby' && /accounts payable/.test(ap.message), JSON.stringify(ap).slice(0, 160));
+  await nf('pause_agent', { agent: 'Match Agent' }); const pz = await nf('match_start', {}); ok('Match: paused, each held invoice is a plain task with no model call', pz.status === 'paused' && pz.plain_task?.proposal === null && pz.overhead.model_calls === 0 && !pz.blocked, JSON.stringify(pz).slice(0, 160));
 });
 console.log(`${pass} smoke checks passed, ${fails.length} failed`); for (const f of fails) console.log(`FAIL ${f}`); process.exit(fails.length ? 1 : 0);

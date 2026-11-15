@@ -20,8 +20,9 @@
 //               into each company's scoped copy. A table missing from a view is not visible to that company.
 import { registerType } from '../x12.js';
 import { docNames } from '../ref.js';
+import warehouse from './warehouse.js';
 
-export const STAGES = [];
+export const STAGES = [warehouse];
 
 for (const s of STAGES) for (const [code, def] of Object.entries(s.docs || {})) { registerType(code, def); docNames[code] = def.name; }
 export const STAGE_BY_TYPE = Object.fromEntries(STAGES.flatMap((s) => Object.keys(s.docs || {}).map((c) => [c, s])));

@@ -423,7 +423,7 @@ New prototypes come from the Prototype specs tab. Mining Northstar for them was 
 | ID | Prototype | Task | Depends on | Read first | Done when | Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | T3.0 | Specs | Mine the Northstar prototype and teardown into the Prototype specs tab | — | — | Evidence: the Prototype specs tab; CALLS 27 and 28 | Done |
-| T3.1 | P13, P14, P15 | Check each spec against the world | — | Prototype specs; `docs/phase3/T3.1-spec-check.md` | Every record each spec needs exists, or a Phase 1 change list adds it. Checked: one P13 conflict; change list 2 approved, not yet applied; CALLS 77 and 79 | Open |
+| T3.1 | P13, P14, P15 | Check each spec against the world | — | Prototype specs; `docs/phase3/T3.1-spec-check.md` | Every record each spec needs exists, or a Phase 1 change list adds it. Checked: one P13 conflict, fixed by change list 2 point 1 in commit 6dd07d0, with gate check `time.receipt_after_ship_notice`; CALLS 77, 79 and 85 | Done |
 | T3.2 | P13, P14, P15 | Rank the specs, place them on the story calendar, and build the top one | T3.1, T2.2, T2.3 (its built parts, CALLS 79) | Prototype specs; story calendar in the Prototype Plan; v8 for the business problem (R40) | The owner approves the ranking and the first new prototype passes its acceptance tests, walk and contract test. Its agent screens follow the tg-retail-agent-prototype skill: a ranked queue beside one record, with now and after values and the two checkpoint controls of R15, and the main path stays within eight actions | Open |
 | T3.3 | FILM | Rebuild the film as a self-playing artifact, the way the marketing film was made; each chapter tells one prototype's task card, problem to ending (R41) | Phase 4 settles the endings it tells | FILM link; the marketing film artifact; task cards | The rebuilt film passes A1, A5 and A7 and the FILM A7 cell reads Done | Open |
 
@@ -509,7 +509,7 @@ The gate and smoke tests pass at commit b6d53d992e. Two of the plan's proofs hav
 
 | Proof | Command or location | Result |
 | --- | --- | --- |
-| World gate: invariants, catalogue equals the pack, thresholds from the catalogue | `npm run build` | 389 passed, 0 failed |
+| World gate: invariants, catalogue equals the pack, thresholds from the catalogue | `npm run build` | 390 passed, 0 failed |
 | Server smoke: both scopes, refusals, the shared deduction case | `npm run smoke` | 57 passed, 0 failed |
 | X12 validation | `npm run validate` | Passes, but its schemas were generated in this repo, so it does not meet the independent-schema test |
 | X12 against schemas this repo did not write | `validator/botscheck.py` with the bots-grammars X12 grammars | Every document checked; it faults exactly the documents the world rejects on a 997, and nothing else; all ten injected faults are rejected for their reason (`validator/bots-report.json`) |

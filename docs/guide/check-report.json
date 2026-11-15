@@ -1,6 +1,6 @@
 {
  "file": "/home/claude/agenticmcp/docs/build-guide.md",
- "ran_at_head": "7607154",
+ "ran_at_head": "d359eb9",
  "results": [
   {
    "name": "as_of_commit_current",
@@ -37,10 +37,8 @@
   },
   {
    "name": "no_copied_world_values",
-   "ok": false,
-   "problems": [
-    "7607154"
-   ]
+   "ok": true,
+   "problems": []
   },
   {
    "name": "proof_counts_current",

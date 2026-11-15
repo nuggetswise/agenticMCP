@@ -44,7 +44,8 @@ export default function ({ db, ash, nf, ok, eq, none, n, D, ROOT }) {
   }
   // Prices and item versions are read as of a date.
   eq('model.price_and_item_read_by_date', [D.priceAt(db, 'ASH-MUG-12', 'Northfield cost', '2026-11-01T12:00:00Z')?.amount, D.itemAt(db, 'ASH-MUG-12', '2026-11-01T12:00:00Z')?.units_per_case, D.priceAt(db, 'AHP-8820', 'Northfield cost', '2026-09-01T12:00:00Z')], [54, 12, null]);
-  none('model.northfield_cost_matches_item_master_in_force_now', "SELECT i.sku FROM items i JOIN item_prices p ON p.sku = i.sku AND p.price_list = 'Northfield cost' AND p.valid_to IS NULL WHERE p.amount <> i.case_price");
+  // "Now" is the quarter: T1.12 adds cost changes from 1 February 2027, after it, so the open row is not the quarter's.
+  none('model.northfield_cost_matches_item_master_in_force_now', "SELECT i.sku FROM items i JOIN item_prices p ON p.sku = i.sku AND p.price_list = 'Northfield cost' AND p.valid_from <= '2026-12-26' AND (p.valid_to IS NULL OR p.valid_to > '2026-12-26') WHERE p.amount <> i.case_price");
   // The document flow: every document except an origin names the document it was created from, and that document came first.
   const origins = [...ORIGINS];
   none('model.every_document_names_the_one_before_it', `SELECT doc_id FROM documents d WHERE doc_type NOT IN (${origins.map((o) => `'${o}'`).join(',')}) AND NOT EXISTS (SELECT 1 FROM document_links l WHERE l.doc_id = d.doc_id)`);

@@ -50,6 +50,18 @@ export function itemRows() {
       accepted_by: i.on_northfield_list && !marketplace ? 'NORTHFIELD' : null, accepted_at: i.on_northfield_list && !marketplace ? '2026-02-27T15:00:00.000Z' : null };
   });
   const item_prices = base.map((i) => ({ sku: i.sku, price_list: 'Northfield cost', uom: 'CA', amount: i.case_price, valid_from: i.sku === 'AHP-8820' ? '2026-09-27' : HISTORY_START, valid_to: null, source: 'Item setup' }));
+  // Later versions and prices a stage adds (T1.12 catalogue): each closes the open row before it at its own valid_from,
+  // as ERPNext ends an Item Price with Valid Upto when the next one starts.
+  for (const s of STAGES) {
+    const x = s.dated ? s.dated() : {};
+    for (const [rows, extra, key] of [[item_versions, x.item_versions || [], (r) => r.sku], [item_prices, x.item_prices || [], (r) => `${r.sku}|${r.price_list}`]]) {
+      for (const r of [...extra].sort((a, b) => (a.valid_from < b.valid_from ? -1 : 1))) {
+        const open = rows.find((o) => key(o) === key(r) && o.valid_to == null);
+        if (!open || open.valid_from >= r.valid_from) throw new Error(`Stage ${s.id}: no earlier open row to follow for ${key(r)} from ${r.valid_from}`);
+        open.valid_to = r.valid_from; rows.push(r);
+      }
+    }
+  }
   return { item_versions, item_prices };
 }
 

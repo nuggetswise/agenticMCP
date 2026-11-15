@@ -976,5 +976,167 @@
     }
    ]
   }
- ]
+ ],
+ "catalogue": {
+  "stage": "T1.12 Catalogue (world/stages/catalogue.js)",
+  "note": "Structure from X12 004010 and GS1; values invented for this world unless a link is given. Guides are cited, not copied.",
+  "values": [
+   {
+    "field": "segments",
+    "basis": "Public",
+    "says": "832: BCT01 PC, header DTM*007, LIN UK GTIN-14, PO4 pack, CTP price (CVS). 888: G53 001 change / 003 add, G62*09 process date, G62*88 first ship date (Dot Foods 879), G39 per level with UK GTIN-14, weight in pounds, inches, cubic feet, G3916 pallet block and tiers, G3917 pack, G3923/24 VN item (Dot Foods). 879: G91 B, G28, G20 pack, G62*87 first order date, G40 new cost per unit (Walmart, Dot Foods). Group codes SC (832) and QG (879, 888) from the X12 functional identifier list (not opened). The G39 packaging code naming the level (PKG each, BOX inner, CTN case, PLT pallet) and N9*ZZ naming the catalogue are Northfield’s invented usage.",
+    "links": [
+     {
+      "title": "CVS 4010 832 item setup guide, 2026 V1",
+      "url": "https://www.cvssuppliers.com/content/dam/enterprise/cvs-suppliers/plan-documents/topics/CVS-4010-832-IMS-IB-2026-V1.pdf"
+     },
+     {
+      "title": "Dot Foods distributor 888 item maintenance guide",
+      "url": "https://www.dotfoods.com/globalassets/corporate/pdfs/customer-edi/distributor-888-item-maintenance.pdf"
+     },
+     {
+      "title": "Dot Foods distributor 879 price information guide",
+      "url": "https://www.dotfoods.com/globalassets/corporate/pdfs/customer-edi/distributor-879-price.pdf"
+     },
+     {
+      "title": "Walmart 879 Price Information Advice",
+      "url": "https://developer.walmart.com/suppliers/docs/879-price-information-advice"
+     }
+    ]
+   },
+   {
+    "field": "level",
+    "basis": "Public",
+    "says": "Each, inner, case and pallet are GS1 trade item hierarchy levels, each with its own GTIN; one row per unit as SAP MARM keeps them.",
+    "links": [
+     {
+      "title": "GS1 Global Data Model, attribute implementation guide",
+      "url": "https://www.gs1.org/standards/gs1-global-data-model-attribute-implementation-guide/14"
+     },
+     {
+      "title": "GS1 Sweden: trade item hierarchies and trade item levels",
+      "url": "https://gs1.se/en/support/what-are-trade-item-hierarchies-and-trade-item-levels-2/"
+     },
+     {
+      "title": "SAP table MARM, units of measure for material",
+      "url": "https://leanx.eu/en/sap/table/marm.html"
+     }
+    ]
+   },
+   {
+    "field": "gtin",
+    "basis": "Adapted",
+    "says": "A GTIN per level on GS1’s example prefix 0614141 with a valid check digit; the case GTIN is the item master GTIN; a new case quantity takes a new GTIN. Indicator digits (0 each, 3 inner, 1 case, 5 pallet, 2 and 6 an alternative case and its pallet) are chosen for this world.",
+    "links": [
+     {
+      "title": "GS1 Global Data Model, attribute implementation guide",
+      "url": "https://www.gs1.org/standards/gs1-global-data-model-attribute-implementation-guide/14"
+     },
+     {
+      "title": "GS1 Sweden: trade item hierarchies and trade item levels",
+      "url": "https://gs1.se/en/support/what-are-trade-item-hierarchies-and-trade-item-levels-2/"
+     }
+    ]
+   },
+   {
+    "field": "child_qty",
+    "basis": "Invented",
+    "why": "No public source states pack sizes for these fictional items. Case quantities follow the item master packs (Case of 12, 24, 6; Pair is a single-pair shipper); inner packs of 4 or 6 are set where a retailer would expect them (mugs, napkins, candles)."
+   },
+   {
+    "field": "length",
+    "basis": "Invented",
+    "why": "Fictional items have no published dimensions. Measured as the GDSN rules define: length is the longer side of the natural base, in inches to one decimal.",
+    "links": [
+     {
+      "title": "GS1 GDSN Package Measurement Rules, Release 3.2 (sections 5.2, 5.7)",
+      "url": "https://www.gs1.org/docs/gdsn/3.1/GDSN_Package_Measurement_Rules.pdf"
+     },
+     {
+      "title": "Kohl’s Consumer Package Dimensions (retailer item setup)",
+      "url": "https://link.kohls.com/content/dam/klink/pdfs/Kohls_Consumer_Package_Dimensions.pdf"
+     }
+    ]
+   },
+   {
+    "field": "width",
+    "basis": "Invented",
+    "why": "As length: the shorter side of the natural base, inches, one decimal.",
+    "links": [
+     {
+      "title": "GS1 GDSN Package Measurement Rules, Release 3.2 (sections 5.2, 5.7)",
+      "url": "https://www.gs1.org/docs/gdsn/3.1/GDSN_Package_Measurement_Rules.pdf"
+     },
+     {
+      "title": "Kohl’s Consumer Package Dimensions (retailer item setup)",
+      "url": "https://link.kohls.com/content/dam/klink/pdfs/Kohls_Consumer_Package_Dimensions.pdf"
+     }
+    ]
+   },
+   {
+    "field": "height",
+    "basis": "Invented",
+    "why": "As length: natural base to top, inches, one decimal; a pallet is its tiers of cases plus a 5.5 in wood pallet deck.",
+    "links": [
+     {
+      "title": "GS1 GDSN Package Measurement Rules, Release 3.2 (sections 5.2, 5.7)",
+      "url": "https://www.gs1.org/docs/gdsn/3.1/GDSN_Package_Measurement_Rules.pdf"
+     }
+    ]
+   },
+   {
+    "field": "gross_weight",
+    "basis": "Invented",
+    "why": "Gross weight includes the packaging (Kohl’s); each level weighs at least its contents; a pallet adds 45 lb for the wood pallet. Values chosen for plausible goods, all cases under 50 lb.",
+    "links": [
+     {
+      "title": "Kohl’s Consumer Package Dimensions (retailer item setup)",
+      "url": "https://link.kohls.com/content/dam/klink/pdfs/Kohls_Consumer_Package_Dimensions.pdf"
+     }
+    ]
+   },
+   {
+    "field": "pallet_ti",
+    "basis": "Invented",
+    "why": "Cases per layer chosen so the case footprint fits a 48 x 40 in pallet; carried in G3916 as Dot Foods does.",
+    "links": [
+     {
+      "title": "Dot Foods distributor 888 item maintenance guide",
+      "url": "https://www.dotfoods.com/globalassets/corporate/pdfs/customer-edi/distributor-888-item-maintenance.pdf"
+     }
+    ]
+   },
+   {
+    "field": "pallet_hi",
+    "basis": "Invented",
+    "why": "Layers per pallet chosen to keep pallets about 48 to 63 in high.",
+    "links": [
+     {
+      "title": "Dot Foods distributor 888 item maintenance guide",
+      "url": "https://www.dotfoods.com/globalassets/corporate/pdfs/customer-edi/distributor-888-item-maintenance.pdf"
+     }
+    ]
+   },
+   {
+    "field": "packaging_code",
+    "basis": "Invented",
+    "why": "X12 element 103 codes (PKG, BOX, CTN25, PLT94) mapped to GS1 levels by Northfield’s invented guide."
+   },
+   {
+    "field": "valid_from",
+    "basis": "Invented",
+    "why": "Catalogue sent 23 Feb 2026, effective 1 Mar 2026 (start of the history period), accepted 27 Feb. AHP-8820 levels from 27 Sep 2026 (programme invitation); its case of 12 until 23 Nov 2026 (NetSuite correction). Maintenance and price information sent 29 Dec 2026, after the quarter, effective 1 Feb 2027, so no existing control number moves and nothing falls in P10’s window."
+   },
+   {
+    "field": "item_versions",
+    "basis": "Invented",
+    "why": "AHP-8820 version 2 (case of 6) accepted 24 Nov 2026 15:00 ET, when Northfield activated the programme for the item after trade tests (existing events). Honey moves to a shelf-ready case of 6 from 1 Feb 2027; invented to show a pack decision that flips with the version in force."
+   },
+   {
+    "field": "item_prices",
+    "basis": "Invented",
+    "why": "ASH-MUG-12 cost rises 3% to 55.62 per case from 1 Feb 2027; honey’s case of 6 at 23.40, the same unit cost. Current-quarter prices are unchanged; invoices in the quarter stay at the item master price."
+   }
+  ]
+ }
 }

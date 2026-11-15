@@ -443,9 +443,9 @@ Each row is one prototype through the Phase 4 loop under Build flow. Before prop
 | T4.17 | P9 | Shelf Recovery | T0.17, T2.4 | D22; `docs/phase4/agent-entry.md`, items AE-P9 | Phase 4 loop complete | Open |
 | T4.18 | P11 | NetSuite Chargeback Avoidance | T0.18 | Decisions item 7; `docs/phase4/agent-entry.md`, items AE-P11 | Phase 4 loop complete | Open |
 | T4.19 | P12 | ERP-native Activation | T0.19 | Decisions item 6 | Evidence: no loop needed after retirement, CALLS 32 | Done |
-| T4.2 | Portfolio | Entry page built from the story calendar | T4.10 | The Prototype Plan's story calendar | The owner approves it and every link on it opens a live prototype | Open |
+| T4.2 | Portfolio | Entry page built from the story calendar | — | The Prototype Plan's story calendar | The owner approves it and every link on it opens a live prototype | Open |
 | T4.3 | FILM | Portfolio film, after the owner approves a storyboard | T0.7, T4.5 | FILM link in Inventory; R41 | Every chapter takes its problem, turn and result from its prototype's task card, any number shown passes the contract test, and a viewer states each chapter's problem and outcome | Open |
-| T4.5 | Docs | Add a task card to the Prototype Plan for each built prototype: problem, turn and result drafted for the owner, the ending copied from Inventory. Accepted so far: P5, P6, P7, P8, P9 and P11 (CALLS 38 and 41) | Owner releases P1, P2 and P4 | R41; Inventory | Every built prototype has a task card carrying problem, turn, result and ending, and no video or deck words them differently | Blocked |
+| T4.5 | Docs | Add a task card to the Prototype Plan for each built prototype: problem, turn and result drafted for the owner, the ending copied from Inventory. Accepted so far: P5, P6, P7, P8, P9 and P11 (CALLS 38 and 41) | — | R41; Inventory | Every built prototype has a task card carrying problem, turn, result and ending, and no video or deck words them differently | Open |
 | T4.4 | Docs | Partner Map edits, Retail Direction section 9 change list, Prototype Briefs fixes, Agentic Retail Trade figures | — | Decisions items 8, 9 and 10 | Each change list is approved and applied, with its CALLS entry | Open |
 
 ## Server reference

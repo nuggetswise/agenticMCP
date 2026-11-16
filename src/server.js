@@ -417,6 +417,11 @@ for (const tool of [...TOOLS, ...BOUNDARY]) {
 app.get('/api/:token/tools', (req, res) => { const cid = cidOf(req, res); if (!cid) return; res.json({ instructions: INSTRUCTIONS[cid](), tools: [...(cid === AS ? ALL_TOOLS : ALL_NF_TOOLS), ...GOV_TOOLS[cid]].map((t) => ({ name: t.name, description: t.description, input: Object.fromEntries(Object.entries(t.input || {}).map(([k, v]) => [k, v.description || ''])) })) }); });
 app.all('/api/:token/tools/:name', (req, res) => { const cid = cidOf(req, res); if (!cid) return; res.json(call(cid, req.params.name, { ...req.query, ...(req.body || {}) })); });
 
+// A session's current view by its id, for recording a real run into a prototype page. Session ids are random and live in memory
+// only; the data is fictional. Builders fetch the views a connector already returned, so a page's recorded run is never retyped.
+app.get('/sessions/:id', (req, res) => { const id = String(req.params.id).replace(/\.json$/, '');
+  const v = id.startsWith('WS-') && Watch.getSession(id) ? watchView(Watch.getSession(id)) : id.startsWith('MS-') && Match.getSession(id) ? matchView(Match.getSession(id)) : null;
+  if (!v) return res.status(404).json({ error: 'No such session; sessions live in memory and end when the server restarts.' }); res.json(v); });
 app.get('/records/order/:po', (req, res) => res.type('html').send(recordPage(D.lifecycle(db, req.params.po))));
 app.get('/records/document/:id', (req, res) => res.type('html').send(documentPage(D.document(db, req.params.id))));
 app.get('/records/northfield/order/:po', (req, res) => res.type('html').send(nfOrderPage(NR.trail(db, { po: req.params.po, asOf: D.asOfDate('2027-01-06') }))));

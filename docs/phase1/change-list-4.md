@@ -30,6 +30,23 @@ Add the eight rules Northfield does not already have as **Northfield draft rules
 | Shelf life | Left out (D30) | Leave out | — |
 | Ticketing | Not modelled | Leave out | — |
 
+## Second set: a large marketplace retailer's vendor chargebacks (owner-supplied, 16 November)
+
+| Rule | Northfield today | Proposed |
+| --- | --- | --- |
+| Missing or inaccurate ship notice; 2 to 6% of cost of goods | NF-4.2 (timing) and NF-4.5, AS02 | Keep; a percentage charge is a pricing choice for the owner |
+| Carton contents differ from the ship notice; per unit | NF-4.5, AS02 $150 plus $1 per carton | Keep |
+| Missing or incorrect carton label; per box | NF-4.1, LB01 | Keep |
+| Delivery outside the PO window; 3 to 10% of cost of goods | NF-8.1 and OT01, 3% quarterly | Keep |
+| More units received than confirmed; 10% of cost of goods | No rule | Fold into draft NFD-6 (over-shipment), measured against the order acknowledgment |
+| Carton over 63.5 cm on any side; per box | No rule | Draft NFD-12; the world already holds each item's case dimensions (GS1 hierarchy, T1.12), so it replays with no new records |
+| A unit over 23 kg in a carton; per box | No rule | Draft NFD-13; case weights are in the world too |
+| Trade documents for imports late | Not modelled | Leave out: no import flow in the world |
+| Carrier misses its appointment | NF-3.6 covers the supplier's readiness; Northfield's routed carrier is excluded (NF-8.5) | Leave out |
+| Prep (barcode, bagging, wrapping) | Not modelled | Leave out |
+
+Of the two sets, five drafts can be replayed today with no world change: NFD-3 (late supplier 997), NFD-5 and NFD-10 (charges on item and unit of measure), NFD-12 and NFD-13 (carton size and weight). Recommended first, since they give P15 and P21 something real to replay at no cost to the world.
+
 ## What the world needs
 
 - Eight draft rows in `draft_rules`, with `basis` "adapted from a retailer guide (owner-supplied)" and the figures above; three charges are unset in the source and stay "to set" until the owner gives them.

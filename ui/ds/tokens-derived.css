@@ -1,0 +1,11 @@
+/* Values derived from the design system tokens, as the tg-retail-workspace-prototype skill's token table marks them (d):
+   the soft action tint, the soft gold tint and every dark-theme value. The design system defines light values only. */
+:root { --soft-action: #e8f0ff; --soft-gold: #faf1d2; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --surface-page: #0b1220; --surface-card: #131e33; --surface-subtle: #17233a; --text-heading: #e7eaef; --text-body: #c9cfd9; --text-muted: #9aa6b8;
+  --border-default: #2b3a52; --border-strong: #22304a; --color-primary: #9a9cff; --color-action: #5c93ff; --link-hover: #8fb4ff; --action-text: #8fb4ff;
+  --soft-action: #12264a; --surface-dark: #0e2350; --ot-warn-bar: #e3be52; --ot-warn: #e3be52; --ot-warn-tint: #3a2e12; --ot-risk: #f07167; --ot-risk-tint: #3a1a18; } }
+:root[data-theme="dark"] {
+  --surface-page: #0b1220; --surface-card: #131e33; --surface-subtle: #17233a; --text-heading: #e7eaef; --text-body: #c9cfd9; --text-muted: #9aa6b8;
+  --border-default: #2b3a52; --border-strong: #22304a; --color-primary: #9a9cff; --color-action: #5c93ff; --link-hover: #8fb4ff; --action-text: #8fb4ff;
+  --soft-action: #12264a; --surface-dark: #0e2350; --ot-warn-bar: #e3be52; --ot-warn: #e3be52; --ot-warn-tint: #3a2e12; --ot-risk: #f07167; --ot-risk-tint: #3a1a18; }

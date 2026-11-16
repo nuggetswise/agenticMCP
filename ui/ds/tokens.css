@@ -1,0 +1,20 @@
+/* OpenText TG Retail Design System tokens, repo copy of project/tokens.css (https://claude.ai/artifact/LDFHTCvphK9qbn7ecQx6S1).
+   Inter is the product-UI font (Phase 3 step 3, owner settled 16 Nov 2026). Every visual value on a prototype comes from here or
+   from tokens-derived.css; kit-check fails any other colour, font, radius or type size. */
+:root {
+  --ot-blue-900: #00008a; --ot-blue-500: #1968ff; --ot-navy-900: #001c50; --ot-gold-400: #e1bb35;
+  --ot-grad-from: #00008b; --ot-grad-to: #1a6aff; --ot-ink-900: #0f1b2d; --ot-ink-800: #1a2332;
+  --ot-slate-700: #373848; --ot-slate-500: #66677b; --ot-slate-400: #8a92a0; --ot-line-200: #e7e9ec;
+  --ot-surface-100: #fbfbfc; --ot-surface-50: #f4f6f5; --ot-white: #ffffff; --ot-black: #000000;
+  --ot-warn: #8a6d1f; --ot-warn-bar: #e6c766; --ot-warn-tint: #fbefd0;
+  --ot-risk: #c0392b; --ot-risk-bar: #e4a9a9; --ot-risk-tint: #fbeaea;
+  --color-primary: var(--ot-blue-900); --color-action: var(--ot-blue-500); --action-text: #1163ff; --color-accent: var(--ot-gold-400);
+  --text-heading: var(--ot-ink-900); --text-body: var(--ot-slate-700); --text-muted: var(--ot-slate-500); --text-on-dark: var(--ot-white);
+  --link: var(--action-text); --link-hover: var(--ot-blue-900);
+  --surface-page: var(--ot-surface-50); --surface-card: var(--ot-white); --surface-subtle: var(--ot-surface-100); --surface-dark: var(--ot-navy-900);
+  --border-default: var(--ot-line-200); --border-strong: #d3d7dd;
+  --shadow-xs: 0 1px 2px rgba(15,27,45,.05); --shadow-sm: 0 1px 3px rgba(15,27,45,.08); --shadow-md: 0 4px 12px rgba(15,27,45,.08); --shadow-lg: 0 12px 32px rgba(15,27,45,.12);
+  --radius-sm: 6px; --radius-md: 10px; --radius-lg: 12px; --radius-xl: 16px; --radius-pill: 999px;
+  --font-sans: Inter, "Helvetica Neue", Arial, sans-serif; --font-brand: Arial, "Helvetica Neue", Helvetica, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}

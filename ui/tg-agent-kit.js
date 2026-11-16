@@ -3,7 +3,7 @@
  * and calls TGAgentKit.<piece>(props), each returning a DOM element. Colours are the design system's tokens as the
  * tg-retail-workspace-prototype skill maps them; nothing here adds a colour. No green, no ticks, no dates.
  *
- * Pieces: aviator, queueRow, recordHeader, factRow, interfaceTag, drawer, nowAfter, compareTable, decisionBar, roleTrace, traceLine,
+ * Pieces: header, agentWork, choice, resultList, aviator, queueRow, recordHeader, factRow, interfaceTag, drawer, nowAfter, compareTable, decisionBar, roleTrace, traceLine,
  * timeline, simulated, setupView, governanceView. Helpers: connector(side), injectCss().
  * The page reaches the demo server only through the viewer's own connector (claude.use('mcp')); it holds no key. */
 (function (root) {
@@ -11,25 +11,22 @@
   const SERVERS = { ashby: 'RetailStrategy', northfield: 'SupplierRetail' };
 
   const CSS = `
-:root{--tgk-bg:#F4F6F5;--tgk-card:#FFFFFF;--tgk-subtle:#FBFBFC;--tgk-ink:#0F1B2D;--tgk-body:#373848;--tgk-muted:#66677B;--tgk-divider:#E7E9EC;--tgk-track:#D3D7DD;
---tgk-brand:#00008A;--tgk-action:#1968FF;--tgk-action-hover:#00008A;--tgk-soft-action:#E8F0FF;--tgk-panel:#001C50;--tgk-on-panel:#FFFFFF;--tgk-from:#00008B;--tgk-to:#1A6AFF;
---tgk-amber:#E6C766;--tgk-amber-text:#8A6D1F;--tgk-soft-amber:#FBEFD0;--tgk-red:#C0392B;--tgk-soft-red:#FBEAEA;--tgk-font:Inter,"Helvetica Neue",Arial,sans-serif;--tgk-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--tgk-bg:#0B1220;--tgk-card:#131E33;--tgk-subtle:#17233A;--tgk-ink:#E7EAEF;--tgk-body:#C9CFD9;--tgk-muted:#9AA6B8;--tgk-divider:#2B3A52;--tgk-track:#22304A;--tgk-brand:#9A9CFF;--tgk-action:#5C93FF;--tgk-action-hover:#8FB4FF;--tgk-soft-action:#12264A;--tgk-panel:#0E2350;--tgk-amber:#E3BE52;--tgk-amber-text:#E3BE52;--tgk-soft-amber:#3A2E12;--tgk-red:#F07167;--tgk-soft-red:#3A1A18}}
-:root[data-theme="dark"]{--tgk-bg:#0B1220;--tgk-card:#131E33;--tgk-subtle:#17233A;--tgk-ink:#E7EAEF;--tgk-body:#C9CFD9;--tgk-muted:#9AA6B8;--tgk-divider:#2B3A52;--tgk-track:#22304A;--tgk-brand:#9A9CFF;--tgk-action:#5C93FF;--tgk-action-hover:#8FB4FF;--tgk-soft-action:#12264A;--tgk-panel:#0E2350;--tgk-amber:#E3BE52;--tgk-amber-text:#E3BE52;--tgk-soft-amber:#3A2E12;--tgk-red:#F07167;--tgk-soft-red:#3A1A18}
+/*tokens:start*/:root {--ot-blue-900: #00008a; --ot-blue-500: #1968ff; --ot-navy-900: #001c50; --ot-gold-400: #e1bb35;--ot-grad-from: #00008b; --ot-grad-to: #1a6aff; --ot-ink-900: #0f1b2d; --ot-ink-800: #1a2332;--ot-slate-700: #373848; --ot-slate-500: #66677b; --ot-slate-400: #8a92a0; --ot-line-200: #e7e9ec;--ot-surface-100: #fbfbfc; --ot-surface-50: #f4f6f5; --ot-white: #ffffff; --ot-black: #000000;--ot-warn: #8a6d1f; --ot-warn-bar: #e6c766; --ot-warn-tint: #fbefd0;--ot-risk: #c0392b; --ot-risk-bar: #e4a9a9; --ot-risk-tint: #fbeaea;--color-primary: var(--ot-blue-900); --color-action: var(--ot-blue-500); --action-text: #1163ff; --color-accent: var(--ot-gold-400);--text-heading: var(--ot-ink-900); --text-body: var(--ot-slate-700); --text-muted: var(--ot-slate-500); --text-on-dark: var(--ot-white);--link: var(--action-text); --link-hover: var(--ot-blue-900);--surface-page: var(--ot-surface-50); --surface-card: var(--ot-white); --surface-subtle: var(--ot-surface-100); --surface-dark: var(--ot-navy-900);--border-default: var(--ot-line-200); --border-strong: #d3d7dd;--shadow-xs: 0 1px 2px rgba(15,27,45,.05); --shadow-sm: 0 1px 3px rgba(15,27,45,.08); --shadow-md: 0 4px 12px rgba(15,27,45,.08); --shadow-lg: 0 12px 32px rgba(15,27,45,.12);--radius-sm: 6px; --radius-md: 10px; --radius-lg: 12px; --radius-xl: 16px; --radius-pill: 999px;--font-sans: Inter, "Helvetica Neue", Arial, sans-serif; --font-brand: Arial, "Helvetica Neue", Helvetica, system-ui, sans-serif;--font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;}:root { --soft-action: #e8f0ff; --soft-gold: #faf1d2; }@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {--surface-page: #0b1220; --surface-card: #131e33; --surface-subtle: #17233a; --text-heading: #e7eaef; --text-body: #c9cfd9; --text-muted: #9aa6b8;--border-default: #2b3a52; --border-strong: #22304a; --color-primary: #9a9cff; --color-action: #5c93ff; --link-hover: #8fb4ff; --action-text: #8fb4ff;--soft-action: #12264a; --surface-dark: #0e2350; --ot-warn-bar: #e3be52; --ot-warn: #e3be52; --ot-warn-tint: #3a2e12; --ot-risk: #f07167; --ot-risk-tint: #3a1a18; } }:root[data-theme="dark"] {--surface-page: #0b1220; --surface-card: #131e33; --surface-subtle: #17233a; --text-heading: #e7eaef; --text-body: #c9cfd9; --text-muted: #9aa6b8;--border-default: #2b3a52; --border-strong: #22304a; --color-primary: #9a9cff; --color-action: #5c93ff; --link-hover: #8fb4ff; --action-text: #8fb4ff;--soft-action: #12264a; --surface-dark: #0e2350; --ot-warn-bar: #e3be52; --ot-warn: #e3be52; --ot-warn-tint: #3a2e12; --ot-risk: #f07167; --ot-risk-tint: #3a1a18; }/*tokens:end*/
+:root{--tgk-bg:var(--surface-page);--tgk-card:var(--surface-card);--tgk-subtle:var(--surface-subtle);--tgk-ink:var(--text-heading);--tgk-body:var(--text-body);--tgk-muted:var(--text-muted);--tgk-divider:var(--border-default);--tgk-track:var(--border-strong);--tgk-brand:var(--color-primary);--tgk-action:var(--color-action);--tgk-action-hover:var(--link-hover);--tgk-action-text:var(--action-text);--tgk-soft-action:var(--soft-action);--tgk-panel:var(--surface-dark);--tgk-on-panel:var(--text-on-dark);--tgk-from:var(--ot-grad-from);--tgk-to:var(--ot-grad-to);--tgk-amber:var(--ot-warn-bar);--tgk-amber-text:var(--ot-warn);--tgk-soft-amber:var(--ot-warn-tint);--tgk-red:var(--ot-risk);--tgk-soft-red:var(--ot-risk-tint);--tgk-font:var(--font-sans);--tgk-mono:var(--font-mono)}
 .tgk,.tgk *{box-sizing:border-box}
 .tgk{font-family:var(--tgk-font);color:var(--tgk-body);font-size:13.5px;line-height:1.45;font-variant-numeric:tabular-nums}
-.tgk-chip{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap;background:var(--tgk-subtle);color:var(--tgk-muted);border:1px solid var(--tgk-divider)}
+.tgk-chip{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:var(--radius-pill);font-size:12px;font-weight:600;white-space:nowrap;background:var(--tgk-subtle);color:var(--tgk-muted);border:1px solid var(--tgk-divider)}
 .tgk-chip[data-tone=live]{background:var(--tgk-soft-action);color:var(--tgk-action);border-color:transparent}
 .tgk-chip[data-tone=wait]{background:var(--tgk-soft-amber);color:var(--tgk-amber-text);border-color:transparent}
 .tgk-chip[data-tone=fail]{background:var(--tgk-soft-red);color:var(--tgk-red);border-color:transparent}
 .tgk-chip[data-tone=done]{background:var(--tgk-brand);color:var(--tgk-on-panel);border-color:transparent}
 .tgk-label{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--tgk-brand)}
-.tgk-btn{font:600 14px/1 var(--tgk-font);height:38px;padding:0 16px;border-radius:10px;border:1px solid var(--tgk-track);background:var(--tgk-card);color:var(--tgk-ink);cursor:pointer;transition:transform .12s}
+.tgk-btn{font:600 14px/1 var(--tgk-font);height:38px;padding:0 16px;border-radius:var(--radius-md);border:1px solid var(--tgk-track);background:var(--tgk-card);color:var(--tgk-ink);cursor:pointer;transition:transform .12s}
 .tgk-btn:active{transform:scale(.97)}.tgk-btn:focus-visible{outline:3px solid var(--tgk-action);outline-offset:2px}
-.tgk-btn[data-primary]{background:var(--tgk-action);border-color:var(--tgk-action);color:#fff}.tgk-btn[data-primary]:hover{background:var(--tgk-action-hover);border-color:var(--tgk-action-hover)}
+.tgk-btn[data-primary]{background:var(--tgk-action);border-color:var(--tgk-action);color:var(--tgk-on-panel)}.tgk-btn[data-primary]:hover{background:var(--tgk-action-hover);border-color:var(--tgk-action-hover)}
 .tgk-btn[disabled]{opacity:.45;cursor:not-allowed}
 /* queue row */
-.tgk-qrow{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:12px 14px;border:1px solid var(--tgk-divider);border-radius:12px;background:var(--tgk-card);cursor:pointer;text-align:left;width:100%;font:inherit;color:inherit}
+.tgk-qrow{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:12px 14px;border:1px solid var(--tgk-divider);border-radius:var(--radius-lg);background:var(--tgk-card);cursor:pointer;text-align:left;width:100%;font:inherit;color:inherit}
 .tgk-qrow[aria-current=true]{box-shadow:0 0 0 2px var(--tgk-action);border-color:transparent}
 .tgk-qrow .ref{font-weight:600;color:var(--tgk-ink)}.tgk-qrow .line{grid-column:1/-1;color:var(--tgk-body)}.tgk-qrow .clock{grid-column:1/-1;color:var(--tgk-red);font-weight:600;font-size:12.5px}
 /* record header */
@@ -41,22 +38,22 @@
 .tgk-tag{background:none;border:0;padding:0;font:400 11px/1.4 var(--tgk-font);color:var(--tgk-muted);cursor:pointer;white-space:nowrap;text-decoration:underline dotted;text-underline-offset:3px}
 .tgk-tag:hover{color:var(--tgk-action)}
 /* drawer */
-.tgk-drawer{position:fixed;inset:0 0 0 auto;width:min(560px,100vw);background:var(--tgk-card);box-shadow:-12px 0 32px rgba(15,27,45,.18);z-index:60;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .22s ease}
+.tgk-drawer{position:fixed;inset:0 0 0 auto;width:min(560px,100vw);background:var(--tgk-card);box-shadow:var(--shadow-lg);z-index:60;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .22s ease}
 .tgk-drawer[data-open]{transform:none}.tgk-drawer header{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid var(--tgk-divider)}
 .tgk-drawer h3{margin:0;font-size:15px;color:var(--tgk-ink)}
 .tgk-drawer .body{padding:14px 18px;overflow:auto;flex:1}
 .tgk-doc{display:grid;grid-template-columns:max-content 1fr;gap:8px 16px;margin:0}.tgk-doc dt{color:var(--tgk-muted);font-size:12.5px}.tgk-doc dd{margin:0;color:var(--tgk-ink)}.tgk-doc-text{margin:0 0 10px;color:var(--tgk-ink)}
 /* now and after */
-.tgk-sugg{border:1px solid var(--tgk-divider);border-radius:12px;background:var(--tgk-card);padding:14px 16px}
+.tgk-sugg{border:1px solid var(--tgk-divider);border-radius:var(--radius-lg);background:var(--tgk-card);padding:14px 16px}
 .tgk-sugg .head{display:flex;align-items:center;gap:10px;margin-bottom:10px}.tgk-sugg .head b{color:var(--tgk-ink);font-size:14px}
 .tgk-na{width:100%;border-collapse:collapse}.tgk-na th{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--tgk-muted);text-align:left;font-weight:700;padding:6px 8px;border-bottom:1px solid var(--tgk-divider)}
 .tgk-na td{padding:9px 8px;border-bottom:1px solid var(--tgk-divider);vertical-align:top}.tgk-na td.after{color:var(--tgk-ink);font-weight:700}.tgk-na .via{color:var(--tgk-muted)}
-.tgk-na [contenteditable=true]{outline:1px dashed var(--tgk-action);border-radius:4px;padding:0 3px}.tgk-na .rm{font:600 12px var(--tgk-font);border:0;background:none;color:var(--tgk-red);cursor:pointer}
+.tgk-na [contenteditable=true]{outline:1px dashed var(--tgk-action);border-radius:var(--radius-sm);padding:0 3px}.tgk-na .rm{font:600 12px var(--tgk-font);border:0;background:none;color:var(--tgk-red);cursor:pointer}
 .tgk-reason{margin-top:10px;color:var(--tgk-body)}.tgk-reason b{color:var(--tgk-ink)}
-.tgk-ask{margin-top:10px;padding:10px 12px;background:var(--tgk-soft-amber);border-radius:10px;color:var(--tgk-amber-text)}.tgk-ask label{display:block;font-weight:600;margin-bottom:6px}
+.tgk-ask{margin-top:10px;padding:10px 12px;background:var(--tgk-soft-amber);border-radius:var(--radius-md);color:var(--tgk-amber-text)}.tgk-ask label{display:block;font-weight:600;margin-bottom:6px}
 /* decision bar */
-.tgk-bar{margin-top:12px;background:var(--tgk-subtle);border:1px solid var(--tgk-divider);border-radius:12px;padding:12px 14px;display:grid;grid-template-columns:1fr auto;gap:8px 14px;align-items:center}
-.tgk-bar .says{color:var(--tgk-ink)}.tgk-bar .btns{display:flex;gap:8px}.tgk-bar .nodecision{grid-column:1/-1;color:var(--tgk-muted);font-size:12.5px}
+.tgk-bar{margin-top:12px;background:var(--tgk-subtle);border:1px solid var(--tgk-divider);border-radius:var(--radius-md);padding:16px;display:flex;flex-direction:column;gap:12px}
+.tgk-bar .says{color:var(--tgk-ink);font-size:15px}.tgk-bar .btns{display:flex;gap:8px}.tgk-bar .nodecision{grid-column:1/-1;color:var(--tgk-muted);font-size:12.5px}
 .tgk-bar .sent{grid-column:1/-1;color:var(--tgk-body)}
 /* roles and trace */
 .tgk-roles{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--tgk-muted)}.tgk-roles b{color:var(--tgk-ink);font-weight:600}
@@ -66,31 +63,50 @@
 @keyframes tgk-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.tgk-trace{animation:none}.tgk-drawer,.tgk-av-panel{transition:none}}
 /* timeline */
-.tgk-tl{list-style:none;margin:0;padding:0}.tgk-tl li{position:relative;padding:0 0 12px 22px}.tgk-tl li:before{content:"";position:absolute;left:4px;top:5px;width:9px;height:9px;border-radius:50%;border:2px solid var(--tgk-brand);background:var(--tgk-brand)}
+.tgk-tl{list-style:none;margin:0;padding:0}.tgk-tl li{position:relative;padding:0 0 12px 22px}.tgk-tl li:before{content:"";position:absolute;left:4px;top:5px;width:9px;height:9px;border-radius:var(--radius-pill);border:2px solid var(--tgk-brand);background:var(--tgk-brand)}
 .tgk-tl li:after{content:"";position:absolute;left:8px;top:16px;bottom:0;width:1px;background:var(--tgk-divider)}.tgk-tl li:last-child:after{display:none}
 .tgk-tl li[data-state=next]{color:var(--tgk-muted)}.tgk-tl li[data-state=next]:before{background:transparent;border-color:var(--tgk-track)}
 .tgk-tl li[data-state=waiting]:before{background:transparent;border-color:var(--tgk-amber)}.tgk-tl li[data-state=settled]{color:var(--tgk-ink);font-weight:600}
 /* simulated */
-.tgk-sim{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:999px;border:1px dashed var(--tgk-track);color:var(--tgk-muted);font:600 11px var(--tgk-font)}
+.tgk-sim{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:var(--radius-pill);border:1px dashed var(--tgk-track);color:var(--tgk-muted);font:600 11px var(--tgk-font)}
 /* setup and governance */
-.tgk-panel{border:1px solid var(--tgk-divider);border-radius:12px;background:var(--tgk-card);padding:16px}
+.tgk-panel{border:1px solid var(--tgk-divider);border-radius:var(--radius-lg);background:var(--tgk-card);padding:16px}
 .tgk-panel h3{margin:0 0 4px;font-size:15px;color:var(--tgk-ink)}.tgk-panel .lead{color:var(--tgk-muted);margin:0 0 12px}
 .tgk-grid{display:grid;grid-template-columns:minmax(160px,1fr) 1.4fr;gap:8px 14px;align-items:center;padding:8px 0;border-bottom:1px solid var(--tgk-divider)}
 .tgk-grid .k{color:var(--tgk-ink);font-weight:600}.tgk-grid .src{grid-column:1/-1;font-size:11px;color:var(--tgk-muted)}
-.tgk-panel select,.tgk-panel input,.tgk-panel textarea{font:13px var(--tgk-font);padding:6px 8px;border:1px solid var(--tgk-track);border-radius:8px;background:var(--tgk-card);color:var(--tgk-ink);width:100%}
+.tgk-panel select,.tgk-panel input,.tgk-panel textarea{font:13px var(--tgk-font);padding:6px 8px;border:1px solid var(--tgk-track);border-radius:var(--radius-sm);background:var(--tgk-card);color:var(--tgk-ink);width:100%}
 .tgk-lock{color:var(--tgk-muted)}.tgk-lock:before{content:"Locked · ";font-weight:600}
 .tgk-gov{width:100%;border-collapse:collapse}.tgk-gov th,.tgk-gov td{padding:8px;border-bottom:1px solid var(--tgk-divider);text-align:left;vertical-align:top}
 .tgk-gov th{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--tgk-muted)}.tgk-gov td.by{font-weight:600;color:var(--tgk-ink)}
 /* aviator */
-.tgk-av-btn{position:fixed;right:max(20px,env(safe-area-inset-right));bottom:max(20px,env(safe-area-inset-bottom));z-index:70;height:44px;padding:0 18px 0 14px;border-radius:999px;border:0;color:#fff;font:600 14px var(--tgk-font);cursor:pointer;background:linear-gradient(135deg,var(--tgk-from),var(--tgk-to));box-shadow:0 8px 24px rgba(0,0,139,.28);display:flex;align-items:center;gap:8px}
-.tgk-av-btn svg{width:18px;height:18px}
-.tgk-av-panel{position:fixed;right:max(20px,env(safe-area-inset-right));bottom:76px;z-index:71;width:min(400px,calc(100vw - 32px));height:min(560px,calc(100vh - 110px));background:var(--tgk-card);border:1px solid var(--tgk-divider);border-radius:16px;box-shadow:0 18px 48px rgba(15,27,45,.22);display:flex;flex-direction:column;opacity:0;transform:translateY(10px) scale(.98);pointer-events:none;transition:opacity .18s,transform .18s}
+.tgk-av-btn{position:fixed;right:max(20px,env(safe-area-inset-right));bottom:max(20px,env(safe-area-inset-bottom));z-index:70;min-height:48px;padding:0 20px;border-radius:var(--radius-pill);border:0;color:var(--tgk-on-panel);font:600 14px var(--tgk-font);cursor:pointer;background:var(--tgk-panel);box-shadow:var(--shadow-md)}
+.tgk-av-panel{position:fixed;right:max(20px,env(safe-area-inset-right));bottom:76px;z-index:71;width:min(400px,calc(100vw - 32px));height:min(560px,calc(100vh - 110px));background:var(--tgk-card);border:1px solid var(--tgk-divider);border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;opacity:0;transform:translateY(10px) scale(.98);pointer-events:none;transition:opacity .18s,transform .18s}
 .tgk-av-panel[data-open]{opacity:1;transform:none;pointer-events:auto}
 .tgk-av-panel header{padding:12px 14px;border-bottom:1px solid var(--tgk-divider);display:flex;justify-content:space-between;align-items:center}.tgk-av-panel header b{color:var(--tgk-ink)}
 .tgk-av-log{flex:1;overflow:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
-.tgk-av-msg{max-width:90%;padding:9px 11px;border-radius:12px;white-space:pre-wrap}.tgk-av-msg[data-role=user]{align-self:flex-end;background:var(--tgk-soft-action);color:var(--tgk-ink)}
+.tgk-av-msg{max-width:90%;padding:9px 11px;border-radius:var(--radius-lg);white-space:pre-wrap}.tgk-av-msg[data-role=user]{align-self:flex-end;background:var(--tgk-soft-action);color:var(--tgk-ink)}
 .tgk-av-msg[data-role=model]{align-self:flex-start;background:var(--tgk-subtle);border:1px solid var(--tgk-divider);color:var(--tgk-ink)}.tgk-av-msg .cites{margin-top:6px;font-size:11px;color:var(--tgk-muted)}
-.tgk-av-form{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--tgk-divider)}.tgk-av-form input{flex:1;font:13.5px var(--tgk-font);padding:9px 10px;border:1px solid var(--tgk-track);border-radius:10px;background:var(--tgk-card);color:var(--tgk-ink)}
+.tgk-av-form{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--tgk-divider)}.tgk-av-form input{flex:1;font:13.5px var(--tgk-font);padding:9px 10px;border:1px solid var(--tgk-track);border-radius:var(--radius-md);background:var(--tgk-card);color:var(--tgk-ink)}
+
+/* header (board): wordmark, workspace, History and Agents as text links, business clock, person */
+.tgk-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:14px 32px;background:var(--tgk-card);border-bottom:1px solid var(--tgk-divider)}
+.tgk-head .mark{font-weight:700;font-size:16px;color:var(--tgk-brand)}.tgk-head .ws{color:var(--tgk-muted)}.tgk-head .l,.tgk-head .r{display:flex;align-items:center;gap:12px}.tgk-head .r{gap:16px;color:var(--tgk-muted)}
+.tgk-head .link{border:0;background:none;padding:0;font:inherit;color:var(--tgk-muted);cursor:pointer}.tgk-head .link[data-strong]{color:var(--tgk-brand);font-weight:600}.tgk-head .clock{font-weight:700;color:var(--tgk-ink)}
+/* queue row additions: consequence and cutoff */
+.tgk-qrow .impact{grid-column:1/-1;font-size:12px;color:var(--tgk-muted)}.tgk-qrow .impact b{font-weight:600}
+.tgk-qrow .cutoff{grid-column:1/-1;font-size:12px;font-weight:600;color:var(--tgk-muted)}.tgk-qrow .cutoff[data-running]{color:var(--tgk-red)}
+.tgk-qrow{animation:tgk-in .26s cubic-bezier(.23,1,.32,1) both}
+/* what the agent did */
+.tgk-work .hd{display:flex;align-items:center;gap:10px;margin-bottom:8px}.tgk-work .step{display:flex;gap:10px;align-items:baseline;padding:2px 0;animation:tgk-in .26s cubic-bezier(.23,1,.32,1) both}
+.tgk-work .dot{flex:0 0 8px;height:8px;border-radius:var(--radius-pill);background:var(--tgk-panel)}.tgk-work .t{flex:1;color:var(--tgk-ink)}
+/* choice under the person's rule */
+.tgk-choice{display:flex;flex-direction:column;gap:8px}.tgk-opt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;text-align:left;font:inherit;cursor:pointer;background:var(--tgk-card);border:1px solid var(--tgk-divider);border-radius:var(--radius-md)}
+.tgk-opt[aria-pressed=true]{background:var(--tgk-soft-action);border:2px solid var(--tgk-action)}.tgk-opt b{font-weight:600;color:var(--tgk-ink)}.tgk-opt span{font-size:12px;color:var(--tgk-muted)}
+/* result list */
+.tgk-result .row{display:flex;gap:10px;align-items:baseline;padding:2px 0}.tgk-result .dot{flex:0 0 8px;height:8px;border-radius:var(--radius-pill);background:var(--tgk-panel)}
+.tgk-result .row[data-state=next] .dot{flex-basis:6px;height:6px;background:transparent;border:2px solid var(--tgk-muted)}.tgk-result .t{flex:1;color:var(--tgk-ink)}.tgk-result .row[data-state=next] .t{color:var(--tgk-muted)}
+.tgk-result .row[data-state=settled] .t{font-weight:700}
+@media (prefers-reduced-motion:reduce){.tgk-qrow,.tgk-work .step{animation:none}}
 `;
 
   // ---------- tiny DOM helper ----------
@@ -117,10 +133,14 @@
   }
 
   // ---------- pieces ----------
-  /** A row in the "Needs review" queue: reference, one state chip, one line stating the problem in values; a clock only on the row with a running deadline. */
-  function queueRow({ ref, chip, tone, line, clock, open, onSelect }) {
+  /** A row in the "Needs review" queue: reference, one state chip, one line stating its own problem in values, "If nothing changes:" and its cutoff;
+   * only the row with a running clock (running: true) shows the cutoff in red. While the agent checks, pass chip 'Checking' with tone 'live'. */
+  function queueRow({ ref, chip, tone, line, impact, cutoff, running, clock, open, onSelect }) {
+    const cut = cutoff || clock;
     return kit(el('button', { class: 'tgk-qrow', type: 'button', 'aria-current': open ? 'true' : 'false', onclick: onSelect },
-      el('span', { class: 'ref', text: ref }), el('span', { class: 'tgk-chip', 'data-tone': tone, text: chip }), el('span', { class: 'line', text: line }), clock ? el('span', { class: 'clock', text: clock }) : null));
+      el('span', { class: 'ref', text: ref }), el('span', { class: 'tgk-chip', 'data-tone': tone, text: chip }), el('span', { class: 'line', text: line }),
+      impact ? el('span', { class: 'impact' }, el('b', { text: 'If nothing changes: ' }), impact) : null,
+      cut ? el('span', { class: cutoff ? 'cutoff' : 'clock', 'data-running': running || (!cutoff && clock) ? true : null, text: cut }) : null));
   }
 
   /** The record header: business reference as title, the running deadline in red where one exists. */
@@ -170,7 +190,7 @@
     const ask = question ? el('div', { class: 'tgk-ask' }, el('label', { text: question.text }),
       el('select', { onchange: (e) => onAnswer && onAnswer(e.target.value) }, el('option', { value: '', text: 'Choose' }), ...question.options.map((o) => el('option', { value: o, text: o })))) : null;
     return kit(el('section', { class: 'tgk-sugg', 'aria-label': `${agent} suggestion` },
-      el('div', { class: 'head' }, el('b', { text: `${agent} suggestion` }), el('span', { class: 'tgk-chip', 'data-tone': editable ? 'wait' : 'live', text: editable ? 'Edited by you' : chip })),
+      el('div', { class: 'head' }, el('b', { text: `${agent} suggestion` }), el('span', { class: 'tgk-chip', 'data-tone': 'wait', text: editable ? 'Edited by you' : chip })),
       table, reason ? el('p', { class: 'tgk-reason' }, el('b', { text: 'Reason. ' }), reason) : null, ask));
   }
 
@@ -203,6 +223,34 @@
 
   /** The review timeline: done (filled), waiting (amber ring), next (hollow, muted); the last line is the record that settles the job, styled as settled only once it exists. */
   function timeline({ items }) { return kit(el('ol', { class: 'tgk-tl' }, ...items.map((i) => el('li', { 'data-state': i.state || 'done', text: i.text })))); }
+
+
+  /** The board's header: wordmark, the workspace of the acting person, History and Agents as text links, the business clock, the person. */
+  function header({ workspace, clock, person, onHistory, onAgents }) {
+    return kit(el('header', { class: 'tgk-head' }, el('div', { class: 'l' }, el('span', { class: 'mark', text: 'Trading Grid' }), el('span', { class: 'ws', text: workspace })),
+      el('div', { class: 'r' }, el('button', { class: 'link', type: 'button', onclick: onHistory, text: 'History' }), onAgents ? el('button', { class: 'link', type: 'button', 'data-strong': true, onclick: onAgents, text: 'Agents' }) : null,
+        clock ? el('span', { class: 'clock', text: clock }) : null, el('span', { text: person }))));
+  }
+
+  /** "What <Name> Agent did": the agent's steps, each a past-tense line ending with its system and interface tag, under a Working or Done chip. */
+  function agentWork({ agent, working, steps }) {
+    return kit(el('section', { class: 'tgk-work', 'aria-label': `What ${agent} did` }, el('div', { class: 'hd' }, el('span', { class: 'tgk-label', text: `What ${agent} did` }),
+      el('span', { class: 'tgk-chip', 'data-tone': working ? 'live' : null, text: working ? 'Working' : 'Done' })),
+      ...steps.map((st) => el('div', { class: 'step' }, el('span', { class: 'dot', 'aria-hidden': 'true' }), el('span', { class: 't', text: st.text }), st.system ? interfaceTag({ system: st.system, via: st.via, doc: st.doc }) : null))));
+  }
+
+  /** A choice under the person's rule: two valid options as cards, the one the person's rule recommends selected and labelled with that rule. */
+  function choice({ label, options, onPick }) {
+    const wrap = el('div', { class: 'tgk-choice', role: 'group', 'aria-label': label }, el('span', { class: 'tgk-label', text: label }));
+    const draw = (sel) => { wrap.querySelectorAll('.tgk-opt').forEach((n) => n.remove()); options.forEach((o, i) => wrap.append(el('button', { class: 'tgk-opt', type: 'button', 'aria-pressed': String(i === sel), onclick: () => { draw(i); onPick && onPick(o, i); } }, el('b', { text: o.title }), el('span', { text: o.note })))); };
+    draw(Math.max(0, options.findIndex((o) => o.recommended))); return kit(wrap);
+  }
+
+  /** The Result list: done lines with a filled navy dot, next lines hollow and muted; the last line is the confirming record, bold once it exists (state 'settled'). */
+  function resultList({ items }) {
+    return kit(el('section', { class: 'tgk-result', 'aria-label': 'Result' }, el('span', { class: 'tgk-label', text: 'Result' }),
+      ...items.map((i) => el('div', { class: 'row', 'data-state': i.state || 'done' }, el('span', { class: 'dot', 'aria-hidden': 'true' }), el('span', { class: 't', text: i.text }), i.system ? interfaceTag({ system: i.system, via: i.via, doc: i.doc }) : null))));
+  }
 
   /** The Simulated label: shown on a task card when the model could not answer and a recorded real run is replayed. */
   function simulated({ note = 'Replays the last recorded run' } = {}) { return kit(el('span', { class: 'tgk-sim', title: note, text: 'Simulated' })); }
@@ -252,7 +300,6 @@
     const say = (role, text, extra) => { const m = el('div', { class: 'tgk-av-msg', 'data-role': role, text }); if (extra) m.append(extra); logBox.append(m); logBox.scrollTop = logBox.scrollHeight; return m; };
     const input = el('input', { type: 'text', placeholder: 'Ask about this record', 'aria-label': 'Ask Aviator' });
     const send = el('button', { class: 'tgk-btn', type: 'submit', 'data-primary': true, text: 'Ask' });
-    const icon = () => { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.innerHTML = '<path fill="currentColor" d="M12 2l2.2 6.3L20.5 10l-6.3 2.2L12 18.5l-2.2-6.3L3.5 10l6.3-1.7z"/>'; return s; };
     async function ask(q) {
       if (!q.trim()) return; say('user', q); input.value = ''; send.disabled = true; const wait = say('model', 'Reading the records…');
       try {
@@ -272,10 +319,10 @@
     if (chips) logBox.append(chips);
     const panel = kit(el('section', { class: 'tgk-av-panel', role: 'dialog', 'aria-label': 'Aviator' },
       el('header', {}, el('b', { text: 'Aviator' }), el('span', { class: 'tgk-chip', text: person || 'Trading Grid' })), logBox, form));
-    const btn = kit(el('button', { class: 'tgk-av-btn', type: 'button', 'aria-expanded': 'false', onclick: () => { const open = panel.toggleAttribute('data-open'); btn.setAttribute('aria-expanded', String(open)); if (open) input.focus(); } }, icon(), 'Aviator'));
+    const btn = kit(el('button', { class: 'tgk-av-btn', type: 'button', 'aria-expanded': 'false', onclick: () => { const open = panel.toggleAttribute('data-open'); btn.setAttribute('aria-expanded', String(open)); if (open) input.focus(); } }, 'Aviator'));
     const wrap = el('div', { class: 'tgk-aviator' }, panel, btn); document.body.append(wrap);
     return { element: wrap, ask, open: () => { panel.setAttribute('data-open', ''); btn.setAttribute('aria-expanded', 'true'); } };
   }
 
-  root.TGAgentKit = Object.freeze({ version: '1.2.0', css: CSS, injectCss, connector, el, queueRow, recordHeader, interfaceTag, factRow, drawer, nowAfter, compareTable, decisionBar, sentState, roleTrace, traceLine, timeline, simulated, setupView, fromServerSetup, governanceView, aviator, SERVERS });
+  root.TGAgentKit = Object.freeze({ version: '1.3.0', css: CSS, injectCss, connector, el, header, agentWork, choice, resultList, queueRow, recordHeader, interfaceTag, factRow, drawer, nowAfter, compareTable, decisionBar, sentState, roleTrace, traceLine, timeline, simulated, setupView, fromServerSetup, governanceView, aviator, SERVERS });
 })(typeof window !== 'undefined' ? window : globalThis);

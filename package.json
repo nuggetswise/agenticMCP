@@ -20,7 +20,8 @@
     "scout": "node --no-warnings scripts/scout-test.mjs",
     "watch": "node --no-warnings scripts/watch-test.mjs",
     "match": "node --no-warnings scripts/match-test.mjs",
-    "kit-check": "node --no-warnings scripts/kit-check.mjs"
+    "kit-check": "node --no-warnings scripts/kit-check.mjs",
+    "kit-tokens": "node --no-warnings scripts/kit-tokens.mjs --check"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",

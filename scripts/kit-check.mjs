@@ -28,6 +28,26 @@ const green = await page.evaluate(() => [...document.querySelectorAll('*')].some
 ok('no green anywhere', !green);
 ok('no tick characters', !/[✓✔✅]/.test(text));
 const src = readFileSync(page0, 'utf8');
+
+// Design system tokens: every colour, font, radius and type size a page sets must come from ui/ds (tokens and the
+// derived values the workspace skill marks). Scans style blocks, style attributes, the kit's CSS and style strings in scripts.
+const tokenFiles = ['tokens.css', 'tokens-derived.css'].map((f) => readFileSync(join(ROOT, 'ui', 'ds', f), 'utf8')).join('\n');
+const ALLOWED_HEX = new Set([...tokenFiles.matchAll(/#([0-9a-f]{3,8})\b/gi)].map((m) => m[1].toLowerCase()));
+const ALLOWED_RGB = new Set([...tokenFiles.matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g)].map((m) => `${m[1]},${m[2]},${m[3]}`));
+const SIZES = new Set([10.5, 11, 12, 12.5, 13, 13.5, 14, 15, 16, 18, 22, 30, 40, 52, 56]); const RADII = new Set([0, 6, 10, 12, 16, 999]);
+const styleText = (() => { const out = []; const noTok = src.replace(/\/\*tokens:start\*\/[\s\S]*?\/\*tokens:end\*\//g, '').replace(/<style id="ds-tokens">[\s\S]*?<\/style>/g, '');
+  for (const m of noTok.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)) out.push(m[1]);
+  for (const m of noTok.matchAll(/style\s*=\s*"([^"]*)"/g)) out.push(m[1]);
+  for (const m of noTok.matchAll(/const CSS = `([\s\S]*?)`;/g)) out.push(m[1]);
+  for (const m of noTok.matchAll(/(?:style|cssText)\s*[:=]\s*(['`])((?:(?!\1)[^\\]|\\.)*?)\1/g)) out.push(m[2]);
+  return out.join('\n'); })();
+const off = [];
+for (const m of styleText.matchAll(/#([0-9a-f]{3,8})\b/gi)) if (!ALLOWED_HEX.has(m[1].toLowerCase())) off.push(`colour #${m[1]}`);
+for (const m of styleText.matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g)) if (!ALLOWED_RGB.has(`${m[1]},${m[2]},${m[3]}`)) off.push(`colour ${m[0]})`);
+for (const m of styleText.matchAll(/font-family\s*:\s*([^;}"']+)/g)) if (!/^\s*(var\(--|inherit|Inter\b)/.test(m[1])) off.push(`font ${m[1].trim()}`);
+for (const m of styleText.matchAll(/font(?:-size)?\s*:\s*(?:\d{3}\s+)?([\d.]+)px/g)) if (!SIZES.has(+m[1])) off.push(`type size ${m[1]}px`);
+for (const m of styleText.matchAll(/border-radius\s*:\s*([\d.]+)px/g)) if (!RADII.has(+m[1])) off.push(`radius ${m[1]}px`);
+ok('every colour, font, radius and type size comes from the design system tokens', off.length === 0, [...new Set(off)].slice(0, 12).join('; '));
 ok('no raw X12 in the page source', !rawHit(src), rawHit(src));
 ok('no raw X12 in the visible text', !rawHit(text) && !/\braw X12\b/i.test(text), rawHit(text) || 'raw X12 label');
 if (!RETAILER) {

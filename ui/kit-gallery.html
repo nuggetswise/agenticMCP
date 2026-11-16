@@ -28,10 +28,18 @@ section.piece>div:first-child h2{margin:0 0 4px;font-size:14px;color:var(--tgk-i
   const piece = (name, says, ...nodes) => { const s = K.el('section', { class: 'piece' }, K.el('div', {}, K.el('h2', { text: name }), K.el('p', { text: says })), K.el('div', { class: 'stage' }, ...nodes)); box.append(s); };
   const doc = { title: 'Kinross load scan for NR-460207', fields: [['From', 'Kinross Logistics, Groveport'], ['Order', 'NR-460207'], ['Cartons loaded', '659 of 660'], ['Exception', 'One staged carton crushed, contents damaged']] };
 
-  piece('Queue row', 'One state chip and one line stating the row’s own problem in values. Only the row with a running deadline shows its clock.',
-    K.queueRow({ ref: 'NR-460207', chip: 'Ready for review', tone: 'live', line: '659 of 660 cartons loaded; one carton crushed', clock: 'Trailer seals in 48 min', open: true }),
-    K.queueRow({ ref: 'NR-460231', chip: 'Waiting on Kinross', tone: 'wait', line: 'Ship-to on the sales order is DC 4; the order says DC 2' }),
-    K.queueRow({ ref: 'NR-460262', chip: 'Rule failed', tone: 'fail', line: '640 ordered across three orders; 520 available at Groveport' }));
+  piece('Header', 'Wordmark, the acting person\u2019s workspace, History and Agents as text links, the business clock and the person.',
+    K.header({ workspace: 'Ashby Supplier \u00b7 Shipments', clock: 'Tuesday 17:12', person: 'Priya Raman', onHistory: () => {}, onAgents: () => {} }));
+  piece('Queue row', 'Each row states its own problem in values, what happens if nothing changes, and its cutoff. Only the row with the running clock shows it in red. While the agent checks, rows arrive with the chip Checking.',
+    K.queueRow({ ref: 'NR-460207', chip: 'Ready for review', tone: 'wait', line: '659 of 660 cartons loaded. Supplier ERP says DC 4; the order says DC 2.', impact: 'DC 2 can\u2019t check the load in by scan, and Northfield charges 3 violations.', cutoff: 'Trailer seals in about 40 minutes', running: true, open: true }),
+    K.queueRow({ ref: 'NR-460219', chip: 'Ready for review', tone: 'wait', line: 'The invoice draft bills 180 units; 176 shipped.', impact: 'Northfield disputes the invoice and charges $100, and payment slows.', cutoff: 'Invoice batch sends in 2 hours 48 minutes' }),
+    K.queueRow({ ref: 'NR-460241', chip: 'Checking', tone: 'live', line: 'The routing request is missing.' }));
+  piece('What the agent did', 'The agent\u2019s steps land one by one as the server trace returns them, each ending with its system and interface tag, under a Working or Done chip.',
+    K.agentWork({ agent: 'Scout Agent', working: false, steps: [{ text: 'Kinross load scan arrived: 659 of 660 cartons loaded, carton ending 5172 staged at door 7', system: 'Kinross', via: 'API', doc }, { text: 'Read Northfield\u2019s order change 1: ship to DC 2', system: 'EDI 860' }, { text: 'Read the sales order: ship to DC 4', system: 'Supplier ERP' }] }));
+  piece('Choice under the person\u2019s rule', 'Two valid options, the one the person\u2019s rule recommends selected and labelled with that rule.',
+    K.choice({ label: 'Order of work', options: [{ title: 'Carton first, then ship-to', note: 'Recommended under your rule: earliest cutoff first. The trailer seals in about 40 minutes.', recommended: true }, { title: 'Ship-to first, then carton', note: 'Fixes the Supplier ERP first; the carton may miss the seal.' }] }));
+  piece('Result', 'Done lines with a filled dot; the last line is the record that settles the job, bold once it exists.',
+    K.resultList({ items: [{ text: 'Approved by Priya Raman: Kinross task delivered', system: 'Kinross', via: 'API' }, { text: 'Ship-to changed to DC 2 in the Supplier ERP', system: 'Supplier ERP' }, { state: 'next', text: 'Northfield\u2019s receiving advice matches the ship notice', system: 'EDI 861' }] }));
   piece('Record header', 'The business reference as title, and the running deadline in red where the world holds one.',
     K.recordHeader({ title: 'NR-460207', deadline: 'Trailer seals in 48 min', sub: 'Northfield DC 2 · 660 cartons of ASH-MUG-12' }));
   piece('Fact and interface tag', 'Each fact leads with its values and ends with a muted tag naming the system and interface. The tag opens the readable document: its trade name and business values, nothing more.',

@@ -688,6 +688,33 @@
       "id": "P16",
       "name": "Retailer catalogue connector",
       "status": "Out of scope"
+    },
+    {
+      "id": "P19",
+      "name": "P19 Ship notice chase",
+      "status": "Planned",
+      "agent": "Chase Agent",
+      "tools_northfield": "chase_*",
+      "spec": "Build prompts doc, P19",
+      "note": "Moves to prototypes with its calendar moment, anchors and decisions when built (T3.6)"
+    },
+    {
+      "id": "P20",
+      "name": "P20 Promotion deductions with Vividly",
+      "status": "Planned",
+      "agent": "Claim Agent",
+      "tools": "claim_* at the promotion moment (preset promotions), vividly_match",
+      "spec": "Build prompts doc, P20",
+      "note": "Moves to prototypes with its calendar moment, anchors and decisions when built (T3.7)"
+    },
+    {
+      "id": "P21",
+      "name": "P21 Admin and rules",
+      "status": "Planned",
+      "agent": null,
+      "tools": "list_rules_by_source, update_supplier_rule, set_agent_mode",
+      "spec": "Build prompts doc, P21",
+      "note": "A tool, not an agent; moves to prototypes when built (T3.5)"
     }
   ]
 }

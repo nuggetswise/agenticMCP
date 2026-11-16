@@ -1,14 +1,12 @@
 {
  "file": "/home/claude/agenticmcp/docs/build-guide.md",
- "ran_at_head": "8050fe3",
+ "ran_at_head": "34959c0",
  "results": [
   {
    "name": "as_of_commit_current",
-   "ok": false,
-   "problems": [
-    "changed since 193dfa9: package.json, scripts/check.js, scripts/checks/40-transport.mjs, scripts/checks/85-match.mjs, scripts/kit-check.mjs, scripts/kit-ds.mjs, scripts/match-test.mjs, scripts/runtime-test.mjs, scripts/scout-test.mjs, scripts/smoke.js, scripts/watch-test.mjs, src/aviator.js, src/chase.js, src/claim.js, src/governance.js, src/match.js, src/pace.js, src/review.js, src/runtime.js, src/scout.js, src/server.js, src/shelf.js, src/watch.js, world/build.js"
-   ],
-   "info": "193dfa9"
+   "ok": true,
+   "problems": [],
+   "info": "34959c0"
   },
   {
    "name": "commits_exist",
@@ -29,13 +27,13 @@
    "name": "calls_refs_exist",
    "ok": true,
    "problems": [],
-   "info": "103 calls logged"
+   "info": "104 calls logged"
   },
   {
    "name": "inventory_and_grid_complete",
    "ok": true,
    "problems": [],
-   "info": "18 inventory rows, 18 grid rows"
+   "info": "21 inventory rows, 21 grid rows"
   },
   {
    "name": "no_copied_world_values",
@@ -44,11 +42,8 @@
   },
   {
    "name": "proof_counts_current",
-   "ok": false,
-   "problems": [
-    "npm run build: guide 717/0, run 718/0",
-    "npm run smoke: guide 109/0, run 119/0"
-   ]
+   "ok": true,
+   "problems": []
   },
   {
    "name": "artifact_links_verified",
@@ -101,7 +96,7 @@
    "name": "tasks_have_ids_and_done_when",
    "ok": true,
    "problems": [],
-   "info": "64 tasks: 52 done, 0 blocked"
+   "info": "69 tasks: 53 done, 0 blocked"
   }
  ]
 }

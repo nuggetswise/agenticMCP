@@ -332,12 +332,12 @@ export function geminiCaller(routes = modelRoutes(), fetchImpl = fetch) {
     for (let round = 0; round < 3; round++) { if (round) await new Promise((r) => setTimeout(r, (process.env.MODEL_ROUND_WAIT_MS ? +process.env.MODEL_ROUND_WAIT_MS : 20000) * round));
     for (const rt of routes) for (let attempt = 0; attempt < 2; attempt++) {
       if (attempt) await new Promise((r) => setTimeout(r, 2500));
-      const r = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${rt.model}:generateContent`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': rt.key }, body: JSON.stringify(body) });
+      let r; try { r = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${rt.model}:generateContent`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': rt.key }, body: JSON.stringify(body) }); } catch (e) { err = `${rt.route} ${rt.model}: 599 network ${String(e?.message || e).slice(0, 80)}`; continue; }
       if (r.ok) { const j = await r.json(); j._route = `${rt.route} · ${rt.model}`; return j; }
       err = `${rt.route} ${rt.model}: ${r.status} ${(await r.text()).slice(0, 160)}`;
       if (r.status !== 503) break; // 429 and 404 go straight to the next route; 503 retries once first
     }
-    if (!/: (429|503|500) /.test(err || '')) break; }
+    if (!/: (429|503|500|599) /.test(err || '')) break; }
     throw new Error(`Model did not answer: ${err}`); };
 }
 

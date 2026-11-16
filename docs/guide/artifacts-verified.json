@@ -71,11 +71,11 @@
    "version": "1794449438-8fe5"
   },
   "BH5yvtjF5thUSJhUjrSBun": {
-   "title": "TG for Retail \u00b7 Shared Demo Database and MCP Server Plan",
+   "title": "TG for Retail · Shared Demo Database and MCP Server Plan",
    "version": "1794494730-e4da"
   },
   "VXoARJoJoqyv4VmGRUjFtz": {
-   "title": "TG for Retail \u00b7 Agent and MCP strategy for prototypes",
+   "title": "TG for Retail · Agent and MCP strategy for prototypes",
    "version": "1794514468-5ac5"
   },
   "PFa9A3bMAn8aZUiNKFRQae": {
@@ -87,7 +87,7 @@
    "version": "1794511824-2b39"
   },
   "5fb2Z4j5jAZeTdMpjkQSvJ": {
-   "title": "TG for Retail \u00b7 Build Guide",
+   "title": "TG for Retail · Build Guide",
    "version": "this doc"
   },
   "6ytUrUPw3susuHkoDmA7Xr": {
@@ -96,11 +96,21 @@
   },
   "5Bk6LChWZk24KsCSxbUxTg": {
    "title": "TG for Retail agent kit",
-   "version": "1794776977-40bc"
+   "version": "1794784343-31b6"
   },
   "LDFHTCvphK9qbn7ecQx6S1": {
    "title": "OpenText TG Retail Design System",
-   "version": "1794779431-121c"
+   "version": "1794784350-f6b5"
+  },
+  "MGDhE28iCZ1bdb4he73uup": {
+   "title": "P13 Silent Order Watch",
+   "version": "1794795431-22c1",
+   "verified": "2026-11-16"
+  },
+  "2xeimvMs5c3aYV6aw1Zz9W": {
+   "title": "P14 Invoice Variance",
+   "version": "1794795343-baae",
+   "verified": "2026-11-16"
   }
  },
  "server": {

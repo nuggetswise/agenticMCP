@@ -45,9 +45,9 @@ details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}
   const RECORDED = __P13_DATA__;
   const TRADE = { '855': 'Order acknowledgment', '856': 'Ship notice', '810': 'Invoice', '945': 'Warehouse shipping advice', '997': 'Technical acknowledgment', '861': 'Receiving advice', '824': 'Application advice', '865': 'Change acknowledgment', '940': 'Warehouse order' };
   const KIND = { rule: 'rule', ai: 'agent', human: 'person', external: 'outside', system: 'system' };
-  const S = { view: null, live: false, conn: null, open: 0, editing: false, rows: null, busy: false, decided: {}, sim: false };
+  const S = { used: new Set(), view: null, live: false, conn: null, open: 0, editing: false, rows: null, busy: false, decided: {}, sim: false };
   const time = (t) => String(t || '').replace(/\d{4}-\d{2}-\d{2} /g, '');
-  const said = (t) => time(`${t.what}${t.detail && t.detail.text ? ': ' + short(t.detail.text) : ''}`);
+  const said = (t) => time(`${t.what}${t.detail && t.detail.text ? ': ' + short(t.detail.text) : ''}`).replace(/\*\*/g, '').replace(/\s+/g, ' ');
   const mins = (a, b) => { const p = (x) => Date.parse(String(x).replace(' ET', '').replace(' ', 'T') + ':00Z'); return Math.round((p(a) - p(b)) / 60000); };
 
   async function call(tool, input) {
@@ -116,12 +116,16 @@ details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}
   async function approve(r, props) {
     S.busy = true; draw(); let v = null;
     if (S.live) { for (const p of props) { const out = await call('watch_decide', { session: S.view.session, proposal: p.id, decision: 'approve' }); if (out && out.session) v = out; else if (out) { S.notice = out.failed || out.message || 'The decision was refused.'; } } }
-    else if (RECORDED.final) { // the recorded run, one order at a time: this order takes its recorded state after approval
-      const f = RECORDED.final, cur = S.view, mine = (x) => x.po === r.po;
-      v = { ...cur, queue: { ...cur.queue, rows: cur.queue.rows.map((x) => mine(x) ? (f.queue.rows.find((y) => y.id === x.id) || x) : x) },
-        awaiting: (cur.awaiting || []).filter((p) => p.args.po !== r.po), trace: [...cur.trace, ...f.trace.slice(cur.trace.length).filter((t) => String(t.what).includes(r.po) || JSON.stringify(t.detail || {}).includes(r.po))],
-        confirmations_pending: [...(cur.confirmations_pending || []).filter((c) => c.po !== r.po), ...(f.confirmations_pending || []).filter(mine)] }; }
-    if (v) S.view = v; S.decided[r.po] = 'approved'; S.busy = false; S.editing = false; draw(); setTimeout(() => comeBack(r.po), 2500);
+    else if (RECORDED.final) { // the recorded run, one order at a time: this order takes its recorded state after approval,
+      // and any later proposal the agent made on the same order in that run comes back as the next decision
+      const f = RECORDED.final, cur = S.view, mine = (x) => x.po === r.po; props.forEach((p) => S.used.add(p.id));
+      S.unrec = !props.some((p) => f.trace.some((t) => String(t.what).startsWith(`Approved ${p.id}:`)));
+      const seen = new Set(cur.trace.map((t) => t.n)); const next = (f.awaiting || []).filter((p) => p.args.po === r.po && !S.used.has(p.id));
+      v = { ...cur, clock: f.clock, queue: { ...cur.queue, rows: [...cur.queue.rows.filter((x) => !mine(x)), ...f.queue.rows.filter(mine)] },
+        awaiting: [...(cur.awaiting || []).filter((p) => p.args.po !== r.po), ...next],
+        trace: [...cur.trace, ...f.trace.filter((t) => !seen.has(t.n) && (String(t.what).includes(r.po) || JSON.stringify(t.detail || {}).includes(r.po)))].sort((x, y) => x.n - y.n),
+        confirmations_pending: (cur.confirmations_pending || []).filter((c) => c.po !== r.po) }; }
+    if (v) S.view = v; S.decided[r.po] = awaitingFor(S.view, r.po).length ? null : (!S.live && S.unrec) ? 'unrecorded' : 'approved'; S.busy = false; S.editing = false; draw(); setTimeout(() => comeBack(r.po), 2500);
   }
   async function takeOver(r, props, edited) {
     S.busy = true; draw();
@@ -139,7 +143,7 @@ details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}
   function nextOpen() { const list = queueList(); const i = list.findIndex((r) => awaitingFor(S.view, r.po).length); if (i >= 0) S.open = i; draw(); }
 
   function timelineFor(r) {
-    const tr = traceFor(S.view, r.po).slice(-5).map((t) => ({ state: 'done', text: `${t.actor} · ${said(t)}` }));
+    const tr = traceFor(S.view, r.po).filter((t) => t.what !== 'Watch Agent said').slice(-5).map((t) => ({ state: 'done', text: `${t.actor} · ${said(t)}` }));
     const pend = ((S.view && S.view.confirmations_pending) || []).filter((c) => c.po === r.po).map((c) => ({ state: 'waiting', text: `${c.what} due` }));
     const end = r.nothing ? { state: 'settled', text: 'Left alone: Northfield sends no business acceptance, so nothing is chased' }
       : r.closed ? { state: 'settled', text: r.confirmation || `${TRADE[r.document]} confirmed` }
@@ -169,7 +173,7 @@ details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}
         noDecision: r.time_left && !/^Overdue/.test(r.time_left) ? `No decision with ${r.time_left.replace(/ left$/, '')} to go: the ${(TRADE[r.document] || 'document').toLowerCase()} misses ${r.rule}.` : null,
         onApprove: () => S.editing ? takeOver(r, props, rows) : approve(r, props), onEdit: () => { S.editing = true; S.rows = base.map((x) => ({ ...x })); draw(); } }));
     } else if (S.decided[r.po]) {
-      parts.push(K.sentState({ text: S.decided[r.po] === 'edited' ? 'Taken over by Priya Raman · Watch Agent proposes again only on a new record for this order' : `${r.state}${r.technical_ack && !/^Awaiting/.test(r.technical_ack) ? ' · technical acknowledgment received' : ''}${(S.view.confirmations_pending || []).some((c) => c.po === r.po) ? ' · waiting for its confirmation' : ''}` }));
+      parts.push(K.sentState({ text: S.decided[r.po] === 'edited' ? 'Taken over by Priya Raman · Watch Agent proposes again only on a new record for this order' : S.decided[r.po] === 'unrecorded' ? 'Approved · the recorded run ends before this send; with the Ashby connector it is sent live' : `${r.state}${r.technical_ack && !/^Awaiting/.test(r.technical_ack) ? ' · technical acknowledgment received' : ''}${(S.view.confirmations_pending || []).some((c) => c.po === r.po) ? ' · waiting for its confirmation' : ''}` }));
     } else if (!r.nothing && !r.closed) parts.push(K.sentState({ text: `${r.state} · no proposal waiting on this order` }));
     parts.push(K.el('div', { class: 'sec' }, K.el('h3', { class: 'tgk-label', text: 'Review' }), K.timeline({ items: timelineFor(r) })));
     const ev = traceFor(S.view, r.po);

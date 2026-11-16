@@ -45,7 +45,7 @@ details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}.dra
   const STATUS = { above_shipped: 'Billed above shipped', above_received: 'Billed above received', clear: 'Clear', price_held: 'Price above tolerance', price_cleared: 'Price set by an accepted change' };
   const S = { step: 0, view: null, live: false, conn: null, open: 0, editing: false, rows: null, busy: false, decided: {}, sim: false };
   const time = (t) => String(t || '').replace(/\d{4}-\d{2}-\d{2} /g, '');
-  const said = (t) => time(`${t.what}${t.detail && t.detail.text ? ': ' + short(t.detail.text) : ''}`);
+  const said = (t) => time(`${t.what}${t.detail && t.detail.text ? ': ' + short(t.detail.text) : ''}`).replace(/\*\*/g, '').replace(/\s+/g, ' ');
   const short = (s) => { const w = String(s || '').split(/\s+/); return w.length > 25 ? w.slice(0, 25).join(' ') + '…' : String(s || ''); };
   async function call(tool, input) {
     if (S.conn === null) S.conn = await K.connector('northfield') || false;

@@ -55,7 +55,6 @@ export const FACTS = {
   moment: { values: Object.keys(MOMENTS), recorded: P13_MOMENT, owner: 'Presenter', says: 'Story moment the session branches at: P13 (18 Nov 09:00), NR-46302 early fulfilment (19 Nov 16:00), NR-46156 rejected ship notice (17 Nov 11:00)' },
   kinross_window_hours: { values: [24, 48], recorded: 48, owner: 'Priya Raman', says: 'Priya’s rule: hours after the 940 by which Kinross must return the 945 before the order is flagged' },
   kinross_reachable: { values: ['yes', 'no'], recorded: 'yes', owner: 'Kinross', says: 'Whether Kinross answers a status ask (no: Kinross cannot be reached and its later records stay hidden)' },
-  kinross_note: { maxLength: 300, recorded: '', owner: 'Kinross', says: 'Free-text note Kinross adds when it answers a status ask' },
   departure_scanned_46220: { values: ['yes', 'no'], recorded: 'no', owner: 'Kinross', says: 'A Kinross departure scan for NR-46220 at 08:30 ET on 18 November, with no load scan and no 945 (P13 moment only)' },
 };
 export function factsToVariation(facts = {}) {
@@ -76,7 +75,6 @@ export const VARIATIONS = {
   departure_scanned_46220: { kinross_window_hours: 24, departure_scanned_46220: 'yes' },
   early_fulfilment_46302: { moment: '2026-11-19 16:00 ET', kinross_window_hours: 24 },
   rejected_ship_notice_46156: { moment: '2026-11-17 11:00 ET', kinross_window_hours: 24 },
-  unforeseen_kinross_note: { kinross_window_hours: 24, kinross_note: 'The trailer with NR-46220 left Joliet at 07:40 ET with all 57 cartons. Our 945 feed is down until about 11:30 ET; the load scan for SHP-46220 is in our portal now if Ashby needs it.' },
 };
 
 // ---------- Sessions ----------
@@ -236,7 +234,7 @@ export const READS = {
         supplier_erp: { sales_order: { lines: salesOrder(db, s, po), matches_current_order: true }, shipment_plan: plan ? { shipment: plan.d.shipment, site: plan.d.site, planned_departure: fmtET(plan.d.planned_departure), cartons: plan.d.cartons } : 'None',
           fulfilment: fulfil ? { posted: fmtET(fulfil.at), shipment: fulfil.d.shipment, cartons: fulfil.d.cartons } : 'Not posted', invoice: inv ? { reference: inv.reference, total: inv.total, from: inv.from } : rec810 ? `Invoiced: ${rec810.reference}` : 'None', notes: s.erp.notes.filter((n) => n.po === po), substitutions: evs.filter((e) => e.kind === 'erp.substitution').map((e) => ({ at: fmtET(e.at), ...e.d })) },
         session_notices: s.notices.filter((n) => n.po === po) }; } },
-  read_warehouse: { description: 'Warehouse records for one order at the session clock: the Kinross warehouse order (940) and shipping advice (945), the load scan, the departure scan, and every Kinross reply in this session with any free-text note. Orders shipped from Ashby’s own site have no 940 or 945.', input: { po: z.string().describe('PO number') },
+  read_warehouse: { description: 'Warehouse records for one order at the session clock: the Kinross warehouse order (940) and shipping advice (945), the load scan, the departure scan and every Kinross reply in this session. Orders shipped from Ashby’s own site have no 940 or 945.', input: { po: z.string().describe('PO number') },
     run: (db, s, a) => { const po = D.normPo(a.po || ''); const evs = visibleEvents(db, s, po); const w = warehouseOrder(db, s, po); const load = lastEv(evs, 'wms.load_scan'), dep = lastEv(evs, 'wms.departure_scan');
       return { po, as_of: fmtET(iso(s.clock)), warehouse_order_940: w ? { reference: w.ref, site: w.site === 'KIN-JOL' ? 'Kinross Joliet' : w.site === 'KIN-GRV' ? 'Kinross Groveport' : w.site, sent: fmtET(w.sent_at) } : 'None: not a Kinross order (ships from Ashby’s own site)',
         shipping_advice_945: w ? (w.advice_at ? { reference: w.advice_ref, received: fmtET(w.advice_at) } : 'Not received') : 'Not applicable',
@@ -250,7 +248,7 @@ export const READS = {
       priya_rules: { kinross_945_window_hours: s.facts.kinross_window_hours, escalate_when_hours_left: ESCALATE_HOURS, drafts: 'A draft reaches Northfield only when Priya approves its release' }, guardrails: GUARDRAILS }) },
   read_proposals: { description: 'Every action proposed in this session, with its state (awaiting approval, approved, rejected, executed, failed, refused) and its result.', input: {},
     run: (db, s) => ({ proposals: s.proposals.map((p) => ({ id: p.id, action: p.action, args: p.args, state: p.state, result: p.result || null })) }) },
-  read_tasks: { description: 'Every status ask sent to Kinross in this session with its state and Kinross’s answer, including any free-text note Kinross added.', input: {},
+  read_tasks: { description: 'Every status ask sent to Kinross in this session with its state and Kinross’s answer.', input: {},
     run: (db, s) => ({ tasks: s.tasks }) },
 };
 export function read(db, s, name, args = {}) {
@@ -382,7 +380,7 @@ function execute(db, s, p, by) {
         const now = iso(s.clock); const syn = s.synthetic.find((e) => e.po === po && e.kind === 'wms.departure_scan');
         const recDep = kev.find((e) => e.kind === 'wms.departure_scan' && e.at <= now), recLoad = kev.find((e) => e.kind === 'wms.load_scan' && e.at <= now);
         const response = syn ? `The trailer left at ${fmtET(syn.at)}; the load scan and 945 follow when our 945 job runs` : rec?.advice_at && rec.advice_at <= now ? `945 sent at ${fmtET(rec.advice_at)}` : recDep ? `Departed at ${fmtET(recDep.at)}; the 945 follows` : recLoad ? 'Loaded; the trailer has not departed' : 'Picked; the load is not on a trailer and has not departed';
-        Object.assign(t, { state: 'Answered', response, ...(s.facts.kinross_note ? { note: s.facts.kinross_note } : {}) });
+        Object.assign(t, { state: 'Answered', response });
         // The confirming record: the recorded 945 and the Kinross scans before it, revealed when the clock reaches them.
         if (rec?.advice_at && rec.advice_at > iso(cutOf(s))) {
           // Kinross's load and departure scans arrive with its 945 (the confirming record), each keeping its own time.
@@ -474,7 +472,6 @@ Goal: ${s.goal}
 Find the open orders that are missing a document Northfield requires, find out from the source records why each is missing, and propose the next step for each with propose_action.
 Use only facts returned by your tools. Never state a record, quantity or confirmation the tools did not return. Read the policy before proposing. A proposal that waits for approval is not done. A technical acknowledgment (997) is never business acceptance. A ship notice is confirmed only by Northfield's receiving advice (861); a Kinross request only by the 945. A late document stays Late after it is sent.
 A draft made under Priya's standing policy has not reached Northfield: once a document is drafted, propose release_document for it in the same pass, so every drafted document waits for Priya's decision rather than sitting unsent.
-Read the whole of every answer, its free-text note included. When a note contradicts the status it comes with, or names a record you cannot read (a load scan held in Kinross's portal, a trailer that left), the fixed rules cannot act on it: propose escalate_to_priya for that order at once, with the note's facts and what they put at risk (a ship notice is due within one hour of departure, NF-4.2). Never draft a ship notice from a note; it is built only from a load scan or fulfilment record.
 Never retry an action the server refused; read the refusal and change course, or stop and say what waits for Priya.
 When you are waiting for Priya, Kinross or Northfield, stop and say in one or two sentences what you proposed and why. When new evidence arrives, re-read what changed and reconsider; do not repeat an action a party already answered for the same reason.`;
 

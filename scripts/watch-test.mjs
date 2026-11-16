@@ -33,7 +33,6 @@ const EXPECT = {
   departure_scanned_46220: { on_time: ['NR-46210 855', 'NR-46226 810'], late: ['NR-46215 856', 'NR-46220 856'], asked: ['NR-46220'], escalated: ['NR-46220'] },
   early_fulfilment_46302: { on_time: ['NR-46302 856'], late: [], asked: ['NR-46302'], escalated: ['NR-46302'] },
   rejected_ship_notice_46156: { on_time: ['NR-46151 856', 'NR-46142 855', 'NR-46156 856'], late: [], asked: [], escalated: [] },
-  unforeseen_kinross_note: { on_time: ['NR-46210 855', 'NR-46226 810', 'NR-46220 856'], late: ['NR-46215 856'], asked: ['NR-46220'], escalated: [] },
 };
 const rows = [];
 for (const [name, v] of Object.entries(W.VARIATIONS)) {
@@ -43,8 +42,6 @@ for (const [name, v] of Object.entries(W.VARIATIONS)) {
   check(!s.trace.some((x) => /^Refused/.test(x.what)), `${name}/baseline: no action refused`);
   rows.push({ variation: name, actor: 'baseline', on_time: o.sent_on_time.length, late: o.sent_late.length, kinross_asked: o.kinross_asked.join(' '), escalated: o.escalated.join(' '), closed: o.rows.filter((r) => r.closed).length, approvals: o.approvals, failed: o.actions_failed });
 }
-{ const a = W.startSession(db, { variation: W.VARIATIONS.canonical }), b = W.startSession(db, { variation: W.VARIATIONS.unforeseen_kinross_note }); W.runBaseline(db, a); W.runBaseline(db, b);
-  const c = W.compare(a, b); check(!c.baseline_only.length && !c.agent_only.length && b.tasks[0]?.note, 'baseline: the free-text Kinross note changes nothing it does (the note is where an agent may earn its place)'); }
 
 // Agent-loop plumbing with a scripted caller: not a model. It reads the queue, proposes a draft and stops; the server gates it.
 { const s = W.startSession(db, { variation: W.VARIATIONS.canonical, label: 'plumbing' }); let turn = 0;

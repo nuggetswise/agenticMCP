@@ -1,11 +1,13 @@
 {
  "file": "/home/claude/agenticmcp/docs/build-guide.md",
- "ran_at_head": "34959c0",
+ "ran_at_head": "08a4a5c",
  "results": [
   {
    "name": "as_of_commit_current",
-   "ok": true,
-   "problems": [],
+   "ok": false,
+   "problems": [
+    "changed since 34959c0: registry/registry.json, scripts/checks/85-match.mjs, scripts/checks/87-retailer-drafts.mjs, scripts/match-test.mjs, src/match.js, src/pace.js, src/retailer.js, src/runtime.js, src/server.js, world/build.js, world/schema.sql"
+   ],
    "info": "34959c0"
   },
   {
@@ -42,8 +44,10 @@
   },
   {
    "name": "proof_counts_current",
-   "ok": true,
-   "problems": []
+   "ok": false,
+   "problems": [
+    "npm run build: guide 718/0, run 728/0"
+   ]
   },
   {
    "name": "artifact_links_verified",

@@ -77,7 +77,7 @@ export default function ({ db, ok, eq }) {
   { const s = W.startSession(db, { variation: W.VARIATIONS.early_fulfilment_46302 }); W.propose(db, s, 'Test', 'draft_ship_notice', { po: 'NR-46302' });
     ok('watch.guard_no_ship_notice_sent_before_departure', /NF-4\.2/.test(W.propose(db, s, 'Test', 'release_document', { po: 'NR-46302', document: '856' }).message || '')); }
   { const bad = (f) => { try { W.factsToVariation(f); return false; } catch { return true; } };
-    ok('watch.facts_out_of_range_refused', bad({ kinross_window_hours: 12 }) && bad({ kinross_reachable: 'maybe' }) && bad({ kinross_note: 'x'.repeat(301) }) && bad({ ship_to: 'DC 2' }) && bad({ moment: '2026-11-17 11:00 ET', departure_scanned_46220: 'yes' })); }
+    ok('watch.facts_out_of_range_refused', bad({ kinross_window_hours: 12 }) && bad({ kinross_reachable: 'maybe' }) && bad({ kinross_note: 'Trailer left' }) && bad({ ship_to: 'DC 2' }) && bad({ moment: '2026-11-17 11:00 ET', departure_scanned_46220: 'yes' })); }
   { const su = W.setup(); ok('watch.setup_lists_facts_rules_actions_guardrails', su.facts.kinross_window_hours.recorded === 48 && su.priya_rules.kinross_window_hours.allowed.join() === '24,48' && su.actions.release_document.priya_may_change === false && su.guardrails.length === 3 && Object.keys(su.presets).length === Object.keys(W.VARIATIONS).length); }
 
   // ---------- 7. No read returns a record from after the branch unless revealed as a confirmation (leak check) ----------

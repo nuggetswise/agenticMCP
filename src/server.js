@@ -307,8 +307,8 @@ const SCOUT_TOOLS = [
 ];
 // ---------- Watch Agent (P13): a server-side agent on the open-order queue, in an isolated session branched from the recorded world ----------
 const watchPaused = () => G.isPaused(db, 'Watch Agent');
-const WFACTS_IN = z.object({ moment: z.enum(Object.keys(Watch.MOMENTS)), kinross_window_hours: z.number().int(), kinross_reachable: z.enum(['yes', 'no']), kinross_note: z.string().max(300), departure_scanned_46220: z.enum(['yes', 'no']) }).partial().optional()
-  .describe('Facts to branch with, on top of the preset: moment (story moment), kinross_window_hours (Priya’s rule: 24 or 48), kinross_reachable, kinross_note (free text Kinross adds to a status answer), departure_scanned_46220. watch_setup lists them with their recorded values.');
+const WFACTS_IN = z.object({ moment: z.enum(Object.keys(Watch.MOMENTS)), kinross_window_hours: z.number().int(), kinross_reachable: z.enum(['yes', 'no']), departure_scanned_46220: z.enum(['yes', 'no']) }).partial().optional()
+  .describe('Facts to branch with, on top of the preset: moment (story moment), kinross_window_hours (Priya’s rule: 24 or 48), kinross_reachable, departure_scanned_46220. watch_setup lists them with their recorded values.');
 const WVAR = z.enum(Object.keys(Watch.VARIATIONS)).optional().describe(`Preset to branch with: ${Object.keys(Watch.VARIATIONS).join(', ')}. Default canonical (Priya has set the Kinross window to 24 hours).`);
 const WPOLICY_IN = z.record(z.enum(['suggest', 'approve', 'policy'])).optional().describe('Approval mode per action for this run, for actions Priya Raman may change (watch_setup lists them). Locked actions keep their mode.');
 const watchBranch = (variation, facts) => ({ ...Watch.VARIATIONS[variation || 'canonical'], ...Watch.factsToVariation(facts || {}) });

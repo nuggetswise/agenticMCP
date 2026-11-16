@@ -111,7 +111,7 @@ Each rule has one home, here. Its ID is how `docs/guide/coverage.json` maps the 
 - **R36** Every call is logged in docs/build-log/CALLS.md with what would change it.
 - **R37** Words: Trading Grid Catalogue or TGC, never AC; Supplier readiness; banned words follow the enterprise-product-writing skill.
 - **R38** A conversation may carry several tasks when they all belong to one prototype; name the prototype and its task IDs in the first message. World, server, partner and docs tasks run one per conversation. Each new chat reads this guide first, and hand-off between chats runs through this guide, the commit and its CALLS entry, never through chat history.
-- **R39** Start here. In Tasks, read the tables top to bottom and read the open comments in the Claude doc and log any answer, then take the first row whose status is Open and whose Depends on entries are all Done; a dash means no dependency. In a chat for one prototype (R38), take every eligible row for that prototype in the same order. Read its Read first entries, do the task, and stop when its Done when holds. Commit the evidence first, then set the row to Done citing that commit, log the call in CALLS, run the check, commit and push, and refresh the Claude doc. When a commit changes repo behaviour, the guide's as-of commit moves to it in the same edit. A Blocked row waits for the owner answer it names.
+- **R39** Start here. In Tasks, read the tables top to bottom, then take the first row whose status is Open and whose Depends on entries are all Done; a dash means no dependency. In a chat for one prototype (R38), take every eligible row for that prototype in the same order. Read its Read first entries, do the task, and stop when its Done when holds. Commit the evidence first, then set the row to Done citing that commit, log the call in CALLS, run the check, commit and push, and refresh the Claude doc. When a commit changes repo behaviour, the guide's as-of commit moves to it in the same edit. A Blocked row waits for the owner answer it names. Owner questions are asked in chat with one AskUserQuestion call and logged as decisions; no comment is left open in the Claude doc unless the owner asks for one.
 
 ## Where each fact lives
 
@@ -245,18 +245,15 @@ The owner approved change items 1 to 14 on 12 November. Two are done, five are p
 | D69 | Match Agent asks the supplier to prove a delivery its answer claims (the ship notice for the later truck and the carrier's delivery receipt) before Jordan short-pays the line; a supplier claim left unanswered returns as a payment dispute. Source: owner, 16 November. | — |
 | D70 | Change list 4 is applied as drafts: the two retailers' published chargeback rules, with the owner's figures, are Northfield drafts NFD-3 to NFD-15; nothing is in force until Jordan replays and publishes one. Late and early shipment wait for ship-window dates on orders; label per box, on-time as a percentage, import documents, carrier no-show, prep, mark-for, shelf life and ticketing stay out because no record in the world exercises them. Retailers are not named (R04). Source: owner, 16 November. | The owner wanting the rules in force for the quarter |
 | D71 | A rule finding on an agent's queue must be answered: if the agent stops while a row the rules mark as needing action is open, the runtime tells it once and it goes on. Pace Agent's queue marks a period whose short shipments split across warehouses as needing Priya's answer before any plan. Source: owner's fix, 16 November. | — |
+| D72 | The retailer drafts NFD-3 to NFD-15 go into force from a date in the demo's future, so charges apply only to shipments from then on and the months already in the demo keep their charges. The builder picks the date after checking with `node scripts/world-diff.mjs` which screen figures, if any, it moves, and reports them before publishing. Source: owner, 16 November. | The owner wanting the rules to count from the start of the demo |
+| D73 | The rebuilds of P5, P6, P7, P8, P9 and P11 each start with a change list (what stays, changes, goes and is added) that the owner approves before the build (R32). Source: owner, 16 November, answering open question 5. | — |
+| D74 | Retire the old pages: P12, the nine pages in `docs/phase0/HANDOFF.md`, and the retired presenter-notes files. The owner unshares the pages in claude.ai; no presenter-notes file is in the project's doc list today. Source: owner, 16 November, answering open questions 1, 3 and 4. | — |
+| D75 | P13 is rebuilt with no agent: the same queue, documents and approvals, run by the rules, with no agent name and no label calling it automation. Source: owner, 16 November. | A standard record that gives Watch a step the rules cannot take |
 | D62 | Phase 3 starts when the first build's dependencies are Done: T3.1, T2.2 and T2.3's built parts. The other Phase 1 and 2 rows run alongside it, and a Phase 1 row is pulled forward when a spec needs one of its records. T3.4 is folded into T3.2's Done when, because its own Done when named the prototype T3.2 builds. Source: owner, 15 November. | A spec that needs a world record a deferred Phase 1 row would add |
 
 **Open questions for the owner**
 
-Each question also sits as a comment on its row in the Claude doc; answer there or in chat.
-
-1. P12 is retired (D40). Unshare its page, or keep it readable as a record?
-2. The Prototype Plan's gallery card still carries the Threat Ranking title. It has to be renamed in claude.ai.
-3. Delete the three retired presenter-notes files from this project?
-4. Nine pages may be retired (listed in `docs/phase0/HANDOFF.md`). Keep or retire each?
-5. Phase 4 reworks of P5, P6, P7, P8, P9 and P11 were ordered in chat on 15 November. Build directly under that order, or send a change list per prototype first (R32)?
-
+None open. The Prototype Plan's gallery card still carries the Threat Ranking title; renaming it is the owner's action in claude.ai.
 
 ## Inventory
 

@@ -1,6 +1,6 @@
 {
  "file": "/home/claude/agenticmcp/docs/build-guide.md",
- "ran_at_head": "a391883",
+ "ran_at_head": "83cbff7",
  "results": [
   {
    "name": "as_of_commit_current",
@@ -52,8 +52,11 @@
   },
   {
    "name": "no_repeated_passages",
-   "ok": true,
-   "problems": []
+   "ok": false,
+   "problems": [
+    "source owner 16 november. the owner wanting the",
+    "owner 16 november. the owner wanting the rules"
+   ]
   },
   {
    "name": "overlap_with_replaced_docs",

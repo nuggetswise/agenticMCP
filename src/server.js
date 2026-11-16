@@ -41,6 +41,7 @@ const db = new DatabaseSync(MAIN_DB);
 const ashbyDb = new DatabaseSync(ASHBY_DB, { readOnly: true });
 const nfDb = new DatabaseSync(NORTHFIELD_DB, { readOnly: true });
 const BASELINE_EVENT = db.prepare('SELECT max(id) m FROM events').get().m;
+const BASELINE_RULES = db.prepare('SELECT id, statement, params FROM rules').all(); const BASELINE_VERSIONS = db.prepare('SELECT rule_id, valid_from, statement, params FROM rule_versions').all();
 const AS = 'ashby-assistant', NF = 'northfield-assistant';
 const BY_TOKEN = { [TOKEN]: AS, [NF_TOKEN]: NF };
 // AVIATOR_TOKEN opens Aviator only (read tools through the model), never MCP, REST or admin: <token>-ashby or <token>-northfield.
@@ -189,6 +190,18 @@ export function call(cid, name, args = {}) {
     log(cid, name, [], args, r.result, r.trial ? [r.trial] : [], { agent: assistantOf(cid), rule: r.change?.rule || null, mode: 'person', approver: 'None needed: a trial publishes nothing', outcome: r.trial ? `Trial ${r.trial}: ${r.drift_measure}` : r.message });
     return r;
   }
+  // P21 Admin and rules: rules by source, a supplier's own rule changed with its effect shown first, an agent action's approval mode.
+  if (name === 'list_rules_by_source') { const r = G.rulesBySource(db, cid === AS ? db : nfDb, cid); log(cid, name, [], args, 'Answered', []); return r; }
+  if (name === 'update_supplier_rule') {
+    const r = G.updateSupplierRule(db, cid, args, side.person);
+    log(cid, name, [], args, r.result, r.change ? [r.change] : [], { agent: assistantOf(cid), rule: r.rule || null, mode: 'person', approver: r.result === 'Rule changed' ? `${side.person} (asked in the assistant)` : 'None: nothing saved', outcome: r.result === 'Rule changed' ? `${r.rule} ${JSON.stringify(r.from)} to ${JSON.stringify(r.to)}` : r.message || r.result });
+    return r;
+  }
+  if (name === 'set_agent_mode') {
+    const r = G.setAgentMode(db, cid, args, AGENT_ACTIONS, side.person);
+    log(cid, name, [], args, r.result, r.change ? [r.change] : [], { agent: assistantOf(cid), rule: null, mode: 'person', approver: r.result === 'Mode changed' ? `${side.person} (asked in the assistant)` : 'None', outcome: r.result === 'Mode changed' ? `${r.agent} ${r.action}: ${r.from} to ${r.to}` : r.message || r.result });
+    return r;
+  }
   if (name === 'get_change_list') { const r = G.changeList(db, cid, { limit: args.limit || 50, kind: args.kind }); log(cid, name, [], args, 'Answered', r.entries.map((e) => e.id).slice(0, 50)); return r; }
   return { result: 'Invalid request', error: `Unknown tool ${name}` };
 }
@@ -227,7 +240,12 @@ const GOV = (cid) => [
   { name: 'pause_agent', title: 'Pause an agent', write: true, description: `Pauses one of ${SIDE[cid].company}’s agents (${agentNames(cid)}). While paused the agent proposes nothing: each event it would work arrives as a plain task with no proposal${cid === AS ? ', Claim Agent disputes nothing without asking, and Scout gets no model turn' : ''}. Recorded on the change list with who paused it and why. Only call this when the user asks.`, input: { agent: z.string().describe(`Agent name: ${agentNames(cid)}`), reason: z.string().optional() } },
   ...(cid === AS ? [{ name: 'replay_agent_rule', title: 'Trial a changed agent rule', write: true, description: 'Replays a change to one of Ashby’s agent rules (a parameter the catalogue holds, for example AP-4.1 max_amount 50) over records beside the rule in force, lists every record whose next step or authority differs, and records the trial on the change list with who ran it, the drift measure and the rollback path. Nothing is published and the catalogue is unchanged. Deduction cases default to every case of the quarter up to as_of.',
     input: { job: z.enum(Object.keys(JOBS)).describe('Agent job, for example deduction (Claim Agent)'), rule: z.string().describe('Ashby rule id, for example AP-4.1'), params: z.record(z.number()).describe('Parameters to change, for example {"max_amount": 50}'), records: z.array(z.string()).optional().describe('Records to replay; deduction defaults to the quarter’s cases'), as_of: z.string().optional() } }] : []),
-  { name: 'get_change_list', title: 'Agent change list', description: 'Each agent with its state (Active or Paused) and authority limit, and the change list newest first: every pause, resume and trial of a changed agent rule, with what changed, the replay result, who did it and when.', input: { limit: z.number().int().min(1).max(200).optional(), kind: z.enum(['pause', 'resume', 'trial']).optional() } },
+  { name: 'get_change_list', title: 'Agent change list', description: 'Each agent with its state (Active or Paused) and authority limit, and the change list newest first: every pause, resume, trial of a changed agent rule, rule change and approval-mode change, with what changed, the result, who did it and when.', input: { limit: z.number().int().min(1).max(200).optional(), kind: z.enum(['pause', 'resume', 'trial', 'rule_change', 'mode']).optional() } },
+  { name: 'list_rules_by_source', title: 'Rules by source', description: `Every rule ${SIDE[cid].company} trades under, grouped by where it comes from: the Supplier ERP, Ashby's manual rules, Northfield's guide, and standards and law. Each with who created it and when, its parameters, its last change and whether ${SIDE[cid].company} may edit it here. Changes nothing.`, input: {} },
+  ...(cid === AS ? [{ name: 'update_supplier_rule', title: 'Change one of Ashby’s own rules', write: true, description: 'Changes a parameter of one of Ashby’s manual rules (for example AP-4.1 max_amount 150, AP-6.4 carton 40, KX-945 hours 24). Without apply it shows which open work the change touches and saves nothing; with apply true it saves the change in the catalogue the agents read, records it on the change list with who made it, and every agent uses it on its next run. Northfield’s guide and standards are read-only. Only call with apply true when the user has decided.',
+    input: { rule: z.string().describe('Ashby rule id, for example AP-4.1'), params: z.record(z.number()).describe('Parameters to change, for example {"max_amount": 150}'), apply: z.boolean().optional().describe('true saves the change; omitted shows its effect only'), records: z.array(z.string()).optional(), as_of: z.string().optional() } }] : []),
+  { name: 'set_agent_mode', title: 'Set an agent action’s approval mode', write: true, description: `Sets the standing approval mode of one action of one of ${SIDE[cid].company}’s agents (${agentNames(cid)}) for Northfield Retailer: suggest (the agent only suggests), approve (${SIDE[cid].person} approves each), or policy (it runs under the standing policy). Only actions ${SIDE[cid].person} may change; locked actions and guardrails stay. Recorded on the change list; the agent uses it on its next run. Only call this when the user has decided.`,
+    input: { agent: z.string().describe(`Agent name: ${agentNames(cid)}`), action: z.string().describe('Action name, as the agent’s setup tool lists it'), mode: z.enum(['suggest', 'approve', 'policy']), retailer: z.string().optional() } },
 ];
 export const GOV_TOOLS = { [AS]: GOV(AS), [NF]: GOV(NF) };
 
@@ -262,7 +280,7 @@ function scoutGov(sess) {
   return g;
 }
 function drainScout(sessionId) { const sess = Scout.getSession(sessionId); if (!sess) return; for (const a of sess.audit.slice(sess.audited || 0)) log(AS, `scout:${a.action}`, [], { session: a.session, proposal: a.proposal }, a.outcome, [a.session, a.proposal], { agent: a.agent, rule: a.authority_rule, mode: a.authority_mode, approver: a.approver, outcome: a.outcome }); sess.audited = sess.audit.length; }
-async function scoutStart({ variation, facts, policy, label } = {}) { const sess = Scout.startSession(db, { variation: branchWith(variation, facts), policy: policy || {}, label: label || 'Operator' }); const run = await Scout.runScout(db, sess, { callModel: scoutModel(), paused: scoutPaused }); drainScout(sess.id); return scoutView(sess, run.ok ? {} : { blocked: run.blocked || run.status }); }
+async function scoutStart({ variation, facts, policy, label } = {}) { const sess = Scout.startSession(db, { variation: branchWith(variation, facts), policy: withModes('Scout Agent', policy), label: label || 'Operator' }); const run = await Scout.runScout(db, sess, { callModel: scoutModel(), paused: scoutPaused }); drainScout(sess.id); return scoutView(sess, run.ok ? {} : { blocked: run.blocked || run.status }); }
 async function scoutDecide({ session, proposal, decision, note }) { const sess = Scout.getSession(session); if (!sess) return scoutView(null); const r = await Scout.decideAndResume(db, sess, proposal, decision, 'Priya Raman', { callModel: scoutModel(), paused: scoutPaused, note }); drainScout(sess.id); if (r.state === 'Refused') return { ...r, result: 'Refused' }; return scoutView(sess, r.run?.ok === false ? { blocked: r.run.blocked || r.run.status } : {}); }
 async function scoutBaseline({ variation, facts, policy } = {}) { const sess = Scout.startSession(db, { variation: branchWith(variation, facts), policy: policy || {}, label: 'Rule baseline' }); Scout.runBaseline(db, sess); drainScout(sess.id); return scoutView(sess); }
 const brief = (tr) => tr.map((t) => `${t.n}. ${t.clock.slice(11, 16)} ${t.actor} [${Scout.TYPES[t.type] || t.type}] ${t.what}${t.detail?.args && Object.keys(t.detail.args).length ? ' ' + JSON.stringify(t.detail.args) : ''}${t.detail?.response ? ' · ' + t.detail.response : ''}${t.detail?.reason ? ' · ' + t.detail.reason : ''}${t.detail?.rationale ? ' · why: ' + t.detail.rationale : ''}${t.detail?.text ? ' · ' + t.detail.text.slice(0, 240) : ''}`);
@@ -305,7 +323,7 @@ export const watchView = (sess, extra = {}) => sess ? ({ session: sess.id, label
   confirmations_pending: sess.pending.map((p) => ({ at: fmtET(p.at), what: p.doc_type === '997' ? 'Technical acknowledgment (997)' : p.doc_type === '861' ? 'Northfield receiving advice (861)' : p.doc_type === '945' ? 'Kinross shipping advice (945)' : 'Kinross scan', po: p.po })),
   outcome: Watch.outcome(db, sess), trace: sess.trace, overhead: { model_calls: sess.agent.calls, tool_calls: sess.agent.tool_calls, ms: sess.agent.ms, model_routes: sess.agent.routes || {} }, ...extra }) : { result: 'Invalid request', error: 'No such session; sessions live in memory and end when the server restarts.' };
 function drainWatch(sessionId) { const sess = Watch.getSession(sessionId); if (!sess) return; for (const a of sess.audit.slice(sess.audited || 0)) log(AS, `watch:${a.action}`, [], { session: a.session, proposal: a.proposal }, a.outcome, [a.session, a.proposal], { agent: a.agent, rule: a.authority_rule, mode: a.authority_mode, approver: a.approver, outcome: a.outcome }); sess.audited = sess.audit.length; }
-async function watchStart({ variation, facts, policy, label } = {}) { const sess = Watch.startSession(db, { variation: watchBranch(variation, facts), policy: policy || {}, label: label || 'Operator' }); const run = await Watch.runWatch(db, sess, { callModel: scoutModel(), paused: watchPaused }); drainWatch(sess.id); return watchView(sess, run.ok ? {} : { blocked: run.blocked || run.status }); }
+async function watchStart({ variation, facts, policy, label } = {}) { const sess = Watch.startSession(db, { variation: watchBranch(variation, facts), policy: withModes('Watch Agent', policy), label: label || 'Operator' }); const run = await Watch.runWatch(db, sess, { callModel: scoutModel(), paused: watchPaused }); drainWatch(sess.id); return watchView(sess, run.ok ? {} : { blocked: run.blocked || run.status }); }
 async function watchDecide({ session, proposal, decision, note }) { const sess = Watch.getSession(session); if (!sess) return watchView(null); const r = await Watch.decideAndResume(db, sess, proposal, decision, 'Priya Raman', { callModel: scoutModel(), paused: watchPaused, note }); drainWatch(sess.id); if (r.state === 'Refused') return { ...r, result: 'Refused' }; return watchView(sess, r.run?.ok === false ? { blocked: r.run.blocked || r.run.status } : {}); }
 async function watchState({ session, advance_minutes } = {}) { const sess = Watch.getSession(session); if (!sess) return watchView(null); if (!advance_minutes) return watchView(sess);
   const r = await Watch.advanceAndResume(db, sess, { minutes: advance_minutes, callModel: scoutModel(), paused: watchPaused }); drainWatch(sess.id); return watchView(sess, { arrived: r.arrived, ...(r.run?.ok === false ? { blocked: r.run.blocked || r.run.status } : {}) }); }
@@ -343,7 +361,7 @@ export const matchView = (sess, extra = {}) => sess ? ({ session: sess.id, label
   outcome: Match.outcome(nfDb, sess), ...(sess.simplest ? { simplest_baseline: sess.simplest } : {}), ashby_sees: Match.supplierView(sess), trace: sess.trace, overhead: { model_calls: sess.agent.calls, tool_calls: sess.agent.tool_calls, ms: sess.agent.ms, model_routes: sess.agent.routes || {} }, ...extra })
   : { result: 'Invalid request', error: 'No such session; sessions live in memory and end when the server restarts.' };
 function drainMatch(sessionId) { const sess = Match.getSession(sessionId); if (!sess) return; for (const a of sess.audit.slice(sess.audited || 0)) log(NF, `match:${a.action}`, [], { session: a.session, proposal: a.proposal }, a.outcome, [a.session, a.proposal, a.record].filter(Boolean), { agent: a.agent, rule: a.authority_rule, mode: a.authority_mode, approver: a.approver, outcome: a.outcome }); sess.audited = sess.audit.length; }
-async function matchStart({ variation, facts, policy, label } = {}) { const sess = Match.startSession(nfDb, { facts: matchFacts(variation, facts), policy: policy || {}, label: label || 'Operator' }); const run = await Match.runMatch(nfDb, sess, { callModel: matchModel(), paused: matchPaused }); drainMatch(sess.id); return matchView(sess, run.ok ? {} : { blocked: run.blocked || run.status }); }
+async function matchStart({ variation, facts, policy, label } = {}) { const sess = Match.startSession(nfDb, { facts: matchFacts(variation, facts), policy: withModes('Match Agent', policy), label: label || 'Operator' }); const run = await Match.runMatch(nfDb, sess, { callModel: matchModel(), paused: matchPaused }); drainMatch(sess.id); return matchView(sess, run.ok ? {} : { blocked: run.blocked || run.status }); }
 async function matchDecide({ session, proposal, decision, note }) { const sess = Match.getSession(session); if (!sess) return matchView(null); const r = await Match.decideAndResume(nfDb, sess, proposal, decision, 'Jordan Ellis', { callModel: matchModel(), paused: matchPaused, note }); drainMatch(sess.id); if (r.state === 'Refused') return { ...r, result: 'Refused' }; const dec = r.decision?.approval ? { state: r.decision.state, ...r.decision.approval } : { state: r.decision?.state, by: 'Jordan Ellis', proposal, payment: Match.PAYMENT_UNCHANGED }; return matchView(sess, { decision: dec, ...(r.run?.ok === false ? { blocked: r.run.blocked || r.run.status } : {}) }); }
 async function matchBaseline({ variation, facts, policy } = {}) { const sess = Match.startSession(nfDb, { facts: matchFacts(variation, facts), policy: policy || {}, label: 'Rule baseline' }); Match.runBaseline(nfDb, sess); drainMatch(sess.id); return matchView(sess); }
 async function matchReplay({ variation, facts, policy, detail } = {}, by = assistantOf(NF)) {
@@ -364,7 +382,14 @@ const MATCH_TOOLS = [
 ];
 // ---------- Claim, Pace and Shelf (Ashby) and Review and Chase (Northfield): agents on the shared runtime (src/runtime.js, D61) ----------
 const rtModel = () => Scout.geminiCaller(Aviator.modelRoutes());
-const rtSet = (cid, rt, name, dataDb) => runtimeTools(rt, { name, db: dataDb, callModel: rtModel, paused: () => G.isPaused(db, rt.agent),
+/** Each agent's settable actions, from its own setup tool, for set_agent_mode. */
+function AGENT_ACTIONS(agent) {
+  const rt = { 'Claim Agent': Claim, 'Pace Agent': Pace, 'Shelf Agent': Shelf, 'Review Agent': Review, 'Chase Agent': Chase }[agent];
+  if (rt) return rt.setup().actions; if (agent === 'Scout Agent') return Scout.setup().actions; if (agent === 'Watch Agent') return Watch.setup().actions; if (agent === 'Match Agent') return Match.setup(nfDb).actions; return null;
+}
+/** A run's approval modes: the standing modes set in admin (P21), then any the run itself asks for. */
+const withModes = (agent, policy) => ({ ...G.modesOf(db, agent), ...(policy || {}) });
+const rtSet = (cid, rt, name, dataDb) => runtimeTools(rt, { name, db: dataDb, callModel: rtModel, paused: () => G.isPaused(db, rt.agent), modes: () => G.modesOf(db, rt.agent),
   log: (tool, args, outcome, records, w) => log(cid, tool, [], args, outcome, records, w), recordTrial: (t) => G.recordTrial(db, cid, t), by: () => assistantOf(cid) });
 export const RUNTIME_TOOLS = { [AS]: [...rtSet(AS, Claim, 'claim', db), ...rtSet(AS, Pace, 'pace', db), ...rtSet(AS, Shelf, 'shelf', db)], [NF]: [...rtSet(NF, Review, 'review', nfDb), ...rtSet(NF, Chase, 'chase', nfDb)] };
 // A replay runs the baseline and the agent end to end and can outlast a connector's call budget (about four minutes). Every
@@ -506,6 +531,8 @@ app.post('/admin/:token/reset', (req, res) => {
   const cid = cidOf(req, res); if (!cid) return;
   db.prepare('DELETE FROM events WHERE id > ?').run(BASELINE_EVENT); db.prepare('DELETE FROM proposals').run(); db.prepare('DELETE FROM access_log').run(); db.prepare('DELETE FROM rule_replays').run(); db.prepare('DELETE FROM agent_changes').run();
   db.prepare("UPDATE draft_rules SET state = 'Draft'").run();
+  for (const r of BASELINE_RULES) db.prepare('UPDATE rules SET statement = ?, params = ? WHERE id = ?').run(r.statement, r.params, r.id);
+  for (const v of BASELINE_VERSIONS) db.prepare('UPDATE rule_versions SET statement = ?, params = ? WHERE rule_id = ? AND valid_from = ?').run(v.statement, v.params, v.rule_id, v.valid_from);
   for (const c of [AS, NF]) db.prepare('UPDATE connections SET scopes = ? WHERE id = ?').run(JSON.stringify(SIDE[c].scopes), c);
   res.redirect(`/admin/${req.params.token}`);
 });

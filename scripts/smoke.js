@@ -21,8 +21,8 @@ await withServer({ WRITES: 'off' }, 3971, async ({ base, client, tool, rest }) =
   // 19 record tools, six Scout tools (CALLS 81), six Watch tools (P13) and three governance tools (T2.3). Scout tools change only an isolated in-memory session, never a
   // Trading Grid record, but they are not marked read-only so that a client still confirms before approving on Priya's behalf. Pause, resume and
   // a trial record on the change list, so they are not read-only either; get_change_list is.
-  const scout = names.filter((n) => n.startsWith('scout_')); const watch = names.filter((n) => n.startsWith('watch_')); const GOVW = ['pause_agent', 'replay_agent_rule'];
-  ok('53 tools listed: 19 record tools, 6 each for Scout, Watch, Claim, Pace and Shelf, 3 governance tools and Aviator; no resume tool', !names.includes('resume_agent') && names.length === 53 && ['claim_', 'pace_', 'shelf_'].every((p) => names.filter((x) => x.startsWith(p)).length === 6) && names.includes('ask_aviator') && scout.length === 6 && watch.length === 6 && [...GOVW, 'get_change_list'].every((g) => names.includes(g)), `${names.length}, ${scout.length} Scout, ${watch.length} Watch`); ok('no scenario tool', !names.includes('list_scenarios'));
+  const scout = names.filter((n) => n.startsWith('scout_')); const watch = names.filter((n) => n.startsWith('watch_')); const GOVW = ['pause_agent', 'replay_agent_rule', 'update_supplier_rule', 'set_agent_mode'];
+  ok('56 tools listed: 19 record tools, 6 each for Scout, Watch, Claim, Pace and Shelf, 6 governance and admin tools and Aviator; no resume tool', !names.includes('resume_agent') && names.length === 56 && ['claim_', 'pace_', 'shelf_'].every((p) => names.filter((x) => x.startsWith(p)).length === 6) && names.includes('ask_aviator') && scout.length === 6 && watch.length === 6 && [...GOVW, 'get_change_list'].every((g) => names.includes(g)), `${names.length}, ${scout.length} Scout, ${watch.length} Watch`); ok('no scenario tool', !names.includes('list_scenarios'));
   ok('every record tool read-only', tools.filter((t) => !/^(scout|watch|claim|pace|shelf)_/.test(t.name) && !GOVW.includes(t.name)).every((t) => t.annotations?.readOnlyHint === true));
   ok('governance writes are not marked read-only', tools.filter((t) => GOVW.includes(t.name) || (t.name.startsWith('scout_') && t.name !== 'scout_setup') || (t.name.startsWith('watch_') && t.name !== 'watch_setup')).every((t) => t.annotations?.readOnlyHint === false) && tools.find((t) => t.name === 'watch_setup')?.annotations?.readOnlyHint === true);
   { const av = await tool('ask_aviator', { question: 'What is the order value of NR-450118?' }); const lg = await tool('get_access_log', { limit: 3 });
@@ -74,7 +74,7 @@ await withServer({}, 3972, async ({ base, tool }) => {
 });
 // Both scopes on one world: shared documents, private records, refusals, and one deduction case worked from both sides.
 await withServer({}, 3973, async ({ base, nfClient, tool, nf }) => {
-  const { tools } = await nfClient.listTools(); ok('Northfield: 37 tools (16, 2 governance, Aviator, and 6 each for Match, Review and Chase), no resume tool', tools.length === 37 && ['match', 'review', 'chase'].every((p) => ['setup', 'start', 'decide', 'state', 'baseline', 'replay'].every((x) => tools.some((t) => t.name === `${p}_${x}`))) && tools.some((t) => t.name === 'ask_aviator') && !tools.some((t) => t.name === 'resume_agent') && ['pause_agent', 'get_change_list'].every((g) => tools.some((t) => t.name === g)), String(tools.length));
+  const { tools } = await nfClient.listTools(); ok('Northfield: 39 tools (16, 4 governance and admin, Aviator, and 6 each for Match, Review and Chase), no resume tool', tools.length === 39 && ['match', 'review', 'chase'].every((p) => ['setup', 'start', 'decide', 'state', 'baseline', 'replay'].every((x) => tools.some((t) => t.name === `${p}_${x}`))) && tools.some((t) => t.name === 'ask_aviator') && !tools.some((t) => t.name === 'resume_agent') && ['pause_agent', 'get_change_list'].every((g) => tools.some((t) => t.name === g)), String(tools.length));
   const x = (await tool('get_document', { reference: 'ASN-450118-2' })).x12, y = (await nf('get_document', { reference: 'ASN-450118-2' })).x12; ok('shared X12 is the same on both sides', !!x && x === y);
   { const pre = await nf('supplier_document_trail', { po: 'NR-460207' }), post = await nf('supplier_document_trail', { po: 'NR-460207', as_of: '2026-12-04T10:00:00-05:00' });
     ok('Northfield trail: no such order before it is sent', pre.found === false && /^No such order as of/.test(pre.message) && !('order_value' in pre) && !('requested_delivery' in pre) && post.found === true && post.documents.length >= 1, JSON.stringify(pre).slice(0, 120)); }
@@ -198,4 +198,27 @@ await withServer({}, 3975, async ({ base, client, nfClient, tool, nf }) => {
   { const md = await nf('match_decide', { session: mb.session, proposal: 'MP-1', decision: 'approve' }); ok('Match: an executed proposal cannot be approved again', md.result === 'Refused', JSON.stringify(md).slice(0, 160)); }
   await nf('pause_agent', { agent: 'Match Agent' }); const pz = await nf('match_start', {}); ok('Match: paused, each held invoice is a plain task with no model call', pz.status === 'paused' && pz.plain_task?.proposal === null && pz.overhead.model_calls === 0 && !pz.blocked, JSON.stringify(pz).slice(0, 160));
 });
+// P21 Admin and rules: rules by source; an Ashby rule changed with its effect shown first; the next agent run reads it; an approval
+// mode set in admin reaches the next run; Northfield cannot edit Ashby's rules and Ashby cannot edit Northfield's; reset restores.
+await withServer({}, 3975, async ({ base, tool, nf }) => {
+  const src = await tool('list_rules_by_source'); const g = Object.fromEntries(src.groups.map((x) => [x.source, x]));
+  ok('rules by source: Ashby manual rules editable, Northfield guide read-only', g['Ashby manual rules'].count === 21 && !g['Ashby manual rules'].read_only && g['Northfield guide'].read_only && g['Northfield guide'].count === 51 && g['Ashby manual rules'].rules.find((r) => r.id === 'AP-4.1').created_by === 'Priya Raman', JSON.stringify(src.groups.map((x) => [x.source, x.count])));
+  ok('Northfield sees no Ashby rule', (await nf('list_rules_by_source')).groups.find((x) => x.source === 'Ashby manual rules').count === 0);
+  const preview = await tool('update_supplier_rule', { rule: 'AP-4.1', params: { max_amount: 50 } });
+  ok('a rule change shows its effect first and saves nothing', preview.result === 'Effect shown; nothing saved' && preview.effect.changed.some((c) => c.record === 'DC-40877') && (await tool('list_rules_by_source')).groups.find((x) => x.source === 'Ashby manual rules').rules.find((r) => r.id === 'AP-4.1').params.max_amount === 250, JSON.stringify(preview.effect).slice(0, 200));
+  ok('another company’s rule is read-only', (await tool('update_supplier_rule', { rule: 'NF-4.2', params: { hours: 2 } })).result === 'Invalid request' && (await nf('update_supplier_rule', { rule: 'AP-4.1', params: { max_amount: 1 } }).catch(() => ({ result: 'Invalid request' }))).result !== 'Rule changed');
+  const ch = preview.effect.changed[0] || {}; const before = await tool('recommend_next_step', { job: 'deduction', record: ch.record, as_of: '2026-12-28T10:00:00-05:00' });
+  const saved = await tool('update_supplier_rule', { rule: 'AP-4.1', params: { max_amount: 50 }, apply: true });
+  ok('apply saves the change with who made it, on the change list', saved.result === 'Rule changed' && /\$50/.test(saved.statement) && (await tool('get_change_list', { kind: 'rule_change' })).entries[0]?.run_by === 'Priya Raman', JSON.stringify(saved).slice(0, 200));
+  const nx = await tool('recommend_next_step', { job: 'deduction', record: ch.record, as_of: '2026-12-28T10:00:00-05:00' });
+  ok('the next agent decision reads the changed limit', nx.authority !== before.authority && nx.authority === ch.with_change?.authority, `${ch.record}: ${before.authority} -> ${nx.authority}`);
+  const m = await tool('set_agent_mode', { agent: 'Shelf Agent', action: 'recommend_order', mode: 'suggest' });
+  ok('set_agent_mode records the standing mode', m.result === 'Mode changed' && m.from === 'approve' && m.to === 'suggest', JSON.stringify(m));
+  ok('a locked action cannot change mode', (await tool('set_agent_mode', { agent: 'Shelf Agent', action: 'wait_for_transit', mode: 'approve' })).result === 'Invalid request');
+  const sb = await tool('shelf_baseline', {});
+  ok('the next run uses the standing mode: recommend_order only suggests', JSON.stringify(sb.trace).includes('suggest') || (sb.suggested || []).some((x) => x.action === 'recommend_order'), JSON.stringify(sb.suggested || []).slice(0, 160));
+  await fetch(`${base}/admin/smoke/reset`, { method: 'POST', redirect: 'manual' });
+  ok('reset restores the catalogue and clears standing modes', (await tool('list_rules_by_source')).groups.find((x) => x.source === 'Ashby manual rules').rules.find((r) => r.id === 'AP-4.1').params.max_amount === 250 && !(await tool('get_change_list', { kind: 'mode' })).entries.length);
+});
+
 console.log(`${pass} smoke checks passed, ${fails.length} failed`); for (const f of fails) console.log(`FAIL ${f}`); process.exit(fails.length ? 1 : 0);

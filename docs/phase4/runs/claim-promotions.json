@@ -1,0 +1,1712 @@
+{
+ "agent": "Claim Agent (promotions)",
+ "tool": "claim_replay",
+ "args": {
+  "facts": {
+   "moment": "2027-01-06 09:00 ET"
+  }
+ },
+ "job": "JOB-904f355ae45b",
+ "status": "finished",
+ "started": "2026-11-16T18:52:52.234Z",
+ "finished": "2026-11-16T18:54:33.620Z",
+ "trial": "CL-0001",
+ "baseline_session": "CL-160ecbe78a",
+ "agent_session": "CL-914ac4eb2c",
+ "baseline_outcome": {
+  "as_of": "2027-01-06 09:10 ET",
+  "payment": "PMT-990168",
+  "deductions": [
+   {
+    "deduction": "PD-2701-01",
+    "deal": "NFP-2610-01",
+    "amount": 728,
+    "state": "Accepted"
+   },
+   {
+    "deduction": "PD-2701-02",
+    "deal": "NFP-2610-01",
+    "amount": 370,
+    "state": "Accepted"
+   },
+   {
+    "deduction": "PD-2701-03",
+    "deal": "NFP-2611-02",
+    "amount": 714,
+    "state": "Accepted"
+   },
+   {
+    "deduction": "PD-2701-04",
+    "deal": "NFP-2612-03",
+    "amount": 1600.2,
+    "state": "Accepted"
+   },
+   {
+    "deduction": "PD-2701-05",
+    "deal": "NFP-2702-04",
+    "amount": 40.5,
+    "state": "Accepted"
+   }
+  ],
+  "disputed": [],
+  "accepted": [
+   "PD-2701-01",
+   "PD-2701-02",
+   "PD-2701-03",
+   "PD-2701-04",
+   "PD-2701-05"
+  ],
+  "recovered_and_matched": 0,
+  "reversed_not_yet_repaid": 0,
+  "accepted_amount": 3452.7,
+  "unsupported_on_record": 677.2,
+  "violations": [],
+  "synthetic": "Vividly matches, Northfield decisions and repayments at the promotion moment are synthetic, from the world’s deal settlement and the rules in src/claim.js."
+ },
+ "agent_status": "done",
+ "agent_outcome": {
+  "as_of": "2027-01-18 09:17 ET",
+  "payment": "PMT-990168",
+  "deductions": [
+   {
+    "deduction": "PD-2701-01",
+    "deal": "NFP-2610-01",
+    "amount": 728,
+    "state": "Accepted"
+   },
+   {
+    "deduction": "PD-2701-02",
+    "deal": "NFP-2610-01",
+    "amount": 370,
+    "state": "Repayment matched"
+   },
+   {
+    "deduction": "PD-2701-03",
+    "deal": "NFP-2611-02",
+    "amount": 714,
+    "state": "Accepted"
+   },
+   {
+    "deduction": "PD-2701-04",
+    "deal": "NFP-2612-03",
+    "amount": 1600.2,
+    "state": "Repayment matched"
+   },
+   {
+    "deduction": "PD-2701-05",
+    "deal": "NFP-2702-04",
+    "amount": 40.5,
+    "state": "Repayment matched"
+   }
+  ],
+  "disputed": [
+   "PD-2701-02",
+   "PD-2701-04",
+   "PD-2701-05"
+  ],
+  "accepted": [
+   "PD-2701-01",
+   "PD-2701-03"
+  ],
+  "recovered_and_matched": 677.2,
+  "reversed_not_yet_repaid": 0,
+  "accepted_amount": 1442,
+  "unsupported_on_record": 677.2,
+  "violations": [],
+  "synthetic": "Vividly matches, Northfield decisions and repayments at the promotion moment are synthetic, from the world’s deal settlement and the rules in src/claim.js."
+ },
+ "agent_overhead": {
+  "model_calls": 26,
+  "tool_calls": 32,
+  "ms": 101035
+ },
+ "automation": {
+  "same_steps": [
+   "accept_charge PD-2701-01",
+   "accept_charge PD-2701-03"
+  ],
+  "baseline_only": [
+   "accept_charge PD-2701-02",
+   "accept_charge PD-2701-04",
+   "accept_charge PD-2701-05"
+  ],
+  "agent_only": [
+   "submit_dispute PD-2701-04",
+   "submit_dispute PD-2701-02",
+   "submit_dispute PD-2701-05",
+   "match_repayment PD-2701-04",
+   "match_repayment PD-2701-02",
+   "match_repayment PD-2701-05"
+  ]
+ },
+ "replay_answer": {
+  "trial": "CL-0001",
+  "changes": [
+   {
+    "field": "moment",
+    "from": "2026-12-01 09:00 ET",
+    "to": "2027-01-06 09:00 ET"
+   }
+  ],
+  "evidence_cutoff": "2027-01-06 09:00 ET",
+  "baseline": {
+   "session": "CL-160ecbe78a",
+   "outcome": {
+    "as_of": "2027-01-06 09:10 ET",
+    "payment": "PMT-990168",
+    "deductions": [
+     {
+      "deduction": "PD-2701-01",
+      "deal": "NFP-2610-01",
+      "amount": 728,
+      "state": "Accepted"
+     },
+     {
+      "deduction": "PD-2701-02",
+      "deal": "NFP-2610-01",
+      "amount": 370,
+      "state": "Accepted"
+     },
+     {
+      "deduction": "PD-2701-03",
+      "deal": "NFP-2611-02",
+      "amount": 714,
+      "state": "Accepted"
+     },
+     {
+      "deduction": "PD-2701-04",
+      "deal": "NFP-2612-03",
+      "amount": 1600.2,
+      "state": "Accepted"
+     },
+     {
+      "deduction": "PD-2701-05",
+      "deal": "NFP-2702-04",
+      "amount": 40.5,
+      "state": "Accepted"
+     }
+    ],
+    "disputed": [],
+    "accepted": [
+     "PD-2701-01",
+     "PD-2701-02",
+     "PD-2701-03",
+     "PD-2701-04",
+     "PD-2701-05"
+    ],
+    "recovered_and_matched": 0,
+    "reversed_not_yet_repaid": 0,
+    "accepted_amount": 3452.7,
+    "unsupported_on_record": 677.2,
+    "violations": [],
+    "synthetic": "Vividly matches, Northfield decisions and repayments at the promotion moment are synthetic, from the world’s deal settlement and the rules in src/claim.js."
+   },
+   "trace": [
+    "1. 09:00 Trading Grid [System] Session branched from the recorded world",
+    "2. 09:00 Rule engine [Fixed rule] 5 open deductions to work",
+    "3. 09:00 Baseline [Fixed rule] Proposed: Accept the charge (no dispute) {\"record\":\"PD-2701-01\"}",
+    "4. 09:01 Test approver (replay) [Human approval] Approved CLP-1: Accept the charge (no dispute) {\"record\":\"PD-2701-01\"}",
+    "5. 09:02 Supplier ERP (deduction item) [External confirmation] Executed: Accept the charge (no dispute) · Promotion Scan-based $728.00 on PD-2701-01 accepted in the Supplier ERP",
+    "6. 09:02 Baseline [Fixed rule] Proposed: Accept the charge (no dispute) {\"record\":\"PD-2701-02\"}",
+    "7. 09:03 Test approver (replay) [Human approval] Approved CLP-2: Accept the charge (no dispute) {\"record\":\"PD-2701-02\"}",
+    "8. 09:04 Supplier ERP (deduction item) [External confirmation] Executed: Accept the charge (no dispute) · Promotion Scan-based $370.00 on PD-2701-02 accepted in the Supplier ERP",
+    "9. 09:04 Baseline [Fixed rule] Proposed: Accept the charge (no dispute) {\"record\":\"PD-2701-03\"}",
+    "10. 09:05 Test approver (replay) [Human approval] Approved CLP-3: Accept the charge (no dispute) {\"record\":\"PD-2701-03\"}",
+    "11. 09:06 Supplier ERP (deduction item) [External confirmation] Executed: Accept the charge (no dispute) · Promotion Bill-back $714.00 on PD-2701-03 accepted in the Supplier ERP",
+    "12. 09:06 Baseline [Fixed rule] Proposed: Accept the charge (no dispute) {\"record\":\"PD-2701-04\"}",
+    "13. 09:07 Test approver (replay) [Human approval] Approved CLP-4: Accept the charge (no dispute) {\"record\":\"PD-2701-04\"}",
+    "14. 09:08 Supplier ERP (deduction item) [External confirmation] Executed: Accept the charge (no dispute) · Promotion Bill-back $1600.20 on PD-2701-04 accepted in the Supplier ERP",
+    "15. 09:08 Baseline [Fixed rule] Proposed: Accept the charge (no dispute) {\"record\":\"PD-2701-05\"}",
+    "16. 09:09 Test approver (replay) [Human approval] Approved CLP-5: Accept the charge (no dispute) {\"record\":\"PD-2701-05\"}",
+    "17. 09:10 Supplier ERP (deduction item) [External confirmation] Executed: Accept the charge (no dispute) · Promotion Off-invoice $40.50 on PD-2701-05 accepted in the Supplier ERP"
+   ]
+  },
+  "agent": {
+   "session": "CL-914ac4eb2c",
+   "status": "done",
+   "outcome": {
+    "as_of": "2027-01-18 09:17 ET",
+    "payment": "PMT-990168",
+    "deductions": [
+     {
+      "deduction": "PD-2701-01",
+      "deal": "NFP-2610-01",
+      "amount": 728,
+      "state": "Accepted"
+     },
+     {
+      "deduction": "PD-2701-02",
+      "deal": "NFP-2610-01",
+      "amount": 370,
+      "state": "Repayment matched"
+     },
+     {
+      "deduction": "PD-2701-03",
+      "deal": "NFP-2611-02",
+      "amount": 714,
+      "state": "Accepted"
+     },
+     {
+      "deduction": "PD-2701-04",
+      "deal": "NFP-2612-03",
+      "amount": 1600.2,
+      "state": "Repayment matched"
+     },
+     {
+      "deduction": "PD-2701-05",
+      "deal": "NFP-2702-04",
+      "amount": 40.5,
+      "state": "Repayment matched"
+     }
+    ],
+    "disputed": [
+     "PD-2701-02",
+     "PD-2701-04",
+     "PD-2701-05"
+    ],
+    "accepted": [
+     "PD-2701-01",
+     "PD-2701-03"
+    ],
+    "recovered_and_matched": 677.2,
+    "reversed_not_yet_repaid": 0,
+    "accepted_amount": 1442,
+    "unsupported_on_record": 677.2,
+    "violations": [],
+    "synthetic": "Vividly matches, Northfield decisions and repayments at the promotion moment are synthetic, from the world’s deal settlement and the rules in src/claim.js."
+   },
+   "overhead": {
+    "model_calls": 26,
+    "tool_calls": 32,
+    "ms": 101035
+   },
+   "trace": [
+    "1. 09:00 Trading Grid [System] Session branched from the recorded world",
+    "2. 09:00 Rule engine [Fixed rule] 5 open deductions to work",
+    "15. 09:00 Claim Agent [AI judgment] Proposed: Dispute the charge in Northfield’s deduction case with the evidence that contradicts it (the NF-7.4 pack for a shortage; the deal, store activity or invoice for the unsupported amount of a promotion deduction) {\"record\":\"PD-2701-04\"} · why: Vividly found the claimed rate $0.60 per CA is above the agreed rate $0.50 on deal NFP-2612-03, so we dispute the unsupported amount of $266.70.",
+    "16. 09:00 Claim Agent [AI judgment] Proposed: Accept the charge (no dispute) {\"record\":\"PD-2701-01\"} · why: Vividly matched deduction PD-2701-01 of $728.00 to deal NFP-2610-01 as fully supported.",
+    "17. 09:00 Claim Agent [AI judgment] Proposed: Accept the charge (no dispute) {\"record\":\"PD-2701-03\"} · why: Vividly matched deduction PD-2701-03 of $714.00 to deal NFP-2611-02 as fully supported.",
+    "18. 09:00 Claim Agent [AI judgment] Proposed: Dispute the charge in Northfield’s deduction case with the evidence that contradicts it (the NF-7.4 pack for a shortage; the deal, store activity or invoice for the unsupported amount of a promotion deduction) {\"record\":\"PD-2701-02\"} · why: Vividly found no store activity report for the claimed period on deduction PD-2701-02, so the full amount of $370.00 is unsupported.",
+    "19. 09:00 Claim Agent [AI judgment] Proposed: Dispute the charge in Northfield’s deduction case with the evidence that contradicts it (the NF-7.4 pack for a shortage; the deal, store activity or invoice for the unsupported amount of a promotion deduction) {\"record\":\"PD-2701-05\"} · why: Vividly found deduction PD-2701-05 outside the deal's order window (order placed 2026-12-05 vs order window 2027-02-01 to 2027-02-28), so the full amount of $40.50 is unsupported.",
+    "21. 09:00 Claim Agent [AI judgment] Claim Agent said",
+    "22. 09:01 Test approver (replay) [Human approval] Approved CLP-1: Dispute the charge in Northfield’s deduction case with the evidence that contradicts it (the NF-7.4 pack for a shortage; the deal, store activity or invoice for the unsupported amount of a promotion deduction) {\"record\":\"PD-2701-04\"}",
+    "23. 09:04 Northfield deduction case [External confirmation] Executed: Dispute the charge in Northfield’s deduction case with the evidence that contradicts it (the NF-7.4 pack for a shortage; the deal, store activity or invoice for the unsupported amount of a promotion deduction) · Dispute of $266.70 of PD-2701-04 submitted to Northfield with 889 NFP-2612-03, 856 ship notices in the promoted period, Vividly match; $1333.50 stands",
+    "24. 09:05 Test approver (replay) [Human approval] Approved CLP-2: Accept the charge (no dispute) {\"record\":\"PD-2701-01\"}",
+    "25. 09:06 Supplier ERP (deduction item) [External confirmation] Executed: Accept the charge (no dispute) · Promotion Scan-based $728.00 on PD-2701-01 accepted in the Supplier ERP",
+    "26. 09:07 Test approver (replay) [Human approval] Approved CLP-3: Accept the charge (no dispute) {\"record\":\"PD-2701-03\"}",
+    "27. 09:08 Supplier ERP (deduction item) [External confirmation] Executed: Accept the charge (no dispute) · Promotion Bill-back $714.00 on PD-2701-03 accepted in the Supplier ERP",
+    "28. 09:09 Test approver (replay) [Human approval] Approved CLP-4: Dispute the charge in Northfield’s deduction case with the evidence that contradicts it (the NF-7.4 pack for a shortage; the deal, store activity or invoice for the unsupported amount of a promotion deduction) {\"record\":\"PD-2701-02\"}",
+    "29. 09:12 Northfield deduction case [External confirmation] Executed: Dispute the charge in Northfield’s deduction case with the evidence that contradicts it (the NF-7.4 pack for a shortage; the deal, store activity or invoice for the unsupported amount of a promotion deduction) · Dispute of $370.00 of PD-2701-02 submitted to Northfield with 889 NFP-2610-01, 852 history: no report for the claimed week, Vividly match; $0.00 stands",
+    "30. 09:13 Test approver (replay) [Human approval] Approved CLP-5: Dispute the charge in Northfield’s deduction case with the evidence that contradicts it (the NF-7.4 pack for a shortage; the deal, store activity or invoice for the unsupported amount of a promotion deduction) {\"record\":\"PD-2701-05\"}",
+    "31. 09:16 Northfield deduction case [External confirmation] Executed: Dispute the charge in Northfield’s deduction case with the evidence that contradicts it (the NF-7.4 pack for a shortage; the deal, store activity or invoice for the unsupported amount of a promotion deduction) · Dispute of $40.50 of PD-2701-05 submitted to Northfield with 889 NFP-2702-04, 810 INV-46487, Vividly match; $0.00 stands",
+    "34. 09:16 Claim Agent [AI judgment] Claim Agent said",
+    "35. 09:04 Northfield (synthetic) [External confirmation] Jordan Ellis reversed $266.70 of PD-2701-04",
+    "39. 09:04 Claim Agent [AI judgment] Claim Agent said",
+    "40. 09:12 Northfield (synthetic) [External confirmation] Jordan Ellis reversed $370.00 of PD-2701-02",
+    "42. 09:12 Claim Agent [AI judgment] Claim Agent said",
+    "43. 09:16 Northfield (synthetic) [External confirmation] Jordan Ellis reversed $40.50 of PD-2701-05",
+    "45. 09:16 Claim Agent [AI judgment] Claim Agent said",
+    "46. 09:04 Northfield remittance (synthetic) [External confirmation] Remittance PMT-S914A repays $266.70 referencing PD-2701-04",
+    "47. 09:04 Claim Agent [AI judgment] Proposed: Match a repayment on Northfield’s remittance to the deduction in receivables and close the case {\"record\":\"PD-2701-04\"} · why: Remittance PMT-S914A repays $266.70 referencing deduction PD-2701-04, allowing us to close the case under NF-7.6.",
+    "48. 09:05 Supplier ERP (receivables) [External confirmation] Executed: Match a repayment on Northfield’s remittance to the deduction in receivables and close the case · PMT-S914A matched to PD-2701-04 in receivables; PD-2701-04 closed",
+    "51. 09:05 Claim Agent [AI judgment] Claim Agent said",
+    "52. 09:12 Northfield remittance (synthetic) [External confirmation] Remittance PMT-S914A repays $370.00 referencing PD-2701-02",
+    "53. 09:12 Claim Agent [AI judgment] Proposed: Match a repayment on Northfield’s remittance to the deduction in receivables and close the case {\"record\":\"PD-2701-02\"} · why: Remittance PMT-S914A repays $370.00 referencing deduction PD-2701-02, allowing us to close the case under NF-7.6.",
+    "54. 09:13 Supplier ERP (receivables) [External confirmation] Executed: Match a repayment on Northfield’s remittance to the deduction in receivables and close the case · PMT-S914A matched to PD-2701-02 in receivables; PD-2701-02 closed",
+    "56. 09:13 Claim Agent [AI judgment] Claim Agent said",
+    "57. 09:16 Northfield remittance (synthetic) [External confirmation] Remittance PMT-S914A repays $40.50 referencing PD-2701-05",
+    "58. 09:16 Claim Agent [AI judgment] Proposed: Match a repayment on Northfield’s remittance to the deduction in receivables and close the case {\"record\":\"PD-2701-05\"} · why: Remittance PMT-S914A repays $40.50 referencing deduction PD-2701-05, allowing us to close the case under NF-7.6.",
+    "59. 09:17 Supplier ERP (receivables) [External confirmation] Executed: Match a repayment on Northfield’s remittance to the deduction in receivables and close the case · PMT-S914A matched to PD-2701-05 in receivables; PD-2701-05 closed",
+    "61. 09:17 Claim Agent [AI judgment] Claim Agent said"
+   ]
+  },
+  "automation": {
+   "same_steps": [
+    "accept_charge PD-2701-01",
+    "accept_charge PD-2701-03"
+   ],
+   "baseline_only": [
+    "accept_charge PD-2701-02",
+    "accept_charge PD-2701-04",
+    "accept_charge PD-2701-05"
+   ],
+   "agent_only": [
+    "submit_dispute PD-2701-04",
+    "submit_dispute PD-2701-02",
+    "submit_dispute PD-2701-05",
+    "match_repayment PD-2701-04",
+    "match_repayment PD-2701-02",
+    "match_repayment PD-2701-05"
+   ]
+  }
+ },
+ "session_views": {
+  "baseline": {
+   "session": "CL-160ecbe78a",
+   "agent": "Claim Agent",
+   "label": "Replay · baseline",
+   "clock": "2027-01-06 09:10 ET",
+   "branch_at": "2027-01-06 09:00 ET",
+   "status": "idle",
+   "variation": [
+    {
+     "field": "moment",
+     "from": "2026-12-01 09:00 ET",
+     "to": "2027-01-06 09:00 ET"
+    }
+   ],
+   "facts": {
+    "moment": "2027-01-06 09:00 ET",
+    "kinross_reachable": "yes",
+    "lakeline_reachable": "yes",
+    "northfield_decision": "by_evidence",
+    "kinross_note": ""
+   },
+   "queue": {
+    "as_of": "2027-01-06 09:10 ET",
+    "rows": [
+     {
+      "id": "PD-2701-04",
+      "record": "PD-2701-04",
+      "deal": "NFP-2612-03",
+      "charge": "Promotion Bill-back",
+      "amount": 1600.2,
+      "what": "Bill-back deduction $1600.20 on PMT-990168 for deal NFP-2612-03; not yet matched",
+      "state": "Accepted",
+      "closed": true,
+      "vividly": null
+     },
+     {
+      "id": "PD-2701-01",
+      "record": "PD-2701-01",
+      "deal": "NFP-2610-01",
+      "charge": "Promotion Scan-based",
+      "amount": 728,
+      "what": "Scan-based deduction $728.00 on PMT-990168 for deal NFP-2610-01; not yet matched",
+      "state": "Accepted",
+      "closed": true,
+      "vividly": null
+     },
+     {
+      "id": "PD-2701-03",
+      "record": "PD-2701-03",
+      "deal": "NFP-2611-02",
+      "charge": "Promotion Bill-back",
+      "amount": 714,
+      "what": "Bill-back deduction $714.00 on PMT-990168 for deal NFP-2611-02; not yet matched",
+      "state": "Accepted",
+      "closed": true,
+      "vividly": null
+     },
+     {
+      "id": "PD-2701-02",
+      "record": "PD-2701-02",
+      "deal": "NFP-2610-01",
+      "charge": "Promotion Scan-based",
+      "amount": 370,
+      "what": "Scan-based deduction $370.00 on PMT-990168 for deal NFP-2610-01; not yet matched",
+      "state": "Accepted",
+      "closed": true,
+      "vividly": null
+     },
+     {
+      "id": "PD-2701-05",
+      "record": "PD-2701-05",
+      "deal": "NFP-2702-04",
+      "charge": "Promotion Off-invoice",
+      "amount": 40.5,
+      "what": "Off-invoice deduction $40.50 on PMT-990168 for deal NFP-2702-04; not yet matched",
+      "state": "Accepted",
+      "closed": true,
+      "vividly": null
+     }
+    ],
+    "open": 0
+   },
+   "awaiting": [],
+   "suggested": [],
+   "pending": [],
+   "roles": [
+    {
+     "proposal": "CLP-1",
+     "action": "accept_charge",
+     "recommended_by": "Baseline",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Supplier ERP (deduction item)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CLP-2",
+     "action": "accept_charge",
+     "recommended_by": "Baseline",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Supplier ERP (deduction item)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CLP-3",
+     "action": "accept_charge",
+     "recommended_by": "Baseline",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Supplier ERP (deduction item)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CLP-4",
+     "action": "accept_charge",
+     "recommended_by": "Baseline",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Supplier ERP (deduction item)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CLP-5",
+     "action": "accept_charge",
+     "recommended_by": "Baseline",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Supplier ERP (deduction item)",
+     "state": "Executed"
+    }
+   ],
+   "outcome": {
+    "as_of": "2027-01-06 09:10 ET",
+    "payment": "PMT-990168",
+    "deductions": [
+     {
+      "deduction": "PD-2701-01",
+      "deal": "NFP-2610-01",
+      "amount": 728,
+      "state": "Accepted"
+     },
+     {
+      "deduction": "PD-2701-02",
+      "deal": "NFP-2610-01",
+      "amount": 370,
+      "state": "Accepted"
+     },
+     {
+      "deduction": "PD-2701-03",
+      "deal": "NFP-2611-02",
+      "amount": 714,
+      "state": "Accepted"
+     },
+     {
+      "deduction": "PD-2701-04",
+      "deal": "NFP-2612-03",
+      "amount": 1600.2,
+      "state": "Accepted"
+     },
+     {
+      "deduction": "PD-2701-05",
+      "deal": "NFP-2702-04",
+      "amount": 40.5,
+      "state": "Accepted"
+     }
+    ],
+    "disputed": [],
+    "accepted": [
+     "PD-2701-01",
+     "PD-2701-02",
+     "PD-2701-03",
+     "PD-2701-04",
+     "PD-2701-05"
+    ],
+    "recovered_and_matched": 0,
+    "reversed_not_yet_repaid": 0,
+    "accepted_amount": 3452.7,
+    "unsupported_on_record": 677.2,
+    "violations": [],
+    "synthetic": "Vividly matches, Northfield decisions and repayments at the promotion moment are synthetic, from the world’s deal settlement and the rules in src/claim.js."
+   },
+   "trace": [
+    {
+     "n": 1,
+     "clock": "2027-01-06 09:00 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Session branched from the recorded world",
+     "detail": {
+      "at": "2027-01-06 09:00 ET",
+      "hidden": "Every recorded record after this time",
+      "changes": [
+       {
+        "field": "moment",
+        "from": "2026-12-01 09:00 ET",
+        "to": "2027-01-06 09:00 ET"
+       }
+      ]
+     }
+    },
+    {
+     "n": 2,
+     "clock": "2027-01-06 09:00 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "5 open deductions to work",
+     "detail": {
+      "rows": [
+       "PD-2701-04: Bill-back deduction $1600.20 on PMT-990168 for deal NFP-2612-03; not yet matched",
+       "PD-2701-01: Scan-based deduction $728.00 on PMT-990168 for deal NFP-2610-01; not yet matched",
+       "PD-2701-03: Bill-back deduction $714.00 on PMT-990168 for deal NFP-2611-02; not yet matched",
+       "PD-2701-02: Scan-based deduction $370.00 on PMT-990168 for deal NFP-2610-01; not yet matched",
+       "PD-2701-05: Off-invoice deduction $40.50 on PMT-990168 for deal NFP-2702-04; not yet matched"
+      ]
+     }
+    },
+    {
+     "n": 3,
+     "clock": "2027-01-06 09:00 ET",
+     "actor": "Baseline",
+     "type": "rule",
+     "what": "Proposed: Accept the charge (no dispute)",
+     "detail": {
+      "proposal": "CLP-1",
+      "args": {
+       "record": "PD-2701-01"
+      },
+      "rationale": null,
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 4,
+     "clock": "2027-01-06 09:01 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CLP-1: Accept the charge (no dispute)",
+     "detail": {
+      "args": {
+       "record": "PD-2701-01"
+      }
+     }
+    },
+    {
+     "n": 5,
+     "clock": "2027-01-06 09:02 ET",
+     "actor": "Supplier ERP (deduction item)",
+     "type": "external",
+     "what": "Executed: Accept the charge (no dispute)",
+     "detail": {
+      "proposal": "CLP-1",
+      "response": "Promotion Scan-based $728.00 on PD-2701-01 accepted in the Supplier ERP"
+     }
+    },
+    {
+     "n": 6,
+     "clock": "2027-01-06 09:02 ET",
+     "actor": "Baseline",
+     "type": "rule",
+     "what": "Proposed: Accept the charge (no dispute)",
+     "detail": {
+      "proposal": "CLP-2",
+      "args": {
+       "record": "PD-2701-02"
+      },
+      "rationale": null,
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 7,
+     "clock": "2027-01-06 09:03 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CLP-2: Accept the charge (no dispute)",
+     "detail": {
+      "args": {
+       "record": "PD-2701-02"
+      }
+     }
+    },
+    {
+     "n": 8,
+     "clock": "2027-01-06 09:04 ET",
+     "actor": "Supplier ERP (deduction item)",
+     "type": "external",
+     "what": "Executed: Accept the charge (no dispute)",
+     "detail": {
+      "proposal": "CLP-2",
+      "response": "Promotion Scan-based $370.00 on PD-2701-02 accepted in the Supplier ERP"
+     }
+    },
+    {
+     "n": 9,
+     "clock": "2027-01-06 09:04 ET",
+     "actor": "Baseline",
+     "type": "rule",
+     "what": "Proposed: Accept the charge (no dispute)",
+     "detail": {
+      "proposal": "CLP-3",
+      "args": {
+       "record": "PD-2701-03"
+      },
+      "rationale": null,
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 10,
+     "clock": "2027-01-06 09:05 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CLP-3: Accept the charge (no dispute)",
+     "detail": {
+      "args": {
+       "record": "PD-2701-03"
+      }
+     }
+    },
+    {
+     "n": 11,
+     "clock": "2027-01-06 09:06 ET",
+     "actor": "Supplier ERP (deduction item)",
+     "type": "external",
+     "what": "Executed: Accept the charge (no dispute)",
+     "detail": {
+      "proposal": "CLP-3",
+      "response": "Promotion Bill-back $714.00 on PD-2701-03 accepted in the Supplier ERP"
+     }
+    },
+    {
+     "n": 12,
+     "clock": "2027-01-06 09:06 ET",
+     "actor": "Baseline",
+     "type": "rule",
+     "what": "Proposed: Accept the charge (no dispute)",
+     "detail": {
+      "proposal": "CLP-4",
+      "args": {
+       "record": "PD-2701-04"
+      },
+      "rationale": null,
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 13,
+     "clock": "2027-01-06 09:07 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CLP-4: Accept the charge (no dispute)",
+     "detail": {
+      "args": {
+       "record": "PD-2701-04"
+      }
+     }
+    },
+    {
+     "n": 14,
+     "clock": "2027-01-06 09:08 ET",
+     "actor": "Supplier ERP (deduction item)",
+     "type": "external",
+     "what": "Executed: Accept the charge (no dispute)",
+     "detail": {
+      "proposal": "CLP-4",
+      "response": "Promotion Bill-back $1600.20 on PD-2701-04 accepted in the Supplier ERP"
+     }
+    },
+    {
+     "n": 15,
+     "clock": "2027-01-06 09:08 ET",
+     "actor": "Baseline",
+     "type": "rule",
+     "what": "Proposed: Accept the charge (no dispute)",
+     "detail": {
+      "proposal": "CLP-5",
+      "args": {
+       "record": "PD-2701-05"
+      },
+      "rationale": null,
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 16,
+     "clock": "2027-01-06 09:09 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CLP-5: Accept the charge (no dispute)",
+     "detail": {
+      "args": {
+       "record": "PD-2701-05"
+      }
+     }
+    },
+    {
+     "n": 17,
+     "clock": "2027-01-06 09:10 ET",
+     "actor": "Supplier ERP (deduction item)",
+     "type": "external",
+     "what": "Executed: Accept the charge (no dispute)",
+     "detail": {
+      "proposal": "CLP-5",
+      "response": "Promotion Off-invoice $40.50 on PD-2701-05 accepted in the Supplier ERP"
+     }
+    }
+   ],
+   "overhead": {
+    "model_calls": 0,
+    "tool_calls": 0,
+    "ms": 0,
+    "model_routes": {}
+   }
+  },
+  "agent": {
+   "session": "CL-914ac4eb2c",
+   "agent": "Claim Agent",
+   "label": "Replay · Claim Agent",
+   "clock": "2027-01-18 09:17 ET",
+   "branch_at": "2027-01-06 09:00 ET",
+   "status": "done",
+   "variation": [
+    {
+     "field": "moment",
+     "from": "2026-12-01 09:00 ET",
+     "to": "2027-01-06 09:00 ET"
+    }
+   ],
+   "facts": {
+    "moment": "2027-01-06 09:00 ET",
+    "kinross_reachable": "yes",
+    "lakeline_reachable": "yes",
+    "northfield_decision": "by_evidence",
+    "kinross_note": ""
+   },
+   "queue": {
+    "as_of": "2027-01-18 09:17 ET",
+    "rows": [
+     {
+      "id": "PD-2701-04",
+      "record": "PD-2701-04",
+      "deal": "NFP-2612-03",
+      "charge": "Promotion Bill-back",
+      "amount": 1600.2,
+      "what": "Bill-back deduction $1600.20 on PMT-990168 for deal NFP-2612-03; Rate above the deal",
+      "state": "Repayment matched",
+      "closed": true,
+      "vividly": "Rate above the deal"
+     },
+     {
+      "id": "PD-2701-01",
+      "record": "PD-2701-01",
+      "deal": "NFP-2610-01",
+      "charge": "Promotion Scan-based",
+      "amount": 728,
+      "what": "Scan-based deduction $728.00 on PMT-990168 for deal NFP-2610-01; Matched to its deal",
+      "state": "Accepted",
+      "closed": true,
+      "vividly": "Matched to its deal"
+     },
+     {
+      "id": "PD-2701-03",
+      "record": "PD-2701-03",
+      "deal": "NFP-2611-02",
+      "charge": "Promotion Bill-back",
+      "amount": 714,
+      "what": "Bill-back deduction $714.00 on PMT-990168 for deal NFP-2611-02; Matched to its deal",
+      "state": "Accepted",
+      "closed": true,
+      "vividly": "Matched to its deal"
+     },
+     {
+      "id": "PD-2701-02",
+      "record": "PD-2701-02",
+      "deal": "NFP-2610-01",
+      "charge": "Promotion Scan-based",
+      "amount": 370,
+      "what": "Scan-based deduction $370.00 on PMT-990168 for deal NFP-2610-01; No store activity report for the claimed period",
+      "state": "Repayment matched",
+      "closed": true,
+      "vividly": "No store activity report for the claimed period"
+     },
+     {
+      "id": "PD-2701-05",
+      "record": "PD-2701-05",
+      "deal": "NFP-2702-04",
+      "charge": "Promotion Off-invoice",
+      "amount": 40.5,
+      "what": "Off-invoice deduction $40.50 on PMT-990168 for deal NFP-2702-04; Outside the deal's order window",
+      "state": "Repayment matched",
+      "closed": true,
+      "vividly": "Outside the deal's order window"
+     }
+    ],
+    "open": 0
+   },
+   "awaiting": [],
+   "suggested": [],
+   "pending": [],
+   "roles": [
+    {
+     "proposal": "CLP-1",
+     "action": "submit_dispute",
+     "recommended_by": "Claim Agent",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Northfield deduction case",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CLP-2",
+     "action": "accept_charge",
+     "recommended_by": "Claim Agent",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Supplier ERP (deduction item)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CLP-3",
+     "action": "accept_charge",
+     "recommended_by": "Claim Agent",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Supplier ERP (deduction item)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CLP-4",
+     "action": "submit_dispute",
+     "recommended_by": "Claim Agent",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Northfield deduction case",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CLP-5",
+     "action": "submit_dispute",
+     "recommended_by": "Claim Agent",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Northfield deduction case",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CLP-6",
+     "action": "match_repayment",
+     "recommended_by": "Claim Agent",
+     "authorised_by": "Standing policy (NF-7.6)",
+     "carried_out_by": "Supplier ERP (receivables)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CLP-7",
+     "action": "match_repayment",
+     "recommended_by": "Claim Agent",
+     "authorised_by": "Standing policy (NF-7.6)",
+     "carried_out_by": "Supplier ERP (receivables)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CLP-8",
+     "action": "match_repayment",
+     "recommended_by": "Claim Agent",
+     "authorised_by": "Standing policy (NF-7.6)",
+     "carried_out_by": "Supplier ERP (receivables)",
+     "state": "Executed"
+    }
+   ],
+   "outcome": {
+    "as_of": "2027-01-18 09:17 ET",
+    "payment": "PMT-990168",
+    "deductions": [
+     {
+      "deduction": "PD-2701-01",
+      "deal": "NFP-2610-01",
+      "amount": 728,
+      "state": "Accepted"
+     },
+     {
+      "deduction": "PD-2701-02",
+      "deal": "NFP-2610-01",
+      "amount": 370,
+      "state": "Repayment matched"
+     },
+     {
+      "deduction": "PD-2701-03",
+      "deal": "NFP-2611-02",
+      "amount": 714,
+      "state": "Accepted"
+     },
+     {
+      "deduction": "PD-2701-04",
+      "deal": "NFP-2612-03",
+      "amount": 1600.2,
+      "state": "Repayment matched"
+     },
+     {
+      "deduction": "PD-2701-05",
+      "deal": "NFP-2702-04",
+      "amount": 40.5,
+      "state": "Repayment matched"
+     }
+    ],
+    "disputed": [
+     "PD-2701-02",
+     "PD-2701-04",
+     "PD-2701-05"
+    ],
+    "accepted": [
+     "PD-2701-01",
+     "PD-2701-03"
+    ],
+    "recovered_and_matched": 677.2,
+    "reversed_not_yet_repaid": 0,
+    "accepted_amount": 1442,
+    "unsupported_on_record": 677.2,
+    "violations": [],
+    "synthetic": "Vividly matches, Northfield decisions and repayments at the promotion moment are synthetic, from the world’s deal settlement and the rules in src/claim.js."
+   },
+   "trace": [
+    {
+     "n": 1,
+     "clock": "2027-01-06 09:00 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Session branched from the recorded world",
+     "detail": {
+      "at": "2027-01-06 09:00 ET",
+      "hidden": "Every recorded record after this time",
+      "changes": [
+       {
+        "field": "moment",
+        "from": "2026-12-01 09:00 ET",
+        "to": "2027-01-06 09:00 ET"
+       }
+      ]
+     }
+    },
+    {
+     "n": 2,
+     "clock": "2027-01-06 09:00 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "5 open deductions to work",
+     "detail": {
+      "rows": [
+       "PD-2701-04: Bill-back deduction $1600.20 on PMT-990168 for deal NFP-2612-03; not yet matched",
+       "PD-2701-01: Scan-based deduction $728.00 on PMT-990168 for deal NFP-2610-01; not yet matched",
+       "PD-2701-03: Bill-back deduction $714.00 on PMT-990168 for deal NFP-2611-02; not yet matched",
+       "PD-2701-02: Scan-based deduction $370.00 on PMT-990168 for deal NFP-2610-01; not yet matched",
+       "PD-2701-05: Off-invoice deduction $40.50 on PMT-990168 for deal NFP-2702-04; not yet matched"
+      ]
+     }
+    },
+    {
+     "n": 3,
+     "clock": "2027-01-06 09:00 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_policy",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 4,
+     "clock": "2027-01-06 09:00 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_queue",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 5,
+     "clock": "2027-01-06 09:00 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_promotion_deduction",
+     "detail": {
+      "args": {
+       "record": "PD-2701-04"
+      }
+     }
+    },
+    {
+     "n": 6,
+     "clock": "2027-01-06 09:00 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read vividly_match",
+     "detail": {
+      "args": {
+       "record": "PD-2701-04"
+      }
+     }
+    },
+    {
+     "n": 7,
+     "clock": "2027-01-06 09:00 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_promotion_deduction",
+     "detail": {
+      "args": {
+       "record": "PD-2701-01"
+      }
+     }
+    },
+    {
+     "n": 8,
+     "clock": "2027-01-06 09:00 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read vividly_match",
+     "detail": {
+      "args": {
+       "record": "PD-2701-01"
+      }
+     }
+    },
+    {
+     "n": 9,
+     "clock": "2027-01-06 09:00 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_promotion_deduction",
+     "detail": {
+      "args": {
+       "record": "PD-2701-03"
+      }
+     }
+    },
+    {
+     "n": 10,
+     "clock": "2027-01-06 09:00 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read vividly_match",
+     "detail": {
+      "args": {
+       "record": "PD-2701-03"
+      }
+     }
+    },
+    {
+     "n": 11,
+     "clock": "2027-01-06 09:00 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_promotion_deduction",
+     "detail": {
+      "args": {
+       "record": "PD-2701-02"
+      }
+     }
+    },
+    {
+     "n": 12,
+     "clock": "2027-01-06 09:00 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read vividly_match",
+     "detail": {
+      "args": {
+       "record": "PD-2701-02"
+      }
+     }
+    },
+    {
+     "n": 13,
+     "clock": "2027-01-06 09:00 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_promotion_deduction",
+     "detail": {
+      "args": {
+       "record": "PD-2701-05"
+      }
+     }
+    },
+    {
+     "n": 14,
+     "clock": "2027-01-06 09:00 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read vividly_match",
+     "detail": {
+      "args": {
+       "record": "PD-2701-05"
+      }
+     }
+    },
+    {
+     "n": 15,
+     "clock": "2027-01-06 09:00 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Proposed: Dispute the charge in Northfield’s deduction case with the evidence that contradicts it (the NF-7.4 pack for a shortage; the deal, store activity or invoice for the unsupported amount of a promotion deduction)",
+     "detail": {
+      "proposal": "CLP-1",
+      "args": {
+       "record": "PD-2701-04"
+      },
+      "rationale": "Vividly found the claimed rate $0.60 per CA is above the agreed rate $0.50 on deal NFP-2612-03, so we dispute the unsupported amount of $266.70.",
+      "alternatives": [
+       "accept_charge"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 16,
+     "clock": "2027-01-06 09:00 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Proposed: Accept the charge (no dispute)",
+     "detail": {
+      "proposal": "CLP-2",
+      "args": {
+       "record": "PD-2701-01"
+      },
+      "rationale": "Vividly matched deduction PD-2701-01 of $728.00 to deal NFP-2610-01 as fully supported.",
+      "alternatives": [
+       "submit_dispute"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 17,
+     "clock": "2027-01-06 09:00 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Proposed: Accept the charge (no dispute)",
+     "detail": {
+      "proposal": "CLP-3",
+      "args": {
+       "record": "PD-2701-03"
+      },
+      "rationale": "Vividly matched deduction PD-2701-03 of $714.00 to deal NFP-2611-02 as fully supported.",
+      "alternatives": [
+       "submit_dispute"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 18,
+     "clock": "2027-01-06 09:00 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Proposed: Dispute the charge in Northfield’s deduction case with the evidence that contradicts it (the NF-7.4 pack for a shortage; the deal, store activity or invoice for the unsupported amount of a promotion deduction)",
+     "detail": {
+      "proposal": "CLP-4",
+      "args": {
+       "record": "PD-2701-02"
+      },
+      "rationale": "Vividly found no store activity report for the claimed period on deduction PD-2701-02, so the full amount of $370.00 is unsupported.",
+      "alternatives": [
+       "accept_charge"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 19,
+     "clock": "2027-01-06 09:00 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Proposed: Dispute the charge in Northfield’s deduction case with the evidence that contradicts it (the NF-7.4 pack for a shortage; the deal, store activity or invoice for the unsupported amount of a promotion deduction)",
+     "detail": {
+      "proposal": "CLP-5",
+      "args": {
+       "record": "PD-2701-05"
+      },
+      "rationale": "Vividly found deduction PD-2701-05 outside the deal's order window (order placed 2026-12-05 vs order window 2027-02-01 to 2027-02-28), so the full amount of $40.50 is unsupported.",
+      "alternatives": [
+       "accept_charge"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 20,
+     "clock": "2027-01-06 09:00 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_proposals",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 21,
+     "clock": "2027-01-06 09:00 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Claim Agent said",
+     "detail": {
+      "text": "I have reviewed Northfield's five promotion deductions on remittance PMT-990168 with Vividly and proposed the appropriate actions, which are now awaiting Priya Raman's approval:\n\n1. **PD-2701-04 ($1,600.20 Bill-back)**: Vividly found the claimed rate ($0.60/CA) exceeds the agreed deal rate ($0.50/CA); I proposed submitting a dispute for the unsupported $266.70.\n2. **PD-2701-01 ($728.00 Scan-based)**: Vividly matched the deduction to deal NFP-2610-01; I proposed accepting the charge.\n3. **PD-2701-03 ($714.00 Bill-back)**: Vividly matched the deduction to deal NFP-2611-02; I proposed accepting t"
+     }
+    },
+    {
+     "n": 22,
+     "clock": "2027-01-06 09:01 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CLP-1: Dispute the charge in Northfield’s deduction case with the evidence that contradicts it (the NF-7.4 pack for a shortage; the deal, store activity or invoice for the unsupported amount of a promotion deduction)",
+     "detail": {
+      "args": {
+       "record": "PD-2701-04"
+      }
+     }
+    },
+    {
+     "n": 23,
+     "clock": "2027-01-06 09:04 ET",
+     "actor": "Northfield deduction case",
+     "type": "external",
+     "what": "Executed: Dispute the charge in Northfield’s deduction case with the evidence that contradicts it (the NF-7.4 pack for a shortage; the deal, store activity or invoice for the unsupported amount of a promotion deduction)",
+     "detail": {
+      "proposal": "CLP-1",
+      "response": "Dispute of $266.70 of PD-2701-04 submitted to Northfield with 889 NFP-2612-03, 856 ship notices in the promoted period, Vividly match; $1333.50 stands"
+     }
+    },
+    {
+     "n": 24,
+     "clock": "2027-01-06 09:05 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CLP-2: Accept the charge (no dispute)",
+     "detail": {
+      "args": {
+       "record": "PD-2701-01"
+      }
+     }
+    },
+    {
+     "n": 25,
+     "clock": "2027-01-06 09:06 ET",
+     "actor": "Supplier ERP (deduction item)",
+     "type": "external",
+     "what": "Executed: Accept the charge (no dispute)",
+     "detail": {
+      "proposal": "CLP-2",
+      "response": "Promotion Scan-based $728.00 on PD-2701-01 accepted in the Supplier ERP"
+     }
+    },
+    {
+     "n": 26,
+     "clock": "2027-01-06 09:07 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CLP-3: Accept the charge (no dispute)",
+     "detail": {
+      "args": {
+       "record": "PD-2701-03"
+      }
+     }
+    },
+    {
+     "n": 27,
+     "clock": "2027-01-06 09:08 ET",
+     "actor": "Supplier ERP (deduction item)",
+     "type": "external",
+     "what": "Executed: Accept the charge (no dispute)",
+     "detail": {
+      "proposal": "CLP-3",
+      "response": "Promotion Bill-back $714.00 on PD-2701-03 accepted in the Supplier ERP"
+     }
+    },
+    {
+     "n": 28,
+     "clock": "2027-01-06 09:09 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CLP-4: Dispute the charge in Northfield’s deduction case with the evidence that contradicts it (the NF-7.4 pack for a shortage; the deal, store activity or invoice for the unsupported amount of a promotion deduction)",
+     "detail": {
+      "args": {
+       "record": "PD-2701-02"
+      }
+     }
+    },
+    {
+     "n": 29,
+     "clock": "2027-01-06 09:12 ET",
+     "actor": "Northfield deduction case",
+     "type": "external",
+     "what": "Executed: Dispute the charge in Northfield’s deduction case with the evidence that contradicts it (the NF-7.4 pack for a shortage; the deal, store activity or invoice for the unsupported amount of a promotion deduction)",
+     "detail": {
+      "proposal": "CLP-4",
+      "response": "Dispute of $370.00 of PD-2701-02 submitted to Northfield with 889 NFP-2610-01, 852 history: no report for the claimed week, Vividly match; $0.00 stands"
+     }
+    },
+    {
+     "n": 30,
+     "clock": "2027-01-06 09:13 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CLP-5: Dispute the charge in Northfield’s deduction case with the evidence that contradicts it (the NF-7.4 pack for a shortage; the deal, store activity or invoice for the unsupported amount of a promotion deduction)",
+     "detail": {
+      "args": {
+       "record": "PD-2701-05"
+      }
+     }
+    },
+    {
+     "n": 31,
+     "clock": "2027-01-06 09:16 ET",
+     "actor": "Northfield deduction case",
+     "type": "external",
+     "what": "Executed: Dispute the charge in Northfield’s deduction case with the evidence that contradicts it (the NF-7.4 pack for a shortage; the deal, store activity or invoice for the unsupported amount of a promotion deduction)",
+     "detail": {
+      "proposal": "CLP-5",
+      "response": "Dispute of $40.50 of PD-2701-05 submitted to Northfield with 889 NFP-2702-04, 810 INV-46487, Vividly match; $0.00 stands"
+     }
+    },
+    {
+     "n": 32,
+     "clock": "2027-01-06 09:16 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_proposals",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 33,
+     "clock": "2027-01-06 09:16 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_queue",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 34,
+     "clock": "2027-01-06 09:16 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Claim Agent said",
+     "detail": {
+      "text": "All five proposals (CLP-1 through CLP-5) have been approved and executed:\n- **PD-2701-01** and **PD-2701-03** were accepted.\n- **PD-2701-04**, **PD-2701-02**, and **PD-2701-05** were successfully disputed with Northfield and are now awaiting Northfield's review.\n\nAs per rule NF-7.7, we await Northfield's decision on the disputes, and per rule NF-7.6, no case can be closed until a corresponding repayment matches in receivables."
+     }
+    },
+    {
+     "n": 35,
+     "clock": "2027-01-08 09:04 ET",
+     "actor": "Northfield (synthetic)",
+     "type": "external",
+     "what": "Jordan Ellis reversed $266.70 of PD-2701-04",
+     "detail": {
+      "at": "2027-01-08 09:04 ET",
+      "synthetic": true
+     }
+    },
+    {
+     "n": 36,
+     "clock": "2027-01-08 09:04 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_case",
+     "detail": {
+      "args": {
+       "record": "PD-2701-04"
+      }
+     }
+    },
+    {
+     "n": 37,
+     "clock": "2027-01-08 09:04 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_promotion_deduction",
+     "detail": {
+      "args": {
+       "record": "PD-2701-04"
+      }
+     }
+    },
+    {
+     "n": 38,
+     "clock": "2027-01-08 09:04 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_queue",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 39,
+     "clock": "2027-01-08 09:04 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Claim Agent said",
+     "detail": {
+      "text": "Northfield's reviewer Jordan Ellis has reversed $266.70 of deduction PD-2701-04. Per rule NF-7.6 (\"Never show a reversal as resolved before the repayment matches in receivables\"), we cannot close or match the repayment until the repayment arrives in Ashby's receivables. We are currently waiting for the repayment to arrive."
+     }
+    },
+    {
+     "n": 40,
+     "clock": "2027-01-08 09:12 ET",
+     "actor": "Northfield (synthetic)",
+     "type": "external",
+     "what": "Jordan Ellis reversed $370.00 of PD-2701-02",
+     "detail": {
+      "at": "2027-01-08 09:12 ET",
+      "synthetic": true
+     }
+    },
+    {
+     "n": 41,
+     "clock": "2027-01-08 09:12 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_promotion_deduction",
+     "detail": {
+      "args": {
+       "record": "PD-2701-02"
+      }
+     }
+    },
+    {
+     "n": 42,
+     "clock": "2027-01-08 09:12 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Claim Agent said",
+     "detail": {
+      "text": "Northfield's reviewer Jordan Ellis has also reversed the $370.00 deduction for PD-2701-02. As with PD-2701-04, per rule NF-7.6, we await the repayment matching in Ashby's receivables before closing or reconciling these reversals."
+     }
+    },
+    {
+     "n": 43,
+     "clock": "2027-01-08 09:16 ET",
+     "actor": "Northfield (synthetic)",
+     "type": "external",
+     "what": "Jordan Ellis reversed $40.50 of PD-2701-05",
+     "detail": {
+      "at": "2027-01-08 09:16 ET",
+      "synthetic": true
+     }
+    },
+    {
+     "n": 44,
+     "clock": "2027-01-08 09:16 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_promotion_deduction",
+     "detail": {
+      "args": {
+       "record": "PD-2701-05"
+      }
+     }
+    },
+    {
+     "n": 45,
+     "clock": "2027-01-08 09:16 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Claim Agent said",
+     "detail": {
+      "text": "Northfield's reviewer Jordan Ellis has reversed the final disputed deduction, PD-2701-05 ($40.50). All three disputed items have now been reversed by Northfield. Per rule NF-7.6, we continue to wait for the repayments to match in Ashby's receivables before these cases can be closed."
+     }
+    },
+    {
+     "n": 46,
+     "clock": "2027-01-18 09:04 ET",
+     "actor": "Northfield remittance (synthetic)",
+     "type": "external",
+     "what": "Remittance PMT-S914A repays $266.70 referencing PD-2701-04",
+     "detail": {
+      "at": "2027-01-18 09:04 ET",
+      "record": "PMT-S914A",
+      "synthetic": true
+     }
+    },
+    {
+     "n": 47,
+     "clock": "2027-01-18 09:04 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Proposed: Match a repayment on Northfield’s remittance to the deduction in receivables and close the case",
+     "detail": {
+      "proposal": "CLP-6",
+      "args": {
+       "record": "PD-2701-04"
+      },
+      "rationale": "Remittance PMT-S914A repays $266.70 referencing deduction PD-2701-04, allowing us to close the case under NF-7.6.",
+      "alternatives": [],
+      "needs": "policy"
+     }
+    },
+    {
+     "n": 48,
+     "clock": "2027-01-18 09:05 ET",
+     "actor": "Supplier ERP (receivables)",
+     "type": "external",
+     "what": "Executed: Match a repayment on Northfield’s remittance to the deduction in receivables and close the case",
+     "detail": {
+      "proposal": "CLP-6",
+      "response": "PMT-S914A matched to PD-2701-04 in receivables; PD-2701-04 closed"
+     }
+    },
+    {
+     "n": 49,
+     "clock": "2027-01-18 09:05 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_promotion_deduction",
+     "detail": {
+      "args": {
+       "record": "PD-2701-04"
+      }
+     }
+    },
+    {
+     "n": 50,
+     "clock": "2027-01-18 09:05 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_queue",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 51,
+     "clock": "2027-01-18 09:05 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Claim Agent said",
+     "detail": {
+      "text": "Remittance PMT-S914A arrived and repaid $266.70 referencing deduction PD-2701-04. Under standing policy (NF-7.6), I have matched the repayment and closed deduction case PD-2701-04. We continue to await repayments for the remaining reversed deductions (PD-2701-02 and PD-2701-05)."
+     }
+    },
+    {
+     "n": 52,
+     "clock": "2027-01-18 09:12 ET",
+     "actor": "Northfield remittance (synthetic)",
+     "type": "external",
+     "what": "Remittance PMT-S914A repays $370.00 referencing PD-2701-02",
+     "detail": {
+      "at": "2027-01-18 09:12 ET",
+      "record": "PMT-S914A",
+      "synthetic": true
+     }
+    },
+    {
+     "n": 53,
+     "clock": "2027-01-18 09:12 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Proposed: Match a repayment on Northfield’s remittance to the deduction in receivables and close the case",
+     "detail": {
+      "proposal": "CLP-7",
+      "args": {
+       "record": "PD-2701-02"
+      },
+      "rationale": "Remittance PMT-S914A repays $370.00 referencing deduction PD-2701-02, allowing us to close the case under NF-7.6.",
+      "alternatives": [],
+      "needs": "policy"
+     }
+    },
+    {
+     "n": 54,
+     "clock": "2027-01-18 09:13 ET",
+     "actor": "Supplier ERP (receivables)",
+     "type": "external",
+     "what": "Executed: Match a repayment on Northfield’s remittance to the deduction in receivables and close the case",
+     "detail": {
+      "proposal": "CLP-7",
+      "response": "PMT-S914A matched to PD-2701-02 in receivables; PD-2701-02 closed"
+     }
+    },
+    {
+     "n": 55,
+     "clock": "2027-01-18 09:13 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_queue",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 56,
+     "clock": "2027-01-18 09:13 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Claim Agent said",
+     "detail": {
+      "text": "Remittance PMT-S914A arrived and repaid $370.00 referencing deduction PD-2701-02. Under standing policy (NF-7.6), I have matched the repayment and closed deduction case PD-2701-02. We are now waiting for the final repayment for PD-2701-05."
+     }
+    },
+    {
+     "n": 57,
+     "clock": "2027-01-18 09:16 ET",
+     "actor": "Northfield remittance (synthetic)",
+     "type": "external",
+     "what": "Remittance PMT-S914A repays $40.50 referencing PD-2701-05",
+     "detail": {
+      "at": "2027-01-18 09:16 ET",
+      "record": "PMT-S914A",
+      "synthetic": true
+     }
+    },
+    {
+     "n": 58,
+     "clock": "2027-01-18 09:16 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Proposed: Match a repayment on Northfield’s remittance to the deduction in receivables and close the case",
+     "detail": {
+      "proposal": "CLP-8",
+      "args": {
+       "record": "PD-2701-05"
+      },
+      "rationale": "Remittance PMT-S914A repays $40.50 referencing deduction PD-2701-05, allowing us to close the case under NF-7.6.",
+      "alternatives": [],
+      "needs": "policy"
+     }
+    },
+    {
+     "n": 59,
+     "clock": "2027-01-18 09:17 ET",
+     "actor": "Supplier ERP (receivables)",
+     "type": "external",
+     "what": "Executed: Match a repayment on Northfield’s remittance to the deduction in receivables and close the case",
+     "detail": {
+      "proposal": "CLP-8",
+      "response": "PMT-S914A matched to PD-2701-05 in receivables; PD-2701-05 closed"
+     }
+    },
+    {
+     "n": 60,
+     "clock": "2027-01-18 09:17 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_queue",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 61,
+     "clock": "2027-01-18 09:17 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Claim Agent said",
+     "detail": {
+      "text": "All five promotion deductions on Northfield’s remittance PMT-990168 have been fully resolved according to Northfield's evidence rules 2026.2:\n\n1. **PD-2701-01 & PD-2701-03**: Accepted as fully supported by Vividly matching their respective deals.\n2. **PD-2701-04, PD-2701-02, & PD-2701-05**: Disputed based on Vividly's findings (rate above deal, missing store activity report, and outside order window respectively). Northfield reversed all three, and the corresponding repayments on PMT-S914A have been matched in Ashby's receivables, closing all cases."
+     }
+    }
+   ],
+   "overhead": {
+    "model_calls": 26,
+    "tool_calls": 32,
+    "ms": 101035,
+    "model_routes": {
+     "primary · gemini-3.5-flash-lite": 26
+    }
+   }
+  }
+ }
+}

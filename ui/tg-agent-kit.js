@@ -78,15 +78,28 @@
 .tgk-lock{color:var(--tgk-muted)}.tgk-lock:before{content:"Locked · ";font-weight:600}
 .tgk-gov{width:100%;border-collapse:collapse}.tgk-gov th,.tgk-gov td{padding:8px;border-bottom:1px solid var(--tgk-divider);text-align:left;vertical-align:top}
 .tgk-gov th{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--tgk-muted)}.tgk-gov td.by{font-weight:600;color:var(--tgk-ink)}
-/* aviator */
-.tgk-av-btn{position:fixed;right:max(20px,env(safe-area-inset-right));bottom:max(20px,env(safe-area-inset-bottom));z-index:70;min-height:48px;padding:0 20px;border-radius:var(--radius-pill);border:0;color:var(--tgk-on-panel);font:600 14px var(--tgk-font);cursor:pointer;background:var(--tgk-panel);box-shadow:var(--shadow-md)}
-.tgk-av-panel{position:fixed;right:max(20px,env(safe-area-inset-right));bottom:76px;z-index:71;width:min(400px,calc(100vw - 32px));height:min(560px,calc(100vh - 110px));background:var(--tgk-card);border:1px solid var(--tgk-divider);border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;opacity:0;transform:translateY(10px) scale(.98);pointer-events:none;transition:opacity .18s,transform .18s}
-.tgk-av-panel[data-open]{opacity:1;transform:none;pointer-events:auto}
-.tgk-av-panel header{padding:12px 14px;border-bottom:1px solid var(--tgk-divider);display:flex;justify-content:space-between;align-items:center}.tgk-av-panel header b{color:var(--tgk-ink)}
-.tgk-av-log{flex:1;overflow:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
-.tgk-av-msg{max-width:90%;padding:9px 11px;border-radius:var(--radius-lg);white-space:pre-wrap}.tgk-av-msg[data-role=user]{align-self:flex-end;background:var(--tgk-soft-action);color:var(--tgk-ink)}
+/* aviator: an agent presence (avatar, name, status) that opens a side panel with the conversation and the records it read */
+.tgk-av-btn{position:fixed;right:max(20px,env(safe-area-inset-right));bottom:max(20px,env(safe-area-inset-bottom));z-index:70;display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 16px 6px 6px;border-radius:var(--radius-pill);border:1px solid var(--tgk-divider);background:var(--tgk-card);color:var(--tgk-ink);font:inherit;font-family:var(--tgk-font);cursor:pointer;box-shadow:var(--shadow-md);text-align:left;transition:transform .15s cubic-bezier(.23,1,.32,1)}
+.tgk-av-btn:active{transform:scale(.97)}.tgk-av-btn:focus-visible{outline:3px solid var(--tgk-action);outline-offset:2px}
+.tgk-av-btn[aria-expanded=true]{display:none}
+.tgk-av-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:var(--radius-pill);background:linear-gradient(135deg,var(--tgk-from),var(--tgk-to));display:grid;place-items:center;color:var(--tgk-on-panel)}
+.tgk-av-avatar svg{width:22px;height:22px}
+.tgk-av-avatar[data-busy]{box-shadow:0 0 0 3px var(--tgk-soft-action)}
+.tgk-av-id{display:flex;flex-direction:column;line-height:1.2}.tgk-av-id b{font-size:14px;font-weight:600;color:var(--tgk-ink)}
+.tgk-av-status{font-size:12px;color:var(--tgk-muted)}.tgk-av-status[data-busy]{color:var(--tgk-action-text)}
+.tgk-av-panel{position:fixed;top:0;right:0;bottom:0;z-index:71;width:min(420px,100vw);background:var(--tgk-card);border-left:1px solid var(--tgk-divider);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .26s cubic-bezier(.23,1,.32,1);visibility:hidden}
+.tgk-av-panel[data-open]{transform:none;visibility:visible}
+.tgk-av-panel header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--tgk-divider)}
+.tgk-av-panel header .tgk-av-id{flex:1}
+.tgk-av-close{border:0;background:none;font:600 13px var(--tgk-font);color:var(--tgk-muted);cursor:pointer;padding:6px}
+.tgk-av-log{flex:1;overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.tgk-av-msg{max-width:92%;padding:9px 11px;border-radius:var(--radius-lg);white-space:pre-wrap}.tgk-av-msg[data-role=user]{align-self:flex-end;background:var(--tgk-soft-action);color:var(--tgk-ink)}
 .tgk-av-msg[data-role=model]{align-self:flex-start;background:var(--tgk-subtle);border:1px solid var(--tgk-divider);color:var(--tgk-ink)}.tgk-av-msg .cites{margin-top:6px;font-size:11px;color:var(--tgk-muted)}
+.tgk-av-read{border-top:1px solid var(--tgk-divider);padding:10px 16px;max-height:30%;overflow:auto}
+.tgk-av-read ul{list-style:none;margin:6px 0 0;padding:0}.tgk-av-read li{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px solid var(--tgk-divider);font-size:12.5px;color:var(--tgk-ink)}
+.tgk-av-read li span{color:var(--tgk-muted);font-size:11px}.tgk-av-read .none{font-size:12px;color:var(--tgk-muted);margin:6px 0 0}
 .tgk-av-form{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--tgk-divider)}.tgk-av-form input{flex:1;font:13.5px var(--tgk-font);padding:9px 10px;border:1px solid var(--tgk-track);border-radius:var(--radius-md);background:var(--tgk-card);color:var(--tgk-ink)}
+@media (prefers-reduced-motion:reduce){.tgk-av-btn{transition:none}}
 
 /* header (board): wordmark, workspace, History and Agents as text links, business clock, person */
 .tgk-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:14px 32px;background:var(--tgk-card);border-bottom:1px solid var(--tgk-divider)}
@@ -292,37 +305,61 @@
       el('p', { class: 'lead', style: 'margin-top:10px' }, `Outcome: ${baseline.outcome} with the rule baseline; ${agent.outcome} with ${agent.name}.`)));
   }
 
-  /** Aviator: floating at the bottom right, closed until opened. Answers through the viewer's own connector (ask_aviator), citing the
-   * records it read; it never acts. A drafted action goes back to the screen through onDraft as a proposal. context() names the record on screen. */
+  /** What Aviator read, in business words: the record a read tool returned, never the tool's name. */
+  const AV_READS = { get_order: 'Order', get_document: 'Document', orders_needing_attention: 'Orders needing attention', check_deliveries: 'Deliveries', lookup_retailer_rules: 'Northfield rules', lookup_rules: 'Northfield rules', get_scorecard: 'Scorecard', supplier_scorecard: 'Scorecard', list_deductions: 'Deductions', list_deduction_cases: 'Deduction cases', get_deduction_case: 'Deduction case', review_deduction_case: 'Deduction case', explain_rejection: 'Rejection', edi_health_summary: 'Document exchange health', get_access_log: 'Access log', supplier_document_trail: 'Document trail', three_way_match: 'Invoice match', recommend_next_step: 'Next step', compare_with_other_suppliers: 'Other suppliers', read_retailer_records: 'Northfield records', read_supplier_records: 'Supplier records', run_readonly_sql: 'Records query', get_story_calendar: 'Calendar', list_draft_rules: 'Draft rules', replay_draft_rule: 'Rule replay', get_change_list: 'Change list' };
+  const avRead = (t) => { const vals = Object.values(t.arguments || {}).filter((v) => typeof v === 'string' || typeof v === 'number').map(String).filter((v) => v.length <= 40); return { what: AV_READS[t.tool] || 'Records', ref: vals.join(', ') }; };
+  const AV_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="4.5"/></svg>';
+  /** Aviator: Trading Grid's AI agent for questions, present at the bottom right on every screen and closed until opened. It shows its
+   * avatar, name and status (Ready, Reading records), answers through the viewer's own connection (ask_aviator), lists every record it read
+   * in its side panel, and never acts: a drafted action goes back to the screen through onDraft as a proposal. context() names the record
+   * on screen. The first question on a page waits for claude.ai's one-time permission; a call that could not start while that box was open
+   * is sent again once, quietly. */
   function aviator({ side = 'ashby', person, context, suggestions = [], onDraft } = {}) {
     injectCss();
-    const history = []; const logBox = el('div', { class: 'tgk-av-log', 'aria-live': 'polite' });
+    const history = []; const readList = []; const logBox = el('div', { class: 'tgk-av-log', 'aria-live': 'polite' });
     const say = (role, text, extra) => { const m = el('div', { class: 'tgk-av-msg', 'data-role': role, text }); if (extra) m.append(extra); logBox.append(m); logBox.scrollTop = logBox.scrollHeight; return m; };
     const input = el('input', { type: 'text', placeholder: 'Ask about this record', 'aria-label': 'Ask Aviator' });
     const send = el('button', { class: 'tgk-btn', type: 'submit', 'data-primary': true, text: 'Ask' });
+    const avatar = () => { const a = el('span', { class: 'tgk-av-avatar' }); a.innerHTML = AV_GLYPH; return a; };
+    const avA = avatar(), avB = avatar();
+    const stA = el('span', { class: 'tgk-av-status', text: 'Ready' }), stB = el('span', { class: 'tgk-av-status', text: 'Ready' });
+    const setStatus = (text, busy) => { for (const n of [stA, stB]) { n.textContent = text; n.toggleAttribute('data-busy', !!busy); } for (const a of [avA, avB]) a.toggleAttribute('data-busy', !!busy); };
+    const readBox = el('ul', {}); const readNone = el('p', { class: 'none', text: 'Nothing read yet' });
+    const showReads = () => { readBox.replaceChildren(...readList.map((r) => el('li', {}, r.what, el('span', { text: r.ref })))); readNone.hidden = readList.length > 0; };
+    const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+    // The model writes light markdown; show it as text with bold kept and list markers as plain bullets, never as raw symbols.
+    const plain = (t) => String(t).replace(/^\s*[*-]\s+/gm, '• ').replace(/`([^`]*)`/g, '$1').split(/\*\*([^*]+)\*\*/g).map((part, i) => i % 2 ? el('b', { text: part }) : document.createTextNode(part.replace(/\*/g, '')));
+    async function call(c, input) {
+      try { return await c.call('ask_aviator', input); }
+      catch (e) { if (e && e.retryable) { await wait(Math.min(e.retryAfterMs || 1500, 8000) + Math.random() * 400); return c.call('ask_aviator', input); } throw e; }
+    }
+    const NOT = { needs_reauth: 'Reconnect Trading Grid in claude.ai Settings, Connectors, to ask Aviator.', server_not_connected: 'Add Trading Grid in claude.ai Settings, Connectors, to ask Aviator.', approval_required: 'Aviator needs Trading Grid allowed for this page.', consent_required: 'Aviator needs Trading Grid allowed for this page.', not_in_manifest: 'Aviator is not available on this page.', server_unavailable: 'Trading Grid did not answer in time. Ask again.', tool_error: 'Trading Grid refused the question.' };
     async function ask(q) {
-      if (!q.trim()) return; say('user', q); input.value = ''; send.disabled = true; const wait = say('model', 'Reading the records…');
+      if (!q.trim()) return; say('user', q); input.value = ''; send.disabled = true; setStatus('Reading records', true); const pending = say('model', 'Reading records');
       try {
         const c = await connector(side);
-        if (!c) { wait.textContent = 'Aviator answers through your Trading Grid connector, which this view cannot reach.'; return; }
-        const out = await c.call('ask_aviator', { question: q, history: history.slice(-8), context: context ? context() : undefined });
-        if (!out || !out.ok) { wait.textContent = out && out.message ? out.message : 'Aviator did not answer.'; return; }
-        wait.textContent = out.answer; history.push({ role: 'user', text: q }, { role: 'model', text: out.answer });
-        const read = (out.tools_called || []).map((t) => `${t.tool}${Object.values(t.arguments || {}).length ? ` (${Object.values(t.arguments).join(', ')})` : ''}`);
-        wait.append(el('div', { class: 'cites', text: read.length ? `Read: ${read.join('; ')}` : 'Answered without reading a record' }));
+        if (!c) { pending.textContent = 'Aviator answers through your Trading Grid connection, which this view cannot reach.'; return; }
+        const out = await call(c, { question: q, history: history.slice(-8), context: context ? context() : undefined });
+        if (!out || !out.ok) { pending.textContent = out && out.message ? out.message : 'Aviator did not answer.'; return; }
+        pending.replaceChildren(...plain(out.answer)); history.push({ role: 'user', text: q }, { role: 'model', text: out.answer });
+        const read = (out.tools_called || []).map(avRead); for (const r of read) if (!readList.some((x) => x.what === r.what && x.ref === r.ref)) readList.push(r); showReads();
+        pending.append(el('div', { class: 'cites', text: read.length ? `Read: ${read.map((r) => [r.what, r.ref].filter(Boolean).join(' ')).join('; ')}` : 'Answered without reading a record' }));
         if (onDraft && /propos|would send|approve/i.test(out.answer)) onDraft(out.answer);
-      } catch (e) { wait.textContent = e && e.code === 'tool_error' ? 'Aviator was refused by the connector.' : 'Aviator could not be reached.'; }
-      finally { send.disabled = false; input.focus(); }
+      } catch (e) { const code = e && e.code; if (typeof console !== 'undefined') console.warn('[Aviator]', code || e); pending.textContent = NOT[code] || 'Aviator could not answer. Ask again.'; }
+      finally { send.disabled = false; setStatus('Ready', false); input.focus(); }
     }
     const form = el('form', { class: 'tgk-av-form', onsubmit: (e) => { e.preventDefault(); ask(input.value); } }, input, send);
     const chips = suggestions.length ? el('div', { style: 'display:flex;flex-wrap:wrap;gap:6px' }, ...suggestions.map((s) => el('button', { class: 'tgk-btn', type: 'button', style: 'height:30px;font-size:12.5px', onclick: () => ask(s), text: s }))) : null;
     if (chips) logBox.append(chips);
+    const close = () => { panel.removeAttribute('data-open'); btn.setAttribute('aria-expanded', 'false'); btn.focus(); };
     const panel = kit(el('section', { class: 'tgk-av-panel', role: 'dialog', 'aria-label': 'Aviator' },
-      el('header', {}, el('b', { text: 'Aviator' }), el('span', { class: 'tgk-chip', text: person || 'Trading Grid' })), logBox, form));
-    const btn = kit(el('button', { class: 'tgk-av-btn', type: 'button', 'aria-expanded': 'false', onclick: () => { const open = panel.toggleAttribute('data-open'); btn.setAttribute('aria-expanded', String(open)); if (open) input.focus(); } }, 'Aviator'));
+      el('header', {}, avB, el('span', { class: 'tgk-av-id' }, el('b', { text: 'Aviator' }), stB), el('span', { class: 'tgk-chip', text: person || 'Trading Grid' }), el('button', { class: 'tgk-av-close', type: 'button', 'aria-label': 'Close Aviator', onclick: close, text: 'Close' })),
+      logBox, el('div', { class: 'tgk-av-read' }, el('div', { class: 'tgk-label', text: 'What Aviator read' }), readNone, readBox), form));
+    const btn = kit(el('button', { class: 'tgk-av-btn', type: 'button', 'aria-expanded': 'false', 'aria-label': 'Open Aviator', onclick: () => { panel.setAttribute('data-open', ''); btn.setAttribute('aria-expanded', 'true'); input.focus(); } }, avA, el('span', { class: 'tgk-av-id' }, el('b', { text: 'Aviator' }), stA)));
+    panel.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
     const wrap = el('div', { class: 'tgk-aviator' }, panel, btn); document.body.append(wrap);
-    return { element: wrap, ask, open: () => { panel.setAttribute('data-open', ''); btn.setAttribute('aria-expanded', 'true'); } };
+    return { element: wrap, ask, open: () => { panel.setAttribute('data-open', ''); btn.setAttribute('aria-expanded', 'true'); }, close, reads: () => readList.slice() };
   }
 
-  root.TGAgentKit = Object.freeze({ version: '1.3.0', css: CSS, injectCss, connector, el, header, agentWork, choice, resultList, queueRow, recordHeader, interfaceTag, factRow, drawer, nowAfter, compareTable, decisionBar, sentState, roleTrace, traceLine, timeline, simulated, setupView, fromServerSetup, governanceView, aviator, SERVERS });
+  root.TGAgentKit = Object.freeze({ version: '1.4.0', css: CSS, injectCss, connector, el, header, agentWork, choice, resultList, queueRow, recordHeader, interfaceTag, factRow, drawer, nowAfter, compareTable, decisionBar, sentState, roleTrace, traceLine, timeline, simulated, setupView, fromServerSetup, governanceView, aviator, SERVERS });
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -57,13 +57,35 @@ const before = (await page.$$('.tgk-sugg tbody tr')).length; await page.click('.
 ok('a row can be removed', left === before - 1, `${before} to ${left} rows`);
 }
 ok('Aviator is closed on load', !(await page.$('.tgk-av-panel[data-open]')));
-await page.click('.tgk-av-btn'); ok('Aviator opens from the bottom-right control', !!(await page.$('.tgk-av-panel[data-open]')));
 const box = await page.$eval('.tgk-av-btn', (b) => { const r = b.getBoundingClientRect(); return { right: innerWidth - r.right, bottom: innerHeight - r.bottom }; });
-ok('Aviator control sits at the bottom right', box.right <= 40 && box.bottom <= 40, JSON.stringify(box));
+ok('Aviator sits at the bottom right', box.right <= 40 && box.bottom <= 40, JSON.stringify(box));
+const presence = await page.$eval('.tgk-av-btn', (b) => ({ avatar: !!b.querySelector('.tgk-av-avatar svg'), name: b.querySelector('.tgk-av-id b')?.textContent, status: b.querySelector('.tgk-av-status')?.textContent }));
+ok('Aviator is an agent presence: avatar, name and status', presence.avatar && presence.name === 'Aviator' && presence.status === 'Ready', JSON.stringify(presence));
+await page.click('.tgk-av-btn'); await page.waitForTimeout(400); ok('Aviator opens a side panel', !!(await page.$('.tgk-av-panel[data-open]')));
+const side = await page.$eval('.tgk-av-panel', (p) => { const r = p.getBoundingClientRect(); return { top: Math.round(r.top), right: Math.round(innerWidth - r.right), h: Math.round(r.height) }; });
+ok('the panel runs full height at the right edge', side.top === 0 && side.right === 0 && side.h >= 800, JSON.stringify(side));
+ok('the panel lists what Aviator read', /What Aviator read/i.test(await page.$eval('.tgk-av-panel', (p) => p.innerText)));
 await page.fill('.tgk-av-form input', 'What is the order value of NR-450118?'); await page.click('.tgk-av-form button'); await page.waitForTimeout(11500);
 const said = await page.$$eval('.tgk-av-msg[data-role=model]', (m) => m.map((x) => x.textContent).pop());
-ok('Aviator without a connector says so and invents nothing', /connector/.test(said || '') && !/\$/.test(said || ''), said);
-await page.click('.tgk-av-btn');
+ok('Aviator without a connection says so and invents nothing', /connection/.test(said || '') && !/\$/.test(said || ''), said);
+await page.click('.tgk-av-close'); ok('Aviator closes', !(await page.$('.tgk-av-panel[data-open]')));
+// With a stand-in connection: the first call cannot start while claude.ai's permission box is open, so it is sent again once,
+// quietly; the answer lands, the status shows the work, and the records read are listed in business words, never tool names.
+{
+  const p2 = await browser.newPage({ viewport: { width: 1440, height: 860 } });
+  await p2.addInitScript(() => { let n = 0; window.__calls = 0; window.claude = { use: async (k) => k !== 'mcp' ? null : { callTool: async (server, tool, input) => { window.__calls++; if (n++ === 0) { const e = new Error('consent'); e.code = 'upstream_error'; e.retryable = true; e.retryAfterMs = 20; throw e; } await new Promise((r) => setTimeout(r, 400)); return { payload: { ok: true, answer: 'Order value is on the order.', tools_called: [{ tool: 'get_order', arguments: { po: 'NR-450118' } }] } }; } } }; });
+  await p2.goto('file://' + page0); await p2.waitForTimeout(300);
+  await p2.click('.tgk-av-btn'); await p2.fill('.tgk-av-form input', 'What is the order value?'); await p2.click('.tgk-av-form button'); await p2.waitForTimeout(150);
+  const busy = await p2.$eval('.tgk-av-panel .tgk-av-status', (n) => n.textContent);
+  ok('while answering, the status reads Reading records', busy === 'Reading records', busy);
+  await p2.waitForTimeout(900);
+  const st = await p2.evaluate(() => ({ calls: window.__calls, answer: [...document.querySelectorAll('.tgk-av-msg[data-role=model]')].pop()?.textContent || '', read: document.querySelector('.tgk-av-read')?.innerText || '', status: document.querySelector('.tgk-av-panel .tgk-av-status').textContent, panel: document.querySelector('.tgk-av-panel').innerText }));
+  ok('a call refused while the permission box was open is sent once more and answers', st.calls === 2 && /Order value is on the order/.test(st.answer), JSON.stringify({ calls: st.calls, answer: st.answer.slice(0, 80) }));
+  ok('the side panel lists the record read, in business words', /Order/.test(st.read) && /NR-450118/.test(st.read), st.read);
+  ok('no tool name on screen', !/get_order|ask_aviator|_\w+\(/.test(st.panel), st.panel.match(/get_order|ask_aviator/)?.[0]);
+  ok('status returns to Ready', st.status === 'Ready', st.status);
+  await p2.close();
+}
 const tags = await page.locator('.tgk-tag[data-doc]').count(); let opened = 0, tabbed = 0, raw = null, empty = 0;
 for (let i = 0; i < tags; i++) {
   const t = page.locator('.tgk-tag[data-doc]').nth(i); if (!(await t.isVisible())) continue;

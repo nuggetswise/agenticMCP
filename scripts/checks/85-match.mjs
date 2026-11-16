@@ -40,6 +40,7 @@ export default function ({ ash, nf, ok, eq }) {
     total_differs: ['reject_document_fault', '1,2,3', ''],
     triple_mismatch: ['request_credit_or_corrected_invoice', '3', '1:short_pay_decided,2:short_pay_decided'],
     ashby_free_text: ['request_credit_or_corrected_invoice', '1,3', '2:short_pay_decided'],
+    ashby_free_text_proved: ['request_credit_or_corrected_invoice', '1,3', '2:short_pay_decided'],
     ashby_dispute: ['request_credit_or_corrected_invoice', '3', '1:short_pay_decided,2:short_pay_decided'],
     ashby_no_answer: ['request_credit_or_corrected_invoice', '3', '1:above_shipped,2:above_received'],
   };
@@ -51,6 +52,14 @@ export default function ({ ash, nf, ok, eq }) {
     for (const r of s.reads) { const late = [...r.out.matchAll(/\d{4}-\d{2}-\d{2} \d{2}:\d{2} ET/g)].map((m) => m[0]).filter((t) => t > r.clock); if (late.length) leaks.push(`${name} ${r.name} at ${r.clock}: ${late[0]}`); }
     if (o.violations.length || JSON.stringify(s.cases[s.anchor].invoice) !== JSON.stringify(s.cases[s.anchor].original)) viol.push(`${name}: ${o.violations.join('; ') || 'invoice changed'}`);
   }
+  // A supplier's delivery claim: the baseline short-pays and leaves it open; asking for proof closes it (withdrawn) or refers the line to receiving (proved).
+  { const claim = (name) => runs[name].o.supplier_claims.map((x) => `${x.line}:${x.state.split(':')[0]}`).join();
+    const followed = (facts) => { const s = M.startSession(nf, { facts }); const st = (a, args) => { const r = M.propose(nf, s, 'Check', a, args); return r.state === 'Awaiting approval' ? M.decide(nf, s, r.proposal, 'approve', 'Check approver') : r; };
+      st('request_credit_or_corrected_invoice', { invoice: 'INV-7731', lines: [1, 2] }); const pr = st('request_proof_of_delivery', { invoice: 'INV-7731', lines: [2] }); const sp = M.propose(nf, s, 'Check', 'short_pay_at_payment', { invoice: 'INV-7731', lines: [2] });
+      return [pr.state, sp.state, M.outcome(nf, s).supplier_claims.map((x) => `${x.line}:${x.state.split(':')[0]}`).join()]; };
+    eq('match.claim_open_when_baseline_short_pays', [claim('ashby_free_text'), claim('canonical')], ['2:Open', '']);
+    eq('match.proof_request_closes_or_refers_the_claim', [followed(M.VARIATIONS.ashby_free_text), followed(M.VARIATIONS.ashby_free_text_proved)], [['Executed', 'Awaiting approval', '2:Closed'], ['Executed', 'Refused', '2:Proof received']]);
+    eq('match.proof_request_needs_a_supplier_statement', M.propose(nf, M.startSession(nf), 'Check', 'request_proof_of_delivery', { invoice: 'INV-7731', lines: [2] }).state, 'Refused'); }
   const triple = runs.triple_mismatch.s; const tr = triple.reads.map((r) => r.name);
   ok('match.triple_mismatch_reads_receiving_advice_first', tr.indexOf('read_receipts') >= 0 && tr.indexOf('read_receipts') < tr.indexOf('read_invoice') && /Receiving advice RCV-|the receiving advice stands/.test(runs.triple_mismatch.o.lines.find((l) => l.line === 1).settling_record), tr.join());
   // Story 2, the mutation test: change one record and the next step switches, following the decision table.

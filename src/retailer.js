@@ -153,6 +153,20 @@ export const REPLAY_CHECKS = {
   acknowledgment_hours: { what: 'Order acknowledgment sent within N hours of the purchase order', set: '855', current: 'NF-1.4', currentValue: 24 },
   invoice_days: { what: 'Invoice sent within N days of the shipped time', set: '810', current: 'NF-7.9', currentValue: 2 },
   price_tolerance_pct: { what: 'Invoice line price within N percent of the purchase order price', set: '810', current: 'NF-7.11', currentValue: 0.5 },
+  // Change list 4: checks behind the retailer rules adopted as drafts. current null = Northfield has no such rule today.
+  supplier_997_hours: { what: 'Supplier’s functional acknowledgment (997) to the order within N hours', set: '850', current: null },
+  ship_to_mismatch: { what: 'Ship-to on the ship notice matches the order', set: '856', current: 'NF-4.7', currentValue: 0, currentCharge: 150 },
+  item_not_on_order: { what: 'Every item on the ship notice is on the order and the item list', set: '856', current: 'NF-4.11 (no charge)', currentValue: 0, currentCharge: 0 },
+  over_shipment_pct: { what: 'Shipped quantity below N percent of the quantity ordered', set: '856', current: null },
+  under_shipment_pct: { what: 'Shipped quantity short of the order by less than N percent', set: '856', current: null },
+  ship_not_after_days: { what: 'Shipped no more than N business days after the order’s ship-not-after date', set: '856', current: null, needs: 'ship-not-after dates on Northfield’s orders, which the world does not yet hold' },
+  ship_not_before_days: { what: 'Shipped no more than N days before the order’s ship-not-before date', set: '856', current: null, needs: 'ship-not-before dates on Northfield’s orders, which the world does not yet hold' },
+  uom_mismatch: { what: 'Ship notice quantities in the order’s unit (cases)', set: '856', current: 'NF-4.14 (no charge)', currentValue: 0, currentCharge: 0 },
+  duplicate_shipment_id: { what: 'No ship notice reuses a shipment identifier', set: '856', current: null },
+  carton_over_cm: { what: 'No carton over N cm on any side', set: '856', current: null },
+  unit_over_kg: { what: 'No carton holds a unit over N kg', set: '856', current: null },
+  carton_contents_units: { what: 'Carton contents match the ship notice, charged per unit that differs', set: '856', current: 'NF-4.5 ($150 plus $1 per carton)', currentValue: 0, currentCharge: 'NF-4.5' },
+  ship_notice_accuracy_pct: { what: 'Ship notice accurate and complete, charged as N percent of the order’s cost', set: '856', current: null },
 };
 function failsOf(db, check, value) {
   const docs = (set) => db.prepare(`SELECT d.*, o.supplier_id sup FROM documents d JOIN orders o ON o.po = d.po WHERE d.doc_type = ? AND d.status <> 'Superseded' AND d.sent_at >= ?`).all(set, QUARTER_FROM);
@@ -161,6 +175,21 @@ function failsOf(db, check, value) {
   if (check === 'ship_notice_minutes') for (const d of docs('856')) { const b = J(d.body); if (b.shipped_at && (Date.parse(d.sent_at) - Date.parse(b.shipped_at)) / 60000 > value) out.push(d); }
   if (check === 'acknowledgment_hours') for (const d of docs('855')) { const p = first(d.po, '850'); if (p && (Date.parse(d.sent_at) - Date.parse(p.sent_at)) / H > value) out.push(d); }
   if (check === 'invoice_days') for (const d of docs('810')) { const s = first(d.po, '856'); const b = s ? J(s.body) : null; if (b && b.shipped_at && (Date.parse(d.sent_at) - Date.parse(b.shipped_at)) / (24 * H) > value) out.push(d); }
+  const lines856 = () => db.prepare(`SELECT s.shipment_id, d.reference, d.doc_id, d.po, o.supplier_id sup, o.order_value, sl.line, sl.sku, sl.qty, sl.uom, ol.qty_ordered, ol.uom ouom, ol.price FROM shipment_lines sl JOIN shipments s ON s.shipment_id = sl.shipment_id JOIN documents d ON d.doc_id = s.doc_id JOIN orders o ON o.po = d.po JOIN order_lines ol ON ol.po = sl.po AND ol.line = sl.line WHERE d.status <> 'Superseded' AND d.sent_at >= ?`).all(QUARTER_FROM);
+  const byDoc = (rows, units = () => 1) => { const m = new Map(); for (const r of rows) { const k = r.doc_id || r.reference; const x = m.get(k) || { ...r, units: 0 }; x.units += units(r); m.set(k, x); } return [...m.values()]; };
+  const errs = (rule) => db.prepare(`SELECT d.*, o.supplier_id sup, o.order_value FROM errors e JOIN documents d ON d.doc_id = e.doc_id JOIN orders o ON o.po = d.po WHERE e.rule_id = ? AND d.sent_at >= ? GROUP BY d.doc_id`).all(rule, QUARTER_FROM);
+  if (check === 'supplier_997_hours') for (const d of docs('850')) { const a = db.prepare("SELECT sent_at FROM documents WHERE doc_type = '997' AND answers_doc_id = ? AND sender_id = ? ORDER BY sent_at").get(d.doc_id, d.sup); if (!a || (Date.parse(a.sent_at) - Date.parse(d.sent_at)) / H > value) out.push(d); }
+  if (check === 'ship_to_mismatch') out.push(...db.prepare(`SELECT d.*, o.supplier_id sup FROM shipments s JOIN documents d ON d.doc_id = s.doc_id JOIN orders o ON o.po = s.po WHERE d.status <> 'Superseded' AND d.sent_at >= ? AND s.ship_to IS NOT NULL AND s.ship_to <> o.ship_to`).all(QUARTER_FROM), ...errs('NF-4.12'));
+  if (check === 'item_not_on_order') { out.push(...errs('NF-4.11')); out.push(...byDoc(lines856().filter((r) => r.sku && r.sku !== db.prepare('SELECT sku FROM order_lines WHERE po = ? AND line = ?').get(r.po, r.line)?.sku))); }
+  if (check === 'uom_mismatch') { out.push(...errs('NF-4.14')); out.push(...byDoc(lines856().filter((r) => r.uom && r.ouom && r.uom !== r.ouom))); }
+  if (check === 'over_shipment_pct' || check === 'under_shipment_pct') { const tot = {}; for (const r of lines856()) { const k = `${r.po}|${r.line}`; (tot[k] ||= { ...r, shipped: 0 }).shipped += r.qty; }
+    const bad = Object.values(tot).filter((t) => check === 'over_shipment_pct' ? t.shipped * 100 >= value * t.qty_ordered : t.qty_ordered > 0 && (t.qty_ordered - t.shipped) * 100 >= value * t.qty_ordered);
+    out.push(...byDoc(bad, (t) => check === 'over_shipment_pct' ? (t.shipped - t.qty_ordered) * t.price : 1)); }
+  if (check === 'duplicate_shipment_id') { const seen = {}; const corrects = (d) => db.prepare("SELECT 1 FROM document_links WHERE doc_id = ? AND kind = 'corrects'").get(d.doc_id); for (const d of docs('856').sort((a, b) => a.sent_at.localeCompare(b.sent_at))) { if (seen[d.reference] && !corrects(d)) out.push(d); seen[d.reference] = true; } } // a corrected ship notice that replaces a rejected one keeps its identifier by design
+  if (check === 'carton_over_cm' || check === 'unit_over_kg') { const big = new Set(db.prepare(check === 'carton_over_cm' ? "SELECT DISTINCT sku FROM packaging_levels WHERE level = 'Case' AND max(length, width, height) * 2.54 > ?" : "SELECT DISTINCT sku FROM packaging_levels WHERE level = 'Each' AND gross_weight * 0.45359 > ?").all(value).map((r) => r.sku));
+    if (big.size) out.push(...byDoc(db.prepare(`SELECT d.*, o.supplier_id sup, c.sku FROM cartons c JOIN shipments s ON s.shipment_id = c.shipment_id JOIN documents d ON d.doc_id = s.doc_id JOIN orders o ON o.po = c.po WHERE d.status <> 'Superseded' AND d.sent_at >= ?`).all(QUARTER_FROM).filter((r) => big.has(r.sku)))); }
+  if (check === 'carton_contents_units') out.push(...byDoc(db.prepare(`SELECT d.*, o.supplier_id sup, c.qty, c.received FROM cartons c JOIN shipments s ON s.shipment_id = c.shipment_id JOIN documents d ON d.doc_id = s.doc_id JOIN orders o ON o.po = c.po WHERE d.status <> 'Superseded' AND d.sent_at >= ? AND c.qty <> c.received`).all(QUARTER_FROM), (r) => Math.abs(r.qty - r.received)));
+  if (check === 'ship_notice_accuracy_pct') out.push(...db.prepare(`SELECT d.*, o.supplier_id sup, o.order_value FROM errors e JOIN documents d ON d.doc_id = e.doc_id JOIN orders o ON o.po = d.po WHERE d.doc_type = '856' AND d.sent_at >= ? GROUP BY d.doc_id`).all(QUARTER_FROM));
   if (check === 'price_tolerance_pct') for (const d of docs('810')) { const b = J(d.body); for (const l of b.lines || []) { const ol = db.prepare('SELECT price FROM order_lines WHERE po = ? AND line = ?').get(d.po, l.line); if (ol && ol.price && Math.abs(l.price - ol.price) / ol.price * 100 > value) { out.push(d); break; } } }
   return out;
 }
@@ -169,8 +198,17 @@ export function replayRule(db, { draft, check, value, charge }) {
   if (draft) { d = db.prepare('SELECT * FROM draft_rules WHERE id = ?').get(draft.trim().toUpperCase()); if (!d) return { found: false, message: `No draft rule ${draft}` }; check = d.check_kind; value = d.value; charge = d.charge; }
   const C = REPLAY_CHECKS[check]; if (!C) return { found: false, message: `Replay checks: ${Object.keys(REPLAY_CHECKS).join(', ')}` };
   const v = Number(value); if (!Number.isFinite(v) || v < 0) return { found: false, message: 'value must be a number' };
-  const perFail = Number(charge || 150);
-  const now = failsOf(db, check, C.currentValue); const then = failsOf(db, check, v);
+  if (C.needs) return { found: true, draft: d ? { id: d.id, statement: d.statement, state: d.state } : null, check: C.what.replace('N', String(v)), replayable: false, needs: C.needs, note: 'Not replayed: the quarter’s records cannot show this check yet. Nothing is published.' };
+  const basis = d?.charge_basis || 'per document'; const perFail = charge == null && d ? null : Number(charge ?? 150);
+  const cost = (rows) => perFail == null ? null : Math.round(rows.reduce((t, r) => t + (basis.startsWith('percent of order') ? (r.order_value || 0) * perFail / 100 : basis.startsWith('percent of over') ? (r.units || 0) * perFail / 100 : basis === 'per unit' || basis === 'per carton' ? (r.units || 1) * perFail : perFail), 0) * 100) / 100;
+  const now = C.current == null ? [] : failsOf(db, check, C.currentValue); const then = failsOf(db, check, v);
+  if (C.current == null || C.currentCharge !== undefined) {
+    const by = (rows) => { const m = {}; for (const r of rows) (m[r.sup] ||= []).push(r.reference); return m; }; const B = by(then);
+    return { found: true, draft: d ? { id: d.id, statement: d.statement, state: d.state, basis: d.basis } : null, check: C.what.replace('N', String(v)), compared_with: C.current ? `${C.current} in force` : 'No such rule in force today',
+      documents_replayed: db.prepare("SELECT count(*) n FROM documents WHERE doc_type = ? AND status <> 'Superseded' AND sent_at >= ?").get(C.set, QUARTER_FROM).n, failing_with_draft: then.length, charge: perFail == null ? 'To set' : basis.startsWith('percent') ? `${perFail}% of the ${basis.replace(/^percent of (the )?/, '')}` : `$${perFail.toFixed(2)} ${basis}`,
+      exposure_with_draft: cost(then) == null ? 'To set' : cost(then),
+      by_supplier: Object.keys(B).map((s) => ({ supplier: supplierName(db, s), with_draft: B[s].length, documents: B[s].slice(0, 5) })).sort((a, b) => b.with_draft - a.with_draft),
+      note: 'Replayed against the quarter’s exchanged records only. Nothing is published; publishing needs this replay on record and Jordan Ellis’s approval.' }; }
   const by = (rows) => { const m = {}; for (const r of rows) (m[r.sup] ||= []).push(r.reference); return m; };
   const A = by(now), B = by(then); const sups = [...new Set([...Object.keys(A), ...Object.keys(B)])];
   return { found: true, draft: d ? { id: d.id, statement: d.statement, state: d.state } : null, check: C.what.replace('N', String(v)), compared_with: `${C.current} at ${C.currentValue}`, documents_replayed: db.prepare("SELECT count(*) n FROM documents WHERE doc_type = ? AND status <> 'Superseded' AND sent_at >= ?").get(C.set, QUARTER_FROM).n,

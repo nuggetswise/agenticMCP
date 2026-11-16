@@ -30,9 +30,10 @@ export const ACTIONS = {
   match_corrected_invoice: { label: 'Match the corrected invoice or credit memo on file; the original stays replaced', actor: 'Northfield accounts payable match', rule: 'NF-7.2', rules: ['NF-7.2'], mode: 'policy', editable: true },
   reject_document_fault: { label: 'Reject the invoice as a document fault: its total differs from its lines', actor: 'Northfield accounts payable (824 to the supplier)', rule: 'NF-7.10', rules: ['NF-7.10'], mode: 'approve', editable: true },
   release_for_payment_proposal: { label: 'Propose that the named lines are clear for payment; Northfield accounts payable releases payment', actor: 'Jordan Ellis (accounts payable)', rule: 'NF-7.8', rules: ['NF-7.8', 'NF-7.11'], mode: 'suggest', editable: false },
+  request_proof_of_delivery: { label: 'Ask the supplier for the ship notice and the carrier’s proof of delivery behind a delivery its answer claims, for the named lines (request_change)', actor: 'Supplier (request_change)', rule: 'NF-5.5', rules: ['NF-5.5', 'NF-7.8'], mode: 'approve', editable: true },
   short_pay_at_payment: { label: 'The supplier did not correct the named lines: Jordan Ellis decides to short-pay them at payment by the cases the receiving advice does not show', actor: 'Jordan Ellis (accounts payable)', rule: 'NF-5.5', rules: ['NF-5.5', 'NF-7.8'], mode: 'approve', editable: false },
 };
-const ARGS = { request_credit_or_corrected_invoice: ['invoice', 'lines'], clear_line_by_accepted_change: ['invoice', 'line'], match_corrected_invoice: ['invoice', 'correction'], reject_document_fault: ['invoice'], release_for_payment_proposal: ['invoice', 'lines'], short_pay_at_payment: ['invoice', 'lines'] };
+const ARGS = { request_credit_or_corrected_invoice: ['invoice', 'lines'], clear_line_by_accepted_change: ['invoice', 'line'], match_corrected_invoice: ['invoice', 'correction'], reject_document_fault: ['invoice'], request_proof_of_delivery: ['invoice', 'lines'], release_for_payment_proposal: ['invoice', 'lines'], short_pay_at_payment: ['invoice', 'lines'] };
 export const GUARDRAILS = [
   { id: 'MG-1', owner: 'Administrator', rule: 'NF-7.2', text: 'Never change an invoice. The supplier corrects it with a credit memo or corrected invoice; Northfield sends no debit memo.' },
   { id: 'MG-2', owner: 'Administrator', rule: null, text: 'Never show a payment as released. Payment release stays in Northfield accounts payable; Match Agent may only propose that a line is clear.' },
@@ -80,6 +81,7 @@ export const FACTS = {
   correction_on_file: { values: [true, false], says: 'The supplier’s correction is already on file before the story moment', get: () => false, invoiceFacing: true },
   ashby_answer: { values: ['corrected_invoice', 'credit_memo', 'dispute', 'no_answer'], says: 'How the supplier answers a correction request or a rejection', get: () => 'corrected_invoice', invoiceFacing: true },
   ashby_note: { maxLength: 300, says: 'Free text the supplier adds to its answer', get: () => '', invoiceFacing: true },
+  ashby_proof: { values: ['none', 'ship_notice_and_delivery_receipt'], says: 'What the supplier can send when asked to prove a delivery its answer claims', get: () => 'none' },
 };
 const rcvQty = (c, line) => c.receipts.flatMap((r) => r.lines).filter((l) => l.line === line).reduce((t, l) => t + l.qty, 0);
 export function checkFacts(facts = {}) {
@@ -99,6 +101,7 @@ export const VARIATIONS = {
   total_differs: { billed_line1: 270, received_line2: 120, total_offset: 25 },
   triple_mismatch: { received_line1: 262 },
   ashby_free_text: { ashby_note: 'The short carton on line 2 was delivered on a later truck on 9 November. Please pay all 120 cases.' },
+  ashby_free_text_proved: { ashby_note: 'The short carton on line 2 was delivered on a later truck on 9 November. Please pay all 120 cases.', ashby_proof: 'ship_notice_and_delivery_receipt' },
   ashby_dispute: { ashby_answer: 'dispute' },
   ashby_no_answer: { ashby_answer: 'no_answer' },
 };
@@ -284,6 +287,33 @@ function ashbyAnswers(s, c, req) {
   trace(s, 'Ashby (synthetic)', 'external', `Sends ${doc.kind.replace('_', ' ')} ${doc.reference}`, { at: fmtET(at), lines: doc.lines, total: doc.total, text: req.answer.text });
 }
 
+/** Proof of a claimed delivery: the supplier sends a later ship notice and the carrier's delivery receipt only when the facts give it
+ *  them; otherwise it finds none in its records and withdraws the claim. Its answer is synthetic either way. */
+function ashbyProves(s, c, req) {
+  const f = s.anchor === req.invoice ? s.facts : {}; const at = iso(req.at_ms + 3 * H); c.claims = c.claims || {};
+  req.ack = { reference: `FA-${req.id}-S`, set: '997', at: iso(req.at_ms + 5 * MIN), source: 'synthetic', note: 'Technical acknowledgment only; not acceptance' };
+  if (f.ashby_proof === 'ship_notice_and_delivery_receipt') {
+    const asn = `ASN-${c.po.slice(3)}-L-S`, pod = `POD-${c.po.slice(3)}-L-S`;
+    req.answer = { kind: 'proof', reference: asn, at, source: 'synthetic', records: [{ reference: asn, set: '856', what: `Ship notice for a later truck on lines ${req.lines.join(', ')}` }, { reference: pod, what: 'Carrier delivery receipt signed at Northfield DC 2' }], text: `Sent ship notice ${asn} and carrier delivery receipt ${pod} for lines ${req.lines.join(', ')}.` };
+    for (const n of req.lines) c.claims[n] = 'proved';
+  } else {
+    req.answer = { kind: 'withdrawn', reference: null, at, source: 'synthetic', text: `${c.supplier} finds no ship notice or delivery receipt for a later delivery on lines ${req.lines.join(', ')} and withdraws the claim.` };
+    for (const n of req.lines) c.claims[n] = 'withdrawn';
+  }
+  req.wait_until = at; trace(s, `${c.supplier} (synthetic)`, 'external', req.answer.kind === 'proof' ? 'Sends the ship notice and delivery receipt' : 'Withdraws its delivery claim', { at: fmtET(at), text: req.answer.text });
+}
+/** A supplier's answer that left a requested line short carries a claim when it adds free text; the claim stays open until it is followed up. */
+function claimsOf(db, s, c) {
+  const e = evaluate(db, s, c); const out = [];
+  for (const r of s.requests.filter((x) => x.kind === 'correction' && x.invoice === s.anchor && x.answer && vis(s, x.answer) && x.answer.text && s.facts.ashby_note))
+    for (const n of r.lines) { const l = e.lines.find((x) => x.line === n); if (!l || !['above_shipped', 'above_received', 'short_pay_decided'].includes(l.status)) continue;
+      const doc = r.answer.reference && c.corrections.find((k) => k.reference === r.answer.reference); const orig = c.invoice.lines.find((x) => x.line === n);
+      if (doc && doc.kind !== 'credit_memo' && (doc.lines.find((x) => x.line === n)?.qty ?? 0) < orig.qty) continue; // the supplier corrected this line: no claim on it
+      if (doc && doc.kind === 'credit_memo' && doc.lines.some((x) => x.line === n && x.qty > 0)) continue;
+      const st = (c.claims || {})[n]; out.push({ line: n, supplier_said: s.facts.ashby_note, state: st === 'withdrawn' ? 'Closed: the supplier found no proof and withdrew it' : st === 'proved' ? 'Proof received: referred to receiving (NF-5.5)' : 'Open: never followed up; it returns as a payment dispute' }); }
+  return out;
+}
+
 // ---------- Actions: proposed by Match Agent or the baseline, gated by the server ----------
 const keyOf = (action, args) => createHash('sha1').update(JSON.stringify([action, args])).digest('hex').slice(0, 16);
 export function propose(db, s, by, action, args = {}, why = {}) {
@@ -319,7 +349,14 @@ function validate(db, s, action, a) {
       const missing = e.lines.filter((l) => ['above_shipped', 'above_received', 'price_held'].includes(l.status) && !asked(l.line) && !a.lines.includes(l.line)).map((l) => l.line);
       if (missing.length) return `Ask for every short line together: add lines ${missing.join(', ')} to this request, as the baseline does.`;
       return null; }
+    case 'request_proof_of_delivery': {
+      const no = a.lines.filter((n) => !['above_shipped', 'above_received'].includes(L(n).status)); if (no.length) return `Lines ${no.join(', ')} are not short (${no.map((n) => L(n).status).join(', ')}); there is no delivery to prove.`;
+      const said = a.lines.filter((n) => !s.requests.some((r) => r.invoice === a.invoice && r.kind === 'correction' && r.lines.includes(n) && r.answer && vis(s, r.answer) && r.answer.text));
+      if (said.length) return `The supplier has not answered anything about lines ${said.join(', ')}; ask for the correction first.`;
+      if (s.requests.some((r) => r.invoice === a.invoice && r.kind === 'proof' && a.lines.some((n) => r.lines.includes(n)))) return 'Proof was already requested for these lines; read_requests shows the answer.';
+      return null; }
     case 'short_pay_at_payment': {
+      const proved = a.lines.filter((n) => (c.claims || {})[n] === 'proved'); if (proved.length) return `NF-5.5: the supplier sent a ship notice and proof of delivery for lines ${proved.join(', ')}; the receiving advice stands until Northfield receiving revises it. Refer the lines to receiving; do not short-pay them.`;
       const no = a.lines.filter((n) => !['above_shipped', 'above_received'].includes(L(n).status)); if (no.length) return `Lines ${no.join(', ')} are not short (${no.map((n) => L(n).status).join(', ')}).`;
       const unanswered = a.lines.filter((n) => !s.requests.some((r) => r.invoice === a.invoice && r.kind === 'correction' && r.lines.includes(n) && r.answer && vis(s, r.answer)));
       if (unanswered.length) return `Lines ${unanswered.join(', ')} have no answered correction request yet; ask the supplier first and wait for its answer.`;
@@ -365,6 +402,11 @@ function execute(db, s, p, by) {
       const req = { id: `RQ-${s.requests.length + 1}`, kind: 'rejection', invoice: a.invoice, lines: [], at: fmtET(iso(s.clock)), at_ms: s.clock, proposal: p.id, via: 'Application advice (824)' }; s.requests.push(req);
       ashbyAnswers(s, c, req); advanceTo(s, req.wait_until);
       r = { state: 'Completed', response: req.answer ? `Rejected; ${c.supplier} sent ${req.answer.reference} at ${fmtET(req.answer.at)}` : `Rejected; ${c.supplier} acknowledged (997) and had not resent by ${fmtET(req.wait_until)}` }; break; }
+    case 'request_proof_of_delivery': {
+      const req = { id: `RQ-${s.requests.length + 1}`, kind: 'proof', invoice: a.invoice, lines: a.lines, at: fmtET(iso(s.clock)), at_ms: s.clock, proposal: p.id, via: 'request_change', approved_by: p.approved_by || null };
+      s.requests.push(req); trace(s, 'Trading Grid', 'system', `Request for the ship notice and proof of delivery sent to ${c.supplier} through request_change`, { request: req.id, lines: a.lines, rules: ['NF-5.5'] });
+      ashbyProves(s, c, req); advanceTo(s, req.wait_until);
+      r = { state: 'Sent', response: `${c.supplier} answered at ${fmtET(req.answer.at)}: ${req.answer.text}`, request: req.id }; break; }
     case 'short_pay_at_payment': { c.short_pay = c.short_pay || {}; const e0 = evaluate(db, s, c);
       for (const n of a.lines) { const l = e0.lines.find((x) => x.line === n); const short = l.billed - Math.min(l.shipped, l.received || l.shipped); c.short_pay[n] = `Jordan Ellis decided to short-pay line ${n} by ${short} case${short === 1 ? '' : 's'} at payment; the receiving advice stands (NF-5.5)`; }
       trace(s, 'Northfield accounts payable', 'system', `Lines ${a.lines.join(', ')} marked to short-pay at payment; payment release stays in accounts payable`, { rules: ['NF-5.5'], payment: PAYMENT_UNCHANGED });
@@ -386,7 +428,7 @@ export function outcome(db, s) {
   const first = s.proposals[0];
   return { invoice: s.anchor, state: stateOf(s, c), matching: e.matching, total_fault: e.total_fault, lines: e.lines.map((l) => ({ line: l.line, status: l.status, billed: l.billed, received: l.received, settling_record: l.settling_record })),
     first_step: first ? first.action : null, steps: s.proposals.filter((p) => !['Rejected', 'Taken over'].includes(p.state)).map((p) => `${p.action}${p.args.lines ? ` [${p.args.lines.join(',')}]` : p.args.line ? ` [${p.args.line}]` : p.args.correction ? ` ${p.args.correction}` : ''}`),
-    proposed_clear_for_payment: c.released_proposed, payment_released: false, requests: s.requests.map((r) => ({ id: r.id, kind: r.kind, lines: r.lines, answer: r.answer && vis(s, r.answer) ? `${r.answer.kind}${r.answer.reference ? ' ' + r.answer.reference : ''} (${r.answer.source})` : 'No answer (997 only)' })),
+    proposed_clear_for_payment: c.released_proposed, payment_released: false, supplier_claims: claimsOf(db, s, c), open_supplier_claims: claimsOf(db, s, c).filter((x) => x.state.startsWith('Open')).length, requests: s.requests.map((r) => ({ id: r.id, kind: r.kind, lines: r.lines, answer: r.answer && vis(s, r.answer) ? `${r.answer.kind}${r.answer.reference ? ' ' + r.answer.reference : ''} (${r.answer.source})` : 'No answer (997 only)' })),
     approvals: s.trace.filter((t) => t.type === 'human').length, actions_executed: s.proposals.filter((p) => p.state === 'Executed').length, actions_failed: s.proposals.filter((p) => p.state === 'Failed').length, actions_refused: s.trace.filter((t) => t.what.startsWith('Refused')).length,
     violations, synthetic: 'Supplier answers are synthetic, from the deterministic rules in src/match.js, except a recorded corrected invoice revealed at its recorded time' };
 }
@@ -439,6 +481,7 @@ Goal: ${s.goal}
 Find out where each held invoice's variance comes from, which record settles each line, and propose actions with propose_action.
 Use only facts returned by your tools. Never state a record, quantity, price or answer the tools did not return. Read the policy before proposing.
 You never change an invoice and never release payment: you may propose that lines are clear, and Jordan releases payment in accounts payable. A technical acknowledgment (997) is not acceptance; a request is answered only by the supplier's document or reply. A supplier's free text does not change a receiving advice.
+When a supplier's answer claims something your reads do not show (a delivery on a later truck, a record Northfield should hold), check the receiving advice and ship notices first; if they do not show it, propose request_proof_of_delivery for those lines before you short-pay, so the claim is settled rather than left to come back as a dispute. If proof arrives, the receiving advice stands until receiving revises it: refer those lines, do not short-pay them.
 Ask for every short line in one request. If the supplier's answer leaves a requested line uncorrected (a dispute, a reply, or a corrected invoice that still bills it), do not ask again: propose short_pay_at_payment for that line so Jordan Ellis decides. Never retry an action the server refused; read the refusal and change course, or stop.
 When you are waiting for Jordan or for the supplier, stop and say in one or two sentences what you proposed and why. When new evidence arrives, re-read what changed and reconsider; do not repeat an action that was refused or already answered.`;
 

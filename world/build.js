@@ -207,8 +207,24 @@ export function buildWorld({ quiet = false } = {}) {
   insert(db, 'review_notes', dec.map((e) => { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; return { case_id: d.case, charge: d.charge, at: new Date(Date.parse(e.at) - 3600000).toISOString(), author: 'Jordan Ellis',
     note: d.decision === 'Reversed' ? 'Load scan time is before the seal time on the bill of lading; seal intact at DC 2. Reverse the shortage. Receipt stays as recorded until receiving revises it.' : 'Ship notice still differs from the receiving advice on record. No revised receiving advice. Uphold.' }; }));
   insert(db, 'draft_rules', [
-    { id: 'NFD-1', created_at: '2026-11-10T15:00:00.000Z', author: 'Jordan Ellis', statement: 'Send the ship notice within 30 minutes of departure', check_kind: 'ship_notice_minutes', value: 30, charge: 150, state: 'Draft' },
-    { id: 'NFD-2', created_at: '2026-11-10T15:30:00.000Z', author: 'Jordan Ellis', statement: 'Invoice line prices within 0.25% of the purchase order price', check_kind: 'price_tolerance_pct', value: 0.25, charge: 100, state: 'Draft' }]);
+    { id: 'NFD-1', created_at: '2026-11-10T15:00:00.000Z', author: 'Jordan Ellis', statement: 'Send the ship notice within 30 minutes of departure', check_kind: 'ship_notice_minutes', value: 30, charge: 150, state: 'Draft', charge_basis: 'per document', basis: 'Northfield' },
+    { id: 'NFD-2', created_at: '2026-11-10T15:30:00.000Z', author: 'Jordan Ellis', statement: 'Invoice line prices within 0.25% of the purchase order price', check_kind: 'price_tolerance_pct', value: 0.25, charge: 100, state: 'Draft', charge_basis: 'per document', basis: 'Northfield' },
+    // Change list 4 (owner decision, 16 November 2026): two real retailers' published chargeback rules as Northfield drafts. Neither retailer
+    // is named (R04). Values as published; a charge the source leaves open stays null ("to set"). Drafts change nothing until published.
+    ...[['NFD-3', 'Supplier’s functional acknowledgment (997) to an order within 48 hours', 'supplier_997_hours', 48, 100, 'per document', 'retailer guide A'],
+      ['NFD-4', 'Ship-to on the ship notice matches the order: $75 below an order-value threshold, $150 at or above it (threshold to set; replayed at $150)', 'ship_to_mismatch', 0, 150, 'per document', 'retailer guide A'],
+      ['NFD-5', 'Every item on the ship notice is on the order and Northfield’s item list: $75 or $150 by order value (replayed at $150)', 'item_not_on_order', 0, 150, 'per document', 'retailer guide A'],
+      ['NFD-6', 'Shipped quantity at or above 105% of the quantity ordered: 10% of the cost of the units over', 'over_shipment_pct', 105, 10, 'percent of over-shipped value', 'retailer guide A; charge from marketplace retailer B'],
+      ['NFD-7', 'Under-shipment of 3% or more against the order (tiers to set)', 'under_shipment_pct', 3, null, 'tiered, to set', 'retailer guide A'],
+      ['NFD-8', 'Shipped more than 10 business days after the order’s ship-not-after date: $500 per ship notice (waits for ship windows on orders)', 'ship_not_after_days', 10, 500, 'per document', 'retailer guide A'],
+      ['NFD-9', 'Shipped more than 7 days before the order’s ship-not-before date (charge to set; waits for ship windows on orders)', 'ship_not_before_days', 7, null, 'per document', 'retailer guide A'],
+      ['NFD-10', 'Ship notice unit of measure equals the order’s: $300 per ship notice', 'uom_mismatch', 0, 300, 'per document', 'retailer guide A'],
+      ['NFD-11', 'No ship notice reuses a shipment identifier: $150', 'duplicate_shipment_id', 0, 150, 'per document', 'retailer guide A'],
+      ['NFD-12', 'No carton over 63.5 cm on any side: $25 per carton', 'carton_over_cm', 63.5, 25, 'per carton', 'marketplace retailer B'],
+      ['NFD-13', 'No carton holds a unit over 23 kg: $25 per carton', 'unit_over_kg', 23, 25, 'per carton', 'marketplace retailer B'],
+      ['NFD-14', 'Carton contents match the ship notice: $2.60 per unit that differs', 'carton_contents_units', 0, 2.6, 'per unit', 'marketplace retailer B'],
+      ['NFD-15', 'Ship notice accurate and complete: 2% of the order’s cost when it fails (low end of the published 2 to 6%)', 'ship_notice_accuracy_pct', 2, 2, 'percent of order value', 'marketplace retailer B']]
+      .map(([id, statement, check_kind, value, charge, charge_basis, src]) => ({ id, created_at: '2026-11-16T17:00:00.000Z', author: 'Jordan Ellis', statement, check_kind, value, charge, state: 'Draft', charge_basis, basis: `Adapted from ${src} (owner-supplied)` }))]);
   const fk = db.prepare('PRAGMA foreign_key_check').all();
   if (fk.length) { const by = {}; for (const r of fk) { const k = `${r.table}→${r.parent}`; by[k] = (by[k] || 0) + 1; } db.exec('ROLLBACK'); throw new Error(`Declared keys without a row to point at: ${JSON.stringify(by)}`); }
   db.exec('COMMIT'); db.close();

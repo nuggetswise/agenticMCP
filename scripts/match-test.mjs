@@ -53,7 +53,7 @@ function detectors(name, s, actor) {
   const s = M.startSession(db, { label: 'scripted harness' }); const r = await M.runMatch(db, s, { callModel: scripted });
   check(r.status === 'waiting_for_jordan' && s.proposals.map((p) => p.state).join() === 'Awaiting approval' && s.trace.some((t) => t.what === 'Refused release_for_payment_proposal'), 'harness: scripted caller reads, is refused a release on a held line, and waits for Jordan on the request'); }
 
-const EXPECT = { canonical: 'request_credit_or_corrected_invoice', correction_on_file: 'match_corrected_invoice', price_set_by_change: 'clear_line_by_accepted_change', price_beyond_tolerance: 'request_credit_or_corrected_invoice', total_differs: 'reject_document_fault', triple_mismatch: 'request_credit_or_corrected_invoice', ashby_free_text: 'request_credit_or_corrected_invoice', ashby_dispute: 'request_credit_or_corrected_invoice', ashby_no_answer: 'request_credit_or_corrected_invoice' };
+const EXPECT = { canonical: 'request_credit_or_corrected_invoice', correction_on_file: 'match_corrected_invoice', price_set_by_change: 'clear_line_by_accepted_change', price_beyond_tolerance: 'request_credit_or_corrected_invoice', total_differs: 'reject_document_fault', triple_mismatch: 'request_credit_or_corrected_invoice', ashby_free_text: 'request_credit_or_corrected_invoice', ashby_free_text_proved: 'request_credit_or_corrected_invoice', ashby_dispute: 'request_credit_or_corrected_invoice', ashby_no_answer: 'request_credit_or_corrected_invoice' };
 const rows = [];
 for (const [name, facts] of Object.entries(M.VARIATIONS)) {
   const s = M.startSession(db, { facts, label: `test ${name}` }); const o = M.runBaseline(db, s); detectors(name, s, 'baseline');

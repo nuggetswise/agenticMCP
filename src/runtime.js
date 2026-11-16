@@ -186,7 +186,13 @@ When you are waiting for ${person} or another party, stop and say in one or two 
       const text = parts.map((p) => p.text || '').join('').trim();
       if (content) ag.history.push(content);
       if (text) trace(s, agent, 'ai', `${agent} said`, { text: text.slice(0, 600) });
-      if (!calls.length) { ag.status = s.proposals.some((p) => p.state === 'Awaiting approval') ? 'waiting_for_person' : s.pending.length ? 'waiting_for_records' : 'done'; break; }
+      if (!calls.length) {
+        ag.status = s.proposals.some((p) => p.state === 'Awaiting approval') ? 'waiting_for_person' : s.pending.length ? 'waiting_for_records' : 'done';
+        // A rule finding on the queue must be answered: if the agent stops with a row the rules marked as needing action, it is told once and goes on.
+        if (ag.status === 'done' && spec.mustAnswer) { ag.nudged ||= []; const open = spec.queue(db, s, ctx).rows.filter((r) => !r.closed && spec.mustAnswer(r, s) && !ag.nudged.includes(`${r.id}|${r.state}`));
+          if (open.length) { ag.nudged.push(...open.map((r) => `${r.id}|${r.state}`)); trace(s, 'Rule engine', 'rule', `Open findings the agent has not answered: ${open.map((r) => r.id).join(', ')}`, { rows: open.map((r) => `${r.id}: ${r.state}`) });
+            ag.history.push({ role: 'user', parts: [{ text: `The rule engine still shows open findings you have not answered: ${open.map((r) => `${r.id} (${r.state}: ${r.what})`).join('; ')}. Answer each with a permitted action, or say why none applies.` }] }); ag.status = 'running'; continue; } }
+        break; }
       const responses = []; let waiting = false; let blocked = null;
       for (const { functionCall: f } of calls) {
         ag.tool_calls++; const args = { ...(f.args || {}) }; let result;

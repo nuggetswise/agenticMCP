@@ -281,7 +281,7 @@ export function runtimeTools(rt, { name, db, callModel, paused, log, recordTrial
         const trial = recordTrial({ agent: rt.agent, rule: null, by: by(), change: { policy: Object.keys(policy || {}).length ? policy : 'Policy in force (no change)', variation: variation || 'canonical', facts: facts || {} },
           result: { baseline: r.baseline.outcome, agent: r.agent.blocked ? { blocked: r.agent.blocked } : r.agent.outcome, automation: r.automation, drift_measure: r.automation ? `${r.automation.same_steps.length} steps the same (automation), ${r.automation.agent_only.length} by the agent only, ${r.automation.baseline_only.length} by the baseline only` : `${rt.agent} did not run; nothing to compare`, rollback: 'Nothing was changed: sessions are in memory and leave the recorded world unchanged.' } });
         if (detail === 'full') return { ...r, trial };
-        return { trial, changes: r.variation, evidence_cutoff: r.evidence_cutoff, baseline: { outcome: r.baseline.outcome, trace: brief(r.baseline.trace) }, agent: r.agent.blocked ? { blocked: r.agent.blocked, trace: brief(r.agent.trace) } : { status: r.agent.status, outcome: r.agent.outcome, overhead: r.agent.overhead, trace: brief(r.agent.trace) }, automation: r.automation };
+        return { trial, changes: r.variation, evidence_cutoff: r.evidence_cutoff, baseline: { session: r.baseline.session, outcome: r.baseline.outcome, trace: brief(r.baseline.trace) }, agent: r.agent.blocked ? { session: r.agent.session, blocked: r.agent.blocked, trace: brief(r.agent.trace) } : { session: r.agent.session, status: r.agent.status, outcome: r.agent.outcome, overhead: r.agent.overhead, trace: brief(r.agent.trace) }, automation: r.automation };
       } },
   ];
 }

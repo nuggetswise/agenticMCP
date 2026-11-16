@@ -278,7 +278,7 @@ async function scoutReplay({ variation, facts, detail, policy } = {}, by = assis
       drift_measure: pt ? `${pt.differs.length} proposal outcomes differ; cartons ${pt.in_force.outcome.cartons_loaded} under the policy in force, ${r.baseline.outcome.cartons_loaded} with the change; approvals ${pt.in_force.outcome.approvals} and ${r.baseline.outcome.approvals}` : 'No change replayed',
       rollback: `Nothing was changed: Scout’s live policy stays ${JSON.stringify(Object.fromEntries(Object.entries(Scout.ACTIONS).map(([k, a]) => [k, a.mode])))}. Sessions are in memory and leave the recorded world unchanged.` } });
   if (detail === 'full') return { ...r, trial };
-  return { trial, variation: variation || 'canonical', changes: r.variation, evidence_cutoff: r.evidence_cutoff, ...(pt ? { policy_trial: { asked: pt.asked, refused: pt.refused, authority_differs: pt.differs, in_force: pt.in_force.outcome, with_change: pt.with_change.outcome } } : {}), baseline: { outcome: r.baseline.outcome, trace: brief(r.baseline.trace) }, scout: r.scout.blocked ? r.scout : { status: r.scout.status, outcome: r.scout.outcome, overhead: r.scout.overhead, trace: brief(r.scout.trace) } }; }
+  return { trial, variation: variation || 'canonical', changes: r.variation, evidence_cutoff: r.evidence_cutoff, ...(pt ? { policy_trial: { asked: pt.asked, refused: pt.refused, authority_differs: pt.differs, in_force: pt.in_force.outcome, with_change: pt.with_change.outcome } } : {}), baseline: { session: r.baseline.session, outcome: r.baseline.outcome, trace: brief(r.baseline.trace) }, scout: r.scout.blocked ? r.scout : { session: r.scout.session, status: r.scout.status, outcome: r.scout.outcome, overhead: r.scout.overhead, trace: brief(r.scout.trace) } }; }
 const SCOUT_TOOLS = [
   { name: 'scout_start', title: 'Start Scout on NR-460207', description: 'Branches the demo world at Tuesday 8 December 2026 17:12 ET into an isolated session (later recorded events hidden; nothing reaches the recorded world), lets Scout Agent investigate the Kinross load scan for NR-460207 with its read tools, and returns when Scout waits for Priya Raman, finishes or hits its limit. Returns the session id, proposals awaiting approval and the full trace with who did what. Kinross and Northfield answers in a session are synthetic, from deterministic rules.', input: { variation: VAR, facts: FACTS_IN, policy: POLICY_IN, label: z.string().optional() }, run: scoutStart },
   { name: 'scout_setup', title: 'Scout setup: facts, approval modes and guardrails', description: 'What can be set before a Scout run on NR-460207: the Kinross facts with their recorded values, each action with its rule, its approval mode and whether Priya Raman may change it, and the administrator guardrails. Changes nothing.', input: {}, run: async () => Scout.setup() },
@@ -320,7 +320,7 @@ async function watchReplay({ variation, facts, detail, policy } = {}, by = assis
     result: { baseline: r.baseline.outcome, watch: wo, automation: r.automation, drift_measure: r.automation ? `${r.automation.same_steps.length} steps the same (automation), ${r.automation.agent_only.length} by the agent only, ${r.automation.baseline_only.length} by the baseline only` : 'Watch Agent did not run; nothing to compare',
       rollback: 'Nothing was changed: sessions are in memory and leave the recorded world unchanged.' } });
   if (detail === 'full') return { ...r, trial };
-  return { trial, variation: variation || 'canonical', changes: r.variation, evidence_cutoff: r.evidence_cutoff, baseline: { outcome: r.baseline.outcome, trace: wbrief(r.baseline.trace) }, watch: r.watch.blocked ? { blocked: r.watch.blocked, trace: wbrief(r.watch.trace) } : { status: r.watch.status, outcome: r.watch.outcome, overhead: r.watch.overhead, trace: wbrief(r.watch.trace) }, automation: r.automation };
+  return { trial, variation: variation || 'canonical', changes: r.variation, evidence_cutoff: r.evidence_cutoff, baseline: { session: r.baseline.session, outcome: r.baseline.outcome, trace: wbrief(r.baseline.trace) }, watch: r.watch.blocked ? { session: r.watch.session, blocked: r.watch.blocked, trace: wbrief(r.watch.trace) } : { session: r.watch.session, status: r.watch.status, outcome: r.watch.outcome, overhead: r.watch.overhead, trace: wbrief(r.watch.trace) }, automation: r.automation };
 }
 const WATCH_TOOLS = [
   { name: 'watch_setup', title: 'Watch setup: facts, Priya’s rules, approval modes and guardrails', description: 'What can be set before a Watch Agent run on Ashby’s open Northfield orders: the story moment and Kinross facts with their recorded values, Priya Raman’s editable rules (the Kinross 945 window), each action with its rule, approval mode and whether Priya may change it, the presets, and the administrator guardrails. Changes nothing.', input: {}, run: async () => Watch.setup() },
@@ -352,7 +352,7 @@ async function matchReplay({ variation, facts, policy, detail } = {}, by = assis
   const trial = G.recordTrial(db, NF, { agent: 'Match Agent', rule: null, by, change: { policy: policy && Object.keys(policy).length ? policy : 'Policy in force (no change)', variation: variation || 'canonical', facts: r.facts },
     result: { baseline: r.baseline.outcome, agent: r.agent.blocked ? { blocked: r.agent.blocked } : r.agent.outcome, steps: r.steps, drift_measure: r.automation, rollback: 'Nothing was changed: sessions are in memory and leave Northfield’s recorded records unchanged.' } });
   if (detail === 'full') return { ...r, trial };
-  return { trial, variation: variation || 'canonical', facts: r.facts, evidence_cutoff: r.evidence_cutoff, simplest_baseline: r.baseline.simplest, baseline: { outcome: r.baseline.outcome, trace: brief(r.baseline.trace) }, agent: r.agent.blocked ? { blocked: r.agent.blocked, trace: brief(r.agent.trace) } : { status: r.agent.status, outcome: r.agent.outcome, overhead: r.agent.overhead, trace: brief(r.agent.trace) }, steps: r.steps, comparison: r.comparison, automation: r.automation };
+  return { trial, variation: variation || 'canonical', facts: r.facts, evidence_cutoff: r.evidence_cutoff, simplest_baseline: r.baseline.simplest, baseline: { session: r.baseline.session, outcome: r.baseline.outcome, trace: brief(r.baseline.trace) }, agent: r.agent.blocked ? { session: r.agent.session, blocked: r.agent.blocked, trace: brief(r.agent.trace) } : { session: r.agent.session, status: r.agent.status, outcome: r.agent.outcome, overhead: r.agent.overhead, trace: brief(r.agent.trace) }, steps: r.steps, comparison: r.comparison, automation: r.automation };
 }
 const MATCH_TOOLS = [
   { name: 'match_setup', title: 'Match Agent setup: queue, facts, approval modes and guardrails', description: 'What can be set before a Match Agent run on the P14 story moment (Tuesday 10 November 2026 09:00 ET): the invoices held at that moment with their rules, the facts with their recorded values and presets, each action with its rules, its approval mode and whether Jordan Ellis may change it, and the administrator guardrails. Changes nothing.', input: {}, run: async () => Match.setup(nfDb) },
@@ -367,7 +367,24 @@ const rtModel = () => Scout.geminiCaller(Aviator.modelRoutes());
 const rtSet = (cid, rt, name, dataDb) => runtimeTools(rt, { name, db: dataDb, callModel: rtModel, paused: () => G.isPaused(db, rt.agent),
   log: (tool, args, outcome, records, w) => log(cid, tool, [], args, outcome, records, w), recordTrial: (t) => G.recordTrial(db, cid, t), by: () => assistantOf(cid) });
 export const RUNTIME_TOOLS = { [AS]: [...rtSet(AS, Claim, 'claim', db), ...rtSet(AS, Pace, 'pace', db), ...rtSet(AS, Shelf, 'shelf', db)], [NF]: [...rtSet(NF, Review, 'review', nfDb), ...rtSet(NF, Chase, 'chase', nfDb)] };
+// A replay runs the baseline and the agent end to end and can outlast a connector's call budget (about four minutes). Every
+// *_replay tool answers inline when it finishes within RUN_WAIT_MS; otherwise it answers at once with a job id, keeps running,
+// and its result is read at /jobs/<id> (random ids, memory only, fictional data). Nothing about the run itself changes.
+const RUN_JOBS = new Map(); const RUN_WAIT_MS = Number(process.env.REPLAY_WAIT_MS || 150000); const RUN_PENDING = Symbol('pending');
+function asJob(t) {
+  if (!t.name.endsWith('_replay') || t.asJob) return t; const run = t.run;
+  t.run = async (args) => {
+    const id = `JOB-${randomBytes(6).toString('hex')}`; const job = { id, tool: t.name, args, status: 'running', started: new Date().toISOString() }; RUN_JOBS.set(id, job);
+    if (RUN_JOBS.size > 200) RUN_JOBS.delete(RUN_JOBS.keys().next().value);
+    const p = Promise.resolve().then(() => run(args)).then((r) => { job.status = 'finished'; job.finished = new Date().toISOString(); job.result = r; return r; }, (e) => { job.status = 'failed'; job.error = String(e?.message || e); return { result: 'Invalid request', error: job.error }; });
+    const r = await Promise.race([p, new Promise((ok) => setTimeout(() => ok(RUN_PENDING), RUN_WAIT_MS))]);
+    if (r !== RUN_PENDING) return { job: id, ...r };
+    return { status: 'running', job: id, poll: `${BASE}/jobs/${id}`, message: `${t.name} is still running on the server; read its result at ${BASE}/jobs/${id}. It is recorded on the change list as a trial when it finishes.` };
+  };
+  t.asJob = true; return t;
+}
 /** Every agent session tool on a connection, for MCP and REST: Scout, Watch and Match, and the shared-runtime agents. */
+for (const t of [...SCOUT_TOOLS, ...WATCH_TOOLS, ...MATCH_TOOLS, ...RUNTIME_TOOLS[AS], ...RUNTIME_TOOLS[NF]]) asJob(t);
 const SESSION_TOOLS = (cid) => cid === AS ? [...SCOUT_TOOLS, ...WATCH_TOOLS, ...RUNTIME_TOOLS[AS]] : [...MATCH_TOOLS, ...RUNTIME_TOOLS[NF]];
 async function runSessionTool(cid, t, args) { let out; try { out = await t.run(args); if (cid === NF) out = linkify(out, SIDE[NF]); } catch (e) { out = { result: 'Invalid request', error: e.message }; } log(cid, t.name, [], args, out.result || out.status || 'Answered', []); return out; }
 function makeServer(cid) {
@@ -439,9 +456,10 @@ app.all('/api/:token/tools/:name', async (req, res) => { const cid = cidOf(req, 
 
 // A session's current view by its id, for recording a real run into a prototype page. Session ids are random and live in memory
 // only; the data is fictional. Builders fetch the views a connector already returned, so a page's recorded run is never retyped.
+app.get('/jobs/:id', (req, res) => { const j = RUN_JOBS.get(String(req.params.id)); if (!j) return res.status(404).json({ error: 'No such job; jobs live in memory and end when the server restarts.' }); res.json(j); });
 app.get('/sessions/:id', (req, res) => { const id = String(req.params.id).replace(/\.json$/, '');
   const rt = [[Claim, db], [Pace, db], [Shelf, db], [Review, nfDb], [Chase, nfDb]].find(([r]) => id.startsWith(`${r.prefix}-`) && r.getSession(id));
-  const v = id.startsWith('WS-') && Watch.getSession(id) ? watchView(Watch.getSession(id)) : id.startsWith('MS-') && Match.getSession(id) ? matchView(Match.getSession(id)) : rt ? rt[0].view(rt[1], rt[0].getSession(id)) : null;
+  const v = id.startsWith('SC-') && Scout.getSession(id) ? scoutView(Scout.getSession(id)) : id.startsWith('WS-') && Watch.getSession(id) ? watchView(Watch.getSession(id)) : id.startsWith('MS-') && Match.getSession(id) ? matchView(Match.getSession(id)) : rt ? rt[0].view(rt[1], rt[0].getSession(id)) : null;
   if (!v) return res.status(404).json({ error: 'No such session; sessions live in memory and end when the server restarts.' }); res.json(v); });
 app.get('/records/order/:po', (req, res) => res.type('html').send(recordPage(D.lifecycle(db, req.params.po))));
 app.get('/records/document/:id', (req, res) => res.type('html').send(documentPage(D.document(db, req.params.id))));

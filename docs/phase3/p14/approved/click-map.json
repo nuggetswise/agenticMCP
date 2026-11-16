@@ -1,0 +1,19 @@
+{
+  "prototype": "P14",
+  "approved": "2026-11-16, Phase 3 approval packet part (a) and open call 3, approved as drafted",
+  "main_path_clicks": 2,
+  "primary_button": "Approve, with the sentence above it naming every destination (open call 1)",
+  "steps": [
+    { "click": null, "changes": "The hold starts Match Agent; INV-7731 opens with one request for lines 1 and 2", "beat": "Problem", "expect": { "record": "INV-7731", "visible": ["What Match Agent did", "If nothing changes:", "line 2"] } },
+    { "click": "Approve", "changes": "Request sent to Ashby for both lines", "beat": "Turn", "expect": { "visible": ["Ashby"] } },
+    { "click": null, "changes": "INV-7731C arrives and is matched for line 1; Ashby keeps line 2 at 120; Match Agent returns with the short-pay proposal", "beat": "Turn", "expect": { "visible": ["INV-7731C", "Approve"] } },
+    { "click": "Approve", "changes": "Line 2 marked to short-pay one case at payment; payment release untouched", "beat": "Result", "expect": { "absent": ["Payment released"] } },
+    { "click": null, "changes": "Result reads INV-7731C matched; line 2 decided", "beat": "Result", "expect": { "visible": ["INV-7731C"] } }
+  ],
+  "task_card": {
+    "problem": "A held invoice can trace to a short receipt, a price beyond tolerance, a total that does not add up, or a correction already sent, and each needs a different record to settle it.",
+    "turn": "Match Agent reads the order, the receiving advice and the invoice, finds where each held line began, and asks Ashby for the record that settles it; Jordan approves each request.",
+    "result": "Ashby's corrected invoice settles line 1; Jordan decides to short-pay line 2's one case at payment. Payment release stays in accounts payable.",
+    "ends_at": "The corrected invoice INV-7731C matched, and every held line settled or decided."
+  }
+}

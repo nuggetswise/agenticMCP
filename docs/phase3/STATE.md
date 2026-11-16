@@ -5,8 +5,8 @@ Read PROMPT.md and this file before each step. One line per step.
 - Gate: done 16 Nov. Workspace skill has "Every turn" and allows Requirements v8 (business problem); agent skill names "Direction A · Agent working live" and lists P13 and P14.
 - Repo: attached with push access; HEAD ed78898.
 - Step 1 Analyse: done 16 Nov; findings in the Phase 3 approval packet (https://claude.ai/artifact/HNumZwYzyjd7SmQTpnredD).
-- Step 2 Approval packet: packet written; waiting on the owner's four answers.
-- Step 3 Design system and kit: not started.
+- Step 2 Approval packet: done 16 Nov. Owner answers: (a) change lists, (b) cut list, (c) skill restructure, (d) open calls, all Approve as drafted. Click maps frozen in docs/phase3/<id>/approved/click-map.json.
+- Step 3 Design system and kit: in progress.
 - Step 4 Agents: not started.
 - Step 5 Rebuild P13, P14, P15: not started.
 - Step 6 Cleanup: not started.

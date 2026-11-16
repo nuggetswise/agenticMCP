@@ -1,0 +1,18 @@
+{
+  "prototype": "P15",
+  "approved": "2026-11-16, Phase 3 approval packet part (a) and open call 5, approved as drafted",
+  "main_path_clicks": 3,
+  "primary_button": "Labelled with its outcome",
+  "steps": [
+    { "click": null, "changes": "NFD-1 opens, not replayed", "beat": "Problem", "expect": { "record": "NFD-1", "visible": ["Replay against the quarter"], "absent": ["Keep as draft"] } },
+    { "click": "Replay against the quarter", "changes": "Failing now, failing with the draft, added exposure and the supplier table appear", "beat": "Turn", "expect": { "visible": ["32", "541", "$76,350"] } },
+    { "click": "Publish to suppliers", "changes": "The rule is published with its replay on record", "beat": "Result", "expect": { "absent": ["Publish requested"] } },
+    { "click": "NFD-2", "changes": "NFD-2 opens", "beat": "Problem, next record", "expect": { "record": "NFD-2" } }
+  ],
+  "task_card": {
+    "problem": "A change to a Northfield rule turns suppliers' passing documents into failures and charges nobody saw coming.",
+    "turn": "Jordan replays the draft against the quarter's exchanged documents and sees which suppliers would fail, how many documents, and the added charge exposure.",
+    "result": "Jordan publishes, revises or keeps the draft with the exposure in front of him.",
+    "ends_at": "The rule Jordan publishes, with its replay on record; nothing already exchanged is charged again."
+  }
+}

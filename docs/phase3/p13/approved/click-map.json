@@ -1,0 +1,24 @@
+{
+  "prototype": "P13",
+  "approved": "2026-11-16, Phase 3 approval packet part (a), approved as drafted",
+  "main_path_clicks": 5,
+  "primary_button": "Approve, with the sentence above it naming every destination (open call 1)",
+  "steps": [
+    { "click": null, "changes": "Morning check starts Watch Agent; rows appear as checked; NR-46215 opens with its proposal", "beat": "Problem",
+      "expect": { "visible": ["What Watch Agent did", "If nothing changes:", "Approve", "Edit suggestion"], "record": "NR-46215" } },
+    { "click": "Approve", "record": "NR-46215", "changes": "Ship notice sent, recorded Late; queue moves on", "beat": "Turn", "expect": { "row_chip": { "NR-46215": "Late" } } },
+    { "click": "Approve", "record": "NR-46220", "changes": "Kinross asked for status; warehouse status Unknown", "beat": "Turn", "expect": { "row_chip": { "NR-46220": "Asked" } } },
+    { "click": "Approve", "record": "NR-46210", "changes": "Order acknowledgment sent before its deadline; technical acknowledgment only", "beat": "Turn", "expect": { "row_chip": { "NR-46210": "Sent" } } },
+    { "click": "Approve", "record": "NR-46226", "changes": "Invoice created in the Supplier ERP and sent", "beat": "Turn", "expect": { "row_chip": { "NR-46226": "Sent" } } },
+    { "click": null, "changes": "Kinross's 945 arrives; NR-46220 returns with a ship notice drafted from the load scan", "beat": "Turn", "expect": { "record": "NR-46220", "visible": ["Approve"] } },
+    { "click": "Approve", "record": "NR-46220", "changes": "Ship notice sent", "beat": "Result", "expect": { "row_chip": { "NR-46220": "Sent" } } },
+    { "click": null, "changes": "Northfield's receiving advice for NR-46215 matches the ship notice; Result reads established", "beat": "Result", "expect": { "visible": ["receiving advice"] } }
+  ],
+  "evidence": "Any interface tag opens its readable document",
+  "task_card": {
+    "problem": "A document Northfield requires never leaves Ashby, and monitoring shows nothing until the charge arrives.",
+    "turn": "Watch Agent checks every open order against the documents Northfield requires, finds out why each is missing from the Supplier ERP, Kinross and the document trail, and drafts the fix from the source record; Priya approves each send.",
+    "result": "Two documents go before their deadlines, the late ship notice goes and stays Late, Kinross is chased and answers, and one order is correctly left alone.",
+    "ends_at": "Every required document reaches Northfield or the order is correctly left alone: Northfield's receiving advice matches the ship notice, and Kinross's 945 answers the warehouse ask."
+  }
+}

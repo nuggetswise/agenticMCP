@@ -1,0 +1,749 @@
+{
+ "recorded_at": "2026-11-16 UTC, session MS-aa648d1954 through Northfield's connector (match_start, then match_decide approve MP-1); views fetched from /sessions/<id> after each step",
+ "approvals": "made by the builder in an isolated session, on the owner's instruction to record a real run",
+ "steps": [
+  {
+   "session": "MS-aa648d1954",
+   "label": "Recording for the P14 page (builder)",
+   "clock": "2026-11-10 09:00 ET",
+   "status": "waiting_for_jordan",
+   "branch_at": "2026-11-10 09:00 ET",
+   "facts": [],
+   "queue": [
+    {
+     "invoice": "INV-7731",
+     "po": "NR-450118",
+     "supplier": "Ashby Supplier",
+     "invoice_sent": "2026-11-08 10:00 ET",
+     "holds": [
+      {
+       "rule": "NF-7.8",
+       "line": 1,
+       "finding": "Line 1 bills 300 cases; 270 shipped and 270 accepted; held value $1620.00",
+       "advice": "AA-INV-7731",
+       "advice_sent": "2026-11-08 10:20 ET",
+       "link": "document/AA-INV-7731"
+      }
+     ],
+     "state": "Held",
+     "compared": {
+      "purchase_order": {
+       "reference": "NR-450118",
+       "link": "order/NR-450118"
+      },
+      "receiving_advice": [
+       {
+        "reference": "RCV-DC2-77290",
+        "link": "document/RCV-DC2-77290"
+       },
+       {
+        "reference": "RCV-DC2-77355",
+        "link": "document/RCV-DC2-77355"
+       }
+      ],
+      "invoice": {
+       "reference": "INV-7731",
+       "link": "document/INV-7731"
+      }
+     }
+    }
+   ],
+   "awaiting": [
+    {
+     "id": "MP-1",
+     "action": "request_credit_or_corrected_invoice",
+     "does": "Ask the supplier for a credit memo or corrected invoice for the named lines (request_change)",
+     "args": {
+      "invoice": "INV-7731",
+      "lines": [
+       1
+      ]
+     },
+     "proposed_by": "Match Agent",
+     "rationale": "Line 1 bills 300 cases while only 270 were shipped and accepted, violating rule NF-7.8; Ashby Supplier must provide a credit memo or corrected invoice for the 30 overbilled cases.",
+     "alternatives": [
+      "reject_document_fault"
+     ],
+     "rules": [
+      "NF-7.8",
+      "NF-7.2"
+     ]
+    }
+   ],
+   "outcome": {
+    "invoice": "INV-7731",
+    "state": "Held",
+    "matching": "INV-7731",
+    "total_fault": false,
+    "lines": [
+     {
+      "line": 1,
+      "status": "above_shipped",
+      "billed": 300,
+      "received": 270,
+      "settling_record": "A credit memo or corrected invoice from Ashby Supplier for 30 cases (NF-7.8, NF-7.2)"
+     },
+     {
+      "line": 2,
+      "status": "above_received",
+      "billed": 120,
+      "received": 119,
+      "settling_record": "Receiving advice RCV-DC2-77355: 119 received of 120 billed. Only a revised receiving advice changes it (NF-5.5); a credit memo from the supplier would also settle it"
+     },
+     {
+      "line": 3,
+      "status": "clear",
+      "billed": 80,
+      "received": 80,
+      "settling_record": null
+     }
+    ],
+    "first_step": "request_credit_or_corrected_invoice",
+    "steps": [
+     "request_credit_or_corrected_invoice [1]"
+    ],
+    "proposed_clear_for_payment": [],
+    "payment_released": false,
+    "requests": [],
+    "approvals": 0,
+    "actions_executed": 0,
+    "actions_failed": 0,
+    "actions_refused": 0,
+    "violations": [],
+    "synthetic": "Supplier answers are synthetic, from the deterministic rules in src/match.js, except a recorded corrected invoice revealed at its recorded time"
+   },
+   "ashby_sees": {
+    "invoices": [
+     {
+      "invoice": "INV-7731",
+      "po": "NR-450118",
+      "application_advice": [
+       {
+        "reference": "AA-INV-7731",
+        "sent": "2026-11-08 10:20 ET",
+        "cause": "Invoice quantity above accepted quantity",
+        "rule": "NF-7.8"
+       }
+      ]
+     }
+    ],
+    "requests_received": [],
+    "not_shown": "Northfield\u2019s accounts payable records, match notes and proposals are Northfield\u2019s"
+   },
+   "trace": [
+    {
+     "n": 1,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Session branched from Northfield\u2019s recorded records",
+     "detail": {
+      "at": "2026-11-10 09:00 ET",
+      "hidden": "Every record dated after the session clock",
+      "facts": []
+     }
+    },
+    {
+     "n": 2,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "1 invoice held at the story moment",
+     "detail": {
+      "holds": [
+       {
+        "invoice": "INV-7731",
+        "rules": [
+         "NF-7.8"
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "n": 3,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_queue",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 4,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_policy",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 5,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_rules",
+     "detail": {
+      "args": {
+       "ids": [
+        "NF-7.8"
+       ]
+      }
+     }
+    },
+    {
+     "n": 6,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_invoice",
+     "detail": {
+      "args": {
+       "invoice": "INV-7731"
+      }
+     }
+    },
+    {
+     "n": 7,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_order",
+     "detail": {
+      "args": {
+       "po": "NR-450118"
+      }
+     }
+    },
+    {
+     "n": 8,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_receipts",
+     "detail": {
+      "args": {
+       "po": "NR-450118"
+      }
+     }
+    },
+    {
+     "n": 9,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_ship_notices",
+     "detail": {
+      "args": {
+       "po": "NR-450118"
+      }
+     }
+    },
+    {
+     "n": 10,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Proposed: Ask the supplier for a credit memo or corrected invoice for the named lines (request_change)",
+     "detail": {
+      "proposal": "MP-1",
+      "args": {
+       "invoice": "INV-7731",
+       "lines": [
+        1
+       ]
+      },
+      "rationale": "Line 1 bills 300 cases while only 270 were shipped and accepted, violating rule NF-7.8; Ashby Supplier must provide a credit memo or corrected invoice for the 30 overbilled cases.",
+      "alternatives": [
+       "reject_document_fault"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 11,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Match Agent said",
+     "detail": {
+      "text": "I have proposed asking Ashby Supplier for a credit memo or corrected invoice for line 1 of invoice INV-7731, because line 1 bills 300 cases while only 270 cases were shipped and accepted, violating rule NF-7.8."
+     }
+    }
+   ],
+   "overhead": {
+    "model_calls": 9,
+    "tool_calls": 8,
+    "ms": 7529,
+    "model_routes": {
+     "primary \u00b7 gemini-3.5-flash-lite": 9
+    }
+   }
+  },
+  {
+   "session": "MS-aa648d1954",
+   "label": "Recording for the P14 page (builder)",
+   "clock": "2026-11-10 15:30 ET",
+   "status": "waiting_for_jordan",
+   "branch_at": "2026-11-10 09:00 ET",
+   "facts": [],
+   "queue": [
+    {
+     "invoice": "INV-7731",
+     "po": "NR-450118",
+     "supplier": "Ashby Supplier",
+     "invoice_sent": "2026-11-08 10:00 ET",
+     "holds": [
+      {
+       "rule": "NF-7.8",
+       "line": 1,
+       "finding": "Line 1 bills 300 cases; 270 shipped and 270 accepted; held value $1620.00",
+       "advice": "AA-INV-7731",
+       "advice_sent": "2026-11-08 10:20 ET",
+       "link": "document/AA-INV-7731"
+      }
+     ],
+     "state": "Original replaced; matching INV-7731C",
+     "compared": {
+      "purchase_order": {
+       "reference": "NR-450118",
+       "link": "order/NR-450118"
+      },
+      "receiving_advice": [
+       {
+        "reference": "RCV-DC2-77290",
+        "link": "document/RCV-DC2-77290"
+       },
+       {
+        "reference": "RCV-DC2-77355",
+        "link": "document/RCV-DC2-77355"
+       }
+      ],
+      "invoice": {
+       "reference": "INV-7731",
+       "link": "document/INV-7731"
+      }
+     }
+    }
+   ],
+   "awaiting": [
+    {
+     "id": "MP-3",
+     "action": "request_credit_or_corrected_invoice",
+     "does": "Ask the supplier for a credit memo or corrected invoice for the named lines (request_change)",
+     "args": {
+      "lines": [
+       2
+      ],
+      "invoice": "INV-7731"
+     },
+     "proposed_by": "Match Agent",
+     "rationale": "Line 2 bills 120 cases while receiving advice RCV-DC2-77355 shows only 119 cases received (rule NF-5.5); asking Ashby Supplier for a credit memo or corrected invoice for the 1 overbilled case.",
+     "alternatives": [
+      "release_for_payment_proposal"
+     ],
+     "rules": [
+      "NF-7.8",
+      "NF-7.2"
+     ]
+    }
+   ],
+   "outcome": {
+    "invoice": "INV-7731",
+    "state": "Original replaced; matching INV-7731C",
+    "matching": "INV-7731C",
+    "total_fault": false,
+    "lines": [
+     {
+      "line": 1,
+      "status": "clear",
+      "billed": 270,
+      "received": 270,
+      "settling_record": null
+     },
+     {
+      "line": 2,
+      "status": "above_received",
+      "billed": 120,
+      "received": 119,
+      "settling_record": "Receiving advice RCV-DC2-77355: 119 received of 120 billed. Only a revised receiving advice changes it (NF-5.5); a credit memo from the supplier would also settle it"
+     },
+     {
+      "line": 3,
+      "status": "clear",
+      "billed": 80,
+      "received": 80,
+      "settling_record": null
+     }
+    ],
+    "first_step": "request_credit_or_corrected_invoice",
+    "steps": [
+     "request_credit_or_corrected_invoice [1]",
+     "match_corrected_invoice INV-7731C",
+     "request_credit_or_corrected_invoice [2]"
+    ],
+    "proposed_clear_for_payment": [],
+    "payment_released": false,
+    "requests": [
+     {
+      "id": "RQ-1",
+      "kind": "correction",
+      "lines": [
+       1
+      ],
+      "answer": "recorded corrected invoice INV-7731C (recorded)"
+     }
+    ],
+    "approvals": 1,
+    "actions_executed": 2,
+    "actions_failed": 0,
+    "actions_refused": 0,
+    "violations": [],
+    "synthetic": "Supplier answers are synthetic, from the deterministic rules in src/match.js, except a recorded corrected invoice revealed at its recorded time"
+   },
+   "ashby_sees": {
+    "invoices": [
+     {
+      "invoice": "INV-7731",
+      "po": "NR-450118",
+      "application_advice": [
+       {
+        "reference": "AA-INV-7731",
+        "sent": "2026-11-08 10:20 ET",
+        "cause": "Invoice quantity above accepted quantity",
+        "rule": "NF-7.8"
+       }
+      ]
+     }
+    ],
+    "requests_received": [
+     {
+      "invoice": "INV-7731",
+      "kind": "correction",
+      "lines": [
+       1
+      ],
+      "sent": "2026-11-10 09:00 ET",
+      "via": "request_change"
+     }
+    ],
+    "not_shown": "Northfield\u2019s accounts payable records, match notes and proposals are Northfield\u2019s"
+   },
+   "trace": [
+    {
+     "n": 1,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Session branched from Northfield\u2019s recorded records",
+     "detail": {
+      "at": "2026-11-10 09:00 ET",
+      "hidden": "Every record dated after the session clock",
+      "facts": []
+     }
+    },
+    {
+     "n": 2,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "1 invoice held at the story moment",
+     "detail": {
+      "holds": [
+       {
+        "invoice": "INV-7731",
+        "rules": [
+         "NF-7.8"
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "n": 3,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_queue",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 4,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_policy",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 5,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_rules",
+     "detail": {
+      "args": {
+       "ids": [
+        "NF-7.8"
+       ]
+      }
+     }
+    },
+    {
+     "n": 6,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_invoice",
+     "detail": {
+      "args": {
+       "invoice": "INV-7731"
+      }
+     }
+    },
+    {
+     "n": 7,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_order",
+     "detail": {
+      "args": {
+       "po": "NR-450118"
+      }
+     }
+    },
+    {
+     "n": 8,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_receipts",
+     "detail": {
+      "args": {
+       "po": "NR-450118"
+      }
+     }
+    },
+    {
+     "n": 9,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_ship_notices",
+     "detail": {
+      "args": {
+       "po": "NR-450118"
+      }
+     }
+    },
+    {
+     "n": 10,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Proposed: Ask the supplier for a credit memo or corrected invoice for the named lines (request_change)",
+     "detail": {
+      "proposal": "MP-1",
+      "args": {
+       "invoice": "INV-7731",
+       "lines": [
+        1
+       ]
+      },
+      "rationale": "Line 1 bills 300 cases while only 270 were shipped and accepted, violating rule NF-7.8; Ashby Supplier must provide a credit memo or corrected invoice for the 30 overbilled cases.",
+      "alternatives": [
+       "reject_document_fault"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 11,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Match Agent said",
+     "detail": {
+      "text": "I have proposed asking Ashby Supplier for a credit memo or corrected invoice for line 1 of invoice INV-7731, because line 1 bills 300 cases while only 270 cases were shipped and accepted, violating rule NF-7.8."
+     }
+    },
+    {
+     "n": 12,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Jordan Ellis",
+     "type": "human",
+     "what": "Approved MP-1 on INV-7731: Ask the supplier for a credit memo or corrected invoice for the named lines (request_change)",
+     "detail": {
+      "args": {
+       "invoice": "INV-7731",
+       "lines": [
+        1
+       ]
+      },
+      "record": "INV-7731",
+      "payment": "No payment state changed: payment release stays in Northfield accounts payable"
+     }
+    },
+    {
+     "n": 13,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Correction request sent to Ashby Supplier through request_change",
+     "detail": {
+      "request": "RQ-1",
+      "lines": [
+       1
+      ],
+      "rules": [
+       "NF-7.8",
+       "NF-7.2"
+      ]
+     }
+    },
+    {
+     "n": 14,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Ashby (synthetic)",
+     "type": "external",
+     "what": "Technical acknowledgment (997) of the request",
+     "detail": {
+      "at": "2026-11-10 09:05 ET",
+      "note": "A 997 is not acceptance"
+     }
+    },
+    {
+     "n": 15,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Ashby (recorded)",
+     "type": "external",
+     "what": "Corrected invoice INV-7731C is in the recorded world at 2026-11-10 15:30 ET; it is revealed when the clock passes that time"
+    },
+    {
+     "n": 16,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Clock moved to the supplier\u2019s answer",
+     "detail": {
+      "to": "2026-11-10 15:30 ET"
+     }
+    },
+    {
+     "n": 17,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_corrections",
+     "detail": {
+      "args": {
+       "invoice": "INV-7731"
+      }
+     }
+    },
+    {
+     "n": 18,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Proposed: Match the corrected invoice or credit memo on file; the original stays replaced",
+     "detail": {
+      "proposal": "MP-2",
+      "args": {
+       "invoice": "INV-7731",
+       "correction": "INV-7731C"
+      },
+      "rationale": "Ashby Supplier sent corrected invoice INV-7731C adjusting line 1 to 270 cases to match the shipped and accepted quantity under rule NF-7.2.",
+      "alternatives": [
+       "request_credit_or_corrected_invoice"
+      ],
+      "needs": "policy"
+     }
+    },
+    {
+     "n": 19,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "Matched INV-7731C; INV-7731 stays replaced (NF-7.2)",
+     "detail": {
+      "lines": [
+       "1: clear",
+       "2: above_received",
+       "3: clear"
+      ]
+     }
+    },
+    {
+     "n": 20,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_queue",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 21,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_invoice",
+     "detail": {
+      "args": {
+       "invoice": "INV-7731"
+      }
+     }
+    },
+    {
+     "n": 22,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Proposed: Ask the supplier for a credit memo or corrected invoice for the named lines (request_change)",
+     "detail": {
+      "proposal": "MP-3",
+      "args": {
+       "lines": [
+        2
+       ],
+       "invoice": "INV-7731"
+      },
+      "rationale": "Line 2 bills 120 cases while receiving advice RCV-DC2-77355 shows only 119 cases received (rule NF-5.5); asking Ashby Supplier for a credit memo or corrected invoice for the 1 overbilled case.",
+      "alternatives": [
+       "release_for_payment_proposal"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 23,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Match Agent said",
+     "detail": {
+      "text": "I have matched corrected invoice INV-7731C, which corrected line 1 to 270 cases. Line 2 bills 120 cases against a receipt of 119 cases (rule NF-5.5), so I have proposed asking Ashby Supplier for a credit memo or corrected invoice for line 2."
+     }
+    }
+   ],
+   "overhead": {
+    "model_calls": 15,
+    "tool_calls": 13,
+    "ms": 12905,
+    "model_routes": {
+     "primary \u00b7 gemini-3.5-flash-lite": 15
+    }
+   }
+  }
+ ]
+}

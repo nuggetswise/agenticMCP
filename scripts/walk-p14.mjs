@@ -20,9 +20,10 @@ ok('a fact’s tag opens the readable document', !!(await p.$('.tgk-drawer[data-
 await p.keyboard.press('Escape'); await p.waitForTimeout(300);
 let approvals = 0;
 for (let i = 0; i < 8 && /Match Agent suggestion/.test(await txt()); i++) {
-  const ref = await p.$eval('.tgk-rhead h2', (h) => h.textContent);
-  await p.click('.tgk-bar button:has-text("Approve")'); clicks++; approvals++; await p.waitForTimeout(3200);
-  const t = await txt(); ok(`Approve on ${ref} replaces the decision bar with the present state`, !/Match Agent suggestion/.test(t) || (await p.$eval('.tgk-rhead h2', (h) => h.textContent)) !== ref);
+  const ref = await p.$eval('.tgk-rhead h2', (h) => h.textContent); const before = await p.$eval('.tgk-sugg', (n) => n.textContent);
+  await p.click('.tgk-bar button:has-text("Approve")'); clicks++; approvals++; await p.waitForTimeout(1500);
+  const t = await txt(); const after = await p.$('.tgk-sugg') ? await p.$eval('.tgk-sugg', (n) => n.textContent) : null;
+  ok(`Approve on ${ref}: the decision is recorded, and the agent comes back only with a new proposal`, after === null || after !== before, after);
 }
 await p.screenshot({ path: join(ROOT, 'docs/phase3/p14/approved.png') });
 ok('no payment reads as released', !/payment released|paid to/i.test(await txt()));

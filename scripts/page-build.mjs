@@ -20,7 +20,7 @@ const DATA = {
     const rec = existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : {}; return { start: rec.start || null, final: rec.final || null, recorded_at: rec.recorded_at || null, setup: W.setup() }; },
   // P14: the last recorded real run through Northfield's connector (docs/phase3/p14/recorded-run.json).
   p14: async () => { const M = await import('../src/match.js'); const f = join(ROOT, 'docs', 'phase3', 'p14', 'recorded-run.json'); const db = new DatabaseSync(join(ROOT, 'build', 'northfield.db'), { readOnly: true });
-    const rec = existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : {}; return { start: rec.start || null, final: rec.final || null, recorded_at: rec.recorded_at || null, setup: M.setup(db) }; },
+    const rec = existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : {}; return { steps: rec.steps || [], recorded_at: rec.recorded_at || null, setup: M.setup(db) }; },
 };
 if (!DATA[page]) { console.error(`No page ${page}`); process.exit(1); }
 const out = join(ROOT, 'build', 'pages', page); mkdirSync(out, { recursive: true });

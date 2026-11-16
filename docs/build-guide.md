@@ -4,7 +4,7 @@ Working copy: `docs/build-guide.md` in the repo. Reading copy: the Claude doc at
 
 ## How to use this guide
 
-This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 34959c0.
+This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 54d2c63.
 
 - **Start here:** follow R39. It picks your next task from the Tasks tables and says what to read first. For one prototype, run `node scripts/guide-pack.mjs P5` with its ID: it prints that prototype's job, ending, v8 section, the rules that apply, its agent, tools and anchors, and its tasks in order, so you read one page and the prototype's source.
 - **Authority, highest first:**
@@ -536,11 +536,11 @@ Both connections' tools, by kind of job, against the nearest published tool. Net
 
 ## Proofs, open items and drift control
 
-The gate and smoke tests pass at commit 34959c0. Two of the plan's proofs have not been built or run.
+The gate and smoke tests pass at commit 54d2c63. Two of the plan's proofs have not been built or run.
 
 | Proof | Command or location | Result |
 | --- | --- | --- |
-| World gate: invariants, catalogue equals the pack, thresholds from the catalogue | `npm run build` | 718 passed, 0 failed |
+| World gate: invariants, catalogue equals the pack, thresholds from the catalogue | `npm run build` | 728 passed, 0 failed |
 | Earlier records unchanged by a world change | `node scripts/world-diff.mjs` | Builds the world at e8f0e93 and compares every table; at commit 5314193af2 no earlier row changed but Lakeline's interchange id, re-baselined on purpose (`docs/phase1/world-diff-T1.11-T1.18.json`) |
 | Server smoke: both scopes, refusals, the shared deduction case, P21 rules and modes | `npm run smoke` | 119 passed, 0 failed |
 | Agent runtimes without a model: each agent's correct path beats its baseline, P20's promotion moment included | `npm run runtime` | 38 passed, 0 failed |

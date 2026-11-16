@@ -449,7 +449,7 @@ function waitAtLimit(s, ag, t0) {
   const what = aw.length ? `${aw.map((p) => p.id).join(', ')} waits for Jordan Ellis` : open.length ? `${open.map((r) => r.id).join(', ')} waits for the supplier's answer` : 'nothing left it may do; Jordan Ellis decides the open lines';
   trace(s, 'Match Agent', 'system', `At its limit; waiting: ${what}`, { tool_calls: ag.tool_calls, ms: Date.now() - t0 });
 }
-export async function runMatch(db, s, { callModel, maxSteps = 14, maxToolCalls = 24, maxSessionCalls = 96, maxMs = 120000, event, paused = () => false } = {}) {
+export async function runMatch(db, s, { callModel, maxSteps = 14, maxToolCalls = 24, maxSessionCalls = 96, maxMs = 300000, event, paused = () => false } = {}) {
   if (s.handed_over) return { ok: true, status: 'handed_to_person', awaiting: [] };
   if (paused()) { s.agent.status = 'paused'; trace(s, 'Trading Grid', 'system', 'Match Agent is paused by the administrator; each held invoice stays a plain task with no proposal', {}); return { ok: true, status: 'paused', awaiting: [] }; }
   if (!callModel) return { ok: false, blocked: 'No model is configured on this server; Match Agent cannot run. Nothing was simulated in its place.' };

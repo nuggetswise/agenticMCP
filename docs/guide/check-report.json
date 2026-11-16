@@ -1,11 +1,13 @@
 {
  "file": "/home/claude/agenticmcp/docs/build-guide.md",
- "ran_at_head": "193dfa9",
+ "ran_at_head": "8050fe3",
  "results": [
   {
    "name": "as_of_commit_current",
-   "ok": true,
-   "problems": [],
+   "ok": false,
+   "problems": [
+    "changed since 193dfa9: package.json, scripts/check.js, scripts/checks/40-transport.mjs, scripts/checks/85-match.mjs, scripts/kit-check.mjs, scripts/kit-ds.mjs, scripts/match-test.mjs, scripts/runtime-test.mjs, scripts/scout-test.mjs, scripts/smoke.js, scripts/watch-test.mjs, src/aviator.js, src/chase.js, src/claim.js, src/governance.js, src/match.js, src/pace.js, src/review.js, src/runtime.js, src/scout.js, src/server.js, src/shelf.js, src/watch.js, world/build.js"
+   ],
    "info": "193dfa9"
   },
   {
@@ -27,7 +29,7 @@
    "name": "calls_refs_exist",
    "ok": true,
    "problems": [],
-   "info": "102 calls logged"
+   "info": "103 calls logged"
   },
   {
    "name": "inventory_and_grid_complete",
@@ -42,8 +44,11 @@
   },
   {
    "name": "proof_counts_current",
-   "ok": true,
-   "problems": []
+   "ok": false,
+   "problems": [
+    "npm run build: guide 717/0, run 718/0",
+    "npm run smoke: guide 109/0, run 119/0"
+   ]
   },
   {
    "name": "artifact_links_verified",

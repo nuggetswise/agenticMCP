@@ -4,7 +4,7 @@ Working copy: `docs/build-guide.md` in the repo. Reading copy: the Claude doc at
 
 ## How to use this guide
 
-This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 193dfa9.
+This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 1ff40a6.
 
 - **Start here:** follow R39. It picks your next task from the Tasks tables and says what to read first. For one prototype, run `node scripts/guide-pack.mjs P5` with its ID: it prints that prototype's job, ending, v8 section, the rules that apply, its agent, tools and anchors, and its tasks in order, so you read one page and the prototype's source.
 - **Authority, highest first:**
@@ -81,6 +81,7 @@ Each rule has one home, here. Its ID is how `docs/guide/coverage.json` maps the 
   4. Authority: who approves, where, and the target system's response.
   5. A business confirmation: a business record such as a receiving advice, a passed test or a matched repayment. A 997 confirms only that a file was accepted.
   6. A failure case: a document that never arrives, a tool that fails, or a deadline that approaches.
+- **R44** An agent prototype passes only with a recorded real-model run that beats its rule baseline: the agent's replay through the live connector, the outcome of both and both session ids, committed under `docs/phase4/runs/`. A run the baseline matches or beats is a failed agent: its instruction or runtime is fixed and the run repeated before any screen is built or republished (D64).
 - **R22** Agents read thresholds from the rule catalogue. A threshold with no catalogue rule stays an agent setting and gets no new rule; that covers the Pace Agent's dominance threshold and the strategy doc's three timing numbers.
 
 **Customer-agent access**
@@ -236,6 +237,10 @@ The owner approved change items 1 to 14 on 12 November. Two are done, five are p
 | D60 | The world stays one relationship, Ashby and Northfield, and grows to cover every stage of procure-to-pay and order-to-cash between them, promotions included, so future prototypes find their records ready. Item data in the catalogue is evidence for avoiding and disputing charges. Values come from standards and public retailer guides first; expertise fills only the gaps, marked invented. Source: owner, 14 November. | A second relationship becoming necessary for a prototype |
 | D61 | An agent in a prototype is a real agent, not a scripted one: a model on the server chooses its reads and proposes actions in a session branched from the world at the story moment, with later records hidden. The server enforces each action's approval and the administrator guardrails. Kinross and Northfield answer by deterministic rules, labelled synthetic. A rule baseline runs on the same facts and actions, and a step is called automation where the two match. P5 is first (`src/scout.js`); P6, P7 and P9 must each show why an agent is needed. Source: owner, 14 November. | A prototype whose agent adds nothing over the baseline in every variation |
 | D63 | Raw X12 leaves every prototype screen: the agent kit's drawer shows the readable document only, kit-check fails a page with any raw X12 in its source, text or drawers, and raw X12 panels are no longer built or compared (R43). Source: owner, 15 November. | A demo audience that must see the wire format |
+| D64 | Every agent prototype needs a recorded real-model run that beats its rule baseline (R44). The runs live in `docs/phase4/runs/`, one file per agent, with the outcome of both sides and their session ids. A replay that outlasts a connector call answers with a job read at `/jobs/<id>`. Source: owner, 16 November. | An agent whose job a fixed rule does as well, which would make it automation |
+| D65 | Aviator is an AI agent on screen: avatar, name and status (Ready, Reading records) at the bottom right, and a side panel listing every record it read, in business words. It stays on the viewer's connector with no key in any page; claude.ai's one-time permission per page is the platform's and cannot be removed from a page, and Aviator handles it without messages. Source: owner, 16 November ("keep it clean and work like all chatbots do"). | A platform route that lets a page reach the server with no permission box and no key |
+| D66 | The Vividly partner journey is no longer parked: it is routed to confirm with Vividly. P20 shows it with Vividly's match as a partner step, labelled synthetic, computed from the world's deal settlement; D52 holds for timelines and route maps. Source: owner, 16 November. | Vividly documenting a route that differs from P20's |
+| D67 | P19 Ship notice chase, P20 Promotion deductions with Vividly and P21 Admin and rules join the inventory; their spec is the build prompts doc. P21 is built before the agent prototypes are rebuilt, so each can link to the rule behind its decision. Source: owner, 16 November. | — |
 | D62 | Phase 3 starts when the first build's dependencies are Done: T3.1, T2.2 and T2.3's built parts. The other Phase 1 and 2 rows run alongside it, and a Phase 1 row is pulled forward when a spec needs one of its records. T3.4 is folded into T3.2's Done when, because its own Done when named the prototype T3.2 builds. Source: owner, 15 November. | A spec that needs a world record a deferred Phase 1 row would add |
 
 **Open questions for the owner**
@@ -251,7 +256,7 @@ Each question also sits as a comment on its row in the Claude doc; answer there 
 
 ## Inventory
 
-The inventory has eighteen items: nine screen prototypes, one retired screen, two server scopes, three planned prototypes, two narrative pages and one connector never audited. Registry status comes from `registry/registry.json`. Each link was checked live on 12 November; gallery titles carry the same number (D33).
+The inventory has twenty-one items: twelve screen prototypes built or planned, one retired screen, two server scopes, three new prototypes specified in the [build prompts doc](https://claude.ai/artifact/BiaGGtYKe1mLdxPL4zB9jT), two narrative pages and one connector never audited. Registry status comes from `registry/registry.json`. Each link was checked live on 12 November; gallery titles carry the same number (D33).
 
 | ID | Prototype | Class | Registry status | Link | Job, and where it ends |
 | --- | --- | --- | --- | --- | --- |
@@ -270,6 +275,9 @@ The inventory has eighteen items: nine screen prototypes, one retired screen, tw
 | P13 | Silent order watch | Screen | Built | [P13](https://claude.ai/artifact/MGDhE28iCZ1bdb4he73uup) | Every document Northfield requires reaches it, or the order is correctly left alone. Ends at Northfield's receiving advice matching the ship notice for a ship notice, and at Kinross's 945 for a warehouse ask. Source: P13's brief in the strategy doc. |
 | P14 | Invoice Variance | Screen | Built | [P14](https://claude.ai/artifact/2xeimvMs5c3aYV6aw1Zz9W) | Settle a held invoice with the record that settles each line, without releasing payment. Ends at the matched corrected invoice or credit memo; payment release stays in Northfield accounts payable. Ending not yet confirmed with the owner. |
 | P15 | Rule Replay | Planned | Planned | — | Same treatment as P14. |
+| P19 | Ship notice chase | Planned | Planned | — | Every inbound Northfield order has a usable ship notice before receiving, or is recorded Late with its receipt. Chase Agent works out which trail is wrong when the ship notice and the carrier record disagree. Ends at Northfield's receiving advice matching the ship notice. Source: the build prompts doc, P19; Northstar ship notice chase (Prototype specs). |
+| P20 | Promotion deductions with Vividly | Planned | Planned | — | Every promotion deduction on Northfield's remittance is either matched to its deal or disputed with the record that shows it is not. Ends when the repayment of what was disputed is matched in Ashby's receivables. Source: the build prompts doc, P20; D66. |
+| P21 | Admin and rules | Planned | Planned | — | Each company sets its own rules and agents' approval modes in one place, sees where every rule came from and the effect of a change before it applies. Ends when both companies' changes are on the change list and the next agent run uses them. Source: the build prompts doc, P21; D67. |
 | ART | Agentic Retail Trade | Narrative | Narrative | [Agentic Retail Trade](https://claude.ai/artifact/P6KTkzJp8rVcY5wNUvrcwS) | A narrative page with no job of its own. |
 | FILM | TG for Retail in Two Minutes | Narrative | Narrative | [Film](https://claude.ai/artifact/RQbZQsmz433BjJCaEbU1BL) | No job of its own: each chapter takes its story from a prototype's task card (R41). |
 | P16 | Retailer catalogue connector | Connector | Out of scope | Not recorded | None in this work: outside scope, real brands acceptable (D46). |
@@ -311,6 +319,9 @@ Phase 0 is closed only when no cell reads Not done or Partly. A cell records whe
 | P13 | Done | Done | Not done | Done | Not done | Not done | Not done | Done | Done | Done | Not done |
 | P14 | Done | Done | Not done | Done | Not done | Not done | Not done | Done | Done | Done | Not done |
 | P15 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
+| P19 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
+| P20 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
+| P21 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
 | ART | N/A | N/A | N/A | N/A | N/A | N/A | Done | N/A | N/A | N/A | N/A |
 | FILM | N/A | N/A | N/A | N/A | N/A | N/A | Partly | N/A | N/A | N/A | N/A |
 | P16 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
@@ -322,7 +333,8 @@ Phase 0 is closed only when no cell reads Not done or Partly. A cell records whe
 - **P12:** retired (D40), so no check applies.
 - **P8:** view only. Nothing to walk, and no manual or agent path.
 - **A5, A7 and A10 on the two server scopes:** a server has no screen or clicks, and its values are the world itself.
-- **P15:** a retailer screen with no agent, checked in its build record. P13 and P14 cells read from their build records; A3 waits on a live mutation run and A7 on the contract test.
+- **P15:** a retailer screen with no agent, checked in its build record.
+- **P19, P20 and P21:** specified, not built; each is checked in its own build record. P19 and P20 carry the agent checks; P21 has no agent. P13 and P14 cells read from their build records; A3 waits on a live mutation run and A7 on the contract test.
 - **ART and FILM:** owner decision of 12 November, A7 only.
 
 **Evidence behind each column**
@@ -431,6 +443,9 @@ New prototypes come from the Prototype specs tab. Mining Northstar for them was 
 | T3.0 | Specs | Mine the Northstar prototype and teardown into the Prototype specs tab | — | — | Evidence: the Prototype specs tab; CALLS 27 and 28 | Done |
 | T3.1 | P13, P14, P15 | Check each spec against the world | — | Prototype specs; `docs/phase3/T3.1-spec-check.md` | Every record each spec needs exists, or a Phase 1 change list adds it. Checked: one P13 conflict, fixed by change list 2 point 1 in commit 5dab23a, with gate check `time.receipt_after_ship_notice`; CALLS 77, 79 and 85 | Done |
 | T3.2 | P13, P14, P15 | Rank the specs, place them on the story calendar, and build the top one | T3.1, T2.2, T2.3 (its built parts, CALLS 79) | Prototype specs; story calendar in the Prototype Plan; v8 for the business problem (R40) | The owner approves the ranking and the first new prototype passes its acceptance tests, walk and contract test. Its agent screens follow the tg-retail-agent-prototype skill: a ranked queue beside one record, with now and after values and the two checkpoint controls of R15, and the main path stays within eight actions. Ranking approved 15 November: P13, then P14, then P15; P15 is built as a retailer screen, not an agent screen, because replaying a rule needs no agent (D61, CALLS 87). Progress: P15 built and published from the agent kit (`docs/phase3/p15/BUILD.md`, commit 29c6c94); P13 and P14 built from the kit on their runtimes, merged, recorded from real runs and published (`docs/phase3/p13/BUILD.md`, `docs/phase3/p14/BUILD.md`; CALLS 100) | Open |
+| T3.5 | P21 | Build Admin and rules: Supplier settings for Priya (rules by source, edit a manual rule with its effect first, agent approval modes, change list) and Retailer admin for Jordan (guide rules, Draft tab as P15, agents with pause and resume, connected assistants) | T4.20 | The build prompts doc, P21; D67; `list_rules_by_source`, `update_supplier_rule`, `set_agent_mode` | Built on the workspace skill alone (no agent screen), walked, kit-check passing; changing AP-4.1 there changes the next Claim Agent run's authority, shown by a replay; CALLS entry | Open |
+| T3.6 | P19 | Build Ship notice chase on `chase_*` (Northfield side, Chase Agent) | T4.20, T3.5 | The build prompts doc, P19; `docs/phase4/runs/chase.json` | Built from the agent kit on a recorded real run that beats the baseline (R44), walked, contract and kit-check passing; CALLS entry | Open |
+| T3.7 | P20 | Build Promotion deductions with Vividly on `claim_*` at the promotion moment, with a workspace switcher to Jordan's decision | T4.20, T3.5 | The build prompts doc, P20; D66; `docs/phase4/runs/claim-promotions.json` | Built from the agent kit on a recorded real run that beats the baseline (R44); Vividly's match tagged as the partner's answer; walked, contract and kit-check passing; CALLS entry | Open |
 | T3.3 | FILM | Rebuild the film as a self-playing artifact, the way the marketing film was made; each chapter tells one prototype's task card, problem to ending (R41) | Phase 4 settles the endings it tells | FILM link; the marketing film artifact; task cards | The rebuilt film passes A1, A5 and A7 and the FILM A7 cell reads Done | Open |
 
 ### Phase 4 · Prototype changes, one at a time
@@ -449,6 +464,8 @@ Each row is one prototype through the Phase 4 loop under Build flow. Before prop
 | T4.17 | P9 | Shelf Recovery | T0.17, T2.4 | D22; `docs/phase4/agent-entry.md`, items AE-P9 | Phase 4 loop complete | Open |
 | T4.18 | P11 | NetSuite Chargeback Avoidance | T0.18 | Decisions item 7; `docs/phase4/agent-entry.md`, items AE-P11 | Phase 4 loop complete | Open |
 | T4.19 | P12 | ERP-native Activation | T0.19 | Decisions item 6 | Evidence: no loop needed after retirement, CALLS 32 | Done |
+| T4.20 | Agents | Record a real-model run of every agent through the live connectors, each beating its rule baseline (R44, D64) | — | `docs/phase4/runs/README.md` | RUNS_EVIDENCE | RUNS_STATUS |
+| T4.21 | Aviator | Aviator as an AI agent: avatar, name, status and a side panel of what it read; the first question on a page handled without messages (D65) | — | D56, D65; `ui/tg-agent-kit.js` | Kit 1.4.0 published to the kit page and the design system; kit-check passes with the presence, side panel, quiet resend and no tool names; answered live in the browser with the side panel listing Order NR-450118 (CALLS 104) | Done |
 | T4.2 | Portfolio | Entry page built from the story calendar | — | The Prototype Plan's story calendar | The owner approves it and every link on it opens a live prototype | Open |
 | T4.3 | FILM | Portfolio film, after the owner approves a storyboard | T0.7, T4.5 | FILM link in Inventory; R41 | Every chapter takes its problem, turn and result from its prototype's task card, any number shown passes the contract test, and a viewer states each chapter's problem and outcome | Open |
 | T4.5 | Docs | Add a task card to the Prototype Plan for each built prototype: problem, turn and result drafted for the owner, the ending copied from Inventory. Accepted so far: P5, P6, P7, P8, P9 and P11 (CALLS 38 and 41) | — | R41; Inventory | Every built prototype has a task card carrying problem, turn, result and ending, and no video or deck words them differently | Open |
@@ -469,6 +486,8 @@ Each row is one prototype through the Phase 4 loop under Build flow. Before prop
 | Record pages | Each answer links to an order or document page with the record and its X12 text. |
 | Writes | A write records a proposal; nothing changes until the connection's person approves it, and approval appends the record to the shared case and both access logs. Reset returns both connections to baseline. `WRITES=off` makes both read-only. |
 | URL | Carries a secret token; suitable for fictional data only, not production sign-in. |
+| Long runs | A `*_replay` that runs past about two and a half minutes answers with a job id; its result is read at `/jobs/<id>` and a session at `/sessions/<id>`, both random ids in memory only (D64). |
+| Rules and modes | `list_rules_by_source` on both connections; `update_supplier_rule` (Ashby's own rules: effect first, apply saves to the catalogue the agents read) and `set_agent_mode` (editable actions only) record on the change list; reset restores the catalogue (P21). |
 
 **Writes follow the rule catalogue**
 
@@ -479,6 +498,8 @@ Each row is one prototype through the Phase 4 loop under Build flow. Before prop
 | decide_charge | Jordan's assistant, with Review Agent's recommendation | Always Jordan Ellis | NF-7.7 |
 | publish_rule | Jordan's assistant | Jordan Ellis, only after a replay of that draft | `nf.publish_needs_replay` |
 | request_change | Either assistant | The connection's person | AP-3.2 |
+| update_supplier_rule | Priya's assistant, on her word | Priya Raman; only Ashby's own rules | Change list |
+| set_agent_mode | Either assistant, on the person's word | The connection's person; locked actions stay | Change list |
 
 **Hosting**
 
@@ -511,13 +532,15 @@ Both connections' tools, by kind of job, against the nearest published tool. Net
 
 ## Proofs, open items and drift control
 
-The gate and smoke tests pass at commit 193dfa9. Two of the plan's proofs have not been built or run.
+The gate and smoke tests pass at commit 1ff40a6. Two of the plan's proofs have not been built or run.
 
 | Proof | Command or location | Result |
 | --- | --- | --- |
-| World gate: invariants, catalogue equals the pack, thresholds from the catalogue | `npm run build` | 717 passed, 0 failed |
+| World gate: invariants, catalogue equals the pack, thresholds from the catalogue | `npm run build` | 718 passed, 0 failed |
 | Earlier records unchanged by a world change | `node scripts/world-diff.mjs` | Builds the world at e8f0e93 and compares every table; at commit 5314193af2 no earlier row changed but Lakeline's interchange id, re-baselined on purpose (`docs/phase1/world-diff-T1.11-T1.18.json`) |
-| Server smoke: both scopes, refusals, the shared deduction case | `npm run smoke` | 109 passed, 0 failed |
+| Server smoke: both scopes, refusals, the shared deduction case, P21 rules and modes | `npm run smoke` | 119 passed, 0 failed |
+| Agent runtimes without a model: each agent's correct path beats its baseline, P20's promotion moment included | `npm run runtime` | 38 passed, 0 failed |
+| Real-model run per agent through the live connectors (R44) | `docs/phase4/runs/README.md` | RUNS_PROOF |
 | X12 validation | `npm run validate` | Passes, but its schemas were generated in this repo, so it does not meet the independent-schema test |
 | X12 against schemas this repo did not write | `validator/botscheck.py` with the bots-grammars X12 grammars | Every document checked; it faults exactly the documents the world rejects on a 997, and nothing else; all ten injected faults are rejected for their reason (`validator/bots-report.json`) |
 | Contract test of on-screen values: it checks every number a screen shows and requires none | `npm run contract` | Run on the live pages on 15 November for P1, P2, P4, P5, P6, P7 and P8 (`docs/phase3/contract-report-2026-11-15.json`): P2 and P4 pass; P1 and P8 differ only in raw X12 panels, which leave the screens under R43; P5, P6 and P7 differ in dates, rule wording and, for P7, three order numbers, each a Phase 4 row. P9 and P11 were read but not saved as files, so only their record numbers were checked by hand: P9 shows one sales order number the world lacks, and P11 shows five record numbers the world lacks, including its ship notice number. P12 is retired. |
@@ -525,7 +548,7 @@ The gate and smoke tests pass at commit 193dfa9. Two of the plan's proofs have n
 | Golden questions, Northfield | `docs/phase2/golden-nf/grade-report.json` | 50 of 50 |
 | Live server | /healthz | ok, version 0.3.0, writes on, Aviator on, read on 14 November with commit cd9717d deployed |
 | Aviator loop, tool declarations, model fallback and refusals | `npm run aviator-test` | 11 passed, 0 failed, against a stand-in model. Live with gemini-3.5-flash-lite on the built world: P11's hold answered correctly, another supplier's cases refused, Ashby's own cases counted correctly (`docs/phase2/aviator-live-2026-11-13.txt`) |
-| Agent kit in a real browser: two decision controls, no green or tick, every colour, font, radius and type size from the design system tokens (`ui/ds/tokens.css`, `ui/ds/tokens-derived.css`), no raw X12 in a page's source, text or drawers, every interface tag opening a readable document, Aviator closed on load and honest without a connector | `npm run kit-check`, `npm run kit-tokens` | All passed at commit 193dfa9 |
+| Agent kit in a real browser: Aviator's presence, side panel and quiet resend, two decision controls, no green or tick, every colour, font, radius and type size from the design system tokens (`ui/ds/tokens.css`, `ui/ds/tokens-derived.css`), no raw X12 in a page's source, text or drawers, every interface tag opening a readable document, Aviator closed on load and honest without a connector | `npm run kit-check`, `npm run kit-tokens` | All passed at commit 1ff40a6 |
 | Agent governance golden questions | `docs/phase2/golden-gov/grade-report.json` | 25 of 25 |
 | Property-based invariants on quantities, time order and money | — | Not built; the gate checks invariants on the one generated quarter only |
 | Fresh agent answers ten builder questions from the docs | Reader tests, 13 November. First: ten answered from the guide alone; gaps fixed in CALLS 31. Second, after the owner decisions: ten of ten correct, including where P4 ends and where P9's business problem is; gaps fixed in CALLS 34 | Passed |
@@ -731,7 +754,7 @@ Activating a supplier whose identity, bank details or terms were never checked i
 
 ## Partner journeys
 
-Kanmon supplier cash and a Vividly promotional deduction are not specified. Phase 0 found neither route in the partner's own documentation: no hosted referral for Kanmon and no Trading Grid evidence feed for Vividly. They return when a partner documents the route.
+Kanmon supplier cash is not specified: Phase 0 found no hosted referral in Kanmon's own documentation, and it returns when Kanmon documents one. The Vividly promotional deduction is routed to confirm with Vividly (D66) and is P20: Vividly owns the promotion terms and matches each deduction; Trading Grid supplies the evidence (889, 856, 852, 810, 820); Claim Agent disputes only what the deal does not support. Vividly's match is synthetic in the demo until Vividly confirms its route. Questions to confirm with Vividly are in the Partner diligence tab.
 
 ---
 
@@ -770,6 +793,7 @@ The Partner Map carries each partner's role, flows and value. It does not carry 
 1. Where do deployments stall today, and would Trading Grid evidence change onboarding cost, matching accuracy or recovery?
 2. Which two or three accounts overlap, each with a sponsor and an authorized data owner?
 3. Who owns integration and support before anything is priced?
+4. Does Vividly expose a deduction-to-deal match result (matched, rate above the deal, no sell-through for the period, outside the order window) that Trading Grid can read per deduction, and by what route? P20 shows this answer as Vividly's; it is synthetic until confirmed.
 
 **Salsify**
 

@@ -170,7 +170,7 @@ When you are waiting for ${person} or another party, stop and say in one or two 
     const aw = s.proposals.filter((p) => p.state === 'Awaiting approval'); ag.status = 'waiting_for_person';
     trace(s, agent, 'system', `At its limit; waiting: ${aw.length ? `${aw.map((p) => p.id).join(', ')} waits for ${person}` : `nothing left it may do; ${person} decides what is open`}`, { tool_calls: ag.tool_calls, ms: Date.now() - t0 });
   }
-  async function runAgent(db, s, { callModel, maxSteps = 14, maxToolCalls = 24, maxSessionCalls = 96, maxMs = 120000, event, paused = () => false } = {}) {
+  async function runAgent(db, s, { callModel, maxSteps = 14, maxToolCalls = 24, maxSessionCalls = 96, maxMs = 300000, event, paused = () => false } = {}) {
     if (paused()) { s.agent.status = 'paused'; trace(s, 'Trading Grid', 'system', `${agent} is paused by the administrator; the queue arrives as plain tasks with no proposal`, {}); return { ok: true, status: 'paused', awaiting: [] }; }
     if (!callModel) return { ok: false, blocked: `No model is configured on this server; ${agent} cannot run. Nothing was simulated in its place.` };
     const ag = s.agent; const t0 = Date.now(); const turnStart = ag.tool_calls; ag.status = 'running';

@@ -485,7 +485,7 @@ function waitAtLimit(s, ag, t0) {
   const what = aw.length ? `${aw.map((p) => p.id).join(', ')} waits for Priya Raman` : 'nothing left it may do; Priya Raman decides what is open';
   trace(s, 'Watch Agent', 'system', `At its limit; waiting: ${what}`, { tool_calls: ag.tool_calls, ms: Date.now() - t0 });
 }
-export async function runWatch(db, s, { callModel, maxSteps = 14, maxToolCalls = 24, maxSessionCalls = 96, maxMs = 120000, event, paused = () => false } = {}) {
+export async function runWatch(db, s, { callModel, maxSteps = 14, maxToolCalls = 24, maxSessionCalls = 96, maxMs = 300000, event, paused = () => false } = {}) {
   if (s.handed_over) return { ok: true, status: 'handed_to_person', awaiting: [] };
   if (paused()) { s.agent.status = 'paused'; trace(s, 'Trading Grid', 'system', 'Watch Agent is paused by the administrator; the queue arrives as plain tasks with no proposal', {}); return { ok: true, status: 'paused', awaiting: [] }; }
   if (!callModel) return { ok: false, blocked: 'No model is configured on this server; Watch Agent cannot run. Nothing was simulated in its place.' };

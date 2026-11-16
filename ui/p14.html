@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P14 Invoice Variance</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
+<style>
+/* VOICE: an enterprise workspace for Northfield's accounts payable lead, Jordan Ellis.
+   IDEA: a review queue of held invoices beside one record (Direction A).
+   PICTURE: the invoice lines against what was received, and Match Agent's suggestion for the record that settles them.
+   COLOUR and TYPE: OpenText TG Retail tokens through the agent kit; Inter.
+   LAYOUT: light header, queue left (380px), record right; one column under 960px. */
+body{margin:0;background:var(--tgk-bg);font-family:Inter,"Helvetica Neue",Arial,sans-serif;color:var(--tgk-body);overflow-x:clip}
+.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px max(16px,env(safe-area-inset-right)) 10px max(16px,env(safe-area-inset-left));background:var(--tgk-card);border-bottom:1px solid var(--tgk-divider)}
+.mark{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--tgk-from),var(--tgk-to))}
+.top b{color:var(--tgk-ink);font-size:14px}.top .ws{color:var(--tgk-muted);font-size:13px}.top .sp{flex:1}.top .who,.top .clk{font-size:13px;color:var(--tgk-ink)}.top .clk{color:var(--tgk-muted)}
+main{max-width:1320px;margin:0 auto;padding:20px max(16px,env(safe-area-inset-right)) 120px max(16px,env(safe-area-inset-left))}
+h1{margin:0;font-size:22px;color:var(--tgk-ink);text-wrap:balance}.lead{margin:4px 0 18px;color:var(--tgk-muted);font-size:13.5px;max-width:860px}
+.cols{display:grid;grid-template-columns:380px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:960px){.cols{grid-template-columns:1fr}}
+.queue{display:flex;flex-direction:column;gap:8px}.qh h2{margin:0;font-size:14px;color:var(--tgk-ink)}
+.record{background:var(--tgk-card);border:1px solid var(--tgk-divider);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.sec h3{margin:0 0 6px}.note{font-size:12.5px;color:var(--tgk-muted);margin:0}.wait{font-size:13.5px;color:var(--tgk-muted);padding:24px 0}
+.scroll{overflow-x:auto}
+details.ev summary{cursor:pointer;font-size:12.5px;color:var(--tgk-action);min-height:32px;display:flex;align-items:center}
+details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}.drawerbody{display:flex;flex-direction:column;gap:14px}
+</style>
+</head>
+<body>
+<header class="top"><span class="mark" aria-hidden="true"></span><b>Trading Grid</b><span class="ws">Northfield workspace · Accounts payable</span><span class="sp"></span><span class="clk" id="clk"></span><button class="tgk-btn" type="button" id="hist">History</button><button class="tgk-btn" type="button" id="agents">Agents</button><span class="who">Jordan Ellis</span></header>
+<main>
+<h1>Held invoices and the record that settles each</h1>
+<p class="lead">Match Agent read the purchase order, the receiving advice and the invoice. Nothing reaches the supplier until Jordan Ellis approves it, and payment release stays in Northfield accounts payable.</p>
+<div class="cols"><section class="queue" aria-label="Needs review"><div class="qh"><h2 id="qt">Needs review</h2></div><div id="q"></div></section><section class="record" id="rec" aria-live="polite"><p class="wait">Match Agent is reading the held invoices.</p></section></div>
+</main>
+<script src="tg-agent-kit.js"></script>
+<script>
+{
+  const K = window.TGAgentKit; K.injectCss();
+  // The last recorded real run through Northfield's connector, shown only when the viewer's connector cannot be reached;
+  // the record then carries the Simulated label.
+  const RECORDED = __P14_DATA__;
+  const KIND = { rule: 'rule', ai: 'agent', human: 'person', external: 'outside', system: 'system' };
+  const STATUS = { above_shipped: 'Billed above shipped', above_received: 'Billed above received', clear: 'Clear', price_held: 'Price above tolerance', price_cleared: 'Price set by an accepted change' };
+  const S = { view: null, live: false, conn: null, open: 0, editing: false, rows: null, busy: false, decided: {}, sim: false };
+  const time = (t) => String(t || '').replace(/\d{4}-\d{2}-\d{2} /g, '');
+  const said = (t) => time(`${t.what}${t.detail && t.detail.text ? ': ' + short(t.detail.text) : ''}`);
+  const short = (s) => { const w = String(s || '').split(/\s+/); return w.length > 25 ? w.slice(0, 25).join(' ') + '…' : String(s || ''); };
+  async function call(tool, input) {
+    if (S.conn === null) S.conn = await K.connector('northfield') || false;
+    if (!S.conn) return null;
+    try { const r = await S.conn.call(tool, input); return r && r.error && !r.session ? { failed: r.error } : r; }
+    catch (e) { return { failed: e && e.code === 'tool_error' ? 'The connector refused the request.' : 'The connector could not be reached.' }; }
+  }
+  const held = () => (S.view && S.view.queue) || [];
+  const awaitingFor = (inv) => ((S.view && S.view.awaiting) || []).filter((p) => p.args && p.args.invoice === inv);
+  const traceFor = (inv) => ((S.view && S.view.trace) || []).filter((t) => t.type !== 'tool');
+  const outcomeFor = (inv) => { const o = S.view && S.view.outcome; return o && (o.invoice === inv ? o : Array.isArray(o) ? o.find((x) => x.invoice === inv) : o); };
+
+  function drawQueue() {
+    const list = held(); document.getElementById('qt').textContent = `Needs review · ${list.filter((r) => r.state !== 'Matched').length}`;
+    document.getElementById('q').replaceChildren(...list.map((r, i) => { const live = awaitingFor(r.invoice).length && !S.decided[r.invoice];
+      return K.queueRow({ ref: r.invoice, chip: live ? 'Ready for review' : r.state, tone: live ? 'live' : /Matched|Settled/.test(r.state) ? 'done' : /Held|Rejected/.test(r.state) ? 'fail' : 'wait', line: r.holds && r.holds.length ? r.holds.map((h) => h.finding.replace(/; held value .*/, '')).join('; ') : r.state, open: i === S.open, onSelect: () => { S.open = i; S.editing = false; draw(); } }); }));
+    document.getElementById('clk').textContent = S.view ? time(S.view.clock) : '';
+  }
+
+  function factsFor(r, o) {
+    const f = [];
+    for (const h of r.holds || []) f.push(K.factRow({ text: `${h.finding} · held under ${h.rule}`, system: 'Northfield match', via: 'EDI 824', doc: { title: `Application advice ${h.advice || ''} for ${r.invoice}`, fields: [['Invoice', r.invoice], ['Line', String(h.line)], ['Rule', h.rule], ['Finding', h.finding], ['Sent to', r.supplier]] } }));
+    const c = r.compared || {};
+    if (c.purchase_order) f.push(K.factRow({ text: `Purchase order ${c.purchase_order.reference} is the commitment the invoice is matched against`, system: 'Purchase order', via: 'EDI 850', doc: { title: `Purchase order ${c.purchase_order.reference}`, fields: [['Buyer', 'Northfield Retailer'], ['Supplier', r.supplier], ['Order', c.purchase_order.reference]] } }));
+    for (const ra of c.receiving_advice || []) { const lines = (o && o.lines || []).filter((l) => l.settling_record && l.settling_record.includes(ra.reference));
+      f.push(K.factRow({ text: `Receiving advice ${ra.reference}${lines.length ? `: ${lines.map((l) => `line ${l.line} received ${l.received} of ${l.billed}`).join('; ')}` : ''}`, system: 'Northfield receiving', via: 'EDI 861', doc: { title: `Receiving advice ${ra.reference}`, fields: [['Order', c.purchase_order ? c.purchase_order.reference : r.po], ['Receiving advice', ra.reference], ...lines.map((l) => [`Line ${l.line}`, `${l.received} received of ${l.billed} billed`])] } })); }
+    if (c.invoice && o && o.lines) f.push(K.factRow({ text: `Invoice ${c.invoice.reference} bills ${o.lines.map((l) => `line ${l.line} ${l.billed}`).join(', ')} cases`, system: 'Invoice', via: 'EDI 810', doc: { title: `Invoice ${c.invoice.reference}`, fields: [['Supplier', r.supplier], ['Order', r.po], ...o.lines.map((l) => [`Line ${l.line}`, `${l.billed} cases billed`])] } }));
+    return f;
+  }
+  const AFTER = {
+    request_credit_or_corrected_invoice: (a) => ['Held', `Correction asked for line${(a.lines || []).length === 1 ? '' : 's'} ${(a.lines || []).join(' and ')}`, 'Ashby Supplier', 'Trading Grid request'],
+    clear_line_by_accepted_change: (a) => ['Held for price', `Line ${a.line} clear`, 'Northfield match', null],
+    match_corrected_invoice: (a) => ['Held', `Matched to ${a.correction}`, 'Northfield match', null],
+    reject_document_fault: () => ['Held', 'Rejected as a document fault', 'Ashby Supplier', 'EDI 824'],
+    release_for_payment_proposal: (a) => ['Held', `Lines ${(a.lines || []).join(', ')} proposed clear`, 'Jordan Ellis', 'Accounts payable'],
+  };
+  function says(rows) {
+    if (!rows.length) return 'Approve sends nothing; this invoice stays a manual task for Jordan Ellis. No payment state changes.';
+    const toSup = rows.filter((x) => x.goesTo === 'Ashby Supplier'); const inNF = rows.filter((x) => x.goesTo !== 'Ashby Supplier');
+    return `Approve sends ${toSup.length ? toSup.map((x) => x.after.toLowerCase()).join(' and ') + ' to Ashby Supplier' : 'nothing to the supplier'}${inNF.length ? ` and records ${inNF.map((x) => x.after.toLowerCase()).join(' and ')} in Northfield's match` : ''}. No payment state changes; payment release stays in Northfield accounts payable.`;
+  }
+  async function approve(r, props) {
+    S.busy = true; draw(); let v = null;
+    if (S.live) for (const p of props) { const out = await call('match_decide', { session: S.view.session, proposal: p.id, decision: 'approve' }); if (out && out.session) v = out; else if (out) S.notice = out.failed || out.message; }
+    else if (RECORDED.final) v = RECORDED.final;
+    if (v) S.view = v; S.decided[r.invoice] = 'approved'; S.busy = false; S.editing = false; draw();
+  }
+  async function takeOver(r, props, edited) {
+    S.busy = true; draw();
+    const note = edited.length ? `Jordan Ellis does it by hand: ${edited.map((x) => `${x.action} (${x.now} to ${x.after}, ${x.goesTo})`).join('; ')}` : 'Jordan Ellis declined every action and works the invoice by hand';
+    if (S.live) for (const p of props) { const out = await call('match_decide', { session: S.view.session, proposal: p.id, decision: 'edit', note }); if (out && out.session) S.view = out; }
+    S.decided[r.invoice] = 'edited'; S.busy = false; S.editing = false; draw();
+  }
+  function timelineFor(r, o) {
+    const tr = traceFor(r.invoice).filter((t) => t.actor !== 'Trading Grid' || !/branched/.test(t.what)).slice(-6).map((t) => ({ state: 'done', text: `${t.actor} · ${said(t)}` }));
+    const settled = /Matched|Settled|Clear/.test((o && o.state) || r.state);
+    return [{ state: 'done', text: `${r.invoice} held under ${(r.holds || []).map((h) => h.rule).join(' and ')} · Match Agent read the purchase order, receiving advice and invoice` }, ...tr,
+      ...(S.decided[r.invoice] === 'edited' ? [{ state: 'done', text: 'Edited by Jordan Ellis · Match Agent watching for the supplier’s next document on this invoice' }] : []),
+      { state: settled ? 'settled' : 'next', text: settled ? `Matched: every line settled by its record; Northfield accounts payable releases payment` : 'The supplier’s corrected invoice or credit memo settles the held lines; Northfield accounts payable then releases payment' }];
+  }
+  function draw() {
+    drawQueue(); const rec = document.getElementById('rec'); const r = held()[S.open];
+    if (!S.view) { rec.replaceChildren(K.el('p', { class: 'wait', text: S.notice || 'Match Agent is reading the held invoices.' })); return; }
+    if (!r) { rec.replaceChildren(K.el('p', { class: 'wait', text: 'No invoice is held.' })); return; }
+    const o = outcomeFor(r.invoice); const props = awaitingFor(r.invoice);
+    const parts = [K.recordHeader({ title: r.invoice, sub: `${r.supplier} · order ${r.po}` }), K.el('div', { class: 'sec' }, K.el('h3', { class: 'tgk-label', text: 'What is wrong' }), ...factsFor(r, o))];
+    if (o && o.lines) parts.push(K.el('div', { class: 'scroll' }, K.compareTable({ columns: ['Line', 'Billed', 'Received', 'Finding', 'Record that settles it'], strong: 4, rows: o.lines.map((l) => [String(l.line), String(l.billed), String(l.received), STATUS[l.status] || l.status, l.settling_record || 'Nothing to settle']) })));
+    if (props.length && !S.decided[r.invoice]) {
+      const base = props.map((p) => { const [now, after, goesTo, via] = (AFTER[p.action] || (() => ['', p.does, '', null]))(p.args || {}); return { action: p.does.replace(/ \(request_change\)/, ''), now, after, goesTo, via }; });
+      if (!S.rows || S.rowsFor !== r.invoice) { S.rows = base.map((x) => ({ ...x })); S.rowsFor = r.invoice; }
+      const rows = S.editing ? S.rows : base;
+      parts.push(K.nowAfter({ agent: 'Match Agent', rows, editable: S.editing, chip: S.editing ? 'Edited by you' : 'Ready for review', reason: short(props.map((p) => p.rationale).filter(Boolean)[0]), onChange: (x) => { S.rows = x; draw(); } }));
+      if (S.sim) parts.push(K.el('div', {}, K.simulated({ note: 'The Northfield connector was not reached; this is the last recorded real run' })));
+      parts.push(K.decisionBar({ says: says(rows), busy: S.busy, onApprove: () => S.editing ? takeOver(r, props, rows) : approve(r, props), onEdit: () => { S.editing = true; S.rows = base.map((x) => ({ ...x })); draw(); } }));
+    } else if (S.decided[r.invoice]) parts.push(K.sentState({ text: S.decided[r.invoice] === 'edited' ? 'Taken over by Jordan Ellis · Match Agent proposes again only on a new document for this invoice' : `${(o && o.state) || r.state} · approved by Jordan Ellis · no payment state changed` }));
+    parts.push(K.el('div', { class: 'sec' }, K.el('h3', { class: 'tgk-label', text: 'Review' }), K.timeline({ items: timelineFor(r, o) })));
+    const ash = S.view.ashby_sees; const ev = traceFor(r.invoice);
+    parts.push(K.el('details', { class: 'ev' }, K.el('summary', { text: 'How Match Agent worked this invoice, and what the supplier sees' }), K.el('div', { class: 'lines' },
+      ...ev.map((t) => K.traceLine({ kind: KIND[t.type] || 'system', actor: t.actor, text: `${time(t.clock)} · ${said(t)}${t.detail && t.detail.rationale ? ': ' + short(t.detail.rationale) : ''}`, synthetic: t.type === 'external' })),
+      ash ? K.el('p', { class: 'note', text: `Ashby Supplier sees the shared documents only: ${(ash.invoices || []).flatMap((x) => x.application_advice.map((a) => `application advice ${a.reference} (${a.cause})`)).concat((ash.requests_received || []).map((q) => `a correction request for lines ${q.lines.join(' and ')}`)).join('; ') || 'nothing yet'}. ${ash.not_shown}.` }) : null)));
+    rec.replaceChildren(...parts);
+  }
+  document.getElementById('hist').onclick = () => K.drawer({ title: 'History', content: K.el('div', { class: 'drawerbody' }, ...((S.view && S.view.trace) || []).filter((t) => t.type !== 'tool').map((t) => K.traceLine({ kind: KIND[t.type] || 'system', actor: t.actor, text: `${time(t.clock)} · ${said(t)}` }))) });
+  document.getElementById('agents').onclick = async () => {
+    const setup = S.live ? await call('match_setup', {}) : RECORDED.setup; const body = K.el('div', { class: 'drawerbody' });
+    if (setup && setup.facts) body.append(K.setupView({ title: 'Match Agent setup', lead: 'Supplier answers and changed records are synthetic; approval modes Jordan Ellis may change are open; guardrails are locked.', setup, startLabel: 'Run Match Agent with these values',
+      onStart: async ({ facts, policy }) => { if (!S.live) return; S.view = null; S.decided = {}; draw(); const v = await call('match_start', { facts, policy, label: 'Jordan Ellis' }); if (v && v.session) S.view = v; draw(); } }));
+    const gov = K.el('div'); body.append(K.el('button', { class: 'tgk-btn', type: 'button', text: 'Compare with the rule baseline', onclick: async () => {
+      gov.replaceChildren(K.el('p', { class: 'note', text: S.live ? 'Running the rule baseline and Match Agent on the same facts.' : 'The comparison needs the Northfield connector.' })); if (!S.live) return;
+      const rp = await call('match_replay', { detail: 'brief' }); const a = rp && rp.automation;
+      if (rp && rp.baseline && (rp.agent || rp.match)) { const ag = rp.agent || rp.match; gov.replaceChildren(K.governanceView({ title: 'Rule baseline and Match Agent', rows: [...((a && a.same_steps) || []).map((x) => ({ step: x, baseline: 'Same', agent: 'Same' })), ...((a && a.agent_only) || []).map((x) => ({ step: x, baseline: 'Not done', agent: 'Done' })), ...((a && a.baseline_only) || []).map((x) => ({ step: x, baseline: 'Done', agent: 'Not done' }))].slice(0, 10),
+        baseline: { outcome: (rp.baseline.outcome && rp.baseline.outcome.state) || '' }, agent: { name: 'Match Agent', outcome: (ag.outcome && ag.outcome.state) || '' } })); }
+      else gov.replaceChildren(K.el('p', { class: 'note', text: (rp && (rp.failed || rp.blocked)) || 'The comparison did not return.' })); } }), gov);
+    K.drawer({ title: 'Agents · Match Agent', content: body });
+  };
+  // It starts on the business event: an invoice held in Northfield accounts payable. No start button.
+  (async () => {
+    const v = await call('match_start', { label: 'Jordan Ellis' });
+    if (v && v.session && !v.blocked) { S.view = v; S.live = true; }
+    else if (RECORDED && RECORDED.start) { S.view = RECORDED.start; S.sim = true; }
+    else S.notice = (v && (v.blocked || v.failed)) || 'Match Agent needs the Northfield connector, and no recorded run is in this page.';
+    draw();
+  })();
+  K.aviator({ side: 'northfield', person: 'Jordan Ellis', context: () => { const r = held()[S.open]; return r ? `Held invoice ${r.invoice} on order ${r.po}` : 'Held invoices'; }, suggestions: ['Why is INV-7731 held?', 'What would settle line 2?'] });
+}
+</script>
+</body>
+</html>

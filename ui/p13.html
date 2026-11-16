@@ -46,7 +46,8 @@ details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}
   const TRADE = { '855': 'Order acknowledgment', '856': 'Ship notice', '810': 'Invoice', '945': 'Warehouse shipping advice', '997': 'Technical acknowledgment', '861': 'Receiving advice', '824': 'Application advice', '865': 'Change acknowledgment', '940': 'Warehouse order' };
   const KIND = { rule: 'rule', ai: 'agent', human: 'person', external: 'outside', system: 'system' };
   const S = { view: null, live: false, conn: null, open: 0, editing: false, rows: null, busy: false, decided: {}, sim: false };
-  const time = (t) => String(t || '').replace(/^\d{4}-\d{2}-\d{2} /, '');
+  const time = (t) => String(t || '').replace(/\d{4}-\d{2}-\d{2} /g, '');
+  const said = (t) => time(`${t.what}${t.detail && t.detail.text ? ': ' + short(t.detail.text) : ''}`);
   const mins = (a, b) => { const p = (x) => Date.parse(String(x).replace(' ET', '').replace(' ', 'T') + ':00Z'); return Math.round((p(a) - p(b)) / 60000); };
 
   async function call(tool, input) {
@@ -138,7 +139,7 @@ details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}
   function nextOpen() { const list = queueList(); const i = list.findIndex((r) => awaitingFor(S.view, r.po).length); if (i >= 0) S.open = i; draw(); }
 
   function timelineFor(r) {
-    const tr = traceFor(S.view, r.po).slice(-5).map((t) => ({ state: 'done', text: `${t.actor} · ${t.what}` }));
+    const tr = traceFor(S.view, r.po).slice(-5).map((t) => ({ state: 'done', text: `${t.actor} · ${said(t)}` }));
     const pend = ((S.view && S.view.confirmations_pending) || []).filter((c) => c.po === r.po).map((c) => ({ state: 'waiting', text: `${c.what} due` }));
     const end = r.nothing ? { state: 'settled', text: 'Left alone: Northfield sends no business acceptance, so nothing is chased' }
       : r.closed ? { state: 'settled', text: r.confirmation || `${TRADE[r.document]} confirmed` }
@@ -172,14 +173,14 @@ details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}
     } else if (!r.nothing && !r.closed) parts.push(K.sentState({ text: `${r.state} · no proposal waiting on this order` }));
     parts.push(K.el('div', { class: 'sec' }, K.el('h3', { class: 'tgk-label', text: 'Review' }), K.timeline({ items: timelineFor(r) })));
     const ev = traceFor(S.view, r.po);
-    if (ev.length) { const d = K.el('details', { class: 'ev' }, K.el('summary', { text: 'How Watch Agent worked this order' }), K.el('div', { class: 'lines' }, ...ev.map((t) => K.traceLine({ kind: KIND[t.type] || 'system', actor: t.actor, text: `${time(t.clock)} · ${t.what}${t.detail && t.detail.rationale ? ': ' + short(t.detail.rationale) : ''}`, synthetic: /Kinross|Northfield/.test(t.actor) && t.type === 'external' }))));
+    if (ev.length) { const d = K.el('details', { class: 'ev' }, K.el('summary', { text: 'How Watch Agent worked this order' }), K.el('div', { class: 'lines' }, ...ev.map((t) => K.traceLine({ kind: KIND[t.type] || 'system', actor: t.actor, text: `${time(t.clock)} · ${said(t)}${t.detail && t.detail.rationale ? ': ' + short(t.detail.rationale) : ''}`, synthetic: /Kinross|Northfield/.test(t.actor) && t.type === 'external' }))));
       parts.push(d); }
     rec.replaceChildren(...parts);
   }
 
   document.getElementById('prev').onclick = () => { const n = queueList().length; S.open = (S.open - 1 + n) % n; S.editing = false; draw(); };
   document.getElementById('next').onclick = () => { const n = queueList().length; S.open = (S.open + 1) % n; S.editing = false; draw(); };
-  document.getElementById('hist').onclick = () => K.drawer({ title: 'History', content: K.el('div', { class: 'drawerbody' }, ...((S.view && S.view.trace) || []).filter((t) => t.type !== 'tool').map((t) => K.traceLine({ kind: KIND[t.type] || 'system', actor: t.actor, text: `${time(t.clock)} · ${t.what}` }))) });
+  document.getElementById('hist').onclick = () => K.drawer({ title: 'History', content: K.el('div', { class: 'drawerbody' }, ...((S.view && S.view.trace) || []).filter((t) => t.type !== 'tool').map((t) => K.traceLine({ kind: KIND[t.type] || 'system', actor: t.actor, text: `${time(t.clock)} · ${said(t)}` }))) });
   document.getElementById('agents').onclick = async () => {
     const setup = S.live ? await call('watch_setup', {}) : RECORDED.setup;
     const body = K.el('div', { class: 'drawerbody' });

@@ -517,7 +517,7 @@
     {
       "id": "P13",
       "name": "P13 Silent order watch",
-      "status": "Queued",
+      "status": "Built",
       "calendar": "P13",
       "seen_by": "Priya Raman",
       "agency": {
@@ -573,12 +573,13 @@
       ],
       "capability_status": "absent",
       "owner": "Unassigned",
-      "tools_northfield": []
+      "tools_northfield": [],
+      "ends_at": "Northfield's receiving advice matching the ship notice, or Kinross's 945 for a warehouse ask"
     },
     {
       "id": "P14",
       "name": "P14 Invoice Variance",
-      "status": "Planned",
+      "status": "Built",
       "calendar": "P14",
       "seen_by": "Jordan Ellis",
       "agency": {
@@ -620,7 +621,8 @@
         "nf.match.correction"
       ],
       "capability_status": "planned",
-      "owner": "Unassigned"
+      "owner": "Unassigned",
+      "ends_at": "The matched corrected invoice or credit memo; payment release stays in Northfield accounts payable"
     },
     {
       "id": "P15",

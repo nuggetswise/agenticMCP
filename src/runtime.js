@@ -105,7 +105,7 @@ export function makeRuntime(spec) {
   function propose(db, s, by, action, args = {}, why = {}) {
     const def = ACTIONS[action]; if (!def) return { state: 'Refused', message: `No action ${action}` };
     for (const k of Object.keys(args)) if (args[k] === undefined || args[k] === '' || args[k] === null) delete args[k];
-    const extra = Object.keys(args).filter((k) => !def.args.includes(k)); if (extra.length) { const m = `${action} takes only ${def.args.join(', ')}; refused ${extra.join(', ')}.`; trace(s, 'Trading Grid', 'rule', `Refused ${action}`, { by, args, reason: m }); return { state: 'Refused', message: m }; }
+    const extra = Object.keys(args).filter((k) => !def.args.includes(k)); if (extra.length) { const m = `${action} takes only ${def.args.join(', ')}; refused ${extra.join(', ')}.`; trace(s, 'Trading Grid', 'rule', `Refused ${action}`, { by, args, reason: m }); return { state: 'Refused', usage: true, message: m }; }
     const key = keyOf(action, args);
     const open = s.proposals.find((p) => p.key === key && ['Awaiting approval', 'Approved', 'Executed'].includes(p.state));
     if (open) return { state: 'Duplicate', proposal: open.id, message: `The same action is already ${open.state.toLowerCase()} (${open.id}).` };
@@ -162,6 +162,7 @@ export function makeRuntime(spec) {
   const INSTRUCTION = (s) => `You are ${agent}, working for ${person} at ${spec.company} on Trading Grid. All data is fictional.
 Goal: ${s.goal}
 ${spec.instruction}
+Start with read_queue: every action's record argument is a row id from the queue, exactly as written there. Pass an action only the arguments read_policy lists for it.
 Use only facts returned by your tools. Never state a record, amount or confirmation the tools did not return. Read the policy before proposing. A proposal that waits for approval is not done.
 Never retry an action the server refused; read the refusal and change course, or stop and say what waits for ${person}.
 When you are waiting for ${person} or another party, stop and say in one or two sentences what you proposed and why. When new evidence arrives, re-read what changed and reconsider.`;
@@ -194,7 +195,7 @@ When you are waiting for ${person} or another party, stop and say in one or two 
           if (rest.record && s.handed?.[rest.record] && !s.handed[rest.record].reopened) result = { state: 'Refused', message: `${person} took ${rest.record} over; ${agent} proposes on it again only after a new business event.` };
           else result = propose(db, s, agent, action, rest, { rationale, alternatives });
           if (result.state === 'Awaiting approval') waiting = true;
-          if (result.state === 'Refused') { ag.refused ||= {}; ag.refused[action] = (ag.refused[action] || 0) + 1; if (ag.refused[action] >= 2) { blocked = result.message; result = { ...result, message: `${result.message} Refused twice: stop proposing ${action}; ${person} is told what is waiting.` }; } }
+          if (result.state === 'Refused' && !result.usage) { ag.refused ||= {}; ag.refused[action] = (ag.refused[action] || 0) + 1; if (ag.refused[action] >= 2) { blocked = result.message; result = { ...result, message: `${result.message} Refused twice: stop proposing ${action}; ${person} is told what is waiting.` }; } }
         } else if (READS[f.name]) { result = read(db, s, f.name, args); trace(s, agent, 'tool', `Read ${f.name}`, { args }); }
         else result = { result: 'Refused', message: `No tool ${f.name}` };
         responses.push({ functionResponse: { name: f.name, ...(f.id ? { id: f.id } : {}), response: { result } } });

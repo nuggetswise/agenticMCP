@@ -326,7 +326,10 @@ export async function decideAndResume(db, s, proposalId, decision, by, opts = {}
 export function geminiCaller(routes = modelRoutes(), fetchImpl = fetch) {
   if (typeof routes === 'string') routes = [{ key: routes, model: 'gemini-3.5-flash-lite', route: 'primary' }];
   if (!routes?.length) return null;
+  // When every route is busy or out of quota, wait and go round again (up to three rounds, 20 then 40 seconds): a per-minute
+  // quota or a demand spike clears in under a minute, and a run that stops mid-way records nothing useful.
   return async (body) => { let err;
+    for (let round = 0; round < 3; round++) { if (round) await new Promise((r) => setTimeout(r, (process.env.MODEL_ROUND_WAIT_MS ? +process.env.MODEL_ROUND_WAIT_MS : 20000) * round));
     for (const rt of routes) for (let attempt = 0; attempt < 2; attempt++) {
       if (attempt) await new Promise((r) => setTimeout(r, 2500));
       const r = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${rt.model}:generateContent`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': rt.key }, body: JSON.stringify(body) });
@@ -334,6 +337,7 @@ export function geminiCaller(routes = modelRoutes(), fetchImpl = fetch) {
       err = `${rt.route} ${rt.model}: ${r.status} ${(await r.text()).slice(0, 160)}`;
       if (r.status !== 503) break; // 429 and 404 go straight to the next route; 503 retries once first
     }
+    if (!/: (429|503|500) /.test(err || '')) break; }
     throw new Error(`Model did not answer: ${err}`); };
 }
 

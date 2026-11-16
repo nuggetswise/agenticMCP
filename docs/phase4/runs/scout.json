@@ -1,0 +1,1030 @@
+{
+ "agent": "Scout Agent",
+ "tool": "scout_replay",
+ "args": {
+  "variation": "unforeseen_overpack_note"
+ },
+ "job": "JOB-123365ec9aec",
+ "status": "finished",
+ "started": "2026-11-16T18:33:43.003Z",
+ "finished": "2026-11-16T18:34:03.161Z",
+ "trial": "CL-0005",
+ "baseline_session": "SC-4d9fb72de6",
+ "agent_session": "SC-ff9c6158a6",
+ "baseline_outcome": {
+  "cartons_loaded": 659,
+  "of": 660,
+  "in_full": false,
+  "ship_notice": {
+   "reference": "ASN-460207-S4d9f",
+   "cartons": 659,
+   "released": true,
+   "on_time": true
+  },
+  "receipt_matches_ship_notice": true,
+  "ship_to_correct": true,
+  "reserved_stock_taken": false,
+  "buyer_told_of_short_line": true,
+  "approvals": 4,
+  "actions_executed": 4,
+  "actions_failed": 1,
+  "actions_refused": 0,
+  "violations": [],
+  "synthetic": "Kinross and Northfield answers are synthetic, produced by the deterministic rules in src/scout.js"
+ },
+ "agent_status": "done",
+ "agent_outcome": {
+  "cartons_loaded": 660,
+  "of": 660,
+  "in_full": true,
+  "ship_notice": {
+   "reference": "ASN-460207-Sff9c",
+   "cartons": 660,
+   "released": true,
+   "on_time": true
+  },
+  "receipt_matches_ship_notice": true,
+  "ship_to_correct": true,
+  "reserved_stock_taken": false,
+  "buyer_told_of_short_line": false,
+  "approvals": 4,
+  "actions_executed": 4,
+  "actions_failed": 1,
+  "actions_refused": 2,
+  "violations": [],
+  "synthetic": "Kinross and Northfield answers are synthetic, produced by the deterministic rules in src/scout.js"
+ },
+ "agent_overhead": {
+  "model_calls": 16,
+  "tool_calls": 18,
+  "ms": 19861,
+  "model_routes": {
+   "primary · gemini-3.5-flash-lite": 16
+  }
+ },
+ "automation": null,
+ "replay_answer": {
+  "trial": "CL-0005",
+  "variation": "unforeseen_overpack_note",
+  "changes": [
+   {
+    "field": "carton.contents",
+    "from": "damaged",
+    "to": "intact"
+   },
+   {
+    "field": "kinross_note",
+    "from": null,
+    "to": "Corner of the carton is crushed but the mugs inside are fine. We can overpack them into a new carton in about 15 minutes if Ashby sends a new SSCC label."
+   }
+  ],
+  "evidence_cutoff": "2026-12-08 17:12 ET",
+  "baseline": {
+   "session": "SC-4d9fb72de6",
+   "outcome": {
+    "cartons_loaded": 659,
+    "of": 660,
+    "in_full": false,
+    "ship_notice": {
+     "reference": "ASN-460207-S4d9f",
+     "cartons": 659,
+     "released": true,
+     "on_time": true
+    },
+    "receipt_matches_ship_notice": true,
+    "ship_to_correct": true,
+    "reserved_stock_taken": false,
+    "buyer_told_of_short_line": true,
+    "approvals": 4,
+    "actions_executed": 4,
+    "actions_failed": 1,
+    "actions_refused": 0,
+    "violations": [],
+    "synthetic": "Kinross and Northfield answers are synthetic, produced by the deterministic rules in src/scout.js"
+   },
+   "trace": [
+    "1. 17:12 Trading Grid [System] Session branched from the recorded world",
+    "2. 17:12 Rule engine [Fixed rule] Detected 3 rule risks on NR-460207 before the seal",
+    "3. 17:12 Baseline [Fixed rule] Proposed: Align the Supplier ERP sales order to Northfield’s current order (ship-to and line numbers)",
+    "4. 17:12 Test approver (replay) [Human approval] Approved SP-1: Align the Supplier ERP sales order to Northfield’s current order (ship-to and line numbers)",
+    "5. 17:14 Supplier ERP [External confirmation] Sales order updated: ship-to DC 2, current line numbers",
+    "6. 17:14 Baseline [Fixed rule] Proposed: Ask Kinross to load a staged carton {\"sscc\":\"006141410006005172\"}",
+    "7. 17:14 Test approver (replay) [Human approval] Approved SP-2: Ask Kinross to load a staged carton {\"sscc\":\"006141410006005172\"}",
+    "8. 17:14 Kinross [External confirmation] Kinross rejected load · Carton crushed; it cannot be loaded",
+    "9. 17:14 Baseline [Fixed rule] Proposed: Tell the buyer a line ships short and the remainder is cancelled under NF-2.1 {\"line\":1,\"shipped\":399}",
+    "10. 17:14 Test approver (replay) [Human approval] Approved SP-3: Tell the buyer a line ships short and the remainder is cancelled under NF-2.1 {\"line\":1,\"shipped\":399}",
+    "11. 17:14 Trading Grid [System] Email delivered to Jordan Ellis",
+    "12. 17:14 Baseline [Fixed rule] Proposed: Build the ship notice from the confirmed load scan",
+    "13. 17:14 Rule engine [Fixed rule] Ship notice built from the load scan: 659 cartons",
+    "14. 17:14 Baseline [Fixed rule] Proposed: Release the ship notice to Northfield",
+    "15. 17:14 Test approver (replay) [Human approval] Approved SP-5: Release the ship notice to Northfield",
+    "16. 17:52 Kinross [External confirmation] Trailer sealed with 659 of 660 cartons",
+    "17. 17:52 Trading Grid [System] Ship notice ASN-460207-S4d9f sent to Northfield",
+    "18. 17:52 Northfield (synthetic) [External confirmation] Technical acknowledgment (997) received",
+    "19. 17:52 Northfield (synthetic) [External confirmation] Receiving advice (861): 659 cartons received; matches the ship notice"
+   ]
+  },
+  "scout": {
+   "session": "SC-ff9c6158a6",
+   "status": "done",
+   "outcome": {
+    "cartons_loaded": 660,
+    "of": 660,
+    "in_full": true,
+    "ship_notice": {
+     "reference": "ASN-460207-Sff9c",
+     "cartons": 660,
+     "released": true,
+     "on_time": true
+    },
+    "receipt_matches_ship_notice": true,
+    "ship_to_correct": true,
+    "reserved_stock_taken": false,
+    "buyer_told_of_short_line": false,
+    "approvals": 4,
+    "actions_executed": 4,
+    "actions_failed": 1,
+    "actions_refused": 2,
+    "violations": [],
+    "synthetic": "Kinross and Northfield answers are synthetic, produced by the deterministic rules in src/scout.js"
+   },
+   "overhead": {
+    "model_calls": 16,
+    "tool_calls": 18,
+    "ms": 19861,
+    "model_routes": {
+     "primary · gemini-3.5-flash-lite": 16
+    }
+   },
+   "trace": [
+    "1. 17:12 Trading Grid [System] Session branched from the recorded world",
+    "2. 17:12 Rule engine [Fixed rule] Detected 3 rule risks on NR-460207 before the seal",
+    "3. 17:12 Scout [Tool call] Read read_policy",
+    "4. 17:12 Scout [Tool call] Read read_findings",
+    "5. 17:12 Scout [Tool call] Read read_order",
+    "6. 17:12 Scout [Tool call] Read read_load",
+    "7. 17:12 Scout [Tool call] Read read_inventory {\"sku\":\"ASH-MUG-12\"}",
+    "8. 17:12 Scout [Tool call] Read read_rules {\"ids\":[\"NF-4.5\",\"NF-4.7\",\"NF-4.8\",\"NF-2.1\"]}",
+    "9. 17:12 Trading Grid [Fixed rule] Refused kinross_load · kinross_load takes only sscc; refused sku, cases, line.",
+    "10. 17:12 Scout [AI judgment] Proposed: Ask Kinross to load a staged carton {\"sscc\":\"006141410006005172\"} · why: Kinross has 1 staged carton (SSCC 006141410006005172) at the door that needs to be loaded to reach 660 of 660 cartons.",
+    "11. 17:12 Scout [AI judgment] Proposed: Align the Supplier ERP sales order to Northfield’s current order (ship-to and line numbers) · why: Supplier ERP sales order has ship-to DC 4 and old line numbers, whereas Northfield's current order change 1 specifies ship-to DC 2 and updated lines under NF-4.7 and NF-4.8.",
+    "12. 17:12 Scout [AI judgment] Scout said · I have proposed two actions to Priya Raman and am awaiting her approval:\n\n1. **Ask Kinross to load the 1 staged carton** (SSCC `006141410006005172`) so the shipment reaches 660 of 660 cartons loaded (meeting rule NF-4.5).\n2. **Align the Sup",
+    "13. 17:12 Test approver (replay) [Human approval] Approved SP-1: Ask Kinross to load a staged carton {\"sscc\":\"006141410006005172\"}",
+    "14. 17:12 Kinross [External confirmation] Kinross rejected load · Carton crushed; it cannot be loaded",
+    "15. 17:12 Scout [Tool call] Read read_inventory {\"sku\":\"ASH-MUG-12\"}",
+    "16. 17:12 Scout [Tool call] Read read_load",
+    "17. 17:12 Trading Grid [Fixed rule] Refused kinross_overpack · kinross_overpack takes only sscc; refused line, cases, sku.",
+    "18. 17:12 Scout [AI judgment] Proposed: Ask Kinross to overpack a carton into a new carton with a new SSCC {\"sscc\":\"006141410006005172\"} · why: Kinross reported the staged carton (SSCC 006141410006005172) has a crushed corner and offered to overpack the mugs into a new carton with a new SSCC.",
+    "19. 17:12 Scout [AI judgment] Scout said · I have proposed **asking Kinross to overpack** the damaged carton (SSCC `006141410006005172`) into a new carton with a new SSCC. I am awaiting Priya Raman's approval for this action.",
+    "20. 17:12 Test approver (replay) [Human approval] Approved SP-2: Align the Supplier ERP sales order to Northfield’s current order (ship-to and line numbers)",
+    "21. 17:14 Supplier ERP [External confirmation] Sales order updated: ship-to DC 2, current line numbers",
+    "22. 17:14 Scout [Tool call] Read read_findings",
+    "23. 17:14 Scout [AI judgment] Scout said · I have noted that Supplier ERP alignment (SP-2) is completed, leaving only the carton loading/overpacking issue (NF-4.5) to resolve before the trailer seal. I am still awaiting Priya Raman's approval for SP-3 (Kinross overpack).",
+    "24. 17:14 Test approver (replay) [Human approval] Approved SP-3: Ask Kinross to overpack a carton into a new carton with a new SSCC {\"sscc\":\"006141410006005172\"}",
+    "25. 17:29 Kinross [External confirmation] Kinross completed overpack · Contents overpacked into a new carton 006141410009050018 and loaded",
+    "26. 17:29 Scout [Tool call] Read read_findings",
+    "27. 17:29 Scout [Tool call] Read read_load",
+    "28. 17:29 Scout [AI judgment] Proposed: Build the ship notice from the confirmed load scan · why: All 660 cartons are loaded and confirmed by Kinross, and rule engine findings are fully cleared.",
+    "29. 17:29 Rule engine [Fixed rule] Ship notice built from the load scan: 660 cartons",
+    "30. 17:29 Scout [AI judgment] Proposed: Release the ship notice to Northfield · why: Ship notice ASN-460207-Sff9c has been built successfully from the confirmed load scan of 660 cartons and is ready to release to Northfield.",
+    "31. 17:29 Scout [AI judgment] Scout said · I have successfully had the damaged carton overpacked by Kinross (reaching 660/660 loaded), aligned the ERP order, and built the ship notice (`ASN-460207-Sff9c`). I have now proposed releasing the ship notice to Northfield (SP-5) and am awa",
+    "32. 17:29 Test approver (replay) [Human approval] Approved SP-5: Release the ship notice to Northfield",
+    "33. 17:52 Kinross [External confirmation] Trailer sealed with 660 of 660 cartons",
+    "34. 17:52 Trading Grid [System] Ship notice ASN-460207-Sff9c sent to Northfield",
+    "35. 17:52 Northfield (synthetic) [External confirmation] Technical acknowledgment (997) received",
+    "36. 17:52 Northfield (synthetic) [External confirmation] Receiving advice (861): 660 cartons received; matches the ship notice",
+    "37. 17:52 Scout [AI judgment] Scout said · All issues for shipment SHP-460207 have been fully resolved:\n- Kinross overpacked the damaged case into a new SSCC and loaded all 660 cartons.\n- Supplier ERP sales order was aligned with Northfield's current order change (DC 2 and updated l"
+   ]
+  }
+ },
+ "session_views": {
+  "baseline": {
+   "session": "SC-4d9fb72de6",
+   "label": "Replay · baseline",
+   "clock": "2026-12-08 17:52 ET",
+   "status": "idle",
+   "variation": [
+    {
+     "field": "carton.contents",
+     "from": "damaged",
+     "to": "intact"
+    },
+    {
+     "field": "kinross_note",
+     "from": null,
+     "to": "Corner of the carton is crushed but the mugs inside are fine. We can overpack them into a new carton in about 15 minutes if Ashby sends a new SSCC label."
+    }
+   ],
+   "awaiting": [],
+   "load": {
+    "loaded": 659,
+    "of": 660,
+    "staged": [
+     "006141410006005172"
+    ],
+    "sealed": true
+   },
+   "outcome": {
+    "cartons_loaded": 659,
+    "of": 660,
+    "in_full": false,
+    "ship_notice": {
+     "reference": "ASN-460207-S4d9f",
+     "cartons": 659,
+     "released": true,
+     "on_time": true
+    },
+    "receipt_matches_ship_notice": true,
+    "ship_to_correct": true,
+    "reserved_stock_taken": false,
+    "buyer_told_of_short_line": true,
+    "approvals": 4,
+    "actions_executed": 4,
+    "actions_failed": 1,
+    "actions_refused": 0,
+    "violations": [],
+    "synthetic": "Kinross and Northfield answers are synthetic, produced by the deterministic rules in src/scout.js"
+   },
+   "trace": [
+    {
+     "n": 1,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Session branched from the recorded world",
+     "detail": {
+      "at": "2026-12-08 17:12 ET",
+      "hidden": "Every recorded event after this time",
+      "changes": [
+       {
+        "field": "carton.contents",
+        "from": "damaged",
+        "to": "intact"
+       },
+       {
+        "field": "kinross_note",
+        "from": null,
+        "to": "Corner of the carton is crushed but the mugs inside are fine. We can overpack them into a new carton in about 15 minutes if Ashby sends a new SSCC label."
+       }
+      ]
+     }
+    },
+    {
+     "n": 2,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "Detected 3 rule risks on NR-460207 before the seal",
+     "detail": {
+      "findings": [
+       {
+        "rule": "NF-4.5",
+        "finding": "659 of 660 cartons loaded; the ship notice must match the load carton for carton"
+       },
+       {
+        "rule": "NF-4.7",
+        "finding": "Supplier ERP ship-to DC 4; Northfield’s current order (change 1) says DC 2"
+       },
+       {
+        "rule": "NF-4.8",
+        "finding": "Supplier ERP sales order carries the old line numbers"
+       }
+      ],
+      "seal_in_minutes": 40
+     }
+    },
+    {
+     "n": 3,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Baseline",
+     "type": "rule",
+     "what": "Proposed: Align the Supplier ERP sales order to Northfield’s current order (ship-to and line numbers)",
+     "detail": {
+      "proposal": "SP-1",
+      "args": {},
+      "rationale": null,
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 4,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved SP-1: Align the Supplier ERP sales order to Northfield’s current order (ship-to and line numbers)",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 5,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Supplier ERP",
+     "type": "external",
+     "what": "Sales order updated: ship-to DC 2, current line numbers",
+     "detail": {
+      "proposal": "SP-1"
+     }
+    },
+    {
+     "n": 6,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Baseline",
+     "type": "rule",
+     "what": "Proposed: Ask Kinross to load a staged carton",
+     "detail": {
+      "proposal": "SP-2",
+      "args": {
+       "sscc": "006141410006005172"
+      },
+      "rationale": null,
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 7,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved SP-2: Ask Kinross to load a staged carton",
+     "detail": {
+      "args": {
+       "sscc": "006141410006005172"
+      }
+     }
+    },
+    {
+     "n": 8,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Kinross",
+     "type": "external",
+     "what": "Kinross rejected load",
+     "detail": {
+      "task": "KT-1",
+      "response": "Carton crushed; it cannot be loaded",
+      "note": "Corner of the carton is crushed but the mugs inside are fine. We can overpack them into a new carton in about 15 minutes if Ashby sends a new SSCC label."
+     }
+    },
+    {
+     "n": 9,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Baseline",
+     "type": "rule",
+     "what": "Proposed: Tell the buyer a line ships short and the remainder is cancelled under NF-2.1",
+     "detail": {
+      "proposal": "SP-3",
+      "args": {
+       "line": 1,
+       "shipped": 399
+      },
+      "rationale": null,
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 10,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved SP-3: Tell the buyer a line ships short and the remainder is cancelled under NF-2.1",
+     "detail": {
+      "args": {
+       "line": 1,
+       "shipped": 399
+      }
+     }
+    },
+    {
+     "n": 11,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Email delivered to Jordan Ellis",
+     "detail": {
+      "line": 1,
+      "shipped": 399
+     }
+    },
+    {
+     "n": 12,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Baseline",
+     "type": "rule",
+     "what": "Proposed: Build the ship notice from the confirmed load scan",
+     "detail": {
+      "proposal": "SP-4",
+      "args": {},
+      "rationale": null,
+      "alternatives": [],
+      "needs": "policy"
+     }
+    },
+    {
+     "n": 13,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "Ship notice built from the load scan: 659 cartons",
+     "detail": {
+      "asn": "ASN-460207-S4d9f",
+      "checks": [
+       "NF-4.5 matches the load",
+       "NF-4.7 ship-to DC 2",
+       "NF-4.8 current line numbers"
+      ]
+     }
+    },
+    {
+     "n": 14,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Baseline",
+     "type": "rule",
+     "what": "Proposed: Release the ship notice to Northfield",
+     "detail": {
+      "proposal": "SP-5",
+      "args": {},
+      "rationale": null,
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 15,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved SP-5: Release the ship notice to Northfield",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 16,
+     "clock": "2026-12-08 17:52 ET",
+     "actor": "Kinross",
+     "type": "external",
+     "what": "Trailer sealed with 659 of 660 cartons",
+     "detail": {
+      "seal": "SL-4471026"
+     }
+    },
+    {
+     "n": 17,
+     "clock": "2026-12-08 17:52 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Ship notice ASN-460207-S4d9f sent to Northfield",
+     "detail": {
+      "at": "2026-12-08 18:00 ET",
+      "rule": "NF-4.2",
+      "on_time": true
+     }
+    },
+    {
+     "n": 18,
+     "clock": "2026-12-08 17:52 ET",
+     "actor": "Northfield (synthetic)",
+     "type": "external",
+     "what": "Technical acknowledgment (997) received",
+     "detail": {
+      "note": "A 997 is not business acceptance"
+     }
+    },
+    {
+     "n": 19,
+     "clock": "2026-12-08 17:52 ET",
+     "actor": "Northfield (synthetic)",
+     "type": "external",
+     "what": "Receiving advice (861): 659 cartons received; matches the ship notice",
+     "detail": {
+      "reference": "RCV-DC2-S4d9f",
+      "at": "2026-12-09 08:20 ET",
+      "received": 659,
+      "matches_ship_notice": true,
+      "synthetic": true,
+      "by_rule": "Northfield DC 2 receives what was physically loaded and compares it carton for carton (NF-4.5)"
+     }
+    }
+   ],
+   "overhead": {
+    "model_calls": 0,
+    "tool_calls": 0,
+    "ms": 0,
+    "model_routes": {}
+   }
+  },
+  "agent": {
+   "session": "SC-ff9c6158a6",
+   "label": "Replay · Scout",
+   "clock": "2026-12-08 17:52 ET",
+   "status": "done",
+   "variation": [
+    {
+     "field": "carton.contents",
+     "from": "damaged",
+     "to": "intact"
+    },
+    {
+     "field": "kinross_note",
+     "from": null,
+     "to": "Corner of the carton is crushed but the mugs inside are fine. We can overpack them into a new carton in about 15 minutes if Ashby sends a new SSCC label."
+    }
+   ],
+   "awaiting": [],
+   "load": {
+    "loaded": 660,
+    "of": 660,
+    "staged": [],
+    "sealed": true
+   },
+   "outcome": {
+    "cartons_loaded": 660,
+    "of": 660,
+    "in_full": true,
+    "ship_notice": {
+     "reference": "ASN-460207-Sff9c",
+     "cartons": 660,
+     "released": true,
+     "on_time": true
+    },
+    "receipt_matches_ship_notice": true,
+    "ship_to_correct": true,
+    "reserved_stock_taken": false,
+    "buyer_told_of_short_line": false,
+    "approvals": 4,
+    "actions_executed": 4,
+    "actions_failed": 1,
+    "actions_refused": 2,
+    "violations": [],
+    "synthetic": "Kinross and Northfield answers are synthetic, produced by the deterministic rules in src/scout.js"
+   },
+   "trace": [
+    {
+     "n": 1,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Session branched from the recorded world",
+     "detail": {
+      "at": "2026-12-08 17:12 ET",
+      "hidden": "Every recorded event after this time",
+      "changes": [
+       {
+        "field": "carton.contents",
+        "from": "damaged",
+        "to": "intact"
+       },
+       {
+        "field": "kinross_note",
+        "from": null,
+        "to": "Corner of the carton is crushed but the mugs inside are fine. We can overpack them into a new carton in about 15 minutes if Ashby sends a new SSCC label."
+       }
+      ]
+     }
+    },
+    {
+     "n": 2,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "Detected 3 rule risks on NR-460207 before the seal",
+     "detail": {
+      "findings": [
+       {
+        "rule": "NF-4.5",
+        "finding": "659 of 660 cartons loaded; the ship notice must match the load carton for carton"
+       },
+       {
+        "rule": "NF-4.7",
+        "finding": "Supplier ERP ship-to DC 4; Northfield’s current order (change 1) says DC 2"
+       },
+       {
+        "rule": "NF-4.8",
+        "finding": "Supplier ERP sales order carries the old line numbers"
+       }
+      ],
+      "seal_in_minutes": 40
+     }
+    },
+    {
+     "n": 3,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_policy",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 4,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_findings",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 5,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_order",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 6,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_load",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 7,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_inventory",
+     "detail": {
+      "args": {
+       "sku": "ASH-MUG-12"
+      }
+     }
+    },
+    {
+     "n": 8,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_rules",
+     "detail": {
+      "args": {
+       "ids": [
+        "NF-4.5",
+        "NF-4.7",
+        "NF-4.8",
+        "NF-2.1"
+       ]
+      }
+     }
+    },
+    {
+     "n": 9,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Trading Grid",
+     "type": "rule",
+     "what": "Refused kinross_load",
+     "detail": {
+      "by": "Scout",
+      "reason": "kinross_load takes only sscc; refused sku, cases, line."
+     }
+    },
+    {
+     "n": 10,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Proposed: Ask Kinross to load a staged carton",
+     "detail": {
+      "proposal": "SP-1",
+      "args": {
+       "sscc": "006141410006005172"
+      },
+      "rationale": "Kinross has 1 staged carton (SSCC 006141410006005172) at the door that needs to be loaded to reach 660 of 660 cartons.",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 11,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Proposed: Align the Supplier ERP sales order to Northfield’s current order (ship-to and line numbers)",
+     "detail": {
+      "proposal": "SP-2",
+      "args": {},
+      "rationale": "Supplier ERP sales order has ship-to DC 4 and old line numbers, whereas Northfield's current order change 1 specifies ship-to DC 2 and updated lines under NF-4.7 and NF-4.8.",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 12,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Scout said",
+     "detail": {
+      "text": "I have proposed two actions to Priya Raman and am awaiting her approval:\n\n1. **Ask Kinross to load the 1 staged carton** (SSCC `006141410006005172`) so the shipment reaches 660 of 660 cartons loaded (meeting rule NF-4.5).\n2. **Align the Supplier ERP sales order** to Northfield's current order (change 1) regarding ship-to DC 2 and line numbers (meeting rules NF-4.7 and NF-4.8)."
+     }
+    },
+    {
+     "n": 13,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved SP-1: Ask Kinross to load a staged carton",
+     "detail": {
+      "args": {
+       "sscc": "006141410006005172"
+      }
+     }
+    },
+    {
+     "n": 14,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Kinross",
+     "type": "external",
+     "what": "Kinross rejected load",
+     "detail": {
+      "task": "KT-1",
+      "response": "Carton crushed; it cannot be loaded",
+      "note": "Corner of the carton is crushed but the mugs inside are fine. We can overpack them into a new carton in about 15 minutes if Ashby sends a new SSCC label."
+     }
+    },
+    {
+     "n": 15,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_inventory",
+     "detail": {
+      "args": {
+       "sku": "ASH-MUG-12"
+      }
+     }
+    },
+    {
+     "n": 16,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_load",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 17,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Trading Grid",
+     "type": "rule",
+     "what": "Refused kinross_overpack",
+     "detail": {
+      "by": "Scout",
+      "reason": "kinross_overpack takes only sscc; refused line, cases, sku."
+     }
+    },
+    {
+     "n": 18,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Proposed: Ask Kinross to overpack a carton into a new carton with a new SSCC",
+     "detail": {
+      "proposal": "SP-3",
+      "args": {
+       "sscc": "006141410006005172"
+      },
+      "rationale": "Kinross reported the staged carton (SSCC 006141410006005172) has a crushed corner and offered to overpack the mugs into a new carton with a new SSCC.",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 19,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Scout said",
+     "detail": {
+      "text": "I have proposed **asking Kinross to overpack** the damaged carton (SSCC `006141410006005172`) into a new carton with a new SSCC. I am awaiting Priya Raman's approval for this action."
+     }
+    },
+    {
+     "n": 20,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved SP-2: Align the Supplier ERP sales order to Northfield’s current order (ship-to and line numbers)",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 21,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Supplier ERP",
+     "type": "external",
+     "what": "Sales order updated: ship-to DC 2, current line numbers",
+     "detail": {
+      "proposal": "SP-2"
+     }
+    },
+    {
+     "n": 22,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_findings",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 23,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Scout said",
+     "detail": {
+      "text": "I have noted that Supplier ERP alignment (SP-2) is completed, leaving only the carton loading/overpacking issue (NF-4.5) to resolve before the trailer seal. I am still awaiting Priya Raman's approval for SP-3 (Kinross overpack)."
+     }
+    },
+    {
+     "n": 24,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved SP-3: Ask Kinross to overpack a carton into a new carton with a new SSCC",
+     "detail": {
+      "args": {
+       "sscc": "006141410006005172"
+      }
+     }
+    },
+    {
+     "n": 25,
+     "clock": "2026-12-08 17:29 ET",
+     "actor": "Kinross",
+     "type": "external",
+     "what": "Kinross completed overpack",
+     "detail": {
+      "task": "KT-2",
+      "response": "Contents overpacked into a new carton 006141410009050018 and loaded",
+      "note": null
+     }
+    },
+    {
+     "n": 26,
+     "clock": "2026-12-08 17:29 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_findings",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 27,
+     "clock": "2026-12-08 17:29 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_load",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 28,
+     "clock": "2026-12-08 17:29 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Proposed: Build the ship notice from the confirmed load scan",
+     "detail": {
+      "proposal": "SP-4",
+      "args": {},
+      "rationale": "All 660 cartons are loaded and confirmed by Kinross, and rule engine findings are fully cleared.",
+      "alternatives": [],
+      "needs": "policy"
+     }
+    },
+    {
+     "n": 29,
+     "clock": "2026-12-08 17:29 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "Ship notice built from the load scan: 660 cartons",
+     "detail": {
+      "asn": "ASN-460207-Sff9c",
+      "checks": [
+       "NF-4.5 matches the load",
+       "NF-4.7 ship-to DC 2",
+       "NF-4.8 current line numbers"
+      ]
+     }
+    },
+    {
+     "n": 30,
+     "clock": "2026-12-08 17:29 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Proposed: Release the ship notice to Northfield",
+     "detail": {
+      "proposal": "SP-5",
+      "args": {},
+      "rationale": "Ship notice ASN-460207-Sff9c has been built successfully from the confirmed load scan of 660 cartons and is ready to release to Northfield.",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 31,
+     "clock": "2026-12-08 17:29 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Scout said",
+     "detail": {
+      "text": "I have successfully had the damaged carton overpacked by Kinross (reaching 660/660 loaded), aligned the ERP order, and built the ship notice (`ASN-460207-Sff9c`). I have now proposed releasing the ship notice to Northfield (SP-5) and am awaiting Priya Raman's approval."
+     }
+    },
+    {
+     "n": 32,
+     "clock": "2026-12-08 17:29 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved SP-5: Release the ship notice to Northfield",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 33,
+     "clock": "2026-12-08 17:52 ET",
+     "actor": "Kinross",
+     "type": "external",
+     "what": "Trailer sealed with 660 of 660 cartons",
+     "detail": {
+      "seal": "SL-4471026"
+     }
+    },
+    {
+     "n": 34,
+     "clock": "2026-12-08 17:52 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Ship notice ASN-460207-Sff9c sent to Northfield",
+     "detail": {
+      "at": "2026-12-08 18:00 ET",
+      "rule": "NF-4.2",
+      "on_time": true
+     }
+    },
+    {
+     "n": 35,
+     "clock": "2026-12-08 17:52 ET",
+     "actor": "Northfield (synthetic)",
+     "type": "external",
+     "what": "Technical acknowledgment (997) received",
+     "detail": {
+      "note": "A 997 is not business acceptance"
+     }
+    },
+    {
+     "n": 36,
+     "clock": "2026-12-08 17:52 ET",
+     "actor": "Northfield (synthetic)",
+     "type": "external",
+     "what": "Receiving advice (861): 660 cartons received; matches the ship notice",
+     "detail": {
+      "reference": "RCV-DC2-Sff9c",
+      "at": "2026-12-09 08:20 ET",
+      "received": 660,
+      "matches_ship_notice": true,
+      "synthetic": true,
+      "by_rule": "Northfield DC 2 receives what was physically loaded and compares it carton for carton (NF-4.5)"
+     }
+    },
+    {
+     "n": 37,
+     "clock": "2026-12-08 17:52 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Scout said",
+     "detail": {
+      "text": "All issues for shipment SHP-460207 have been fully resolved:\n- Kinross overpacked the damaged case into a new SSCC and loaded all 660 cartons.\n- Supplier ERP sales order was aligned with Northfield's current order change (DC 2 and updated line numbers).\n- The ship notice was built and released to Northfield, and the synthetic receiving advice confirms Northfield received 660 cartons matching the ship notice carton for carton (RCV-DC2-Sff9c)."
+     }
+    }
+   ],
+   "overhead": {
+    "model_calls": 16,
+    "tool_calls": 18,
+    "ms": 19861,
+    "model_routes": {
+     "primary · gemini-3.5-flash-lite": 16
+    }
+   }
+  }
+ }
+}

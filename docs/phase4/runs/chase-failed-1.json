@@ -1,0 +1,3609 @@
+{
+ "agent": "Chase Agent",
+ "tool": "chase_replay",
+ "args": {
+  "variation": "mixed_trails"
+ },
+ "job": "JOB-07a3ae4fb678",
+ "status": "finished",
+ "started": "2026-11-16T18:30:55.783Z",
+ "finished": "2026-11-16T18:34:12.779Z",
+ "trial": "CL-0006",
+ "baseline_session": "CH-618dd0d168",
+ "agent_session": "CH-24097eb927",
+ "baseline_outcome": {
+  "as_of": "2026-12-10 09:00 ET",
+  "orders": [
+   {
+    "po": "NR-46560",
+    "state": "Not picked up: not ready; asked ship notice"
+   },
+   {
+    "po": "NR-46567",
+    "state": "Not picked up: not ready; asked ship notice"
+   },
+   {
+    "po": "NR-46574",
+    "state": "Not picked up: not ready; asked ship notice"
+   },
+   {
+    "po": "NR-46581",
+    "state": "Not picked up: not ready; asked ship notice"
+   },
+   {
+    "po": "NR-46588",
+    "state": "Not picked up: not ready; asked ship notice"
+   },
+   {
+    "po": "NR-46595",
+    "state": "Not picked up: not ready; asked ship notice"
+   },
+   {
+    "po": "NR-46602",
+    "state": "Departed; no ship notice; asked ship notice"
+   },
+   {
+    "po": "NR-46609",
+    "state": "No carrier status; asked ship notice"
+   },
+   {
+    "po": "NR-46616",
+    "state": "Ship notice and carrier disagree"
+   }
+  ],
+  "requests": {
+   "NR-46560": {
+    "of": "ship notice",
+    "at": "2026-12-09 17:03 ET"
+   },
+   "NR-46567": {
+    "of": "ship notice",
+    "at": "2026-12-09 17:06 ET"
+   },
+   "NR-46574": {
+    "of": "ship notice",
+    "at": "2026-12-09 17:09 ET"
+   },
+   "NR-46581": {
+    "of": "ship notice",
+    "at": "2026-12-09 17:12 ET"
+   },
+   "NR-46588": {
+    "of": "ship notice",
+    "at": "2026-12-09 17:15 ET"
+   },
+   "NR-46595": {
+    "of": "ship notice",
+    "at": "2026-12-09 17:18 ET"
+   },
+   "NR-46602": {
+    "of": "ship notice",
+    "at": "2026-12-09 17:21 ET"
+   },
+   "NR-46609": {
+    "of": "ship notice",
+    "at": "2026-12-09 17:24 ET"
+   }
+  },
+  "readiness_recorded": {},
+  "carrier_asked": {},
+  "corrections": {},
+  "violations": [
+   "NR-46560: ship notice chased for a load that never left",
+   "NR-46567: ship notice chased for a load that never left",
+   "NR-46574: ship notice chased for a load that never left",
+   "NR-46581: ship notice chased for a load that never left",
+   "NR-46588: ship notice chased for a load that never left",
+   "NR-46595: ship notice chased for a load that never left"
+  ],
+  "synthetic": "Presets on NR-46602, NR-46609 and NR-46616 and every answer to a request are synthetic, from src/chase.js; routing instructions, Lakeline 214s, ship notices and receiving advice are recorded."
+ },
+ "agent_status": "model_failed",
+ "agent_outcome": null,
+ "agent_overhead": null,
+ "automation": null,
+ "replay_answer": {
+  "trial": "CL-0006",
+  "changes": [
+   {
+    "field": "carrier_departed_46602",
+    "from": "no",
+    "to": "yes"
+   },
+   {
+    "field": "carrier_silent_46609",
+    "from": "no",
+    "to": "yes"
+   },
+   {
+    "field": "asn_before_pickup_46616",
+    "from": "no",
+    "to": "yes"
+   }
+  ],
+  "evidence_cutoff": "2026-12-09 17:00 ET",
+  "baseline": {
+   "session": "CH-618dd0d168",
+   "outcome": {
+    "as_of": "2026-12-10 09:00 ET",
+    "orders": [
+     {
+      "po": "NR-46560",
+      "state": "Not picked up: not ready; asked ship notice"
+     },
+     {
+      "po": "NR-46567",
+      "state": "Not picked up: not ready; asked ship notice"
+     },
+     {
+      "po": "NR-46574",
+      "state": "Not picked up: not ready; asked ship notice"
+     },
+     {
+      "po": "NR-46581",
+      "state": "Not picked up: not ready; asked ship notice"
+     },
+     {
+      "po": "NR-46588",
+      "state": "Not picked up: not ready; asked ship notice"
+     },
+     {
+      "po": "NR-46595",
+      "state": "Not picked up: not ready; asked ship notice"
+     },
+     {
+      "po": "NR-46602",
+      "state": "Departed; no ship notice; asked ship notice"
+     },
+     {
+      "po": "NR-46609",
+      "state": "No carrier status; asked ship notice"
+     },
+     {
+      "po": "NR-46616",
+      "state": "Ship notice and carrier disagree"
+     }
+    ],
+    "requests": {
+     "NR-46560": {
+      "of": "ship notice",
+      "at": "2026-12-09 17:03 ET"
+     },
+     "NR-46567": {
+      "of": "ship notice",
+      "at": "2026-12-09 17:06 ET"
+     },
+     "NR-46574": {
+      "of": "ship notice",
+      "at": "2026-12-09 17:09 ET"
+     },
+     "NR-46581": {
+      "of": "ship notice",
+      "at": "2026-12-09 17:12 ET"
+     },
+     "NR-46588": {
+      "of": "ship notice",
+      "at": "2026-12-09 17:15 ET"
+     },
+     "NR-46595": {
+      "of": "ship notice",
+      "at": "2026-12-09 17:18 ET"
+     },
+     "NR-46602": {
+      "of": "ship notice",
+      "at": "2026-12-09 17:21 ET"
+     },
+     "NR-46609": {
+      "of": "ship notice",
+      "at": "2026-12-09 17:24 ET"
+     }
+    },
+    "readiness_recorded": {},
+    "carrier_asked": {},
+    "corrections": {},
+    "violations": [
+     "NR-46560: ship notice chased for a load that never left",
+     "NR-46567: ship notice chased for a load that never left",
+     "NR-46574: ship notice chased for a load that never left",
+     "NR-46581: ship notice chased for a load that never left",
+     "NR-46588: ship notice chased for a load that never left",
+     "NR-46595: ship notice chased for a load that never left"
+    ],
+    "synthetic": "Presets on NR-46602, NR-46609 and NR-46616 and every answer to a request are synthetic, from src/chase.js; routing instructions, Lakeline 214s, ship notices and receiving advice are recorded."
+   },
+   "trace": [
+    "1. 17:00 Trading Grid [System] Session branched from the recorded world",
+    "2. 17:00 Rule engine [Fixed rule] 9 inbound orders to work",
+    "3. 17:00 Baseline [Fixed rule] Proposed: Request the missing ship notice from the supplier {\"record\":\"NR-46560\"}",
+    "4. 17:01 Test approver (replay) [Human approval] Approved CHP-1: Request the missing ship notice from the supplier {\"record\":\"NR-46560\"}",
+    "5. 17:03 Ashby Supplier (request through Trading Grid) [External confirmation] Executed: Request the missing ship notice from the supplier · Ship notice requested from Ashby for NR-46560; it stays Late when it arrives",
+    "6. 17:03 Baseline [Fixed rule] Proposed: Request the missing ship notice from the supplier {\"record\":\"NR-46567\"}",
+    "7. 17:04 Test approver (replay) [Human approval] Approved CHP-2: Request the missing ship notice from the supplier {\"record\":\"NR-46567\"}",
+    "8. 17:06 Ashby Supplier (request through Trading Grid) [External confirmation] Executed: Request the missing ship notice from the supplier · Ship notice requested from Ashby for NR-46567; it stays Late when it arrives",
+    "9. 17:06 Baseline [Fixed rule] Proposed: Request the missing ship notice from the supplier {\"record\":\"NR-46574\"}",
+    "10. 17:07 Test approver (replay) [Human approval] Approved CHP-3: Request the missing ship notice from the supplier {\"record\":\"NR-46574\"}",
+    "11. 17:09 Ashby Supplier (request through Trading Grid) [External confirmation] Executed: Request the missing ship notice from the supplier · Ship notice requested from Ashby for NR-46574; it stays Late when it arrives",
+    "12. 17:09 Baseline [Fixed rule] Proposed: Request the missing ship notice from the supplier {\"record\":\"NR-46581\"}",
+    "13. 17:10 Test approver (replay) [Human approval] Approved CHP-4: Request the missing ship notice from the supplier {\"record\":\"NR-46581\"}",
+    "14. 17:12 Ashby Supplier (request through Trading Grid) [External confirmation] Executed: Request the missing ship notice from the supplier · Ship notice requested from Ashby for NR-46581; it stays Late when it arrives",
+    "15. 17:12 Baseline [Fixed rule] Proposed: Request the missing ship notice from the supplier {\"record\":\"NR-46588\"}",
+    "16. 17:13 Test approver (replay) [Human approval] Approved CHP-5: Request the missing ship notice from the supplier {\"record\":\"NR-46588\"}",
+    "17. 17:15 Ashby Supplier (request through Trading Grid) [External confirmation] Executed: Request the missing ship notice from the supplier · Ship notice requested from Ashby for NR-46588; it stays Late when it arrives",
+    "18. 17:15 Baseline [Fixed rule] Proposed: Request the missing ship notice from the supplier {\"record\":\"NR-46595\"}",
+    "19. 17:16 Test approver (replay) [Human approval] Approved CHP-6: Request the missing ship notice from the supplier {\"record\":\"NR-46595\"}",
+    "20. 17:18 Ashby Supplier (request through Trading Grid) [External confirmation] Executed: Request the missing ship notice from the supplier · Ship notice requested from Ashby for NR-46595; it stays Late when it arrives",
+    "21. 17:18 Baseline [Fixed rule] Proposed: Request the missing ship notice from the supplier {\"record\":\"NR-46602\"}",
+    "22. 17:19 Test approver (replay) [Human approval] Approved CHP-7: Request the missing ship notice from the supplier {\"record\":\"NR-46602\"}",
+    "23. 17:21 Ashby Supplier (request through Trading Grid) [External confirmation] Executed: Request the missing ship notice from the supplier · Ship notice requested from Ashby for NR-46602; it stays Late when it arrives",
+    "24. 17:21 Baseline [Fixed rule] Proposed: Request the missing ship notice from the supplier {\"record\":\"NR-46609\"}",
+    "25. 17:22 Test approver (replay) [Human approval] Approved CHP-8: Request the missing ship notice from the supplier {\"record\":\"NR-46609\"}",
+    "26. 17:24 Ashby Supplier (request through Trading Grid) [External confirmation] Executed: Request the missing ship notice from the supplier · Ship notice requested from Ashby for NR-46609; it stays Late when it arrives",
+    "27. 06:31 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46557",
+    "28. 06:36 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46571",
+    "29. 06:40 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46584",
+    "30. 06:40 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46539",
+    "31. 06:43 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46566",
+    "32. 06:45 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46578",
+    "33. 06:46 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46591",
+    "34. 06:47 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46568",
+    "35. 06:50 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46564",
+    "36. 06:54 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46612",
+    "37. 07:00 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46557 for NR-46557",
+    "38. 07:00 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46568 for NR-46568",
+    "39. 07:00 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46571 for NR-46571",
+    "40. 07:00 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46578 for NR-46578",
+    "41. 07:00 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46584 for NR-46584",
+    "42. 07:00 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46591 for NR-46591",
+    "43. 07:00 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46562",
+    "44. 07:03 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46576",
+    "45. 07:10 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46539 for NR-46539",
+    "46. 07:10 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46566 for NR-46566",
+    "47. 07:10 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46612 for NR-46612",
+    "48. 07:13 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46614",
+    "49. 07:17 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46585",
+    "50. 07:18 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46572",
+    "51. 07:20 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46562 for NR-46562",
+    "52. 07:20 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46564 for NR-46564",
+    "53. 07:20 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46576 for NR-46576",
+    "54. 07:25 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46577",
+    "55. 07:28 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46611",
+    "56. 07:30 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46585 for NR-46585",
+    "57. 07:33 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46561",
+    "58. 07:34 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46607",
+    "59. 07:35 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46563",
+    "60. 07:40 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46572 for NR-46572",
+    "61. 07:40 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46614 for NR-46614",
+    "62. 07:43 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46594",
+    "63. 07:50 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46561 for NR-46561",
+    "64. 07:50 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46577 for NR-46577",
+    "65. 07:50 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46611 for NR-46611",
+    "66. 07:50 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46599",
+    "67. 07:51 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46615",
+    "68. 07:53 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46605",
+    "69. 07:53 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46580",
+    "70. 07:55 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46565",
+    "71. 07:55 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46606",
+    "72. 07:56 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46596",
+    "73. 08:00 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46563 for NR-46563",
+    "74. 08:00 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46594 for NR-46594",
+    "75. 08:00 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46607 for NR-46607",
+    "76. 08:01 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46613",
+    "77. 08:02 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46583",
+    "78. 08:05 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46597",
+    "79. 08:06 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46569",
+    "80. 08:09 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46617",
+    "81. 08:10 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46565 for NR-46565",
+    "82. 08:10 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46580 for NR-46580",
+    "83. 08:10 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46596 for NR-46596",
+    "84. 08:10 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46605 for NR-46605",
+    "85. 08:10 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46606 for NR-46606",
+    "86. 08:10 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46615 for NR-46615",
+    "87. 08:11 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46600",
+    "88. 08:11 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46589",
+    "89. 08:13 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46575",
+    "90. 08:20 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46569 for NR-46569",
+    "91. 08:20 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46599 for NR-46599",
+    "92. 08:20 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46559",
+    "93. 08:21 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46593",
+    "94. 08:24 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46608",
+    "95. 08:26 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46590",
+    "96. 08:30 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46583 for NR-46583",
+    "97. 08:30 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46589 for NR-46589",
+    "98. 08:30 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46597 for NR-46597",
+    "99. 08:30 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46600 for NR-46600",
+    "100. 08:30 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46613 for NR-46613",
+    "101. 08:30 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46617 for NR-46617",
+    "102. 08:32 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46558",
+    "103. 08:40 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46575 for NR-46575",
+    "104. 08:40 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46593 for NR-46593",
+    "105. 08:41 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46604",
+    "106. 08:47 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46601",
+    "107. 08:48 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46587",
+    "108. 08:49 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46570",
+    "109. 08:50 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46558 for NR-46558",
+    "110. 08:50 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46559 for NR-46559",
+    "111. 08:50 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46590 for NR-46590",
+    "112. 08:50 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46608 for NR-46608",
+    "113. 08:50 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46579",
+    "114. 08:54 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46610",
+    "115. 08:57 Lakeline Freight (recorded) [External confirmation] Lakeline status Delivered for NR-46592",
+    "116. 09:00 Northfield receiving (recorded) [External confirmation] Receiving advice RCV-46604 for NR-46604"
+   ]
+  },
+  "agent": {
+   "session": "CH-24097eb927",
+   "blocked": "model_failed",
+   "trace": [
+    "1. 17:00 Trading Grid [System] Session branched from the recorded world",
+    "2. 17:00 Rule engine [Fixed rule] 9 inbound orders to work",
+    "10. 17:00 Chase Agent [AI judgment] Proposed: Ask Lakeline for the load’s status {\"record\":\"NR-46609\"} · why: For NR-46609, Lakeline has provided no 214 status yet, so we must ask the carrier for the status before chasing Ashby.",
+    "11. 17:00 Chase Agent [AI judgment] Chase Agent said",
+    "12. 17:01 Test approver (replay) [Human approval] Approved CHP-1: Ask Lakeline for the load’s status {\"record\":\"NR-46609\"}",
+    "13. 17:03 Lakeline Freight (Northfield’s routed carrier) [External confirmation] Executed: Ask Lakeline for the load’s status · Lakeline asked for the status of NR-46609",
+    "15. 17:03 Chase Agent [AI judgment] Proposed: Record that the collect load was not ready at the assigned pickup, for Jordan Ellis to decide the RT01 charge {\"record\":\"NR-46560\"} · why: For NR-46560, the collect load was not ready at the assigned pickup as reported by Lakeline, so we record the readiness failure for Jordan to decide the RT01 charge under NF-3.6.",
+    "16. 17:03 Chase Agent [AI judgment] Chase Agent said",
+    "17. 17:04 Test approver (replay) [Human approval] Approved CHP-2: Record that the collect load was not ready at the assigned pickup, for Jordan Ellis to decide the RT01 charge {\"record\":\"NR-46560\"}",
+    "18. 17:06 Northfield compliance record [External confirmation] Executed: Record that the collect load was not ready at the assigned pickup, for Jordan Ellis to decide the RT01 charge · Readiness failure on NR-46560 recorded; RT01 $150 decided by Test approver (replay)",
+    "19. 17:06 Chase Agent [AI judgment] Proposed: Ask the supplier for its new ready time and rebook the pickup {\"record\":\"NR-46560\"} · why: For NR-46560, since the readiness failure has been recorded, we ask Ashby for its new ready time and rebook the pickup under NF-3.4.",
+    "20. 17:06 Chase Agent [AI judgment] Chase Agent said",
+    "21. 17:07 Test approver (replay) [Human approval] Approved CHP-3: Ask the supplier for its new ready time and rebook the pickup {\"record\":\"NR-46560\"}",
+    "22. 17:09 Ashby Supplier (request through Trading Grid) [External confirmation] Executed: Ask the supplier for its new ready time and rebook the pickup · Ashby asked for the new ready time of NR-46560",
+    "23. 17:09 Chase Agent [AI judgment] Proposed: Record that the collect load was not ready at the assigned pickup, for Jordan Ellis to decide the RT01 charge {\"record\":\"NR-46567\"} · why: For NR-46567, the collect load was not ready at the assigned pickup as reported by Lakeline, so we record the readiness failure for Jordan to decide the RT01 charge under NF-3.6.",
+    "24. 17:09 Chase Agent [AI judgment] Chase Agent said",
+    "25. 17:10 Test approver (replay) [Human approval] Approved CHP-4: Record that the collect load was not ready at the assigned pickup, for Jordan Ellis to decide the RT01 charge {\"record\":\"NR-46567\"}",
+    "26. 17:12 Northfield compliance record [External confirmation] Executed: Record that the collect load was not ready at the assigned pickup, for Jordan Ellis to decide the RT01 charge · Readiness failure on NR-46567 recorded; RT01 $150 decided by Test approver (replay)",
+    "27. 17:12 Chase Agent [AI judgment] Proposed: Ask the supplier for its new ready time and rebook the pickup {\"record\":\"NR-46567\"} · why: For NR-46567, since the readiness failure has been recorded, we ask Ashby for its new ready time and rebook the pickup under NF-3.4.",
+    "28. 17:12 Chase Agent [AI judgment] Chase Agent said",
+    "29. 17:13 Test approver (replay) [Human approval] Approved CHP-5: Ask the supplier for its new ready time and rebook the pickup {\"record\":\"NR-46567\"}",
+    "30. 17:15 Ashby Supplier (request through Trading Grid) [External confirmation] Executed: Ask the supplier for its new ready time and rebook the pickup · Ashby asked for the new ready time of NR-46567",
+    "31. 17:15 Chase Agent [AI judgment] Proposed: Record that the collect load was not ready at the assigned pickup, for Jordan Ellis to decide the RT01 charge {\"record\":\"NR-46574\"} · why: For NR-46574, the collect load was not ready at the assigned pickup as reported by Lakeline, so we record the readiness failure for Jordan to decide the RT01 charge under NF-3.6.",
+    "32. 17:15 Chase Agent [AI judgment] Chase Agent said",
+    "33. 17:16 Test approver (replay) [Human approval] Approved CHP-6: Record that the collect load was not ready at the assigned pickup, for Jordan Ellis to decide the RT01 charge {\"record\":\"NR-46574\"}",
+    "34. 17:18 Northfield compliance record [External confirmation] Executed: Record that the collect load was not ready at the assigned pickup, for Jordan Ellis to decide the RT01 charge · Readiness failure on NR-46574 recorded; RT01 $150 decided by Test approver (replay)",
+    "35. 17:18 Chase Agent [System] Model call failed; no state was changed"
+   ]
+  },
+  "automation": null
+ },
+ "session_views": {
+  "baseline": {
+   "session": "CH-618dd0d168",
+   "agent": "Chase Agent",
+   "label": "Replay · baseline",
+   "clock": "2026-12-10 09:00 ET",
+   "branch_at": "2026-12-09 17:00 ET",
+   "status": "idle",
+   "variation": [
+    {
+     "field": "carrier_departed_46602",
+     "from": "no",
+     "to": "yes"
+    },
+    {
+     "field": "carrier_silent_46609",
+     "from": "no",
+     "to": "yes"
+    },
+    {
+     "field": "asn_before_pickup_46616",
+     "from": "no",
+     "to": "yes"
+    }
+   ],
+   "facts": {
+    "carrier_departed_46602": "yes",
+    "carrier_silent_46609": "yes",
+    "asn_before_pickup_46616": "yes",
+    "lakeline_reachable": "yes"
+   },
+   "queue": {
+    "as_of": "2026-12-10 09:00 ET",
+    "rows": [
+     {
+      "id": "NR-46560",
+      "record": "NR-46560",
+      "what": "Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:45 ET); ship notice: None",
+      "state": "Not picked up: not ready; asked ship notice",
+      "closed": false,
+      "kind": "not_ready"
+     },
+     {
+      "id": "NR-46567",
+      "record": "NR-46567",
+      "what": "Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:38 ET); ship notice: None",
+      "state": "Not picked up: not ready; asked ship notice",
+      "closed": false,
+      "kind": "not_ready"
+     },
+     {
+      "id": "NR-46574",
+      "record": "NR-46574",
+      "what": "Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:47 ET); ship notice: None",
+      "state": "Not picked up: not ready; asked ship notice",
+      "closed": false,
+      "kind": "not_ready"
+     },
+     {
+      "id": "NR-46581",
+      "record": "NR-46581",
+      "what": "Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:40 ET); ship notice: None",
+      "state": "Not picked up: not ready; asked ship notice",
+      "closed": false,
+      "kind": "not_ready"
+     },
+     {
+      "id": "NR-46588",
+      "record": "NR-46588",
+      "what": "Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:39 ET); ship notice: None",
+      "state": "Not picked up: not ready; asked ship notice",
+      "closed": false,
+      "kind": "not_ready"
+     },
+     {
+      "id": "NR-46595",
+      "record": "NR-46595",
+      "what": "Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:47 ET); ship notice: None",
+      "state": "Not picked up: not ready; asked ship notice",
+      "closed": false,
+      "kind": "not_ready"
+     },
+     {
+      "id": "NR-46602",
+      "record": "NR-46602",
+      "what": "Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Departed pickup location (2026-12-09 15:12 ET); ship notice: None",
+      "state": "Departed; no ship notice; asked ship notice",
+      "closed": false,
+      "kind": "asn_missing"
+     },
+     {
+      "id": "NR-46609",
+      "record": "NR-46609",
+      "what": "Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: None received; ship notice: None",
+      "state": "No carrier status; asked ship notice",
+      "closed": false,
+      "kind": "carrier_silent"
+     },
+     {
+      "id": "NR-46616",
+      "record": "NR-46616",
+      "what": "Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:50 ET); ship notice: ASN-46616-E at 2026-12-09 15:05 ET: Shipped 15:00 ET, 77 cartons",
+      "state": "Ship notice and carrier disagree",
+      "closed": false,
+      "kind": "disagree"
+     }
+    ],
+    "open": 9
+   },
+   "awaiting": [],
+   "suggested": [],
+   "pending": [
+    {
+     "at": "2026-12-10 09:30 ET",
+     "what": "Lakeline status Delivered for NR-46546"
+    },
+    {
+     "at": "2026-12-10 09:50 ET",
+     "what": "Receiving advice RCV-46546 for NR-46546"
+    },
+    {
+     "at": "2026-12-10 09:26 ET",
+     "what": "Lakeline status Delivered for NR-46553"
+    },
+    {
+     "at": "2026-12-10 09:40 ET",
+     "what": "Receiving advice RCV-46553 for NR-46553"
+    },
+    {
+     "at": "2026-12-10 15:18 ET",
+     "what": "Lakeline status Departed pickup location for NR-46560"
+    },
+    {
+     "at": "2026-12-10 15:39 ET",
+     "what": "Ship notice ASN-46560 from Ashby for NR-46560"
+    },
+    {
+     "at": "2026-12-11 07:53 ET",
+     "what": "Lakeline status Delivered for NR-46560"
+    },
+    {
+     "at": "2026-12-11 08:10 ET",
+     "what": "Receiving advice RCV-46560 for NR-46560"
+    },
+    {
+     "at": "2026-12-10 15:09 ET",
+     "what": "Lakeline status Departed pickup location for NR-46567"
+    },
+    {
+     "at": "2026-12-10 15:14 ET",
+     "what": "Ship notice ASN-46567 from Ashby for NR-46567"
+    },
+    {
+     "at": "2026-12-11 06:41 ET",
+     "what": "Lakeline status Delivered for NR-46567"
+    },
+    {
+     "at": "2026-12-11 07:00 ET",
+     "what": "Receiving advice RCV-46567 for NR-46567"
+    },
+    {
+     "at": "2026-12-10 09:10 ET",
+     "what": "Receiving advice RCV-46570 for NR-46570"
+    },
+    {
+     "at": "2026-12-10 09:18 ET",
+     "what": "Lakeline status Delivered for NR-46573"
+    },
+    {
+     "at": "2026-12-10 09:40 ET",
+     "what": "Receiving advice RCV-46573 for NR-46573"
+    },
+    {
+     "at": "2026-12-10 15:08 ET",
+     "what": "Ship notice ASN-46574 from Ashby for NR-46574"
+    },
+    {
+     "at": "2026-12-10 15:13 ET",
+     "what": "Lakeline status Departed pickup location for NR-46574"
+    },
+    {
+     "at": "2026-12-11 06:37 ET",
+     "what": "Lakeline status Delivered for NR-46574"
+    },
+    {
+     "at": "2026-12-11 07:00 ET",
+     "what": "Receiving advice RCV-46574 for NR-46574"
+    },
+    {
+     "at": "2026-12-10 09:10 ET",
+     "what": "Receiving advice RCV-46579 for NR-46579"
+    },
+    {
+     "at": "2026-12-10 15:11 ET",
+     "what": "Lakeline status Departed pickup location for NR-46581"
+    },
+    {
+     "at": "2026-12-10 15:21 ET",
+     "what": "Ship notice ASN-46581 from Ashby for NR-46581"
+    },
+    {
+     "at": "2026-12-11 08:44 ET",
+     "what": "Lakeline status Delivered for NR-46581"
+    },
+    {
+     "at": "2026-12-11 09:00 ET",
+     "what": "Receiving advice RCV-46581 for NR-46581"
+    },
+    {
+     "at": "2026-12-10 09:12 ET",
+     "what": "Lakeline status Delivered for NR-46582"
+    },
+    {
+     "at": "2026-12-10 09:30 ET",
+     "what": "Receiving advice RCV-46582 for NR-46582"
+    },
+    {
+     "at": "2026-12-10 09:29 ET",
+     "what": "Lakeline status Delivered for NR-46586"
+    },
+    {
+     "at": "2026-12-10 09:50 ET",
+     "what": "Receiving advice RCV-46586 for NR-46586"
+    },
+    {
+     "at": "2026-12-10 09:10 ET",
+     "what": "Receiving advice RCV-46587 for NR-46587"
+    },
+    {
+     "at": "2026-12-10 15:08 ET",
+     "what": "Lakeline status Departed pickup location for NR-46588"
+    },
+    {
+     "at": "2026-12-10 15:13 ET",
+     "what": "Ship notice ASN-46588 from Ashby for NR-46588"
+    },
+    {
+     "at": "2026-12-11 08:21 ET",
+     "what": "Lakeline status Delivered for NR-46588"
+    },
+    {
+     "at": "2026-12-11 08:50 ET",
+     "what": "Receiving advice RCV-46588 for NR-46588"
+    },
+    {
+     "at": "2026-12-10 09:20 ET",
+     "what": "Receiving advice RCV-46592 for NR-46592"
+    },
+    {
+     "at": "2026-12-10 15:23 ET",
+     "what": "Lakeline status Departed pickup location for NR-46595"
+    },
+    {
+     "at": "2026-12-10 15:40 ET",
+     "what": "Ship notice ASN-46595 from Ashby for NR-46595"
+    },
+    {
+     "at": "2026-12-11 07:47 ET",
+     "what": "Lakeline status Delivered for NR-46595"
+    },
+    {
+     "at": "2026-12-11 08:10 ET",
+     "what": "Receiving advice RCV-46595 for NR-46595"
+    },
+    {
+     "at": "2026-12-10 09:24 ET",
+     "what": "Lakeline status Delivered for NR-46598"
+    },
+    {
+     "at": "2026-12-10 09:40 ET",
+     "what": "Receiving advice RCV-46598 for NR-46598"
+    },
+    {
+     "at": "2026-12-10 09:10 ET",
+     "what": "Receiving advice RCV-46601 for NR-46601"
+    },
+    {
+     "at": "2026-12-10 15:20 ET",
+     "what": "Lakeline status Departed pickup location for NR-46602"
+    },
+    {
+     "at": "2026-12-10 15:38 ET",
+     "what": "Ship notice ASN-46602 from Ashby for NR-46602"
+    },
+    {
+     "at": "2026-12-11 08:18 ET",
+     "what": "Lakeline status Delivered for NR-46602"
+    },
+    {
+     "at": "2026-12-11 08:40 ET",
+     "what": "Receiving advice RCV-46602 for NR-46602"
+    },
+    {
+     "at": "2026-12-10 09:04 ET",
+     "what": "Lakeline status Delivered for NR-46603"
+    },
+    {
+     "at": "2026-12-10 09:30 ET",
+     "what": "Receiving advice RCV-46603 for NR-46603"
+    },
+    {
+     "at": "2026-12-10 15:10 ET",
+     "what": "Ship notice ASN-46609 from Ashby for NR-46609"
+    },
+    {
+     "at": "2026-12-11 07:30 ET",
+     "what": "Receiving advice RCV-46609 for NR-46609"
+    },
+    {
+     "at": "2026-12-10 09:20 ET",
+     "what": "Receiving advice RCV-46610 for NR-46610"
+    },
+    {
+     "at": "2026-12-10 15:15 ET",
+     "what": "Lakeline status Departed pickup location for NR-46616"
+    },
+    {
+     "at": "2026-12-10 15:19 ET",
+     "what": "Ship notice ASN-46616 from Ashby for NR-46616"
+    },
+    {
+     "at": "2026-12-11 07:37 ET",
+     "what": "Lakeline status Delivered for NR-46616"
+    },
+    {
+     "at": "2026-12-11 08:00 ET",
+     "what": "Receiving advice RCV-46616 for NR-46616"
+    },
+    {
+     "at": "2026-12-10 09:35 ET",
+     "what": "Lakeline status Delivered for NR-46618"
+    },
+    {
+     "at": "2026-12-10 09:50 ET",
+     "what": "Receiving advice RCV-46618 for NR-46618"
+    }
+   ],
+   "roles": [
+    {
+     "proposal": "CHP-1",
+     "action": "request_ship_notice",
+     "recommended_by": "Baseline",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Ashby Supplier (request through Trading Grid)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CHP-2",
+     "action": "request_ship_notice",
+     "recommended_by": "Baseline",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Ashby Supplier (request through Trading Grid)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CHP-3",
+     "action": "request_ship_notice",
+     "recommended_by": "Baseline",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Ashby Supplier (request through Trading Grid)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CHP-4",
+     "action": "request_ship_notice",
+     "recommended_by": "Baseline",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Ashby Supplier (request through Trading Grid)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CHP-5",
+     "action": "request_ship_notice",
+     "recommended_by": "Baseline",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Ashby Supplier (request through Trading Grid)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CHP-6",
+     "action": "request_ship_notice",
+     "recommended_by": "Baseline",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Ashby Supplier (request through Trading Grid)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CHP-7",
+     "action": "request_ship_notice",
+     "recommended_by": "Baseline",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Ashby Supplier (request through Trading Grid)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CHP-8",
+     "action": "request_ship_notice",
+     "recommended_by": "Baseline",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Ashby Supplier (request through Trading Grid)",
+     "state": "Executed"
+    }
+   ],
+   "outcome": {
+    "as_of": "2026-12-10 09:00 ET",
+    "orders": [
+     {
+      "po": "NR-46560",
+      "state": "Not picked up: not ready; asked ship notice"
+     },
+     {
+      "po": "NR-46567",
+      "state": "Not picked up: not ready; asked ship notice"
+     },
+     {
+      "po": "NR-46574",
+      "state": "Not picked up: not ready; asked ship notice"
+     },
+     {
+      "po": "NR-46581",
+      "state": "Not picked up: not ready; asked ship notice"
+     },
+     {
+      "po": "NR-46588",
+      "state": "Not picked up: not ready; asked ship notice"
+     },
+     {
+      "po": "NR-46595",
+      "state": "Not picked up: not ready; asked ship notice"
+     },
+     {
+      "po": "NR-46602",
+      "state": "Departed; no ship notice; asked ship notice"
+     },
+     {
+      "po": "NR-46609",
+      "state": "No carrier status; asked ship notice"
+     },
+     {
+      "po": "NR-46616",
+      "state": "Ship notice and carrier disagree"
+     }
+    ],
+    "requests": {
+     "NR-46560": {
+      "of": "ship notice",
+      "at": "2026-12-09 17:03 ET"
+     },
+     "NR-46567": {
+      "of": "ship notice",
+      "at": "2026-12-09 17:06 ET"
+     },
+     "NR-46574": {
+      "of": "ship notice",
+      "at": "2026-12-09 17:09 ET"
+     },
+     "NR-46581": {
+      "of": "ship notice",
+      "at": "2026-12-09 17:12 ET"
+     },
+     "NR-46588": {
+      "of": "ship notice",
+      "at": "2026-12-09 17:15 ET"
+     },
+     "NR-46595": {
+      "of": "ship notice",
+      "at": "2026-12-09 17:18 ET"
+     },
+     "NR-46602": {
+      "of": "ship notice",
+      "at": "2026-12-09 17:21 ET"
+     },
+     "NR-46609": {
+      "of": "ship notice",
+      "at": "2026-12-09 17:24 ET"
+     }
+    },
+    "readiness_recorded": {},
+    "carrier_asked": {},
+    "corrections": {},
+    "violations": [
+     "NR-46560: ship notice chased for a load that never left",
+     "NR-46567: ship notice chased for a load that never left",
+     "NR-46574: ship notice chased for a load that never left",
+     "NR-46581: ship notice chased for a load that never left",
+     "NR-46588: ship notice chased for a load that never left",
+     "NR-46595: ship notice chased for a load that never left"
+    ],
+    "synthetic": "Presets on NR-46602, NR-46609 and NR-46616 and every answer to a request are synthetic, from src/chase.js; routing instructions, Lakeline 214s, ship notices and receiving advice are recorded."
+   },
+   "trace": [
+    {
+     "n": 1,
+     "clock": "2026-12-09 17:00 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Session branched from the recorded world",
+     "detail": {
+      "at": "2026-12-09 17:00 ET",
+      "hidden": "Every recorded record after this time",
+      "changes": [
+       {
+        "field": "carrier_departed_46602",
+        "from": "no",
+        "to": "yes"
+       },
+       {
+        "field": "carrier_silent_46609",
+        "from": "no",
+        "to": "yes"
+       },
+       {
+        "field": "asn_before_pickup_46616",
+        "from": "no",
+        "to": "yes"
+       }
+      ]
+     }
+    },
+    {
+     "n": 2,
+     "clock": "2026-12-09 17:00 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "9 inbound orders to work",
+     "detail": {
+      "rows": [
+       "NR-46560: Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:45 ET); ship notice: None",
+       "NR-46567: Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:38 ET); ship notice: None",
+       "NR-46574: Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:47 ET); ship notice: None",
+       "NR-46581: Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:40 ET); ship notice: None",
+       "NR-46588: Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:39 ET); ship notice: None",
+       "NR-46595: Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:47 ET); ship notice: None",
+       "NR-46602: Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Departed pickup location (2026-12-09 15:12 ET); ship notice: None",
+       "NR-46609: Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: None received; ship notice: None",
+       "NR-46616: Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:50 ET); ship notice: ASN-46616-E at 2026-12-09 15:05 ET: Shipped 15:00 ET, 77 cartons"
+      ]
+     }
+    },
+    {
+     "n": 3,
+     "clock": "2026-12-09 17:00 ET",
+     "actor": "Baseline",
+     "type": "rule",
+     "what": "Proposed: Request the missing ship notice from the supplier",
+     "detail": {
+      "proposal": "CHP-1",
+      "args": {
+       "record": "NR-46560"
+      },
+      "rationale": null,
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 4,
+     "clock": "2026-12-09 17:01 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CHP-1: Request the missing ship notice from the supplier",
+     "detail": {
+      "args": {
+       "record": "NR-46560"
+      }
+     }
+    },
+    {
+     "n": 5,
+     "clock": "2026-12-09 17:03 ET",
+     "actor": "Ashby Supplier (request through Trading Grid)",
+     "type": "external",
+     "what": "Executed: Request the missing ship notice from the supplier",
+     "detail": {
+      "proposal": "CHP-1",
+      "response": "Ship notice requested from Ashby for NR-46560; it stays Late when it arrives"
+     }
+    },
+    {
+     "n": 6,
+     "clock": "2026-12-09 17:03 ET",
+     "actor": "Baseline",
+     "type": "rule",
+     "what": "Proposed: Request the missing ship notice from the supplier",
+     "detail": {
+      "proposal": "CHP-2",
+      "args": {
+       "record": "NR-46567"
+      },
+      "rationale": null,
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 7,
+     "clock": "2026-12-09 17:04 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CHP-2: Request the missing ship notice from the supplier",
+     "detail": {
+      "args": {
+       "record": "NR-46567"
+      }
+     }
+    },
+    {
+     "n": 8,
+     "clock": "2026-12-09 17:06 ET",
+     "actor": "Ashby Supplier (request through Trading Grid)",
+     "type": "external",
+     "what": "Executed: Request the missing ship notice from the supplier",
+     "detail": {
+      "proposal": "CHP-2",
+      "response": "Ship notice requested from Ashby for NR-46567; it stays Late when it arrives"
+     }
+    },
+    {
+     "n": 9,
+     "clock": "2026-12-09 17:06 ET",
+     "actor": "Baseline",
+     "type": "rule",
+     "what": "Proposed: Request the missing ship notice from the supplier",
+     "detail": {
+      "proposal": "CHP-3",
+      "args": {
+       "record": "NR-46574"
+      },
+      "rationale": null,
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 10,
+     "clock": "2026-12-09 17:07 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CHP-3: Request the missing ship notice from the supplier",
+     "detail": {
+      "args": {
+       "record": "NR-46574"
+      }
+     }
+    },
+    {
+     "n": 11,
+     "clock": "2026-12-09 17:09 ET",
+     "actor": "Ashby Supplier (request through Trading Grid)",
+     "type": "external",
+     "what": "Executed: Request the missing ship notice from the supplier",
+     "detail": {
+      "proposal": "CHP-3",
+      "response": "Ship notice requested from Ashby for NR-46574; it stays Late when it arrives"
+     }
+    },
+    {
+     "n": 12,
+     "clock": "2026-12-09 17:09 ET",
+     "actor": "Baseline",
+     "type": "rule",
+     "what": "Proposed: Request the missing ship notice from the supplier",
+     "detail": {
+      "proposal": "CHP-4",
+      "args": {
+       "record": "NR-46581"
+      },
+      "rationale": null,
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 13,
+     "clock": "2026-12-09 17:10 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CHP-4: Request the missing ship notice from the supplier",
+     "detail": {
+      "args": {
+       "record": "NR-46581"
+      }
+     }
+    },
+    {
+     "n": 14,
+     "clock": "2026-12-09 17:12 ET",
+     "actor": "Ashby Supplier (request through Trading Grid)",
+     "type": "external",
+     "what": "Executed: Request the missing ship notice from the supplier",
+     "detail": {
+      "proposal": "CHP-4",
+      "response": "Ship notice requested from Ashby for NR-46581; it stays Late when it arrives"
+     }
+    },
+    {
+     "n": 15,
+     "clock": "2026-12-09 17:12 ET",
+     "actor": "Baseline",
+     "type": "rule",
+     "what": "Proposed: Request the missing ship notice from the supplier",
+     "detail": {
+      "proposal": "CHP-5",
+      "args": {
+       "record": "NR-46588"
+      },
+      "rationale": null,
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 16,
+     "clock": "2026-12-09 17:13 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CHP-5: Request the missing ship notice from the supplier",
+     "detail": {
+      "args": {
+       "record": "NR-46588"
+      }
+     }
+    },
+    {
+     "n": 17,
+     "clock": "2026-12-09 17:15 ET",
+     "actor": "Ashby Supplier (request through Trading Grid)",
+     "type": "external",
+     "what": "Executed: Request the missing ship notice from the supplier",
+     "detail": {
+      "proposal": "CHP-5",
+      "response": "Ship notice requested from Ashby for NR-46588; it stays Late when it arrives"
+     }
+    },
+    {
+     "n": 18,
+     "clock": "2026-12-09 17:15 ET",
+     "actor": "Baseline",
+     "type": "rule",
+     "what": "Proposed: Request the missing ship notice from the supplier",
+     "detail": {
+      "proposal": "CHP-6",
+      "args": {
+       "record": "NR-46595"
+      },
+      "rationale": null,
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 19,
+     "clock": "2026-12-09 17:16 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CHP-6: Request the missing ship notice from the supplier",
+     "detail": {
+      "args": {
+       "record": "NR-46595"
+      }
+     }
+    },
+    {
+     "n": 20,
+     "clock": "2026-12-09 17:18 ET",
+     "actor": "Ashby Supplier (request through Trading Grid)",
+     "type": "external",
+     "what": "Executed: Request the missing ship notice from the supplier",
+     "detail": {
+      "proposal": "CHP-6",
+      "response": "Ship notice requested from Ashby for NR-46595; it stays Late when it arrives"
+     }
+    },
+    {
+     "n": 21,
+     "clock": "2026-12-09 17:18 ET",
+     "actor": "Baseline",
+     "type": "rule",
+     "what": "Proposed: Request the missing ship notice from the supplier",
+     "detail": {
+      "proposal": "CHP-7",
+      "args": {
+       "record": "NR-46602"
+      },
+      "rationale": null,
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 22,
+     "clock": "2026-12-09 17:19 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CHP-7: Request the missing ship notice from the supplier",
+     "detail": {
+      "args": {
+       "record": "NR-46602"
+      }
+     }
+    },
+    {
+     "n": 23,
+     "clock": "2026-12-09 17:21 ET",
+     "actor": "Ashby Supplier (request through Trading Grid)",
+     "type": "external",
+     "what": "Executed: Request the missing ship notice from the supplier",
+     "detail": {
+      "proposal": "CHP-7",
+      "response": "Ship notice requested from Ashby for NR-46602; it stays Late when it arrives"
+     }
+    },
+    {
+     "n": 24,
+     "clock": "2026-12-09 17:21 ET",
+     "actor": "Baseline",
+     "type": "rule",
+     "what": "Proposed: Request the missing ship notice from the supplier",
+     "detail": {
+      "proposal": "CHP-8",
+      "args": {
+       "record": "NR-46609"
+      },
+      "rationale": null,
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 25,
+     "clock": "2026-12-09 17:22 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CHP-8: Request the missing ship notice from the supplier",
+     "detail": {
+      "args": {
+       "record": "NR-46609"
+      }
+     }
+    },
+    {
+     "n": 26,
+     "clock": "2026-12-09 17:24 ET",
+     "actor": "Ashby Supplier (request through Trading Grid)",
+     "type": "external",
+     "what": "Executed: Request the missing ship notice from the supplier",
+     "detail": {
+      "proposal": "CHP-8",
+      "response": "Ship notice requested from Ashby for NR-46609; it stays Late when it arrives"
+     }
+    },
+    {
+     "n": 27,
+     "clock": "2026-12-10 06:31 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46557",
+     "detail": {
+      "at": "2026-12-10 06:31 ET",
+      "record": "PRO-46557 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 28,
+     "clock": "2026-12-10 06:36 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46571",
+     "detail": {
+      "at": "2026-12-10 06:36 ET",
+      "record": "PRO-46571 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 29,
+     "clock": "2026-12-10 06:40 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46584",
+     "detail": {
+      "at": "2026-12-10 06:40 ET",
+      "record": "PRO-46584 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 30,
+     "clock": "2026-12-10 06:40 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46539",
+     "detail": {
+      "at": "2026-12-10 06:40 ET",
+      "record": "PRO-46539 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 31,
+     "clock": "2026-12-10 06:43 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46566",
+     "detail": {
+      "at": "2026-12-10 06:43 ET",
+      "record": "PRO-46566 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 32,
+     "clock": "2026-12-10 06:45 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46578",
+     "detail": {
+      "at": "2026-12-10 06:45 ET",
+      "record": "PRO-46578 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 33,
+     "clock": "2026-12-10 06:46 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46591",
+     "detail": {
+      "at": "2026-12-10 06:46 ET",
+      "record": "PRO-46591 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 34,
+     "clock": "2026-12-10 06:47 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46568",
+     "detail": {
+      "at": "2026-12-10 06:47 ET",
+      "record": "PRO-46568 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 35,
+     "clock": "2026-12-10 06:50 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46564",
+     "detail": {
+      "at": "2026-12-10 06:50 ET",
+      "record": "PRO-46564 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 36,
+     "clock": "2026-12-10 06:54 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46612",
+     "detail": {
+      "at": "2026-12-10 06:54 ET",
+      "record": "PRO-46612 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 37,
+     "clock": "2026-12-10 07:00 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46557 for NR-46557",
+     "detail": {
+      "at": "2026-12-10 07:00 ET",
+      "record": "RCV-46557",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 38,
+     "clock": "2026-12-10 07:00 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46568 for NR-46568",
+     "detail": {
+      "at": "2026-12-10 07:00 ET",
+      "record": "RCV-46568",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 39,
+     "clock": "2026-12-10 07:00 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46571 for NR-46571",
+     "detail": {
+      "at": "2026-12-10 07:00 ET",
+      "record": "RCV-46571",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 40,
+     "clock": "2026-12-10 07:00 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46578 for NR-46578",
+     "detail": {
+      "at": "2026-12-10 07:00 ET",
+      "record": "RCV-46578",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 41,
+     "clock": "2026-12-10 07:00 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46584 for NR-46584",
+     "detail": {
+      "at": "2026-12-10 07:00 ET",
+      "record": "RCV-46584",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 42,
+     "clock": "2026-12-10 07:00 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46591 for NR-46591",
+     "detail": {
+      "at": "2026-12-10 07:00 ET",
+      "record": "RCV-46591",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 43,
+     "clock": "2026-12-10 07:00 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46562",
+     "detail": {
+      "at": "2026-12-10 07:00 ET",
+      "record": "PRO-46562 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 44,
+     "clock": "2026-12-10 07:03 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46576",
+     "detail": {
+      "at": "2026-12-10 07:03 ET",
+      "record": "PRO-46576 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 45,
+     "clock": "2026-12-10 07:10 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46539 for NR-46539",
+     "detail": {
+      "at": "2026-12-10 07:10 ET",
+      "record": "RCV-46539",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 46,
+     "clock": "2026-12-10 07:10 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46566 for NR-46566",
+     "detail": {
+      "at": "2026-12-10 07:10 ET",
+      "record": "RCV-46566",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 47,
+     "clock": "2026-12-10 07:10 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46612 for NR-46612",
+     "detail": {
+      "at": "2026-12-10 07:10 ET",
+      "record": "RCV-46612",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 48,
+     "clock": "2026-12-10 07:13 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46614",
+     "detail": {
+      "at": "2026-12-10 07:13 ET",
+      "record": "PRO-46614 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 49,
+     "clock": "2026-12-10 07:17 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46585",
+     "detail": {
+      "at": "2026-12-10 07:17 ET",
+      "record": "PRO-46585 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 50,
+     "clock": "2026-12-10 07:18 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46572",
+     "detail": {
+      "at": "2026-12-10 07:18 ET",
+      "record": "PRO-46572 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 51,
+     "clock": "2026-12-10 07:20 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46562 for NR-46562",
+     "detail": {
+      "at": "2026-12-10 07:20 ET",
+      "record": "RCV-46562",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 52,
+     "clock": "2026-12-10 07:20 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46564 for NR-46564",
+     "detail": {
+      "at": "2026-12-10 07:20 ET",
+      "record": "RCV-46564",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 53,
+     "clock": "2026-12-10 07:20 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46576 for NR-46576",
+     "detail": {
+      "at": "2026-12-10 07:20 ET",
+      "record": "RCV-46576",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 54,
+     "clock": "2026-12-10 07:25 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46577",
+     "detail": {
+      "at": "2026-12-10 07:25 ET",
+      "record": "PRO-46577 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 55,
+     "clock": "2026-12-10 07:28 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46611",
+     "detail": {
+      "at": "2026-12-10 07:28 ET",
+      "record": "PRO-46611 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 56,
+     "clock": "2026-12-10 07:30 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46585 for NR-46585",
+     "detail": {
+      "at": "2026-12-10 07:30 ET",
+      "record": "RCV-46585",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 57,
+     "clock": "2026-12-10 07:33 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46561",
+     "detail": {
+      "at": "2026-12-10 07:33 ET",
+      "record": "PRO-46561 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 58,
+     "clock": "2026-12-10 07:34 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46607",
+     "detail": {
+      "at": "2026-12-10 07:34 ET",
+      "record": "PRO-46607 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 59,
+     "clock": "2026-12-10 07:35 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46563",
+     "detail": {
+      "at": "2026-12-10 07:35 ET",
+      "record": "PRO-46563 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 60,
+     "clock": "2026-12-10 07:40 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46572 for NR-46572",
+     "detail": {
+      "at": "2026-12-10 07:40 ET",
+      "record": "RCV-46572",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 61,
+     "clock": "2026-12-10 07:40 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46614 for NR-46614",
+     "detail": {
+      "at": "2026-12-10 07:40 ET",
+      "record": "RCV-46614",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 62,
+     "clock": "2026-12-10 07:43 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46594",
+     "detail": {
+      "at": "2026-12-10 07:43 ET",
+      "record": "PRO-46594 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 63,
+     "clock": "2026-12-10 07:50 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46561 for NR-46561",
+     "detail": {
+      "at": "2026-12-10 07:50 ET",
+      "record": "RCV-46561",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 64,
+     "clock": "2026-12-10 07:50 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46577 for NR-46577",
+     "detail": {
+      "at": "2026-12-10 07:50 ET",
+      "record": "RCV-46577",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 65,
+     "clock": "2026-12-10 07:50 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46611 for NR-46611",
+     "detail": {
+      "at": "2026-12-10 07:50 ET",
+      "record": "RCV-46611",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 66,
+     "clock": "2026-12-10 07:50 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46599",
+     "detail": {
+      "at": "2026-12-10 07:50 ET",
+      "record": "PRO-46599 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 67,
+     "clock": "2026-12-10 07:51 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46615",
+     "detail": {
+      "at": "2026-12-10 07:51 ET",
+      "record": "PRO-46615 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 68,
+     "clock": "2026-12-10 07:53 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46605",
+     "detail": {
+      "at": "2026-12-10 07:53 ET",
+      "record": "PRO-46605 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 69,
+     "clock": "2026-12-10 07:53 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46580",
+     "detail": {
+      "at": "2026-12-10 07:53 ET",
+      "record": "PRO-46580 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 70,
+     "clock": "2026-12-10 07:55 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46565",
+     "detail": {
+      "at": "2026-12-10 07:55 ET",
+      "record": "PRO-46565 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 71,
+     "clock": "2026-12-10 07:55 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46606",
+     "detail": {
+      "at": "2026-12-10 07:55 ET",
+      "record": "PRO-46606 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 72,
+     "clock": "2026-12-10 07:56 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46596",
+     "detail": {
+      "at": "2026-12-10 07:56 ET",
+      "record": "PRO-46596 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 73,
+     "clock": "2026-12-10 08:00 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46563 for NR-46563",
+     "detail": {
+      "at": "2026-12-10 08:00 ET",
+      "record": "RCV-46563",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 74,
+     "clock": "2026-12-10 08:00 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46594 for NR-46594",
+     "detail": {
+      "at": "2026-12-10 08:00 ET",
+      "record": "RCV-46594",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 75,
+     "clock": "2026-12-10 08:00 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46607 for NR-46607",
+     "detail": {
+      "at": "2026-12-10 08:00 ET",
+      "record": "RCV-46607",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 76,
+     "clock": "2026-12-10 08:01 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46613",
+     "detail": {
+      "at": "2026-12-10 08:01 ET",
+      "record": "PRO-46613 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 77,
+     "clock": "2026-12-10 08:02 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46583",
+     "detail": {
+      "at": "2026-12-10 08:02 ET",
+      "record": "PRO-46583 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 78,
+     "clock": "2026-12-10 08:05 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46597",
+     "detail": {
+      "at": "2026-12-10 08:05 ET",
+      "record": "PRO-46597 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 79,
+     "clock": "2026-12-10 08:06 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46569",
+     "detail": {
+      "at": "2026-12-10 08:06 ET",
+      "record": "PRO-46569 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 80,
+     "clock": "2026-12-10 08:09 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46617",
+     "detail": {
+      "at": "2026-12-10 08:09 ET",
+      "record": "PRO-46617 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 81,
+     "clock": "2026-12-10 08:10 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46565 for NR-46565",
+     "detail": {
+      "at": "2026-12-10 08:10 ET",
+      "record": "RCV-46565",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 82,
+     "clock": "2026-12-10 08:10 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46580 for NR-46580",
+     "detail": {
+      "at": "2026-12-10 08:10 ET",
+      "record": "RCV-46580",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 83,
+     "clock": "2026-12-10 08:10 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46596 for NR-46596",
+     "detail": {
+      "at": "2026-12-10 08:10 ET",
+      "record": "RCV-46596",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 84,
+     "clock": "2026-12-10 08:10 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46605 for NR-46605",
+     "detail": {
+      "at": "2026-12-10 08:10 ET",
+      "record": "RCV-46605",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 85,
+     "clock": "2026-12-10 08:10 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46606 for NR-46606",
+     "detail": {
+      "at": "2026-12-10 08:10 ET",
+      "record": "RCV-46606",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 86,
+     "clock": "2026-12-10 08:10 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46615 for NR-46615",
+     "detail": {
+      "at": "2026-12-10 08:10 ET",
+      "record": "RCV-46615",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 87,
+     "clock": "2026-12-10 08:11 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46600",
+     "detail": {
+      "at": "2026-12-10 08:11 ET",
+      "record": "PRO-46600 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 88,
+     "clock": "2026-12-10 08:11 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46589",
+     "detail": {
+      "at": "2026-12-10 08:11 ET",
+      "record": "PRO-46589 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 89,
+     "clock": "2026-12-10 08:13 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46575",
+     "detail": {
+      "at": "2026-12-10 08:13 ET",
+      "record": "PRO-46575 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 90,
+     "clock": "2026-12-10 08:20 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46569 for NR-46569",
+     "detail": {
+      "at": "2026-12-10 08:20 ET",
+      "record": "RCV-46569",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 91,
+     "clock": "2026-12-10 08:20 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46599 for NR-46599",
+     "detail": {
+      "at": "2026-12-10 08:20 ET",
+      "record": "RCV-46599",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 92,
+     "clock": "2026-12-10 08:20 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46559",
+     "detail": {
+      "at": "2026-12-10 08:20 ET",
+      "record": "PRO-46559 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 93,
+     "clock": "2026-12-10 08:21 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46593",
+     "detail": {
+      "at": "2026-12-10 08:21 ET",
+      "record": "PRO-46593 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 94,
+     "clock": "2026-12-10 08:24 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46608",
+     "detail": {
+      "at": "2026-12-10 08:24 ET",
+      "record": "PRO-46608 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 95,
+     "clock": "2026-12-10 08:26 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46590",
+     "detail": {
+      "at": "2026-12-10 08:26 ET",
+      "record": "PRO-46590 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 96,
+     "clock": "2026-12-10 08:30 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46583 for NR-46583",
+     "detail": {
+      "at": "2026-12-10 08:30 ET",
+      "record": "RCV-46583",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 97,
+     "clock": "2026-12-10 08:30 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46589 for NR-46589",
+     "detail": {
+      "at": "2026-12-10 08:30 ET",
+      "record": "RCV-46589",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 98,
+     "clock": "2026-12-10 08:30 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46597 for NR-46597",
+     "detail": {
+      "at": "2026-12-10 08:30 ET",
+      "record": "RCV-46597",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 99,
+     "clock": "2026-12-10 08:30 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46600 for NR-46600",
+     "detail": {
+      "at": "2026-12-10 08:30 ET",
+      "record": "RCV-46600",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 100,
+     "clock": "2026-12-10 08:30 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46613 for NR-46613",
+     "detail": {
+      "at": "2026-12-10 08:30 ET",
+      "record": "RCV-46613",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 101,
+     "clock": "2026-12-10 08:30 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46617 for NR-46617",
+     "detail": {
+      "at": "2026-12-10 08:30 ET",
+      "record": "RCV-46617",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 102,
+     "clock": "2026-12-10 08:32 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46558",
+     "detail": {
+      "at": "2026-12-10 08:32 ET",
+      "record": "PRO-46558 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 103,
+     "clock": "2026-12-10 08:40 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46575 for NR-46575",
+     "detail": {
+      "at": "2026-12-10 08:40 ET",
+      "record": "RCV-46575",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 104,
+     "clock": "2026-12-10 08:40 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46593 for NR-46593",
+     "detail": {
+      "at": "2026-12-10 08:40 ET",
+      "record": "RCV-46593",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 105,
+     "clock": "2026-12-10 08:41 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46604",
+     "detail": {
+      "at": "2026-12-10 08:41 ET",
+      "record": "PRO-46604 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 106,
+     "clock": "2026-12-10 08:47 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46601",
+     "detail": {
+      "at": "2026-12-10 08:47 ET",
+      "record": "PRO-46601 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 107,
+     "clock": "2026-12-10 08:48 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46587",
+     "detail": {
+      "at": "2026-12-10 08:48 ET",
+      "record": "PRO-46587 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 108,
+     "clock": "2026-12-10 08:49 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46570",
+     "detail": {
+      "at": "2026-12-10 08:49 ET",
+      "record": "PRO-46570 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 109,
+     "clock": "2026-12-10 08:50 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46558 for NR-46558",
+     "detail": {
+      "at": "2026-12-10 08:50 ET",
+      "record": "RCV-46558",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 110,
+     "clock": "2026-12-10 08:50 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46559 for NR-46559",
+     "detail": {
+      "at": "2026-12-10 08:50 ET",
+      "record": "RCV-46559",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 111,
+     "clock": "2026-12-10 08:50 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46590 for NR-46590",
+     "detail": {
+      "at": "2026-12-10 08:50 ET",
+      "record": "RCV-46590",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 112,
+     "clock": "2026-12-10 08:50 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46608 for NR-46608",
+     "detail": {
+      "at": "2026-12-10 08:50 ET",
+      "record": "RCV-46608",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 113,
+     "clock": "2026-12-10 08:50 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46579",
+     "detail": {
+      "at": "2026-12-10 08:50 ET",
+      "record": "PRO-46579 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 114,
+     "clock": "2026-12-10 08:54 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46610",
+     "detail": {
+      "at": "2026-12-10 08:54 ET",
+      "record": "PRO-46610 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 115,
+     "clock": "2026-12-10 08:57 ET",
+     "actor": "Lakeline Freight (recorded)",
+     "type": "external",
+     "what": "Lakeline status Delivered for NR-46592",
+     "detail": {
+      "at": "2026-12-10 08:57 ET",
+      "record": "PRO-46592 X1+D1",
+      "synthetic": false
+     }
+    },
+    {
+     "n": 116,
+     "clock": "2026-12-10 09:00 ET",
+     "actor": "Northfield receiving (recorded)",
+     "type": "external",
+     "what": "Receiving advice RCV-46604 for NR-46604",
+     "detail": {
+      "at": "2026-12-10 09:00 ET",
+      "record": "RCV-46604",
+      "synthetic": false
+     }
+    }
+   ],
+   "overhead": {
+    "model_calls": 0,
+    "tool_calls": 0,
+    "ms": 0,
+    "model_routes": {}
+   }
+  },
+  "agent": {
+   "session": "CH-24097eb927",
+   "agent": "Chase Agent",
+   "label": "Replay · Chase Agent",
+   "clock": "2026-12-09 17:18 ET",
+   "branch_at": "2026-12-09 17:00 ET",
+   "status": "model_failed",
+   "variation": [
+    {
+     "field": "carrier_departed_46602",
+     "from": "no",
+     "to": "yes"
+    },
+    {
+     "field": "carrier_silent_46609",
+     "from": "no",
+     "to": "yes"
+    },
+    {
+     "field": "asn_before_pickup_46616",
+     "from": "no",
+     "to": "yes"
+    }
+   ],
+   "facts": {
+    "carrier_departed_46602": "yes",
+    "carrier_silent_46609": "yes",
+    "asn_before_pickup_46616": "yes",
+    "lakeline_reachable": "yes"
+   },
+   "queue": {
+    "as_of": "2026-12-09 17:18 ET",
+    "rows": [
+     {
+      "id": "NR-46560",
+      "record": "NR-46560",
+      "what": "Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:45 ET); ship notice: None",
+      "state": "Not picked up: not ready; readiness recorded",
+      "closed": false,
+      "kind": "not_ready"
+     },
+     {
+      "id": "NR-46567",
+      "record": "NR-46567",
+      "what": "Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:38 ET); ship notice: None",
+      "state": "Not picked up: not ready; readiness recorded",
+      "closed": false,
+      "kind": "not_ready"
+     },
+     {
+      "id": "NR-46574",
+      "record": "NR-46574",
+      "what": "Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:47 ET); ship notice: None",
+      "state": "Not picked up: not ready; readiness recorded",
+      "closed": false,
+      "kind": "not_ready"
+     },
+     {
+      "id": "NR-46581",
+      "record": "NR-46581",
+      "what": "Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:40 ET); ship notice: None",
+      "state": "Not picked up: not ready",
+      "closed": false,
+      "kind": "not_ready"
+     },
+     {
+      "id": "NR-46588",
+      "record": "NR-46588",
+      "what": "Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:39 ET); ship notice: None",
+      "state": "Not picked up: not ready",
+      "closed": false,
+      "kind": "not_ready"
+     },
+     {
+      "id": "NR-46595",
+      "record": "NR-46595",
+      "what": "Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:47 ET); ship notice: None",
+      "state": "Not picked up: not ready",
+      "closed": false,
+      "kind": "not_ready"
+     },
+     {
+      "id": "NR-46602",
+      "record": "NR-46602",
+      "what": "Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Departed pickup location (2026-12-09 15:12 ET); ship notice: None",
+      "state": "Departed; no ship notice",
+      "closed": false,
+      "kind": "asn_missing"
+     },
+     {
+      "id": "NR-46609",
+      "record": "NR-46609",
+      "what": "Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: None received; ship notice: None",
+      "state": "No carrier status",
+      "closed": false,
+      "kind": "carrier_silent"
+     },
+     {
+      "id": "NR-46616",
+      "record": "NR-46616",
+      "what": "Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:50 ET); ship notice: ASN-46616-E at 2026-12-09 15:05 ET: Shipped 15:00 ET, 77 cartons",
+      "state": "Ship notice and carrier disagree",
+      "closed": false,
+      "kind": "disagree"
+     }
+    ],
+    "open": 9
+   },
+   "awaiting": [],
+   "suggested": [],
+   "pending": [
+    {
+     "at": "2026-12-10 06:40 ET",
+     "what": "Lakeline status Delivered for NR-46539"
+    },
+    {
+     "at": "2026-12-10 07:10 ET",
+     "what": "Receiving advice RCV-46539 for NR-46539"
+    },
+    {
+     "at": "2026-12-10 09:30 ET",
+     "what": "Lakeline status Delivered for NR-46546"
+    },
+    {
+     "at": "2026-12-10 09:50 ET",
+     "what": "Receiving advice RCV-46546 for NR-46546"
+    },
+    {
+     "at": "2026-12-10 09:26 ET",
+     "what": "Lakeline status Delivered for NR-46553"
+    },
+    {
+     "at": "2026-12-10 09:40 ET",
+     "what": "Receiving advice RCV-46553 for NR-46553"
+    },
+    {
+     "at": "2026-12-10 06:31 ET",
+     "what": "Lakeline status Delivered for NR-46557"
+    },
+    {
+     "at": "2026-12-10 07:00 ET",
+     "what": "Receiving advice RCV-46557 for NR-46557"
+    },
+    {
+     "at": "2026-12-10 08:32 ET",
+     "what": "Lakeline status Delivered for NR-46558"
+    },
+    {
+     "at": "2026-12-10 08:50 ET",
+     "what": "Receiving advice RCV-46558 for NR-46558"
+    },
+    {
+     "at": "2026-12-10 08:20 ET",
+     "what": "Lakeline status Delivered for NR-46559"
+    },
+    {
+     "at": "2026-12-10 08:50 ET",
+     "what": "Receiving advice RCV-46559 for NR-46559"
+    },
+    {
+     "at": "2026-12-10 15:18 ET",
+     "what": "Lakeline status Departed pickup location for NR-46560"
+    },
+    {
+     "at": "2026-12-10 15:39 ET",
+     "what": "Ship notice ASN-46560 from Ashby for NR-46560"
+    },
+    {
+     "at": "2026-12-11 07:53 ET",
+     "what": "Lakeline status Delivered for NR-46560"
+    },
+    {
+     "at": "2026-12-11 08:10 ET",
+     "what": "Receiving advice RCV-46560 for NR-46560"
+    },
+    {
+     "at": "2026-12-10 07:33 ET",
+     "what": "Lakeline status Delivered for NR-46561"
+    },
+    {
+     "at": "2026-12-10 07:50 ET",
+     "what": "Receiving advice RCV-46561 for NR-46561"
+    },
+    {
+     "at": "2026-12-10 07:00 ET",
+     "what": "Lakeline status Delivered for NR-46562"
+    },
+    {
+     "at": "2026-12-10 07:20 ET",
+     "what": "Receiving advice RCV-46562 for NR-46562"
+    },
+    {
+     "at": "2026-12-10 07:35 ET",
+     "what": "Lakeline status Delivered for NR-46563"
+    },
+    {
+     "at": "2026-12-10 08:00 ET",
+     "what": "Receiving advice RCV-46563 for NR-46563"
+    },
+    {
+     "at": "2026-12-10 06:50 ET",
+     "what": "Lakeline status Delivered for NR-46564"
+    },
+    {
+     "at": "2026-12-10 07:20 ET",
+     "what": "Receiving advice RCV-46564 for NR-46564"
+    },
+    {
+     "at": "2026-12-10 07:55 ET",
+     "what": "Lakeline status Delivered for NR-46565"
+    },
+    {
+     "at": "2026-12-10 08:10 ET",
+     "what": "Receiving advice RCV-46565 for NR-46565"
+    },
+    {
+     "at": "2026-12-10 06:43 ET",
+     "what": "Lakeline status Delivered for NR-46566"
+    },
+    {
+     "at": "2026-12-10 07:10 ET",
+     "what": "Receiving advice RCV-46566 for NR-46566"
+    },
+    {
+     "at": "2026-12-10 15:09 ET",
+     "what": "Lakeline status Departed pickup location for NR-46567"
+    },
+    {
+     "at": "2026-12-10 15:14 ET",
+     "what": "Ship notice ASN-46567 from Ashby for NR-46567"
+    },
+    {
+     "at": "2026-12-11 06:41 ET",
+     "what": "Lakeline status Delivered for NR-46567"
+    },
+    {
+     "at": "2026-12-11 07:00 ET",
+     "what": "Receiving advice RCV-46567 for NR-46567"
+    },
+    {
+     "at": "2026-12-10 06:47 ET",
+     "what": "Lakeline status Delivered for NR-46568"
+    },
+    {
+     "at": "2026-12-10 07:00 ET",
+     "what": "Receiving advice RCV-46568 for NR-46568"
+    },
+    {
+     "at": "2026-12-10 08:06 ET",
+     "what": "Lakeline status Delivered for NR-46569"
+    },
+    {
+     "at": "2026-12-10 08:20 ET",
+     "what": "Receiving advice RCV-46569 for NR-46569"
+    },
+    {
+     "at": "2026-12-10 08:49 ET",
+     "what": "Lakeline status Delivered for NR-46570"
+    },
+    {
+     "at": "2026-12-10 09:10 ET",
+     "what": "Receiving advice RCV-46570 for NR-46570"
+    },
+    {
+     "at": "2026-12-10 06:36 ET",
+     "what": "Lakeline status Delivered for NR-46571"
+    },
+    {
+     "at": "2026-12-10 07:00 ET",
+     "what": "Receiving advice RCV-46571 for NR-46571"
+    },
+    {
+     "at": "2026-12-10 07:18 ET",
+     "what": "Lakeline status Delivered for NR-46572"
+    },
+    {
+     "at": "2026-12-10 07:40 ET",
+     "what": "Receiving advice RCV-46572 for NR-46572"
+    },
+    {
+     "at": "2026-12-10 09:18 ET",
+     "what": "Lakeline status Delivered for NR-46573"
+    },
+    {
+     "at": "2026-12-10 09:40 ET",
+     "what": "Receiving advice RCV-46573 for NR-46573"
+    },
+    {
+     "at": "2026-12-10 15:08 ET",
+     "what": "Ship notice ASN-46574 from Ashby for NR-46574"
+    },
+    {
+     "at": "2026-12-10 15:13 ET",
+     "what": "Lakeline status Departed pickup location for NR-46574"
+    },
+    {
+     "at": "2026-12-11 06:37 ET",
+     "what": "Lakeline status Delivered for NR-46574"
+    },
+    {
+     "at": "2026-12-11 07:00 ET",
+     "what": "Receiving advice RCV-46574 for NR-46574"
+    },
+    {
+     "at": "2026-12-10 08:13 ET",
+     "what": "Lakeline status Delivered for NR-46575"
+    },
+    {
+     "at": "2026-12-10 08:40 ET",
+     "what": "Receiving advice RCV-46575 for NR-46575"
+    },
+    {
+     "at": "2026-12-10 07:03 ET",
+     "what": "Lakeline status Delivered for NR-46576"
+    },
+    {
+     "at": "2026-12-10 07:20 ET",
+     "what": "Receiving advice RCV-46576 for NR-46576"
+    },
+    {
+     "at": "2026-12-10 07:25 ET",
+     "what": "Lakeline status Delivered for NR-46577"
+    },
+    {
+     "at": "2026-12-10 07:50 ET",
+     "what": "Receiving advice RCV-46577 for NR-46577"
+    },
+    {
+     "at": "2026-12-10 06:45 ET",
+     "what": "Lakeline status Delivered for NR-46578"
+    },
+    {
+     "at": "2026-12-10 07:00 ET",
+     "what": "Receiving advice RCV-46578 for NR-46578"
+    },
+    {
+     "at": "2026-12-10 08:50 ET",
+     "what": "Lakeline status Delivered for NR-46579"
+    },
+    {
+     "at": "2026-12-10 09:10 ET",
+     "what": "Receiving advice RCV-46579 for NR-46579"
+    },
+    {
+     "at": "2026-12-10 07:53 ET",
+     "what": "Lakeline status Delivered for NR-46580"
+    },
+    {
+     "at": "2026-12-10 08:10 ET",
+     "what": "Receiving advice RCV-46580 for NR-46580"
+    },
+    {
+     "at": "2026-12-10 15:11 ET",
+     "what": "Lakeline status Departed pickup location for NR-46581"
+    },
+    {
+     "at": "2026-12-10 15:21 ET",
+     "what": "Ship notice ASN-46581 from Ashby for NR-46581"
+    },
+    {
+     "at": "2026-12-11 08:44 ET",
+     "what": "Lakeline status Delivered for NR-46581"
+    },
+    {
+     "at": "2026-12-11 09:00 ET",
+     "what": "Receiving advice RCV-46581 for NR-46581"
+    },
+    {
+     "at": "2026-12-10 09:12 ET",
+     "what": "Lakeline status Delivered for NR-46582"
+    },
+    {
+     "at": "2026-12-10 09:30 ET",
+     "what": "Receiving advice RCV-46582 for NR-46582"
+    },
+    {
+     "at": "2026-12-10 08:02 ET",
+     "what": "Lakeline status Delivered for NR-46583"
+    },
+    {
+     "at": "2026-12-10 08:30 ET",
+     "what": "Receiving advice RCV-46583 for NR-46583"
+    },
+    {
+     "at": "2026-12-10 06:40 ET",
+     "what": "Lakeline status Delivered for NR-46584"
+    },
+    {
+     "at": "2026-12-10 07:00 ET",
+     "what": "Receiving advice RCV-46584 for NR-46584"
+    },
+    {
+     "at": "2026-12-10 07:17 ET",
+     "what": "Lakeline status Delivered for NR-46585"
+    },
+    {
+     "at": "2026-12-10 07:30 ET",
+     "what": "Receiving advice RCV-46585 for NR-46585"
+    },
+    {
+     "at": "2026-12-10 09:29 ET",
+     "what": "Lakeline status Delivered for NR-46586"
+    },
+    {
+     "at": "2026-12-10 09:50 ET",
+     "what": "Receiving advice RCV-46586 for NR-46586"
+    },
+    {
+     "at": "2026-12-10 08:48 ET",
+     "what": "Lakeline status Delivered for NR-46587"
+    },
+    {
+     "at": "2026-12-10 09:10 ET",
+     "what": "Receiving advice RCV-46587 for NR-46587"
+    },
+    {
+     "at": "2026-12-10 15:08 ET",
+     "what": "Lakeline status Departed pickup location for NR-46588"
+    },
+    {
+     "at": "2026-12-10 15:13 ET",
+     "what": "Ship notice ASN-46588 from Ashby for NR-46588"
+    },
+    {
+     "at": "2026-12-11 08:21 ET",
+     "what": "Lakeline status Delivered for NR-46588"
+    },
+    {
+     "at": "2026-12-11 08:50 ET",
+     "what": "Receiving advice RCV-46588 for NR-46588"
+    },
+    {
+     "at": "2026-12-10 08:11 ET",
+     "what": "Lakeline status Delivered for NR-46589"
+    },
+    {
+     "at": "2026-12-10 08:30 ET",
+     "what": "Receiving advice RCV-46589 for NR-46589"
+    },
+    {
+     "at": "2026-12-10 08:26 ET",
+     "what": "Lakeline status Delivered for NR-46590"
+    },
+    {
+     "at": "2026-12-10 08:50 ET",
+     "what": "Receiving advice RCV-46590 for NR-46590"
+    },
+    {
+     "at": "2026-12-10 06:46 ET",
+     "what": "Lakeline status Delivered for NR-46591"
+    },
+    {
+     "at": "2026-12-10 07:00 ET",
+     "what": "Receiving advice RCV-46591 for NR-46591"
+    },
+    {
+     "at": "2026-12-10 08:57 ET",
+     "what": "Lakeline status Delivered for NR-46592"
+    },
+    {
+     "at": "2026-12-10 09:20 ET",
+     "what": "Receiving advice RCV-46592 for NR-46592"
+    },
+    {
+     "at": "2026-12-10 08:21 ET",
+     "what": "Lakeline status Delivered for NR-46593"
+    },
+    {
+     "at": "2026-12-10 08:40 ET",
+     "what": "Receiving advice RCV-46593 for NR-46593"
+    },
+    {
+     "at": "2026-12-10 07:43 ET",
+     "what": "Lakeline status Delivered for NR-46594"
+    },
+    {
+     "at": "2026-12-10 08:00 ET",
+     "what": "Receiving advice RCV-46594 for NR-46594"
+    },
+    {
+     "at": "2026-12-10 15:23 ET",
+     "what": "Lakeline status Departed pickup location for NR-46595"
+    },
+    {
+     "at": "2026-12-10 15:40 ET",
+     "what": "Ship notice ASN-46595 from Ashby for NR-46595"
+    },
+    {
+     "at": "2026-12-11 07:47 ET",
+     "what": "Lakeline status Delivered for NR-46595"
+    },
+    {
+     "at": "2026-12-11 08:10 ET",
+     "what": "Receiving advice RCV-46595 for NR-46595"
+    },
+    {
+     "at": "2026-12-10 07:56 ET",
+     "what": "Lakeline status Delivered for NR-46596"
+    },
+    {
+     "at": "2026-12-10 08:10 ET",
+     "what": "Receiving advice RCV-46596 for NR-46596"
+    },
+    {
+     "at": "2026-12-10 08:05 ET",
+     "what": "Lakeline status Delivered for NR-46597"
+    },
+    {
+     "at": "2026-12-10 08:30 ET",
+     "what": "Receiving advice RCV-46597 for NR-46597"
+    },
+    {
+     "at": "2026-12-10 09:24 ET",
+     "what": "Lakeline status Delivered for NR-46598"
+    },
+    {
+     "at": "2026-12-10 09:40 ET",
+     "what": "Receiving advice RCV-46598 for NR-46598"
+    },
+    {
+     "at": "2026-12-10 07:50 ET",
+     "what": "Lakeline status Delivered for NR-46599"
+    },
+    {
+     "at": "2026-12-10 08:20 ET",
+     "what": "Receiving advice RCV-46599 for NR-46599"
+    },
+    {
+     "at": "2026-12-10 08:11 ET",
+     "what": "Lakeline status Delivered for NR-46600"
+    },
+    {
+     "at": "2026-12-10 08:30 ET",
+     "what": "Receiving advice RCV-46600 for NR-46600"
+    },
+    {
+     "at": "2026-12-10 08:47 ET",
+     "what": "Lakeline status Delivered for NR-46601"
+    },
+    {
+     "at": "2026-12-10 09:10 ET",
+     "what": "Receiving advice RCV-46601 for NR-46601"
+    },
+    {
+     "at": "2026-12-10 15:20 ET",
+     "what": "Lakeline status Departed pickup location for NR-46602"
+    },
+    {
+     "at": "2026-12-10 15:38 ET",
+     "what": "Ship notice ASN-46602 from Ashby for NR-46602"
+    },
+    {
+     "at": "2026-12-11 08:18 ET",
+     "what": "Lakeline status Delivered for NR-46602"
+    },
+    {
+     "at": "2026-12-11 08:40 ET",
+     "what": "Receiving advice RCV-46602 for NR-46602"
+    },
+    {
+     "at": "2026-12-10 09:04 ET",
+     "what": "Lakeline status Delivered for NR-46603"
+    },
+    {
+     "at": "2026-12-10 09:30 ET",
+     "what": "Receiving advice RCV-46603 for NR-46603"
+    },
+    {
+     "at": "2026-12-10 08:41 ET",
+     "what": "Lakeline status Delivered for NR-46604"
+    },
+    {
+     "at": "2026-12-10 09:00 ET",
+     "what": "Receiving advice RCV-46604 for NR-46604"
+    },
+    {
+     "at": "2026-12-10 07:53 ET",
+     "what": "Lakeline status Delivered for NR-46605"
+    },
+    {
+     "at": "2026-12-10 08:10 ET",
+     "what": "Receiving advice RCV-46605 for NR-46605"
+    },
+    {
+     "at": "2026-12-10 07:55 ET",
+     "what": "Lakeline status Delivered for NR-46606"
+    },
+    {
+     "at": "2026-12-10 08:10 ET",
+     "what": "Receiving advice RCV-46606 for NR-46606"
+    },
+    {
+     "at": "2026-12-10 07:34 ET",
+     "what": "Lakeline status Delivered for NR-46607"
+    },
+    {
+     "at": "2026-12-10 08:00 ET",
+     "what": "Receiving advice RCV-46607 for NR-46607"
+    },
+    {
+     "at": "2026-12-10 08:24 ET",
+     "what": "Lakeline status Delivered for NR-46608"
+    },
+    {
+     "at": "2026-12-10 08:50 ET",
+     "what": "Receiving advice RCV-46608 for NR-46608"
+    },
+    {
+     "at": "2026-12-10 15:10 ET",
+     "what": "Ship notice ASN-46609 from Ashby for NR-46609"
+    },
+    {
+     "at": "2026-12-11 07:30 ET",
+     "what": "Receiving advice RCV-46609 for NR-46609"
+    },
+    {
+     "at": "2026-12-10 08:54 ET",
+     "what": "Lakeline status Delivered for NR-46610"
+    },
+    {
+     "at": "2026-12-10 09:20 ET",
+     "what": "Receiving advice RCV-46610 for NR-46610"
+    },
+    {
+     "at": "2026-12-10 07:28 ET",
+     "what": "Lakeline status Delivered for NR-46611"
+    },
+    {
+     "at": "2026-12-10 07:50 ET",
+     "what": "Receiving advice RCV-46611 for NR-46611"
+    },
+    {
+     "at": "2026-12-10 06:54 ET",
+     "what": "Lakeline status Delivered for NR-46612"
+    },
+    {
+     "at": "2026-12-10 07:10 ET",
+     "what": "Receiving advice RCV-46612 for NR-46612"
+    },
+    {
+     "at": "2026-12-10 08:01 ET",
+     "what": "Lakeline status Delivered for NR-46613"
+    },
+    {
+     "at": "2026-12-10 08:30 ET",
+     "what": "Receiving advice RCV-46613 for NR-46613"
+    },
+    {
+     "at": "2026-12-10 07:13 ET",
+     "what": "Lakeline status Delivered for NR-46614"
+    },
+    {
+     "at": "2026-12-10 07:40 ET",
+     "what": "Receiving advice RCV-46614 for NR-46614"
+    },
+    {
+     "at": "2026-12-10 07:51 ET",
+     "what": "Lakeline status Delivered for NR-46615"
+    },
+    {
+     "at": "2026-12-10 08:10 ET",
+     "what": "Receiving advice RCV-46615 for NR-46615"
+    },
+    {
+     "at": "2026-12-10 15:15 ET",
+     "what": "Lakeline status Departed pickup location for NR-46616"
+    },
+    {
+     "at": "2026-12-10 15:19 ET",
+     "what": "Ship notice ASN-46616 from Ashby for NR-46616"
+    },
+    {
+     "at": "2026-12-11 07:37 ET",
+     "what": "Lakeline status Delivered for NR-46616"
+    },
+    {
+     "at": "2026-12-11 08:00 ET",
+     "what": "Receiving advice RCV-46616 for NR-46616"
+    },
+    {
+     "at": "2026-12-10 08:09 ET",
+     "what": "Lakeline status Delivered for NR-46617"
+    },
+    {
+     "at": "2026-12-10 08:30 ET",
+     "what": "Receiving advice RCV-46617 for NR-46617"
+    },
+    {
+     "at": "2026-12-10 09:35 ET",
+     "what": "Lakeline status Delivered for NR-46618"
+    },
+    {
+     "at": "2026-12-10 09:50 ET",
+     "what": "Receiving advice RCV-46618 for NR-46618"
+    },
+    {
+     "at": "2026-12-09 17:23 ET",
+     "what": "Lakeline: NR-46609 was not ready at the assigned pickup; driver left empty at 15:40 ET"
+    },
+    {
+     "at": "2026-12-09 17:54 ET",
+     "what": "Ashby: NR-46560 will be ready for pickup tomorrow 15:00 ET; Lakeline rebooked"
+    },
+    {
+     "at": "2026-12-09 18:00 ET",
+     "what": "Ashby: NR-46567 will be ready for pickup tomorrow 15:00 ET; Lakeline rebooked"
+    }
+   ],
+   "roles": [
+    {
+     "proposal": "CHP-1",
+     "action": "ask_carrier_status",
+     "recommended_by": "Chase Agent",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Lakeline Freight (Northfield’s routed carrier)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CHP-2",
+     "action": "record_readiness_failure",
+     "recommended_by": "Chase Agent",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Northfield compliance record",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CHP-3",
+     "action": "ask_ready_time",
+     "recommended_by": "Chase Agent",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Ashby Supplier (request through Trading Grid)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CHP-4",
+     "action": "record_readiness_failure",
+     "recommended_by": "Chase Agent",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Northfield compliance record",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CHP-5",
+     "action": "ask_ready_time",
+     "recommended_by": "Chase Agent",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Ashby Supplier (request through Trading Grid)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CHP-6",
+     "action": "record_readiness_failure",
+     "recommended_by": "Chase Agent",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Northfield compliance record",
+     "state": "Executed"
+    }
+   ],
+   "outcome": {
+    "as_of": "2026-12-09 17:18 ET",
+    "orders": [
+     {
+      "po": "NR-46560",
+      "state": "Not picked up: not ready; readiness recorded"
+     },
+     {
+      "po": "NR-46567",
+      "state": "Not picked up: not ready; readiness recorded"
+     },
+     {
+      "po": "NR-46574",
+      "state": "Not picked up: not ready; readiness recorded"
+     },
+     {
+      "po": "NR-46581",
+      "state": "Not picked up: not ready"
+     },
+     {
+      "po": "NR-46588",
+      "state": "Not picked up: not ready"
+     },
+     {
+      "po": "NR-46595",
+      "state": "Not picked up: not ready"
+     },
+     {
+      "po": "NR-46602",
+      "state": "Departed; no ship notice"
+     },
+     {
+      "po": "NR-46609",
+      "state": "No carrier status"
+     },
+     {
+      "po": "NR-46616",
+      "state": "Ship notice and carrier disagree"
+     }
+    ],
+    "requests": {
+     "NR-46560": {
+      "of": "ready time",
+      "at": "2026-12-09 17:09 ET"
+     },
+     "NR-46567": {
+      "of": "ready time",
+      "at": "2026-12-09 17:15 ET"
+     }
+    },
+    "readiness_recorded": {
+     "NR-46560": {
+      "charge": "RT01",
+      "amount": 150,
+      "decided_by": "Test approver (replay)",
+      "at": "2026-12-09 17:06 ET"
+     },
+     "NR-46567": {
+      "charge": "RT01",
+      "amount": 150,
+      "decided_by": "Test approver (replay)",
+      "at": "2026-12-09 17:12 ET"
+     },
+     "NR-46574": {
+      "charge": "RT01",
+      "amount": 150,
+      "decided_by": "Test approver (replay)",
+      "at": "2026-12-09 17:18 ET"
+     }
+    },
+    "carrier_asked": {
+     "NR-46609": {
+      "asked": "2026-12-09 17:03 ET"
+     }
+    },
+    "corrections": {},
+    "violations": [],
+    "synthetic": "Presets on NR-46602, NR-46609 and NR-46616 and every answer to a request are synthetic, from src/chase.js; routing instructions, Lakeline 214s, ship notices and receiving advice are recorded."
+   },
+   "trace": [
+    {
+     "n": 1,
+     "clock": "2026-12-09 17:00 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Session branched from the recorded world",
+     "detail": {
+      "at": "2026-12-09 17:00 ET",
+      "hidden": "Every recorded record after this time",
+      "changes": [
+       {
+        "field": "carrier_departed_46602",
+        "from": "no",
+        "to": "yes"
+       },
+       {
+        "field": "carrier_silent_46609",
+        "from": "no",
+        "to": "yes"
+       },
+       {
+        "field": "asn_before_pickup_46616",
+        "from": "no",
+        "to": "yes"
+       }
+      ]
+     }
+    },
+    {
+     "n": 2,
+     "clock": "2026-12-09 17:00 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "9 inbound orders to work",
+     "detail": {
+      "rows": [
+       "NR-46560: Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:45 ET); ship notice: None",
+       "NR-46567: Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:38 ET); ship notice: None",
+       "NR-46574: Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:47 ET); ship notice: None",
+       "NR-46581: Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:40 ET); ship notice: None",
+       "NR-46588: Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:39 ET); ship notice: None",
+       "NR-46595: Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:47 ET); ship notice: None",
+       "NR-46602: Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Departed pickup location (2026-12-09 15:12 ET); ship notice: None",
+       "NR-46609: Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: None received; ship notice: None",
+       "NR-46616: Pickup 2026-12-09 15:00 ET to 17:00 ET; carrier: Arrived at pickup; shipment not ready (2026-12-09 15:50 ET); ship notice: ASN-46616-E at 2026-12-09 15:05 ET: Shipped 15:00 ET, 77 cartons"
+      ]
+     }
+    },
+    {
+     "n": 3,
+     "clock": "2026-12-09 17:00 ET",
+     "actor": "Chase Agent",
+     "type": "tool",
+     "what": "Read read_policy",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 4,
+     "clock": "2026-12-09 17:00 ET",
+     "actor": "Chase Agent",
+     "type": "tool",
+     "what": "Read read_queue",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 5,
+     "clock": "2026-12-09 17:00 ET",
+     "actor": "Chase Agent",
+     "type": "tool",
+     "what": "Read read_proposals",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 6,
+     "clock": "2026-12-09 17:00 ET",
+     "actor": "Chase Agent",
+     "type": "tool",
+     "what": "Read read_order",
+     "detail": {
+      "args": {
+       "record": "NR-46560"
+      }
+     }
+    },
+    {
+     "n": 7,
+     "clock": "2026-12-09 17:00 ET",
+     "actor": "Chase Agent",
+     "type": "tool",
+     "what": "Read read_order",
+     "detail": {
+      "args": {
+       "record": "NR-46602"
+      }
+     }
+    },
+    {
+     "n": 8,
+     "clock": "2026-12-09 17:00 ET",
+     "actor": "Chase Agent",
+     "type": "tool",
+     "what": "Read read_order",
+     "detail": {
+      "args": {
+       "record": "NR-46609"
+      }
+     }
+    },
+    {
+     "n": 9,
+     "clock": "2026-12-09 17:00 ET",
+     "actor": "Chase Agent",
+     "type": "tool",
+     "what": "Read read_order",
+     "detail": {
+      "args": {
+       "record": "NR-46616"
+      }
+     }
+    },
+    {
+     "n": 10,
+     "clock": "2026-12-09 17:00 ET",
+     "actor": "Chase Agent",
+     "type": "ai",
+     "what": "Proposed: Ask Lakeline for the load’s status",
+     "detail": {
+      "proposal": "CHP-1",
+      "args": {
+       "record": "NR-46609"
+      },
+      "rationale": "For NR-46609, Lakeline has provided no 214 status yet, so we must ask the carrier for the status before chasing Ashby.",
+      "alternatives": [
+       "request_ship_notice",
+       "ask_ready_time"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 11,
+     "clock": "2026-12-09 17:00 ET",
+     "actor": "Chase Agent",
+     "type": "ai",
+     "what": "Chase Agent said",
+     "detail": {
+      "text": "I have proposed asking Lakeline Freight for the status of load NRL-46609 (NR-46609) because no carrier status has been received yet (NF-3.3), and we must check the carrier before chasing the supplier. This action is awaiting Jordan Ellis's approval."
+     }
+    },
+    {
+     "n": 12,
+     "clock": "2026-12-09 17:01 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CHP-1: Ask Lakeline for the load’s status",
+     "detail": {
+      "args": {
+       "record": "NR-46609"
+      }
+     }
+    },
+    {
+     "n": 13,
+     "clock": "2026-12-09 17:03 ET",
+     "actor": "Lakeline Freight (Northfield’s routed carrier)",
+     "type": "external",
+     "what": "Executed: Ask Lakeline for the load’s status",
+     "detail": {
+      "proposal": "CHP-1",
+      "response": "Lakeline asked for the status of NR-46609"
+     }
+    },
+    {
+     "n": 14,
+     "clock": "2026-12-09 17:03 ET",
+     "actor": "Chase Agent",
+     "type": "tool",
+     "what": "Read read_queue",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 15,
+     "clock": "2026-12-09 17:03 ET",
+     "actor": "Chase Agent",
+     "type": "ai",
+     "what": "Proposed: Record that the collect load was not ready at the assigned pickup, for Jordan Ellis to decide the RT01 charge",
+     "detail": {
+      "proposal": "CHP-2",
+      "args": {
+       "record": "NR-46560"
+      },
+      "rationale": "For NR-46560, the collect load was not ready at the assigned pickup as reported by Lakeline, so we record the readiness failure for Jordan to decide the RT01 charge under NF-3.6.",
+      "alternatives": [
+       "ask_ready_time"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 16,
+     "clock": "2026-12-09 17:03 ET",
+     "actor": "Chase Agent",
+     "type": "ai",
+     "what": "Chase Agent said",
+     "detail": {
+      "text": "I have proposed recording the readiness failure for NR-46560 because the collect load was not ready at the assigned pickup (NF-3.6), for Jordan Ellis to decide the RT01 charge. This action is awaiting Jordan Ellis's approval."
+     }
+    },
+    {
+     "n": 17,
+     "clock": "2026-12-09 17:04 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CHP-2: Record that the collect load was not ready at the assigned pickup, for Jordan Ellis to decide the RT01 charge",
+     "detail": {
+      "args": {
+       "record": "NR-46560"
+      }
+     }
+    },
+    {
+     "n": 18,
+     "clock": "2026-12-09 17:06 ET",
+     "actor": "Northfield compliance record",
+     "type": "external",
+     "what": "Executed: Record that the collect load was not ready at the assigned pickup, for Jordan Ellis to decide the RT01 charge",
+     "detail": {
+      "proposal": "CHP-2",
+      "response": "Readiness failure on NR-46560 recorded; RT01 $150 decided by Test approver (replay)"
+     }
+    },
+    {
+     "n": 19,
+     "clock": "2026-12-09 17:06 ET",
+     "actor": "Chase Agent",
+     "type": "ai",
+     "what": "Proposed: Ask the supplier for its new ready time and rebook the pickup",
+     "detail": {
+      "proposal": "CHP-3",
+      "args": {
+       "record": "NR-46560"
+      },
+      "rationale": "For NR-46560, since the readiness failure has been recorded, we ask Ashby for its new ready time and rebook the pickup under NF-3.4.",
+      "alternatives": [
+       "record_readiness_failure"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 20,
+     "clock": "2026-12-09 17:06 ET",
+     "actor": "Chase Agent",
+     "type": "ai",
+     "what": "Chase Agent said",
+     "detail": {
+      "text": "I have proposed asking Ashby Supplier for the new ready time and rebooking the pickup for NR-46560 (NF-3.4) now that its readiness failure is recorded. This action is awaiting Jordan Ellis's approval."
+     }
+    },
+    {
+     "n": 21,
+     "clock": "2026-12-09 17:07 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CHP-3: Ask the supplier for its new ready time and rebook the pickup",
+     "detail": {
+      "args": {
+       "record": "NR-46560"
+      }
+     }
+    },
+    {
+     "n": 22,
+     "clock": "2026-12-09 17:09 ET",
+     "actor": "Ashby Supplier (request through Trading Grid)",
+     "type": "external",
+     "what": "Executed: Ask the supplier for its new ready time and rebook the pickup",
+     "detail": {
+      "proposal": "CHP-3",
+      "response": "Ashby asked for the new ready time of NR-46560"
+     }
+    },
+    {
+     "n": 23,
+     "clock": "2026-12-09 17:09 ET",
+     "actor": "Chase Agent",
+     "type": "ai",
+     "what": "Proposed: Record that the collect load was not ready at the assigned pickup, for Jordan Ellis to decide the RT01 charge",
+     "detail": {
+      "proposal": "CHP-4",
+      "args": {
+       "record": "NR-46567"
+      },
+      "rationale": "For NR-46567, the collect load was not ready at the assigned pickup as reported by Lakeline, so we record the readiness failure for Jordan to decide the RT01 charge under NF-3.6.",
+      "alternatives": [
+       "ask_ready_time"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 24,
+     "clock": "2026-12-09 17:09 ET",
+     "actor": "Chase Agent",
+     "type": "ai",
+     "what": "Chase Agent said",
+     "detail": {
+      "text": "I have proposed recording the readiness failure for NR-46567 because the collect load was not ready at the assigned pickup (NF-3.6), for Jordan Ellis to decide the RT01 charge. This action is awaiting Jordan Ellis's approval."
+     }
+    },
+    {
+     "n": 25,
+     "clock": "2026-12-09 17:10 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CHP-4: Record that the collect load was not ready at the assigned pickup, for Jordan Ellis to decide the RT01 charge",
+     "detail": {
+      "args": {
+       "record": "NR-46567"
+      }
+     }
+    },
+    {
+     "n": 26,
+     "clock": "2026-12-09 17:12 ET",
+     "actor": "Northfield compliance record",
+     "type": "external",
+     "what": "Executed: Record that the collect load was not ready at the assigned pickup, for Jordan Ellis to decide the RT01 charge",
+     "detail": {
+      "proposal": "CHP-4",
+      "response": "Readiness failure on NR-46567 recorded; RT01 $150 decided by Test approver (replay)"
+     }
+    },
+    {
+     "n": 27,
+     "clock": "2026-12-09 17:12 ET",
+     "actor": "Chase Agent",
+     "type": "ai",
+     "what": "Proposed: Ask the supplier for its new ready time and rebook the pickup",
+     "detail": {
+      "proposal": "CHP-5",
+      "args": {
+       "record": "NR-46567"
+      },
+      "rationale": "For NR-46567, since the readiness failure has been recorded, we ask Ashby for its new ready time and rebook the pickup under NF-3.4.",
+      "alternatives": [
+       "record_readiness_failure"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 28,
+     "clock": "2026-12-09 17:12 ET",
+     "actor": "Chase Agent",
+     "type": "ai",
+     "what": "Chase Agent said",
+     "detail": {
+      "text": "I have proposed asking Ashby Supplier for the new ready time and rebooking the pickup for NR-46567 (NF-3.4). This action is awaiting Jordan Ellis's approval."
+     }
+    },
+    {
+     "n": 29,
+     "clock": "2026-12-09 17:13 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CHP-5: Ask the supplier for its new ready time and rebook the pickup",
+     "detail": {
+      "args": {
+       "record": "NR-46567"
+      }
+     }
+    },
+    {
+     "n": 30,
+     "clock": "2026-12-09 17:15 ET",
+     "actor": "Ashby Supplier (request through Trading Grid)",
+     "type": "external",
+     "what": "Executed: Ask the supplier for its new ready time and rebook the pickup",
+     "detail": {
+      "proposal": "CHP-5",
+      "response": "Ashby asked for the new ready time of NR-46567"
+     }
+    },
+    {
+     "n": 31,
+     "clock": "2026-12-09 17:15 ET",
+     "actor": "Chase Agent",
+     "type": "ai",
+     "what": "Proposed: Record that the collect load was not ready at the assigned pickup, for Jordan Ellis to decide the RT01 charge",
+     "detail": {
+      "proposal": "CHP-6",
+      "args": {
+       "record": "NR-46574"
+      },
+      "rationale": "For NR-46574, the collect load was not ready at the assigned pickup as reported by Lakeline, so we record the readiness failure for Jordan to decide the RT01 charge under NF-3.6.",
+      "alternatives": [
+       "ask_ready_time"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 32,
+     "clock": "2026-12-09 17:15 ET",
+     "actor": "Chase Agent",
+     "type": "ai",
+     "what": "Chase Agent said",
+     "detail": {
+      "text": "I have proposed recording the readiness failure for NR-46574 because the collect load was not ready at the assigned pickup (NF-3.6), for Jordan Ellis to decide the RT01 charge. This action is awaiting Jordan Ellis's approval."
+     }
+    },
+    {
+     "n": 33,
+     "clock": "2026-12-09 17:16 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CHP-6: Record that the collect load was not ready at the assigned pickup, for Jordan Ellis to decide the RT01 charge",
+     "detail": {
+      "args": {
+       "record": "NR-46574"
+      }
+     }
+    },
+    {
+     "n": 34,
+     "clock": "2026-12-09 17:18 ET",
+     "actor": "Northfield compliance record",
+     "type": "external",
+     "what": "Executed: Record that the collect load was not ready at the assigned pickup, for Jordan Ellis to decide the RT01 charge",
+     "detail": {
+      "proposal": "CHP-6",
+      "response": "Readiness failure on NR-46574 recorded; RT01 $150 decided by Test approver (replay)"
+     }
+    },
+    {
+     "n": 35,
+     "clock": "2026-12-09 17:18 ET",
+     "actor": "Chase Agent",
+     "type": "system",
+     "what": "Model call failed; no state was changed",
+     "detail": {
+      "error": "Model did not answer: secondary gemini-3.8-flash: 503 {\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please t"
+     }
+    }
+   ],
+   "overhead": {
+    "model_calls": 16,
+    "tool_calls": 14,
+    "ms": 21247,
+    "model_routes": {
+     "primary · gemini-3.5-flash-lite": 16
+    }
+   }
+  }
+ }
+}

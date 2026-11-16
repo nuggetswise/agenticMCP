@@ -1,0 +1,658 @@
+{
+ "agent": "Review Agent",
+ "tool": "review_replay",
+ "args": {
+  "variation": "tally_count_only"
+ },
+ "job": "JOB-d99231e04ea5",
+ "status": "finished",
+ "started": "2026-11-16T18:29:05.327Z",
+ "finished": "2026-11-16T18:29:44.542Z",
+ "trial": "CL-0002",
+ "baseline_session": "RV-522995f4e3",
+ "agent_session": "RV-e5db35eee5",
+ "baseline_outcome": {
+  "as_of": "2027-01-07 10:03 ET",
+  "charges": [
+   {
+    "case": "DC-41118",
+    "charge": "SH01",
+    "amount": 96.8,
+    "state": "Reversed by Jordan Ellis"
+   }
+  ],
+  "decisions": [
+   {
+    "case": "DC-41118",
+    "charge": "SH01",
+    "decision": "Reversed",
+    "decided_by": "Test approver (replay)",
+    "recommended_by": "Baseline",
+    "at": "2026-12-28 10:03 ET"
+   }
+  ],
+  "repaid": [
+   {
+    "case": "DC-41118",
+    "charge": "SH01",
+    "payment": "PMT-S5229",
+    "at": "2027-01-07 10:03 ET"
+   }
+  ],
+  "receipt_changed": false,
+  "violations": [],
+  "synthetic": "The 28 December dispute on DC-41118 and repayments with no recorded remittance are synthetic, from src/review.js."
+ },
+ "agent_status": "done",
+ "agent_outcome": {
+  "as_of": "2026-12-28 10:03 ET",
+  "charges": [
+   {
+    "case": "DC-41118",
+    "charge": "SH01",
+    "amount": 96.8,
+    "state": "Not reviewed by Jordan Ellis"
+   }
+  ],
+  "decisions": [
+   {
+    "case": "DC-41118",
+    "charge": "SH01",
+    "decision": "Not reviewed",
+    "decided_by": "Test approver (replay)",
+    "recommended_by": "Review Agent",
+    "at": "2026-12-28 10:03 ET"
+   }
+  ],
+  "repaid": [],
+  "receipt_changed": false,
+  "violations": [],
+  "synthetic": "The 28 December dispute on DC-41118 and repayments with no recorded remittance are synthetic, from src/review.js."
+ },
+ "agent_overhead": {
+  "model_calls": 10,
+  "tool_calls": 8,
+  "ms": 38417
+ },
+ "automation": {
+  "same_steps": [],
+  "baseline_only": [
+   "reverse_charge DC-41118"
+  ],
+  "agent_only": [
+   "mark_not_reviewed DC-41118"
+  ]
+ },
+ "replay_answer": {
+  "trial": "CL-0002",
+  "changes": [
+   {
+    "field": "moment",
+    "from": "2026-12-03 09:00 ET",
+    "to": "2026-12-28 10:00 ET"
+   },
+   {
+    "field": "dispute_41118",
+    "from": "none",
+    "to": "tally_count_only"
+   }
+  ],
+  "evidence_cutoff": "2026-12-28 10:00 ET",
+  "baseline": {
+   "session": "RV-522995f4e3",
+   "outcome": {
+    "as_of": "2027-01-07 10:03 ET",
+    "charges": [
+     {
+      "case": "DC-41118",
+      "charge": "SH01",
+      "amount": 96.8,
+      "state": "Reversed by Jordan Ellis"
+     }
+    ],
+    "decisions": [
+     {
+      "case": "DC-41118",
+      "charge": "SH01",
+      "decision": "Reversed",
+      "decided_by": "Test approver (replay)",
+      "recommended_by": "Baseline",
+      "at": "2026-12-28 10:03 ET"
+     }
+    ],
+    "repaid": [
+     {
+      "case": "DC-41118",
+      "charge": "SH01",
+      "payment": "PMT-S5229",
+      "at": "2027-01-07 10:03 ET"
+     }
+    ],
+    "receipt_changed": false,
+    "violations": [],
+    "synthetic": "The 28 December dispute on DC-41118 and repayments with no recorded remittance are synthetic, from src/review.js."
+   },
+   "trace": [
+    "1. 10:00 Trading Grid [System] Session branched from the recorded world",
+    "2. 10:00 Rule engine [Fixed rule] 1 disputed charges to work",
+    "3. 10:00 Baseline [Fixed rule] Proposed: Reverse the charge; the repayment follows on a later remittance {\"record\":\"DC-41118\",\"charge\":\"SH01\"}",
+    "4. 10:01 Test approver (replay) [Human approval] Approved RVP-1: Reverse the charge; the repayment follows on a later remittance {\"record\":\"DC-41118\",\"charge\":\"SH01\"}",
+    "5. 10:03 Northfield deduction case [External confirmation] Executed: Reverse the charge; the repayment follows on a later remittance · SH01 on DC-41118: reversed by Test approver (replay). The receipt is unchanged (NF-5.5).",
+    "6. 10:03 Northfield remittance (synthetic) [External confirmation] Remittance PMT-S5229 repays $96.80 for SH01 on DC-41118"
+   ]
+  },
+  "agent": {
+   "session": "RV-e5db35eee5",
+   "status": "done",
+   "outcome": {
+    "as_of": "2026-12-28 10:03 ET",
+    "charges": [
+     {
+      "case": "DC-41118",
+      "charge": "SH01",
+      "amount": 96.8,
+      "state": "Not reviewed by Jordan Ellis"
+     }
+    ],
+    "decisions": [
+     {
+      "case": "DC-41118",
+      "charge": "SH01",
+      "decision": "Not reviewed",
+      "decided_by": "Test approver (replay)",
+      "recommended_by": "Review Agent",
+      "at": "2026-12-28 10:03 ET"
+     }
+    ],
+    "repaid": [],
+    "receipt_changed": false,
+    "violations": [],
+    "synthetic": "The 28 December dispute on DC-41118 and repayments with no recorded remittance are synthetic, from src/review.js."
+   },
+   "overhead": {
+    "model_calls": 10,
+    "tool_calls": 8,
+    "ms": 38417
+   },
+   "trace": [
+    "1. 10:00 Trading Grid [System] Session branched from the recorded world",
+    "2. 10:00 Rule engine [Fixed rule] 1 disputed charges to work",
+    "8. 10:00 Trading Grid [Fixed rule] Refused mark_not_reviewed {\"record\":\"DC-41118\",\"charge\":\"SH01\",\"note\":\"The supplier provided a load tally, but rule NF-5.3 and NF-7.4 require a load scan or load tally by SSCC, whereas this tally is handwritten, unsigned, and lists no SSCCs.\"} · mark_not_reviewed takes only record, charge; refused note.",
+    "9. 10:00 Review Agent [AI judgment] Proposed: Record the dispute as not reviewed for missing NF-7.4 evidence (ID01) {\"record\":\"DC-41118\",\"charge\":\"SH01\"} · why: Under NF-7.4 and NF-5.3, the shortage dispute lacks a valid load tally by SSCC (the provided tally is handwritten and lists no SSCCs), so rule NF-7.5 applies to mark it not reviewed.",
+    "10. 10:00 Review Agent [AI judgment] Review Agent said",
+    "11. 10:01 Test approver (replay) [Human approval] Approved RVP-1: Record the dispute as not reviewed for missing NF-7.4 evidence (ID01) {\"record\":\"DC-41118\",\"charge\":\"SH01\"}",
+    "12. 10:03 Northfield deduction case [External confirmation] Executed: Record the dispute as not reviewed for missing NF-7.4 evidence (ID01) · SH01 on DC-41118: not reviewed by Test approver (replay); ID01 $150 applies (NF-7.5). The receipt is unchanged (NF-5.5).",
+    "14. 10:03 Review Agent [AI judgment] Review Agent said"
+   ]
+  },
+  "automation": {
+   "same_steps": [],
+   "baseline_only": [
+    "reverse_charge DC-41118"
+   ],
+   "agent_only": [
+    "mark_not_reviewed DC-41118"
+   ]
+  }
+ },
+ "session_views": {
+  "baseline": {
+   "session": "RV-522995f4e3",
+   "agent": "Review Agent",
+   "label": "Replay · baseline",
+   "clock": "2027-01-07 10:03 ET",
+   "branch_at": "2026-12-28 10:00 ET",
+   "status": "idle",
+   "variation": [
+    {
+     "field": "moment",
+     "from": "2026-12-03 09:00 ET",
+     "to": "2026-12-28 10:00 ET"
+    },
+    {
+     "field": "dispute_41118",
+     "from": "none",
+     "to": "tally_count_only"
+    }
+   ],
+   "facts": {
+    "moment": "2026-12-28 10:00 ET",
+    "dispute_41118": "tally_count_only"
+   },
+   "queue": {
+    "as_of": "2027-01-07 10:03 ET",
+    "rows": [
+     {
+      "id": "DC-41118 SH01",
+      "record": "DC-41118",
+      "charge": "SH01",
+      "amount": 96.8,
+      "po": "NR-46237",
+      "what": "Ashby Supplier disputes SH01 $96.80 on NR-46237 with Bill of lading with seal, Proof of delivery, Load tally by SSCC",
+      "state": "Reversed by Jordan Ellis",
+      "closed": true
+     }
+    ],
+    "open": 0
+   },
+   "awaiting": [],
+   "suggested": [],
+   "pending": [],
+   "roles": [
+    {
+     "proposal": "RVP-1",
+     "action": "reverse_charge",
+     "recommended_by": "Baseline",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Northfield deduction case",
+     "state": "Executed"
+    }
+   ],
+   "outcome": {
+    "as_of": "2027-01-07 10:03 ET",
+    "charges": [
+     {
+      "case": "DC-41118",
+      "charge": "SH01",
+      "amount": 96.8,
+      "state": "Reversed by Jordan Ellis"
+     }
+    ],
+    "decisions": [
+     {
+      "case": "DC-41118",
+      "charge": "SH01",
+      "decision": "Reversed",
+      "decided_by": "Test approver (replay)",
+      "recommended_by": "Baseline",
+      "at": "2026-12-28 10:03 ET"
+     }
+    ],
+    "repaid": [
+     {
+      "case": "DC-41118",
+      "charge": "SH01",
+      "payment": "PMT-S5229",
+      "at": "2027-01-07 10:03 ET"
+     }
+    ],
+    "receipt_changed": false,
+    "violations": [],
+    "synthetic": "The 28 December dispute on DC-41118 and repayments with no recorded remittance are synthetic, from src/review.js."
+   },
+   "trace": [
+    {
+     "n": 1,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Session branched from the recorded world",
+     "detail": {
+      "at": "2026-12-28 10:00 ET",
+      "hidden": "Every recorded record after this time",
+      "changes": [
+       {
+        "field": "moment",
+        "from": "2026-12-03 09:00 ET",
+        "to": "2026-12-28 10:00 ET"
+       },
+       {
+        "field": "dispute_41118",
+        "from": "none",
+        "to": "tally_count_only"
+       }
+      ]
+     }
+    },
+    {
+     "n": 2,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "1 disputed charges to work",
+     "detail": {
+      "rows": [
+       "DC-41118: Ashby Supplier disputes SH01 $96.80 on NR-46237 with Bill of lading with seal, Proof of delivery, Load tally by SSCC"
+      ]
+     }
+    },
+    {
+     "n": 3,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Baseline",
+     "type": "rule",
+     "what": "Proposed: Reverse the charge; the repayment follows on a later remittance",
+     "detail": {
+      "proposal": "RVP-1",
+      "args": {
+       "record": "DC-41118",
+       "charge": "SH01"
+      },
+      "rationale": null,
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 4,
+     "clock": "2026-12-28 10:01 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved RVP-1: Reverse the charge; the repayment follows on a later remittance",
+     "detail": {
+      "args": {
+       "record": "DC-41118",
+       "charge": "SH01"
+      }
+     }
+    },
+    {
+     "n": 5,
+     "clock": "2026-12-28 10:03 ET",
+     "actor": "Northfield deduction case",
+     "type": "external",
+     "what": "Executed: Reverse the charge; the repayment follows on a later remittance",
+     "detail": {
+      "proposal": "RVP-1",
+      "response": "SH01 on DC-41118: reversed by Test approver (replay). The receipt is unchanged (NF-5.5)."
+     }
+    },
+    {
+     "n": 6,
+     "clock": "2027-01-07 10:03 ET",
+     "actor": "Northfield remittance (synthetic)",
+     "type": "external",
+     "what": "Remittance PMT-S5229 repays $96.80 for SH01 on DC-41118",
+     "detail": {
+      "at": "2027-01-07 10:03 ET",
+      "record": "PMT-S5229",
+      "synthetic": true
+     }
+    }
+   ],
+   "overhead": {
+    "model_calls": 0,
+    "tool_calls": 0,
+    "ms": 0,
+    "model_routes": {}
+   }
+  },
+  "agent": {
+   "session": "RV-e5db35eee5",
+   "agent": "Review Agent",
+   "label": "Replay · Review Agent",
+   "clock": "2026-12-28 10:03 ET",
+   "branch_at": "2026-12-28 10:00 ET",
+   "status": "done",
+   "variation": [
+    {
+     "field": "moment",
+     "from": "2026-12-03 09:00 ET",
+     "to": "2026-12-28 10:00 ET"
+    },
+    {
+     "field": "dispute_41118",
+     "from": "none",
+     "to": "tally_count_only"
+    }
+   ],
+   "facts": {
+    "moment": "2026-12-28 10:00 ET",
+    "dispute_41118": "tally_count_only"
+   },
+   "queue": {
+    "as_of": "2026-12-28 10:03 ET",
+    "rows": [
+     {
+      "id": "DC-41118 SH01",
+      "record": "DC-41118",
+      "charge": "SH01",
+      "amount": 96.8,
+      "po": "NR-46237",
+      "what": "Ashby Supplier disputes SH01 $96.80 on NR-46237 with Bill of lading with seal, Proof of delivery, Load tally by SSCC",
+      "state": "Not reviewed by Jordan Ellis",
+      "closed": true
+     }
+    ],
+    "open": 0
+   },
+   "awaiting": [],
+   "suggested": [],
+   "pending": [],
+   "roles": [
+    {
+     "proposal": "RVP-1",
+     "action": "mark_not_reviewed",
+     "recommended_by": "Review Agent",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Northfield deduction case",
+     "state": "Executed"
+    }
+   ],
+   "outcome": {
+    "as_of": "2026-12-28 10:03 ET",
+    "charges": [
+     {
+      "case": "DC-41118",
+      "charge": "SH01",
+      "amount": 96.8,
+      "state": "Not reviewed by Jordan Ellis"
+     }
+    ],
+    "decisions": [
+     {
+      "case": "DC-41118",
+      "charge": "SH01",
+      "decision": "Not reviewed",
+      "decided_by": "Test approver (replay)",
+      "recommended_by": "Review Agent",
+      "at": "2026-12-28 10:03 ET"
+     }
+    ],
+    "repaid": [],
+    "receipt_changed": false,
+    "violations": [],
+    "synthetic": "The 28 December dispute on DC-41118 and repayments with no recorded remittance are synthetic, from src/review.js."
+   },
+   "trace": [
+    {
+     "n": 1,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Session branched from the recorded world",
+     "detail": {
+      "at": "2026-12-28 10:00 ET",
+      "hidden": "Every recorded record after this time",
+      "changes": [
+       {
+        "field": "moment",
+        "from": "2026-12-03 09:00 ET",
+        "to": "2026-12-28 10:00 ET"
+       },
+       {
+        "field": "dispute_41118",
+        "from": "none",
+        "to": "tally_count_only"
+       }
+      ]
+     }
+    },
+    {
+     "n": 2,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "1 disputed charges to work",
+     "detail": {
+      "rows": [
+       "DC-41118: Ashby Supplier disputes SH01 $96.80 on NR-46237 with Bill of lading with seal, Proof of delivery, Load tally by SSCC"
+      ]
+     }
+    },
+    {
+     "n": 3,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Review Agent",
+     "type": "tool",
+     "what": "Read read_queue",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 4,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Review Agent",
+     "type": "tool",
+     "what": "Read read_case",
+     "detail": {
+      "args": {
+       "record": "DC-41118"
+      }
+     }
+    },
+    {
+     "n": 5,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Review Agent",
+     "type": "tool",
+     "what": "Read read_rules",
+     "detail": {
+      "args": {
+       "ids": [
+        "NF-7.4",
+        "NF-5.3",
+        "NF-5.5",
+        "NF-7.5",
+        "NF-7.6",
+        "NF-7.7"
+       ]
+      }
+     }
+    },
+    {
+     "n": 6,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Review Agent",
+     "type": "tool",
+     "what": "Read read_policy",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 7,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Review Agent",
+     "type": "tool",
+     "what": "Read read_evidence",
+     "detail": {
+      "args": {
+       "record": "DC-41118",
+       "charge": "SH01"
+      }
+     }
+    },
+    {
+     "n": 8,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Trading Grid",
+     "type": "rule",
+     "what": "Refused mark_not_reviewed",
+     "detail": {
+      "by": "Review Agent",
+      "args": {
+       "record": "DC-41118",
+       "charge": "SH01",
+       "note": "The supplier provided a load tally, but rule NF-5.3 and NF-7.4 require a load scan or load tally by SSCC, whereas this tally is handwritten, unsigned, and lists no SSCCs."
+      },
+      "reason": "mark_not_reviewed takes only record, charge; refused note."
+     }
+    },
+    {
+     "n": 9,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Review Agent",
+     "type": "ai",
+     "what": "Proposed: Record the dispute as not reviewed for missing NF-7.4 evidence (ID01)",
+     "detail": {
+      "proposal": "RVP-1",
+      "args": {
+       "record": "DC-41118",
+       "charge": "SH01"
+      },
+      "rationale": "Under NF-7.4 and NF-5.3, the shortage dispute lacks a valid load tally by SSCC (the provided tally is handwritten and lists no SSCCs), so rule NF-7.5 applies to mark it not reviewed.",
+      "alternatives": [
+       "uphold_charge",
+       "reverse_charge"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 10,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Review Agent",
+     "type": "ai",
+     "what": "Review Agent said",
+     "detail": {
+      "text": "I have reviewed charge **SH01** on case **DC-41118** and proposed marking the dispute as **not reviewed** (proposal **RVP-1**, awaiting Jordan Ellis's approval). \n\n**Rationale:** Under Northfield guide rules NF-7.4 and NF-5.3, a shortage dispute requires a bill of lading with seal, proof of delivery, and a load scan or load tally by SSCC. Although Ashby provided a load tally, inspection of the record reveals it is a handwritten, unsigned tally with no SSCCs listed. Consequently, under rule NF-7.5, the dispute lacks the required evidence and stands as not reviewed."
+     }
+    },
+    {
+     "n": 11,
+     "clock": "2026-12-28 10:01 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved RVP-1: Record the dispute as not reviewed for missing NF-7.4 evidence (ID01)",
+     "detail": {
+      "args": {
+       "record": "DC-41118",
+       "charge": "SH01"
+      }
+     }
+    },
+    {
+     "n": 12,
+     "clock": "2026-12-28 10:03 ET",
+     "actor": "Northfield deduction case",
+     "type": "external",
+     "what": "Executed: Record the dispute as not reviewed for missing NF-7.4 evidence (ID01)",
+     "detail": {
+      "proposal": "RVP-1",
+      "response": "SH01 on DC-41118: not reviewed by Test approver (replay); ID01 $150 applies (NF-7.5). The receipt is unchanged (NF-5.5)."
+     }
+    },
+    {
+     "n": 13,
+     "clock": "2026-12-28 10:03 ET",
+     "actor": "Review Agent",
+     "type": "tool",
+     "what": "Read read_queue",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 14,
+     "clock": "2026-12-28 10:03 ET",
+     "actor": "Review Agent",
+     "type": "ai",
+     "what": "Review Agent said",
+     "detail": {
+      "text": "All open disputed charges have been reviewed and processed. \n\n**Summary for Jordan Ellis:**\n- **Case DC-41118 (Charge SH01):** The dispute was marked as **not reviewed** (ID01 $150 applies per rule NF-7.5) because the supplier's load tally failed to list SSCCs as required by rules NF-7.4 and NF-5.3. The proposal (RVP-1) was approved and completed."
+     }
+    }
+   ],
+   "overhead": {
+    "model_calls": 10,
+    "tool_calls": 8,
+    "ms": 38417,
+    "model_routes": {
+     "primary · gemini-3.5-flash-lite": 10
+    }
+   }
+  }
+ }
+}

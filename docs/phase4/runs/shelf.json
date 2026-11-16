@@ -1,0 +1,556 @@
+{
+ "agent": "Shelf Agent",
+ "tool": "shelf_replay",
+ "args": {
+  "variation": "in_transit"
+ },
+ "job": "JOB-faaf354cf268",
+ "status": "finished",
+ "started": "2026-11-16T18:33:27.948Z",
+ "finished": "2026-11-16T18:33:38.816Z",
+ "trial": "CL-0004",
+ "baseline_session": "SH-b6f172875f",
+ "agent_session": "SH-d2776e6072",
+ "baseline_outcome": {
+  "as_of": "2026-10-26 19:36 ET",
+  "recommendations": {
+   "114": {
+    "kind": "order",
+    "what": "40 pairs",
+    "at": "2026-10-26 17:33 ET"
+   }
+  },
+  "orders": {
+   "114": {
+    "po": "NR-SB6F1",
+    "sales_order": "SO-Sb6f1"
+   }
+  },
+  "waits": [],
+  "refilled": [],
+  "violations": [
+   "Store 114: order recommended while ASN-451207-1 was in transit (duplicate stock)"
+  ],
+  "synthetic": "Store 114’s purchase order, ship notice, receipt and next report are recorded; any other order is synthetic, from src/shelf.js."
+ },
+ "agent_status": "done",
+ "agent_outcome": {
+  "as_of": "2026-10-26 17:32 ET",
+  "recommendations": {},
+  "orders": {},
+  "waits": [
+   "114"
+  ],
+  "refilled": [],
+  "violations": [],
+  "synthetic": "Store 114’s purchase order, ship notice, receipt and next report are recorded; any other order is synthetic, from src/shelf.js."
+ },
+ "agent_overhead": {
+  "model_calls": 5,
+  "tool_calls": 6,
+  "ms": 6667
+ },
+ "automation": {
+  "same_steps": [],
+  "baseline_only": [
+   "recommend_order 114",
+   "create_sales_order 114"
+  ],
+  "agent_only": [
+   "wait_for_transit 114"
+  ]
+ },
+ "replay_answer": {
+  "trial": "CL-0004",
+  "changes": [
+   {
+    "field": "moment",
+    "from": "2026-10-26 08:07 ET",
+    "to": "2026-10-26 17:30 ET"
+   }
+  ],
+  "evidence_cutoff": "2026-10-26 17:30 ET",
+  "baseline": {
+   "session": "SH-b6f172875f",
+   "outcome": {
+    "as_of": "2026-10-26 19:36 ET",
+    "recommendations": {
+     "114": {
+      "kind": "order",
+      "what": "40 pairs",
+      "at": "2026-10-26 17:33 ET"
+     }
+    },
+    "orders": {
+     "114": {
+      "po": "NR-SB6F1",
+      "sales_order": "SO-Sb6f1"
+     }
+    },
+    "waits": [],
+    "refilled": [],
+    "violations": [
+     "Store 114: order recommended while ASN-451207-1 was in transit (duplicate stock)"
+    ],
+    "synthetic": "Store 114’s purchase order, ship notice, receipt and next report are recorded; any other order is synthetic, from src/shelf.js."
+   },
+   "trace": [
+    "1. 17:30 Trading Grid [System] Session branched from the recorded world",
+    "2. 17:30 Rule engine [Fixed rule] 2 stores to work",
+    "3. 17:30 Baseline [Fixed rule] Proposed: Recommend a new order to Jordan Ellis {\"record\":\"114\",\"pairs\":40}",
+    "4. 17:31 Test approver (replay) [Human approval] Approved SHP-1: Recommend a new order to Jordan Ellis {\"record\":\"114\",\"pairs\":40}",
+    "5. 17:33 Jordan Ellis (recommendation from Trading Grid) [External confirmation] Executed: Recommend a new order to Jordan Ellis · Recommendation sent to Jordan Ellis: 40 pairs for store 114; no order or reservation is created",
+    "6. 19:33 Northfield ordering (synthetic) [External confirmation] Northfield purchase order NR-SB6F1 for 40 pairs to store 114 (EDI 850)",
+    "7. 19:33 Baseline [Fixed rule] Proposed: Create the sales order in the Supplier ERP from Northfield’s purchase order {\"record\":\"114\"}",
+    "8. 19:34 Test approver (replay) [Human approval] Approved SHP-2: Create the sales order in the Supplier ERP from Northfield’s purchase order {\"record\":\"114\"}",
+    "9. 19:36 Supplier ERP [External confirmation] Executed: Create the sales order in the Supplier ERP from Northfield’s purchase order · Sales order SO-Sb6f1 created in the Supplier ERP from NR-SB6F1"
+   ]
+  },
+  "agent": {
+   "session": "SH-d2776e6072",
+   "status": "done",
+   "outcome": {
+    "as_of": "2026-10-26 17:32 ET",
+    "recommendations": {},
+    "orders": {},
+    "waits": [
+     "114"
+    ],
+    "refilled": [],
+    "violations": [],
+    "synthetic": "Store 114’s purchase order, ship notice, receipt and next report are recorded; any other order is synthetic, from src/shelf.js."
+   },
+   "overhead": {
+    "model_calls": 5,
+    "tool_calls": 6,
+    "ms": 6667
+   },
+   "trace": [
+    "1. 17:30 Trading Grid [System] Session branched from the recorded world",
+    "2. 17:30 Rule engine [Fixed rule] 2 stores to work",
+    "7. 17:30 Shelf Agent [AI judgment] Proposed: Record that the store waits for goods already in transit; nothing is sent {\"record\":\"114\"} · why: Store 114 has an empty shelf (0 on hand) but has goods in transit (ASN-451207-1), so under AP-6.1 it should wait for transit.",
+    "8. 17:32 Trading Grid [External confirmation] Executed: Record that the store waits for goods already in transit; nothing is sent · Store 114 waits for the goods in transit; nothing sent",
+    "10. 17:32 Shelf Agent [AI judgment] Shelf Agent said"
+   ]
+  },
+  "automation": {
+   "same_steps": [],
+   "baseline_only": [
+    "recommend_order 114",
+    "create_sales_order 114"
+   ],
+   "agent_only": [
+    "wait_for_transit 114"
+   ]
+  }
+ },
+ "session_views": {
+  "baseline": {
+   "session": "SH-b6f172875f",
+   "agent": "Shelf Agent",
+   "label": "Replay · baseline",
+   "clock": "2026-10-26 19:36 ET",
+   "branch_at": "2026-10-26 17:30 ET",
+   "status": "idle",
+   "variation": [
+    {
+     "field": "moment",
+     "from": "2026-10-26 08:07 ET",
+     "to": "2026-10-26 17:30 ET"
+    }
+   ],
+   "facts": {
+    "moment": "2026-10-26 17:30 ET",
+    "jordan_orders": "as_recommended"
+   },
+   "queue": {
+    "as_of": "2026-10-26 19:36 ET",
+    "rows": [
+     {
+      "id": "Store 114",
+      "record": "114",
+      "what": "12 sold, 0 on hand, 12 a week average, 0 weeks of supply; ASN-451207-1 in transit",
+      "state": "Sales order SO-Sb6f1; shipping",
+      "closed": false
+     },
+     {
+      "id": "Store 207",
+      "record": "207",
+      "what": "3 sold, 48 on hand, 3 a week average, 16 weeks of supply",
+      "state": "Open",
+      "closed": false
+     }
+    ]
+   },
+   "awaiting": [],
+   "suggested": [],
+   "pending": [],
+   "roles": [
+    {
+     "proposal": "SHP-1",
+     "action": "recommend_order",
+     "recommended_by": "Baseline",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Jordan Ellis (recommendation from Trading Grid)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "SHP-2",
+     "action": "create_sales_order",
+     "recommended_by": "Baseline",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Supplier ERP",
+     "state": "Executed"
+    }
+   ],
+   "outcome": {
+    "as_of": "2026-10-26 19:36 ET",
+    "recommendations": {
+     "114": {
+      "kind": "order",
+      "what": "40 pairs",
+      "at": "2026-10-26 17:33 ET"
+     }
+    },
+    "orders": {
+     "114": {
+      "po": "NR-SB6F1",
+      "sales_order": "SO-Sb6f1"
+     }
+    },
+    "waits": [],
+    "refilled": [],
+    "violations": [
+     "Store 114: order recommended while ASN-451207-1 was in transit (duplicate stock)"
+    ],
+    "synthetic": "Store 114’s purchase order, ship notice, receipt and next report are recorded; any other order is synthetic, from src/shelf.js."
+   },
+   "trace": [
+    {
+     "n": 1,
+     "clock": "2026-10-26 17:30 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Session branched from the recorded world",
+     "detail": {
+      "at": "2026-10-26 17:30 ET",
+      "hidden": "Every recorded record after this time",
+      "changes": [
+       {
+        "field": "moment",
+        "from": "2026-10-26 08:07 ET",
+        "to": "2026-10-26 17:30 ET"
+       }
+      ]
+     }
+    },
+    {
+     "n": 2,
+     "clock": "2026-10-26 17:30 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "2 stores to work",
+     "detail": {
+      "rows": [
+       "114: 12 sold, 0 on hand, 12 a week average, 0 weeks of supply; ASN-451207-1 in transit",
+       "207: 3 sold, 48 on hand, 3 a week average, 16 weeks of supply"
+      ]
+     }
+    },
+    {
+     "n": 3,
+     "clock": "2026-10-26 17:30 ET",
+     "actor": "Baseline",
+     "type": "rule",
+     "what": "Proposed: Recommend a new order to Jordan Ellis",
+     "detail": {
+      "proposal": "SHP-1",
+      "args": {
+       "record": "114",
+       "pairs": 40
+      },
+      "rationale": null,
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 4,
+     "clock": "2026-10-26 17:31 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved SHP-1: Recommend a new order to Jordan Ellis",
+     "detail": {
+      "args": {
+       "record": "114",
+       "pairs": 40
+      }
+     }
+    },
+    {
+     "n": 5,
+     "clock": "2026-10-26 17:33 ET",
+     "actor": "Jordan Ellis (recommendation from Trading Grid)",
+     "type": "external",
+     "what": "Executed: Recommend a new order to Jordan Ellis",
+     "detail": {
+      "proposal": "SHP-1",
+      "response": "Recommendation sent to Jordan Ellis: 40 pairs for store 114; no order or reservation is created"
+     }
+    },
+    {
+     "n": 6,
+     "clock": "2026-10-26 19:33 ET",
+     "actor": "Northfield ordering (synthetic)",
+     "type": "external",
+     "what": "Northfield purchase order NR-SB6F1 for 40 pairs to store 114 (EDI 850)",
+     "detail": {
+      "at": "2026-10-26 19:33 ET",
+      "record": "NR-SB6F1",
+      "synthetic": true
+     }
+    },
+    {
+     "n": 7,
+     "clock": "2026-10-26 19:33 ET",
+     "actor": "Baseline",
+     "type": "rule",
+     "what": "Proposed: Create the sales order in the Supplier ERP from Northfield’s purchase order",
+     "detail": {
+      "proposal": "SHP-2",
+      "args": {
+       "record": "114"
+      },
+      "rationale": null,
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 8,
+     "clock": "2026-10-26 19:34 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved SHP-2: Create the sales order in the Supplier ERP from Northfield’s purchase order",
+     "detail": {
+      "args": {
+       "record": "114"
+      }
+     }
+    },
+    {
+     "n": 9,
+     "clock": "2026-10-26 19:36 ET",
+     "actor": "Supplier ERP",
+     "type": "external",
+     "what": "Executed: Create the sales order in the Supplier ERP from Northfield’s purchase order",
+     "detail": {
+      "proposal": "SHP-2",
+      "response": "Sales order SO-Sb6f1 created in the Supplier ERP from NR-SB6F1"
+     }
+    }
+   ],
+   "overhead": {
+    "model_calls": 0,
+    "tool_calls": 0,
+    "ms": 0,
+    "model_routes": {}
+   }
+  },
+  "agent": {
+   "session": "SH-d2776e6072",
+   "agent": "Shelf Agent",
+   "label": "Replay · Shelf Agent",
+   "clock": "2026-10-26 17:32 ET",
+   "branch_at": "2026-10-26 17:30 ET",
+   "status": "done",
+   "variation": [
+    {
+     "field": "moment",
+     "from": "2026-10-26 08:07 ET",
+     "to": "2026-10-26 17:30 ET"
+    }
+   ],
+   "facts": {
+    "moment": "2026-10-26 17:30 ET",
+    "jordan_orders": "as_recommended"
+   },
+   "queue": {
+    "as_of": "2026-10-26 17:32 ET",
+    "rows": [
+     {
+      "id": "Store 114",
+      "record": "114",
+      "what": "12 sold, 0 on hand, 12 a week average, 0 weeks of supply; ASN-451207-1 in transit",
+      "state": "Waiting for goods in transit",
+      "closed": true
+     },
+     {
+      "id": "Store 207",
+      "record": "207",
+      "what": "3 sold, 48 on hand, 3 a week average, 16 weeks of supply",
+      "state": "Open",
+      "closed": false
+     }
+    ]
+   },
+   "awaiting": [],
+   "suggested": [],
+   "pending": [],
+   "roles": [
+    {
+     "proposal": "SHP-1",
+     "action": "wait_for_transit",
+     "recommended_by": "Shelf Agent",
+     "authorised_by": "Standing policy (AP-6.1)",
+     "carried_out_by": "Trading Grid",
+     "state": "Executed"
+    }
+   ],
+   "outcome": {
+    "as_of": "2026-10-26 17:32 ET",
+    "recommendations": {},
+    "orders": {},
+    "waits": [
+     "114"
+    ],
+    "refilled": [],
+    "violations": [],
+    "synthetic": "Store 114’s purchase order, ship notice, receipt and next report are recorded; any other order is synthetic, from src/shelf.js."
+   },
+   "trace": [
+    {
+     "n": 1,
+     "clock": "2026-10-26 17:30 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Session branched from the recorded world",
+     "detail": {
+      "at": "2026-10-26 17:30 ET",
+      "hidden": "Every recorded record after this time",
+      "changes": [
+       {
+        "field": "moment",
+        "from": "2026-10-26 08:07 ET",
+        "to": "2026-10-26 17:30 ET"
+       }
+      ]
+     }
+    },
+    {
+     "n": 2,
+     "clock": "2026-10-26 17:30 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "2 stores to work",
+     "detail": {
+      "rows": [
+       "114: 12 sold, 0 on hand, 12 a week average, 0 weeks of supply; ASN-451207-1 in transit",
+       "207: 3 sold, 48 on hand, 3 a week average, 16 weeks of supply"
+      ]
+     }
+    },
+    {
+     "n": 3,
+     "clock": "2026-10-26 17:30 ET",
+     "actor": "Shelf Agent",
+     "type": "tool",
+     "what": "Read read_policy",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 4,
+     "clock": "2026-10-26 17:30 ET",
+     "actor": "Shelf Agent",
+     "type": "tool",
+     "what": "Read read_stores",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 5,
+     "clock": "2026-10-26 17:30 ET",
+     "actor": "Shelf Agent",
+     "type": "tool",
+     "what": "Read read_queue",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 6,
+     "clock": "2026-10-26 17:30 ET",
+     "actor": "Shelf Agent",
+     "type": "tool",
+     "what": "Read read_store",
+     "detail": {
+      "args": {
+       "record": "114"
+      }
+     }
+    },
+    {
+     "n": 7,
+     "clock": "2026-10-26 17:30 ET",
+     "actor": "Shelf Agent",
+     "type": "ai",
+     "what": "Proposed: Record that the store waits for goods already in transit; nothing is sent",
+     "detail": {
+      "proposal": "SHP-1",
+      "args": {
+       "record": "114"
+      },
+      "rationale": "Store 114 has an empty shelf (0 on hand) but has goods in transit (ASN-451207-1), so under AP-6.1 it should wait for transit.",
+      "alternatives": [
+       "recommend_order",
+       "recommend_transfer"
+      ],
+      "needs": "policy"
+     }
+    },
+    {
+     "n": 8,
+     "clock": "2026-10-26 17:32 ET",
+     "actor": "Trading Grid",
+     "type": "external",
+     "what": "Executed: Record that the store waits for goods already in transit; nothing is sent",
+     "detail": {
+      "proposal": "SHP-1",
+      "response": "Store 114 waits for the goods in transit; nothing sent"
+     }
+    },
+    {
+     "n": 9,
+     "clock": "2026-10-26 17:32 ET",
+     "actor": "Shelf Agent",
+     "type": "tool",
+     "what": "Read read_queue",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 10,
+     "clock": "2026-10-26 17:32 ET",
+     "actor": "Shelf Agent",
+     "type": "ai",
+     "what": "Shelf Agent said",
+     "detail": {
+      "text": "Store 114 has an empty shelf (0 on hand) with goods in transit (ASN-451207-1), so I recorded that it waits for transit."
+     }
+    }
+   ],
+   "overhead": {
+    "model_calls": 5,
+    "tool_calls": 6,
+    "ms": 6667,
+    "model_routes": {
+     "primary · gemini-3.5-flash-lite": 5
+    }
+   }
+  }
+ }
+}

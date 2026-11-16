@@ -1,0 +1,1582 @@
+{
+ "agent": "Claim Agent",
+ "tool": "claim_replay",
+ "args": {
+  "variation": "december_28"
+ },
+ "job": "JOB-2aaf0d32b1d0",
+ "status": "finished",
+ "started": "2026-11-16T18:25:53.749Z",
+ "finished": "2026-11-16T18:29:00.029Z",
+ "trial": "CL-0001",
+ "baseline_session": "CL-086b13e6ac",
+ "agent_session": "CL-4636bf3fda",
+ "baseline_outcome": {
+  "as_of": "2026-12-28 10:06 ET",
+  "cases": [
+   {
+    "case": "DC-41102",
+    "charge": "SH01",
+    "amount": 96.8,
+    "state": "Accepted"
+   },
+   {
+    "case": "DC-41118",
+    "charge": "SH01",
+    "amount": 96.8,
+    "state": "Accepted"
+   },
+   {
+    "case": "DC-41131",
+    "charge": "SH01",
+    "amount": 96.8,
+    "state": "Accepted"
+   }
+  ],
+  "disputed": [],
+  "accepted": [
+   "DC-41102",
+   "DC-41118",
+   "DC-41131"
+  ],
+  "carrier_claims": [],
+  "recovered_and_matched": 0,
+  "reversed_not_yet_repaid": 0,
+  "accepted_amount": 290.4,
+  "evidence_requested": [],
+  "violations": [],
+  "synthetic": "Kinross and Lakeline answers, and Northfield decisions with no recorded decision, are synthetic from the rules in src/claim.js; DC-40877’s decision and repayment are recorded records revealed at their time."
+ },
+ "agent_status": "done",
+ "agent_outcome": {
+  "as_of": "2027-01-09 11:44 ET",
+  "cases": [
+   {
+    "case": "DC-41102",
+    "charge": "SH01",
+    "amount": 96.8,
+    "state": "Repayment matched"
+   },
+   {
+    "case": "DC-41118",
+    "charge": "SH01",
+    "amount": 96.8,
+    "state": "Repayment matched"
+   },
+   {
+    "case": "DC-41131",
+    "charge": "SH01",
+    "amount": 96.8,
+    "state": "Accepted"
+   }
+  ],
+  "disputed": [
+   "DC-41102",
+   "DC-41118"
+  ],
+  "accepted": [
+   "DC-41131"
+  ],
+  "carrier_claims": [],
+  "recovered_and_matched": 193.6,
+  "reversed_not_yet_repaid": 0,
+  "accepted_amount": 96.8,
+  "evidence_requested": [
+   "DC-41102 proof_of_delivery from Lakeline Freight: Received",
+   "DC-41102 load_scan from Kinross: Received",
+   "DC-41118 proof_of_delivery from Lakeline Freight: Received",
+   "DC-41118 load_tally from Kinross: Received"
+  ],
+  "violations": [],
+  "synthetic": "Kinross and Lakeline answers, and Northfield decisions with no recorded decision, are synthetic from the rules in src/claim.js; DC-40877’s decision and repayment are recorded records revealed at their time."
+ },
+ "agent_overhead": {
+  "model_calls": 32,
+  "tool_calls": 26,
+  "ms": 185568
+ },
+ "automation": {
+  "same_steps": [
+   "accept_charge DC-41131"
+  ],
+  "baseline_only": [
+   "accept_charge DC-41102",
+   "accept_charge DC-41118"
+  ],
+  "agent_only": [
+   "request_evidence DC-41102",
+   "request_evidence DC-41102",
+   "request_evidence DC-41118",
+   "request_evidence DC-41118",
+   "submit_dispute DC-41102",
+   "submit_dispute DC-41118",
+   "match_repayment DC-41102",
+   "match_repayment DC-41118"
+  ]
+ },
+ "replay_answer": {
+  "trial": "CL-0001",
+  "changes": [
+   {
+    "field": "moment",
+    "from": "2026-12-01 09:00 ET",
+    "to": "2026-12-28 10:00 ET"
+   }
+  ],
+  "evidence_cutoff": "2026-12-28 10:00 ET",
+  "baseline": {
+   "session": "CL-086b13e6ac",
+   "outcome": {
+    "as_of": "2026-12-28 10:06 ET",
+    "cases": [
+     {
+      "case": "DC-41102",
+      "charge": "SH01",
+      "amount": 96.8,
+      "state": "Accepted"
+     },
+     {
+      "case": "DC-41118",
+      "charge": "SH01",
+      "amount": 96.8,
+      "state": "Accepted"
+     },
+     {
+      "case": "DC-41131",
+      "charge": "SH01",
+      "amount": 96.8,
+      "state": "Accepted"
+     }
+    ],
+    "disputed": [],
+    "accepted": [
+     "DC-41102",
+     "DC-41118",
+     "DC-41131"
+    ],
+    "carrier_claims": [],
+    "recovered_and_matched": 0,
+    "reversed_not_yet_repaid": 0,
+    "accepted_amount": 290.4,
+    "evidence_requested": [],
+    "violations": [],
+    "synthetic": "Kinross and Lakeline answers, and Northfield decisions with no recorded decision, are synthetic from the rules in src/claim.js; DC-40877’s decision and repayment are recorded records revealed at their time."
+   },
+   "trace": [
+    "1. 10:00 Trading Grid [System] Session branched from the recorded world",
+    "2. 10:00 Rule engine [Fixed rule] 3 open deductions to work",
+    "3. 10:00 Baseline [Fixed rule] Proposed: Accept the charge (no dispute) {\"record\":\"DC-41102\"}",
+    "4. 10:01 Test approver (replay) [Human approval] Approved CLP-1: Accept the charge (no dispute) {\"record\":\"DC-41102\"}",
+    "5. 10:02 Supplier ERP (deduction item) [External confirmation] Executed: Accept the charge (no dispute) · SH01 $96.80 on DC-41102 accepted in the Supplier ERP",
+    "6. 10:02 Baseline [Fixed rule] Proposed: Accept the charge (no dispute) {\"record\":\"DC-41118\"}",
+    "7. 10:03 Test approver (replay) [Human approval] Approved CLP-2: Accept the charge (no dispute) {\"record\":\"DC-41118\"}",
+    "8. 10:04 Supplier ERP (deduction item) [External confirmation] Executed: Accept the charge (no dispute) · SH01 $96.80 on DC-41118 accepted in the Supplier ERP",
+    "9. 10:04 Baseline [Fixed rule] Proposed: Accept the charge (no dispute) {\"record\":\"DC-41131\"}",
+    "10. 10:05 Test approver (replay) [Human approval] Approved CLP-3: Accept the charge (no dispute) {\"record\":\"DC-41131\"}",
+    "11. 10:06 Supplier ERP (deduction item) [External confirmation] Executed: Accept the charge (no dispute) · SH01 $96.80 on DC-41131 accepted in the Supplier ERP"
+   ]
+  },
+  "agent": {
+   "session": "CL-4636bf3fda",
+   "status": "done",
+   "outcome": {
+    "as_of": "2027-01-09 11:44 ET",
+    "cases": [
+     {
+      "case": "DC-41102",
+      "charge": "SH01",
+      "amount": 96.8,
+      "state": "Repayment matched"
+     },
+     {
+      "case": "DC-41118",
+      "charge": "SH01",
+      "amount": 96.8,
+      "state": "Repayment matched"
+     },
+     {
+      "case": "DC-41131",
+      "charge": "SH01",
+      "amount": 96.8,
+      "state": "Accepted"
+     }
+    ],
+    "disputed": [
+     "DC-41102",
+     "DC-41118"
+    ],
+    "accepted": [
+     "DC-41131"
+    ],
+    "carrier_claims": [],
+    "recovered_and_matched": 193.6,
+    "reversed_not_yet_repaid": 0,
+    "accepted_amount": 96.8,
+    "evidence_requested": [
+     "DC-41102 proof_of_delivery from Lakeline Freight: Received",
+     "DC-41102 load_scan from Kinross: Received",
+     "DC-41118 proof_of_delivery from Lakeline Freight: Received",
+     "DC-41118 load_tally from Kinross: Received"
+    ],
+    "violations": [],
+    "synthetic": "Kinross and Lakeline answers, and Northfield decisions with no recorded decision, are synthetic from the rules in src/claim.js; DC-40877’s decision and repayment are recorded records revealed at their time."
+   },
+   "overhead": {
+    "model_calls": 32,
+    "tool_calls": 26,
+    "ms": 185568
+   },
+   "trace": [
+    "1. 10:00 Trading Grid [System] Session branched from the recorded world",
+    "2. 10:00 Rule engine [Fixed rule] 3 open deductions to work",
+    "7. 10:00 Claim Agent [AI judgment] Proposed: Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case {\"evidence\":\"proof_of_delivery\",\"record\":\"DC-41102\"} · why: Proof of delivery is held by Lakeline Freight and needed under NF-7.4 for dispute evidence pack.",
+    "8. 10:00 Claim Agent [AI judgment] Proposed: Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case {\"evidence\":\"load_scan\",\"record\":\"DC-41102\"} · why: Load scan by SSCC is held in the Kinross warehouse system and required under NF-7.4.",
+    "9. 10:00 Claim Agent [AI judgment] Proposed: Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case {\"record\":\"DC-41118\",\"evidence\":\"proof_of_delivery\"} · why: Proof of delivery is held by Lakeline Freight and needed under NF-7.4.",
+    "10. 10:00 Claim Agent [AI judgment] Proposed: Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case {\"record\":\"DC-41118\",\"evidence\":\"load_tally\"} · why: Load tally by SSCC is held in the Kinross warehouse system and required under NF-7.4.",
+    "11. 10:00 Claim Agent [AI judgment] Proposed: Accept the charge (no dispute) {\"record\":\"DC-41131\"} · why: No load scan or tally exists anywhere for DC-41131, so a dispute would not be reviewed and incurs ID01 $150 fee per NF-7.5.",
+    "12. 10:00 Claim Agent [AI judgment] Claim Agent said",
+    "13. 10:01 Test approver (replay) [Human approval] Approved CLP-1: Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case {\"evidence\":\"proof_of_delivery\",\"record\":\"DC-41102\"}",
+    "14. 10:03 Kinross or Lakeline Freight (task) [External confirmation] Executed: Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case · Request sent to Lakeline Freight for the proof of delivery",
+    "15. 10:04 Test approver (replay) [Human approval] Approved CLP-2: Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case {\"evidence\":\"load_scan\",\"record\":\"DC-41102\"}",
+    "16. 10:06 Kinross or Lakeline Freight (task) [External confirmation] Executed: Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case · Request sent to Kinross for the load scan by sscc",
+    "17. 10:07 Test approver (replay) [Human approval] Approved CLP-3: Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case {\"record\":\"DC-41118\",\"evidence\":\"proof_of_delivery\"}",
+    "18. 10:09 Kinross or Lakeline Freight (task) [External confirmation] Executed: Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case · Request sent to Lakeline Freight for the proof of delivery",
+    "19. 10:10 Test approver (replay) [Human approval] Approved CLP-4: Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case {\"record\":\"DC-41118\",\"evidence\":\"load_tally\"}",
+    "20. 10:12 Kinross or Lakeline Freight (task) [External confirmation] Executed: Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case · Request sent to Kinross for the load tally by sscc",
+    "21. 10:13 Test approver (replay) [Human approval] Approved CLP-5: Accept the charge (no dispute) {\"record\":\"DC-41131\"}",
+    "22. 10:14 Supplier ERP (deduction item) [External confirmation] Executed: Accept the charge (no dispute) · SH01 $96.80 on DC-41131 accepted in the Supplier ERP",
+    "24. 10:14 Claim Agent [AI judgment] Claim Agent said",
+    "25. 10:46 Kinross (synthetic) [External confirmation] Kinross sent the load scan by sscc for NR-46229; attached to DC-41102",
+    "27. 10:46 Claim Agent [AI judgment] Claim Agent said",
+    "28. 10:52 Kinross (synthetic) [External confirmation] Kinross sent the load tally by sscc for NR-46237; attached to DC-41118",
+    "30. 10:52 Claim Agent [AI judgment] Claim Agent said",
+    "31. 11:33 Lakeline Freight (synthetic) [External confirmation] Lakeline Freight sent the proof of delivery for NR-46229; attached to DC-41102",
+    "33. 11:33 Claim Agent [AI judgment] Proposed: Dispute the charge in Northfield’s deduction case with the NF-7.4 evidence pack {\"record\":\"DC-41102\"} · why: DC-41102 has a complete NF-7.4 evidence pack (bill of lading with seal, proof of delivery, and load scan by SSCC).",
+    "34. 11:33 Claim Agent [AI judgment] Claim Agent said",
+    "35. 11:34 Test approver (replay) [Human approval] Approved CLP-6: Dispute the charge in Northfield’s deduction case with the NF-7.4 evidence pack {\"record\":\"DC-41102\"}",
+    "36. 11:37 Northfield deduction case [External confirmation] Executed: Dispute the charge in Northfield’s deduction case with the NF-7.4 evidence pack · Dispute of SH01 $96.80 submitted to DC-41102 with Bill of lading with seal, Proof of delivery, Load scan by SSCC",
+    "39. 11:37 Claim Agent [AI judgment] Claim Agent said",
+    "40. 11:39 Lakeline Freight (synthetic) [External confirmation] Lakeline Freight sent the proof of delivery for NR-46237; attached to DC-41118",
+    "42. 11:39 Claim Agent [AI judgment] Proposed: Dispute the charge in Northfield’s deduction case with the NF-7.4 evidence pack {\"record\":\"DC-41118\"} · why: DC-41118 has a complete NF-7.4 evidence pack (bill of lading with seal, proof of delivery, and load tally by SSCC per NF-5.3).",
+    "43. 11:39 Claim Agent [AI judgment] Claim Agent said",
+    "44. 11:40 Test approver (replay) [Human approval] Approved CLP-7: Dispute the charge in Northfield’s deduction case with the NF-7.4 evidence pack {\"record\":\"DC-41118\"}",
+    "45. 11:43 Northfield deduction case [External confirmation] Executed: Dispute the charge in Northfield’s deduction case with the NF-7.4 evidence pack · Dispute of SH01 $96.80 submitted to DC-41118 with Bill of lading with seal, Proof of delivery, Load tally by SSCC",
+    "47. 11:43 Claim Agent [AI judgment] Claim Agent said",
+    "48. 11:37 Northfield (synthetic) [External confirmation] Jordan Ellis reversed SH01 $96.80 on DC-41102",
+    "50. 11:37 Claim Agent [AI judgment] Claim Agent said",
+    "51. 11:43 Northfield (synthetic) [External confirmation] Jordan Ellis reversed SH01 $96.80 on DC-41118",
+    "52. 11:43 Claim Agent [AI judgment] Claim Agent said",
+    "53. 11:37 Northfield remittance (synthetic) [External confirmation] Remittance PMT-S4636 repays $96.80 referencing DM-55640",
+    "54. 11:37 Claim Agent [AI judgment] Proposed: Match a repayment on Northfield’s remittance to the deduction in receivables and close the case {\"record\":\"DC-41102\"} · why: Remittance PMT-S4636 repays $96.80 referencing DM-55640 for DC-41102.",
+    "55. 11:38 Supplier ERP (receivables) [External confirmation] Executed: Match a repayment on Northfield’s remittance to the deduction in receivables and close the case · PMT-S4636 matched to DM-55640 in receivables; DC-41102 closed",
+    "57. 11:38 Claim Agent [AI judgment] Claim Agent said",
+    "58. 11:43 Northfield remittance (synthetic) [External confirmation] Remittance PMT-S4636 repays $96.80 referencing DM-55655",
+    "59. 11:43 Claim Agent [AI judgment] Proposed: Match a repayment on Northfield’s remittance to the deduction in receivables and close the case {\"record\":\"DC-41118\"} · why: Remittance PMT-S4636 repays $96.80 referencing DM-55655 for DC-41118.",
+    "60. 11:44 Supplier ERP (receivables) [External confirmation] Executed: Match a repayment on Northfield’s remittance to the deduction in receivables and close the case · PMT-S4636 matched to DM-55655 in receivables; DC-41118 closed",
+    "62. 11:44 Claim Agent [AI judgment] Claim Agent said"
+   ]
+  },
+  "automation": {
+   "same_steps": [
+    "accept_charge DC-41131"
+   ],
+   "baseline_only": [
+    "accept_charge DC-41102",
+    "accept_charge DC-41118"
+   ],
+   "agent_only": [
+    "request_evidence DC-41102",
+    "request_evidence DC-41102",
+    "request_evidence DC-41118",
+    "request_evidence DC-41118",
+    "submit_dispute DC-41102",
+    "submit_dispute DC-41118",
+    "match_repayment DC-41102",
+    "match_repayment DC-41118"
+   ]
+  }
+ },
+ "session_views": {
+  "baseline": {
+   "session": "CL-086b13e6ac",
+   "agent": "Claim Agent",
+   "label": "Replay · baseline",
+   "clock": "2026-12-28 10:06 ET",
+   "branch_at": "2026-12-28 10:00 ET",
+   "status": "idle",
+   "variation": [
+    {
+     "field": "moment",
+     "from": "2026-12-01 09:00 ET",
+     "to": "2026-12-28 10:00 ET"
+    }
+   ],
+   "facts": {
+    "moment": "2026-12-28 10:00 ET",
+    "kinross_reachable": "yes",
+    "lakeline_reachable": "yes",
+    "northfield_decision": "by_evidence",
+    "kinross_note": ""
+   },
+   "queue": {
+    "as_of": "2026-12-28 10:06 ET",
+    "rows": [
+     {
+      "id": "DC-41102",
+      "record": "DC-41102",
+      "po": "NR-46229",
+      "charge": "SH01",
+      "amount": 96.8,
+      "what": "SH01 $96.80 withheld on NR-46229; proof of delivery held by Lakeline Freight, load scan by sscc held by Kinross",
+      "state": "Accepted",
+      "closed": true,
+      "dispute_window": "56 days left",
+      "nf_7_4_complete": false,
+      "evidence": {
+       "Bill of lading with seal": "In the case",
+       "Proof of delivery": "Held by Lakeline Freight",
+       "Load scan by SSCC": "Held by Kinross warehouse system",
+       "Load tally by SSCC": "Not found"
+      }
+     },
+     {
+      "id": "DC-41118",
+      "record": "DC-41118",
+      "po": "NR-46237",
+      "charge": "SH01",
+      "amount": 96.8,
+      "what": "SH01 $96.80 withheld on NR-46237; proof of delivery held by Lakeline Freight, load tally by sscc held by Kinross",
+      "state": "Accepted",
+      "closed": true,
+      "dispute_window": "57 days left",
+      "nf_7_4_complete": false,
+      "evidence": {
+       "Bill of lading with seal": "In the case",
+       "Proof of delivery": "Held by Lakeline Freight",
+       "Load scan by SSCC": "Not found",
+       "Load tally by SSCC": "Held by Kinross warehouse system"
+      }
+     },
+     {
+      "id": "DC-41131",
+      "record": "DC-41131",
+      "po": "NR-46244",
+      "charge": "SH01",
+      "amount": 96.8,
+      "what": "SH01 $96.80 withheld on NR-46244; proof of delivery held by Lakeline Freight",
+      "state": "Accepted",
+      "closed": true,
+      "dispute_window": "58 days left",
+      "nf_7_4_complete": false,
+      "evidence": {
+       "Bill of lading with seal": "In the case",
+       "Proof of delivery": "Held by Lakeline Freight",
+       "Load scan by SSCC": "Not found",
+       "Load tally by SSCC": "Not found"
+      }
+     }
+    ],
+    "open": 0
+   },
+   "awaiting": [],
+   "suggested": [],
+   "pending": [],
+   "roles": [
+    {
+     "proposal": "CLP-1",
+     "action": "accept_charge",
+     "recommended_by": "Baseline",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Supplier ERP (deduction item)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CLP-2",
+     "action": "accept_charge",
+     "recommended_by": "Baseline",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Supplier ERP (deduction item)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CLP-3",
+     "action": "accept_charge",
+     "recommended_by": "Baseline",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Supplier ERP (deduction item)",
+     "state": "Executed"
+    }
+   ],
+   "outcome": {
+    "as_of": "2026-12-28 10:06 ET",
+    "cases": [
+     {
+      "case": "DC-41102",
+      "charge": "SH01",
+      "amount": 96.8,
+      "state": "Accepted"
+     },
+     {
+      "case": "DC-41118",
+      "charge": "SH01",
+      "amount": 96.8,
+      "state": "Accepted"
+     },
+     {
+      "case": "DC-41131",
+      "charge": "SH01",
+      "amount": 96.8,
+      "state": "Accepted"
+     }
+    ],
+    "disputed": [],
+    "accepted": [
+     "DC-41102",
+     "DC-41118",
+     "DC-41131"
+    ],
+    "carrier_claims": [],
+    "recovered_and_matched": 0,
+    "reversed_not_yet_repaid": 0,
+    "accepted_amount": 290.4,
+    "evidence_requested": [],
+    "violations": [],
+    "synthetic": "Kinross and Lakeline answers, and Northfield decisions with no recorded decision, are synthetic from the rules in src/claim.js; DC-40877’s decision and repayment are recorded records revealed at their time."
+   },
+   "trace": [
+    {
+     "n": 1,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Session branched from the recorded world",
+     "detail": {
+      "at": "2026-12-28 10:00 ET",
+      "hidden": "Every recorded record after this time",
+      "changes": [
+       {
+        "field": "moment",
+        "from": "2026-12-01 09:00 ET",
+        "to": "2026-12-28 10:00 ET"
+       }
+      ]
+     }
+    },
+    {
+     "n": 2,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "3 open deductions to work",
+     "detail": {
+      "rows": [
+       "DC-41102: SH01 $96.80 withheld on NR-46229; proof of delivery held by Lakeline Freight, load scan by sscc held by Kinross",
+       "DC-41118: SH01 $96.80 withheld on NR-46237; proof of delivery held by Lakeline Freight, load tally by sscc held by Kinross",
+       "DC-41131: SH01 $96.80 withheld on NR-46244; proof of delivery held by Lakeline Freight"
+      ]
+     }
+    },
+    {
+     "n": 3,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Baseline",
+     "type": "rule",
+     "what": "Proposed: Accept the charge (no dispute)",
+     "detail": {
+      "proposal": "CLP-1",
+      "args": {
+       "record": "DC-41102"
+      },
+      "rationale": null,
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 4,
+     "clock": "2026-12-28 10:01 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CLP-1: Accept the charge (no dispute)",
+     "detail": {
+      "args": {
+       "record": "DC-41102"
+      }
+     }
+    },
+    {
+     "n": 5,
+     "clock": "2026-12-28 10:02 ET",
+     "actor": "Supplier ERP (deduction item)",
+     "type": "external",
+     "what": "Executed: Accept the charge (no dispute)",
+     "detail": {
+      "proposal": "CLP-1",
+      "response": "SH01 $96.80 on DC-41102 accepted in the Supplier ERP"
+     }
+    },
+    {
+     "n": 6,
+     "clock": "2026-12-28 10:02 ET",
+     "actor": "Baseline",
+     "type": "rule",
+     "what": "Proposed: Accept the charge (no dispute)",
+     "detail": {
+      "proposal": "CLP-2",
+      "args": {
+       "record": "DC-41118"
+      },
+      "rationale": null,
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 7,
+     "clock": "2026-12-28 10:03 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CLP-2: Accept the charge (no dispute)",
+     "detail": {
+      "args": {
+       "record": "DC-41118"
+      }
+     }
+    },
+    {
+     "n": 8,
+     "clock": "2026-12-28 10:04 ET",
+     "actor": "Supplier ERP (deduction item)",
+     "type": "external",
+     "what": "Executed: Accept the charge (no dispute)",
+     "detail": {
+      "proposal": "CLP-2",
+      "response": "SH01 $96.80 on DC-41118 accepted in the Supplier ERP"
+     }
+    },
+    {
+     "n": 9,
+     "clock": "2026-12-28 10:04 ET",
+     "actor": "Baseline",
+     "type": "rule",
+     "what": "Proposed: Accept the charge (no dispute)",
+     "detail": {
+      "proposal": "CLP-3",
+      "args": {
+       "record": "DC-41131"
+      },
+      "rationale": null,
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 10,
+     "clock": "2026-12-28 10:05 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CLP-3: Accept the charge (no dispute)",
+     "detail": {
+      "args": {
+       "record": "DC-41131"
+      }
+     }
+    },
+    {
+     "n": 11,
+     "clock": "2026-12-28 10:06 ET",
+     "actor": "Supplier ERP (deduction item)",
+     "type": "external",
+     "what": "Executed: Accept the charge (no dispute)",
+     "detail": {
+      "proposal": "CLP-3",
+      "response": "SH01 $96.80 on DC-41131 accepted in the Supplier ERP"
+     }
+    }
+   ],
+   "overhead": {
+    "model_calls": 0,
+    "tool_calls": 0,
+    "ms": 0,
+    "model_routes": {}
+   }
+  },
+  "agent": {
+   "session": "CL-4636bf3fda",
+   "agent": "Claim Agent",
+   "label": "Replay · Claim Agent",
+   "clock": "2027-01-09 11:44 ET",
+   "branch_at": "2026-12-28 10:00 ET",
+   "status": "done",
+   "variation": [
+    {
+     "field": "moment",
+     "from": "2026-12-01 09:00 ET",
+     "to": "2026-12-28 10:00 ET"
+    }
+   ],
+   "facts": {
+    "moment": "2026-12-28 10:00 ET",
+    "kinross_reachable": "yes",
+    "lakeline_reachable": "yes",
+    "northfield_decision": "by_evidence",
+    "kinross_note": ""
+   },
+   "queue": {
+    "as_of": "2027-01-09 11:44 ET",
+    "rows": [
+     {
+      "id": "DC-41102",
+      "record": "DC-41102",
+      "po": "NR-46229",
+      "charge": "SH01",
+      "amount": 96.8,
+      "what": "SH01 $96.80 withheld on NR-46229; proof complete in the case",
+      "state": "Repayment matched",
+      "closed": true,
+      "dispute_window": "56 days left",
+      "nf_7_4_complete": true,
+      "evidence": {
+       "Bill of lading with seal": "In the case",
+       "Proof of delivery": "In the case",
+       "Load scan by SSCC": "In the case",
+       "Load tally by SSCC": "Not found"
+      }
+     },
+     {
+      "id": "DC-41118",
+      "record": "DC-41118",
+      "po": "NR-46237",
+      "charge": "SH01",
+      "amount": 96.8,
+      "what": "SH01 $96.80 withheld on NR-46237; proof complete in the case",
+      "state": "Repayment matched",
+      "closed": true,
+      "dispute_window": "57 days left",
+      "nf_7_4_complete": true,
+      "evidence": {
+       "Bill of lading with seal": "In the case",
+       "Proof of delivery": "In the case",
+       "Load scan by SSCC": "Not found",
+       "Load tally by SSCC": "In the case"
+      }
+     },
+     {
+      "id": "DC-41131",
+      "record": "DC-41131",
+      "po": "NR-46244",
+      "charge": "SH01",
+      "amount": 96.8,
+      "what": "SH01 $96.80 withheld on NR-46244; proof of delivery held by Lakeline Freight",
+      "state": "Accepted",
+      "closed": true,
+      "dispute_window": "58 days left",
+      "nf_7_4_complete": false,
+      "evidence": {
+       "Bill of lading with seal": "In the case",
+       "Proof of delivery": "Held by Lakeline Freight",
+       "Load scan by SSCC": "Not found",
+       "Load tally by SSCC": "Not found"
+      }
+     }
+    ],
+    "open": 0
+   },
+   "awaiting": [],
+   "suggested": [],
+   "pending": [],
+   "roles": [
+    {
+     "proposal": "CLP-1",
+     "action": "request_evidence",
+     "recommended_by": "Claim Agent",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Kinross or Lakeline Freight (task)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CLP-2",
+     "action": "request_evidence",
+     "recommended_by": "Claim Agent",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Kinross or Lakeline Freight (task)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CLP-3",
+     "action": "request_evidence",
+     "recommended_by": "Claim Agent",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Kinross or Lakeline Freight (task)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CLP-4",
+     "action": "request_evidence",
+     "recommended_by": "Claim Agent",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Kinross or Lakeline Freight (task)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CLP-5",
+     "action": "accept_charge",
+     "recommended_by": "Claim Agent",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Supplier ERP (deduction item)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CLP-6",
+     "action": "submit_dispute",
+     "recommended_by": "Claim Agent",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Northfield deduction case",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CLP-7",
+     "action": "submit_dispute",
+     "recommended_by": "Claim Agent",
+     "authorised_by": "Test approver (replay)",
+     "carried_out_by": "Northfield deduction case",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CLP-8",
+     "action": "match_repayment",
+     "recommended_by": "Claim Agent",
+     "authorised_by": "Standing policy (NF-7.6)",
+     "carried_out_by": "Supplier ERP (receivables)",
+     "state": "Executed"
+    },
+    {
+     "proposal": "CLP-9",
+     "action": "match_repayment",
+     "recommended_by": "Claim Agent",
+     "authorised_by": "Standing policy (NF-7.6)",
+     "carried_out_by": "Supplier ERP (receivables)",
+     "state": "Executed"
+    }
+   ],
+   "outcome": {
+    "as_of": "2027-01-09 11:44 ET",
+    "cases": [
+     {
+      "case": "DC-41102",
+      "charge": "SH01",
+      "amount": 96.8,
+      "state": "Repayment matched"
+     },
+     {
+      "case": "DC-41118",
+      "charge": "SH01",
+      "amount": 96.8,
+      "state": "Repayment matched"
+     },
+     {
+      "case": "DC-41131",
+      "charge": "SH01",
+      "amount": 96.8,
+      "state": "Accepted"
+     }
+    ],
+    "disputed": [
+     "DC-41102",
+     "DC-41118"
+    ],
+    "accepted": [
+     "DC-41131"
+    ],
+    "carrier_claims": [],
+    "recovered_and_matched": 193.6,
+    "reversed_not_yet_repaid": 0,
+    "accepted_amount": 96.8,
+    "evidence_requested": [
+     "DC-41102 proof_of_delivery from Lakeline Freight: Received",
+     "DC-41102 load_scan from Kinross: Received",
+     "DC-41118 proof_of_delivery from Lakeline Freight: Received",
+     "DC-41118 load_tally from Kinross: Received"
+    ],
+    "violations": [],
+    "synthetic": "Kinross and Lakeline answers, and Northfield decisions with no recorded decision, are synthetic from the rules in src/claim.js; DC-40877’s decision and repayment are recorded records revealed at their time."
+   },
+   "trace": [
+    {
+     "n": 1,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Session branched from the recorded world",
+     "detail": {
+      "at": "2026-12-28 10:00 ET",
+      "hidden": "Every recorded record after this time",
+      "changes": [
+       {
+        "field": "moment",
+        "from": "2026-12-01 09:00 ET",
+        "to": "2026-12-28 10:00 ET"
+       }
+      ]
+     }
+    },
+    {
+     "n": 2,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "3 open deductions to work",
+     "detail": {
+      "rows": [
+       "DC-41102: SH01 $96.80 withheld on NR-46229; proof of delivery held by Lakeline Freight, load scan by sscc held by Kinross",
+       "DC-41118: SH01 $96.80 withheld on NR-46237; proof of delivery held by Lakeline Freight, load tally by sscc held by Kinross",
+       "DC-41131: SH01 $96.80 withheld on NR-46244; proof of delivery held by Lakeline Freight"
+      ]
+     }
+    },
+    {
+     "n": 3,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_queue",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 4,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_case",
+     "detail": {
+      "args": {
+       "record": "DC-41102"
+      }
+     }
+    },
+    {
+     "n": 5,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_case",
+     "detail": {
+      "args": {
+       "record": "DC-41118"
+      }
+     }
+    },
+    {
+     "n": 6,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_case",
+     "detail": {
+      "args": {
+       "record": "DC-41131"
+      }
+     }
+    },
+    {
+     "n": 7,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Proposed: Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case",
+     "detail": {
+      "proposal": "CLP-1",
+      "args": {
+       "evidence": "proof_of_delivery",
+       "record": "DC-41102"
+      },
+      "rationale": "Proof of delivery is held by Lakeline Freight and needed under NF-7.4 for dispute evidence pack.",
+      "alternatives": [
+       "accept_charge"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 8,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Proposed: Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case",
+     "detail": {
+      "proposal": "CLP-2",
+      "args": {
+       "evidence": "load_scan",
+       "record": "DC-41102"
+      },
+      "rationale": "Load scan by SSCC is held in the Kinross warehouse system and required under NF-7.4.",
+      "alternatives": [
+       "accept_charge"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 9,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Proposed: Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case",
+     "detail": {
+      "proposal": "CLP-3",
+      "args": {
+       "record": "DC-41118",
+       "evidence": "proof_of_delivery"
+      },
+      "rationale": "Proof of delivery is held by Lakeline Freight and needed under NF-7.4.",
+      "alternatives": [
+       "accept_charge"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 10,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Proposed: Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case",
+     "detail": {
+      "proposal": "CLP-4",
+      "args": {
+       "record": "DC-41118",
+       "evidence": "load_tally"
+      },
+      "rationale": "Load tally by SSCC is held in the Kinross warehouse system and required under NF-7.4.",
+      "alternatives": [
+       "accept_charge"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 11,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Proposed: Accept the charge (no dispute)",
+     "detail": {
+      "proposal": "CLP-5",
+      "args": {
+       "record": "DC-41131"
+      },
+      "rationale": "No load scan or tally exists anywhere for DC-41131, so a dispute would not be reviewed and incurs ID01 $150 fee per NF-7.5.",
+      "alternatives": [
+       "file_carrier_claim"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 12,
+     "clock": "2026-12-28 10:00 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Claim Agent said",
+     "detail": {
+      "text": "I have proposed requesting the missing evidence pieces from Lakeline Freight and Kinross warehouse for DC-41102 and DC-41118, and accepting the charge on DC-41131 because neither a load scan nor a load tally exists anywhere (which would trigger an unreviewed dispute fee ID01 of $150 under NF-7.5). All proposals are currently awaiting Priya Raman's approval."
+     }
+    },
+    {
+     "n": 13,
+     "clock": "2026-12-28 10:01 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CLP-1: Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case",
+     "detail": {
+      "args": {
+       "evidence": "proof_of_delivery",
+       "record": "DC-41102"
+      }
+     }
+    },
+    {
+     "n": 14,
+     "clock": "2026-12-28 10:03 ET",
+     "actor": "Kinross or Lakeline Freight (task)",
+     "type": "external",
+     "what": "Executed: Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case",
+     "detail": {
+      "proposal": "CLP-1",
+      "response": "Request sent to Lakeline Freight for the proof of delivery"
+     }
+    },
+    {
+     "n": 15,
+     "clock": "2026-12-28 10:04 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CLP-2: Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case",
+     "detail": {
+      "args": {
+       "evidence": "load_scan",
+       "record": "DC-41102"
+      }
+     }
+    },
+    {
+     "n": 16,
+     "clock": "2026-12-28 10:06 ET",
+     "actor": "Kinross or Lakeline Freight (task)",
+     "type": "external",
+     "what": "Executed: Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case",
+     "detail": {
+      "proposal": "CLP-2",
+      "response": "Request sent to Kinross for the load scan by sscc"
+     }
+    },
+    {
+     "n": 17,
+     "clock": "2026-12-28 10:07 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CLP-3: Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case",
+     "detail": {
+      "args": {
+       "record": "DC-41118",
+       "evidence": "proof_of_delivery"
+      }
+     }
+    },
+    {
+     "n": 18,
+     "clock": "2026-12-28 10:09 ET",
+     "actor": "Kinross or Lakeline Freight (task)",
+     "type": "external",
+     "what": "Executed: Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case",
+     "detail": {
+      "proposal": "CLP-3",
+      "response": "Request sent to Lakeline Freight for the proof of delivery"
+     }
+    },
+    {
+     "n": 19,
+     "clock": "2026-12-28 10:10 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CLP-4: Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case",
+     "detail": {
+      "args": {
+       "record": "DC-41118",
+       "evidence": "load_tally"
+      }
+     }
+    },
+    {
+     "n": 20,
+     "clock": "2026-12-28 10:12 ET",
+     "actor": "Kinross or Lakeline Freight (task)",
+     "type": "external",
+     "what": "Executed: Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case",
+     "detail": {
+      "proposal": "CLP-4",
+      "response": "Request sent to Kinross for the load tally by sscc"
+     }
+    },
+    {
+     "n": 21,
+     "clock": "2026-12-28 10:13 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CLP-5: Accept the charge (no dispute)",
+     "detail": {
+      "args": {
+       "record": "DC-41131"
+      }
+     }
+    },
+    {
+     "n": 22,
+     "clock": "2026-12-28 10:14 ET",
+     "actor": "Supplier ERP (deduction item)",
+     "type": "external",
+     "what": "Executed: Accept the charge (no dispute)",
+     "detail": {
+      "proposal": "CLP-5",
+      "response": "SH01 $96.80 on DC-41131 accepted in the Supplier ERP"
+     }
+    },
+    {
+     "n": 23,
+     "clock": "2026-12-28 10:14 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_queue",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 24,
+     "clock": "2026-12-28 10:14 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Claim Agent said",
+     "detail": {
+      "text": "I have accepted the charge on DC-41131 per policy, and the evidence requests for DC-41102 and DC-41118 are awaiting approval or processing. I am waiting for Priya Raman to approve the pending proposals and for the requested evidence to arrive."
+     }
+    },
+    {
+     "n": 25,
+     "clock": "2026-12-28 10:46 ET",
+     "actor": "Kinross (synthetic)",
+     "type": "external",
+     "what": "Kinross sent the load scan by sscc for NR-46229; attached to DC-41102",
+     "detail": {
+      "at": "2026-12-28 10:46 ET",
+      "synthetic": true
+     }
+    },
+    {
+     "n": 26,
+     "clock": "2026-12-28 10:46 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_case",
+     "detail": {
+      "args": {
+       "record": "DC-41102"
+      }
+     }
+    },
+    {
+     "n": 27,
+     "clock": "2026-12-28 10:46 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Claim Agent said",
+     "detail": {
+      "text": "The load scan by SSCC for DC-41102 has arrived and is attached to the case, but proof of delivery is still held by Lakeline Freight. I am waiting for the proof of delivery to arrive before assembling the NF-7.4 evidence pack to dispute DC-41102."
+     }
+    },
+    {
+     "n": 28,
+     "clock": "2026-12-28 10:52 ET",
+     "actor": "Kinross (synthetic)",
+     "type": "external",
+     "what": "Kinross sent the load tally by sscc for NR-46237; attached to DC-41118",
+     "detail": {
+      "at": "2026-12-28 10:52 ET",
+      "synthetic": true
+     }
+    },
+    {
+     "n": 29,
+     "clock": "2026-12-28 10:52 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_case",
+     "detail": {
+      "args": {
+       "record": "DC-41118"
+      }
+     }
+    },
+    {
+     "n": 30,
+     "clock": "2026-12-28 10:52 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Claim Agent said",
+     "detail": {
+      "text": "The load tally by SSCC for DC-41118 has arrived and is attached to the case, but proof of delivery is still held by Lakeline Freight. I am waiting for the proof of delivery to arrive before assembling the NF-7.4 evidence pack to dispute DC-41118."
+     }
+    },
+    {
+     "n": 31,
+     "clock": "2026-12-28 11:33 ET",
+     "actor": "Lakeline Freight (synthetic)",
+     "type": "external",
+     "what": "Lakeline Freight sent the proof of delivery for NR-46229; attached to DC-41102",
+     "detail": {
+      "at": "2026-12-28 11:33 ET",
+      "synthetic": true
+     }
+    },
+    {
+     "n": 32,
+     "clock": "2026-12-28 11:33 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_case",
+     "detail": {
+      "args": {
+       "record": "DC-41102"
+      }
+     }
+    },
+    {
+     "n": 33,
+     "clock": "2026-12-28 11:33 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Proposed: Dispute the charge in Northfield’s deduction case with the NF-7.4 evidence pack",
+     "detail": {
+      "proposal": "CLP-6",
+      "args": {
+       "record": "DC-41102"
+      },
+      "rationale": "DC-41102 has a complete NF-7.4 evidence pack (bill of lading with seal, proof of delivery, and load scan by SSCC).",
+      "alternatives": [
+       "accept_charge"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 34,
+     "clock": "2026-12-28 11:33 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Claim Agent said",
+     "detail": {
+      "text": "The proof of delivery for DC-41102 has arrived, completing the NF-7.4 evidence pack. I have proposed submitting the dispute for DC-41102, which is now awaiting Priya Raman's approval."
+     }
+    },
+    {
+     "n": 35,
+     "clock": "2026-12-28 11:34 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CLP-6: Dispute the charge in Northfield’s deduction case with the NF-7.4 evidence pack",
+     "detail": {
+      "args": {
+       "record": "DC-41102"
+      }
+     }
+    },
+    {
+     "n": 36,
+     "clock": "2026-12-28 11:37 ET",
+     "actor": "Northfield deduction case",
+     "type": "external",
+     "what": "Executed: Dispute the charge in Northfield’s deduction case with the NF-7.4 evidence pack",
+     "detail": {
+      "proposal": "CLP-6",
+      "response": "Dispute of SH01 $96.80 submitted to DC-41102 with Bill of lading with seal, Proof of delivery, Load scan by SSCC"
+     }
+    },
+    {
+     "n": 37,
+     "clock": "2026-12-28 11:37 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_case",
+     "detail": {
+      "args": {
+       "record": "DC-41118"
+      }
+     }
+    },
+    {
+     "n": 38,
+     "clock": "2026-12-28 11:37 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_proposals",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 39,
+     "clock": "2026-12-28 11:37 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Claim Agent said",
+     "detail": {
+      "text": "I have successfully disputed DC-41102 (with complete NF-7.4 evidence: bill of lading with seal, proof of delivery, and load scan by SSCC) and accepted DC-41131 (where no load scan or tally existed, avoiding an unreviewed dispute fee ID01 of $150). For DC-41118, the load tally by SSCC has arrived from Kinross and is attached, and the request for proof of delivery from Lakeline Freight is already pending. I am currently waiting for Lakeline Freight to send the proof of delivery for DC-41118."
+     }
+    },
+    {
+     "n": 40,
+     "clock": "2026-12-28 11:39 ET",
+     "actor": "Lakeline Freight (synthetic)",
+     "type": "external",
+     "what": "Lakeline Freight sent the proof of delivery for NR-46237; attached to DC-41118",
+     "detail": {
+      "at": "2026-12-28 11:39 ET",
+      "synthetic": true
+     }
+    },
+    {
+     "n": 41,
+     "clock": "2026-12-28 11:39 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_case",
+     "detail": {
+      "args": {
+       "record": "DC-41118"
+      }
+     }
+    },
+    {
+     "n": 42,
+     "clock": "2026-12-28 11:39 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Proposed: Dispute the charge in Northfield’s deduction case with the NF-7.4 evidence pack",
+     "detail": {
+      "proposal": "CLP-7",
+      "args": {
+       "record": "DC-41118"
+      },
+      "rationale": "DC-41118 has a complete NF-7.4 evidence pack (bill of lading with seal, proof of delivery, and load tally by SSCC per NF-5.3).",
+      "alternatives": [
+       "accept_charge"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 43,
+     "clock": "2026-12-28 11:39 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Claim Agent said",
+     "detail": {
+      "text": "The proof of delivery for DC-41118 has arrived, completing the NF-7.4 evidence pack alongside the bill of lading with seal and load tally by SSCC (accepted under NF-5.3). I have proposed submitting the dispute for DC-41118, which is now awaiting Priya Raman's approval."
+     }
+    },
+    {
+     "n": 44,
+     "clock": "2026-12-28 11:40 ET",
+     "actor": "Test approver (replay)",
+     "type": "human",
+     "what": "Approved CLP-7: Dispute the charge in Northfield’s deduction case with the NF-7.4 evidence pack",
+     "detail": {
+      "args": {
+       "record": "DC-41118"
+      }
+     }
+    },
+    {
+     "n": 45,
+     "clock": "2026-12-28 11:43 ET",
+     "actor": "Northfield deduction case",
+     "type": "external",
+     "what": "Executed: Dispute the charge in Northfield’s deduction case with the NF-7.4 evidence pack",
+     "detail": {
+      "proposal": "CLP-7",
+      "response": "Dispute of SH01 $96.80 submitted to DC-41118 with Bill of lading with seal, Proof of delivery, Load tally by SSCC"
+     }
+    },
+    {
+     "n": 46,
+     "clock": "2026-12-28 11:43 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_queue",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 47,
+     "clock": "2026-12-28 11:43 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Claim Agent said",
+     "detail": {
+      "text": "Both disputes have been submitted with complete NF-7.4 evidence packs (DC-41102 with load scan, DC-41118 with load tally), and DC-41131 has been accepted. I am now waiting for Northfield's reviewer to decide the disputes and issue repayment."
+     }
+    },
+    {
+     "n": 48,
+     "clock": "2026-12-30 11:37 ET",
+     "actor": "Northfield (synthetic)",
+     "type": "external",
+     "what": "Jordan Ellis reversed SH01 $96.80 on DC-41102",
+     "detail": {
+      "at": "2026-12-30 11:37 ET",
+      "synthetic": true
+     }
+    },
+    {
+     "n": 49,
+     "clock": "2026-12-30 11:37 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_case",
+     "detail": {
+      "args": {
+       "record": "DC-41102"
+      }
+     }
+    },
+    {
+     "n": 50,
+     "clock": "2026-12-30 11:37 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Claim Agent said",
+     "detail": {
+      "text": "Northfield's reviewer Jordan Ellis reversed the charge on DC-41102. As per instructions, a reversal is not money until the repayment arrives and is matched in Ashby's receivables. I am waiting for the repayment to arrive."
+     }
+    },
+    {
+     "n": 51,
+     "clock": "2026-12-30 11:43 ET",
+     "actor": "Northfield (synthetic)",
+     "type": "external",
+     "what": "Jordan Ellis reversed SH01 $96.80 on DC-41118",
+     "detail": {
+      "at": "2026-12-30 11:43 ET",
+      "synthetic": true
+     }
+    },
+    {
+     "n": 52,
+     "clock": "2026-12-30 11:43 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Claim Agent said",
+     "detail": {
+      "text": "Northfield's reviewer Jordan Ellis reversed the charge on DC-41118 as well. As a reversal is not money until the repayment arrives and is matched in Ashby's receivables, I am waiting for the repayments for both DC-41102 and DC-41118 to arrive."
+     }
+    },
+    {
+     "n": 53,
+     "clock": "2027-01-09 11:37 ET",
+     "actor": "Northfield remittance (synthetic)",
+     "type": "external",
+     "what": "Remittance PMT-S4636 repays $96.80 referencing DM-55640",
+     "detail": {
+      "at": "2027-01-09 11:37 ET",
+      "record": "PMT-S4636",
+      "synthetic": true
+     }
+    },
+    {
+     "n": 54,
+     "clock": "2027-01-09 11:37 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Proposed: Match a repayment on Northfield’s remittance to the deduction in receivables and close the case",
+     "detail": {
+      "proposal": "CLP-8",
+      "args": {
+       "record": "DC-41102"
+      },
+      "rationale": "Remittance PMT-S4636 repays $96.80 referencing DM-55640 for DC-41102.",
+      "alternatives": [
+       "accept_charge"
+      ],
+      "needs": "policy"
+     }
+    },
+    {
+     "n": 55,
+     "clock": "2027-01-09 11:38 ET",
+     "actor": "Supplier ERP (receivables)",
+     "type": "external",
+     "what": "Executed: Match a repayment on Northfield’s remittance to the deduction in receivables and close the case",
+     "detail": {
+      "proposal": "CLP-8",
+      "response": "PMT-S4636 matched to DM-55640 in receivables; DC-41102 closed"
+     }
+    },
+    {
+     "n": 56,
+     "clock": "2027-01-09 11:38 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_case",
+     "detail": {
+      "args": {
+       "record": "DC-41102"
+      }
+     }
+    },
+    {
+     "n": 57,
+     "clock": "2027-01-09 11:38 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Claim Agent said",
+     "detail": {
+      "text": "I have matched remittance PMT-S4636 to deduction DM-55640 for DC-41102 and closed the case. I am waiting for the repayment for DC-41118 to arrive in receivables."
+     }
+    },
+    {
+     "n": 58,
+     "clock": "2027-01-09 11:43 ET",
+     "actor": "Northfield remittance (synthetic)",
+     "type": "external",
+     "what": "Remittance PMT-S4636 repays $96.80 referencing DM-55655",
+     "detail": {
+      "at": "2027-01-09 11:43 ET",
+      "record": "PMT-S4636",
+      "synthetic": true
+     }
+    },
+    {
+     "n": 59,
+     "clock": "2027-01-09 11:43 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Proposed: Match a repayment on Northfield’s remittance to the deduction in receivables and close the case",
+     "detail": {
+      "proposal": "CLP-9",
+      "args": {
+       "record": "DC-41118"
+      },
+      "rationale": "Remittance PMT-S4636 repays $96.80 referencing DM-55655 for DC-41118.",
+      "alternatives": [
+       "accept_charge"
+      ],
+      "needs": "policy"
+     }
+    },
+    {
+     "n": 60,
+     "clock": "2027-01-09 11:44 ET",
+     "actor": "Supplier ERP (receivables)",
+     "type": "external",
+     "what": "Executed: Match a repayment on Northfield’s remittance to the deduction in receivables and close the case",
+     "detail": {
+      "proposal": "CLP-9",
+      "response": "PMT-S4636 matched to DM-55655 in receivables; DC-41118 closed"
+     }
+    },
+    {
+     "n": 61,
+     "clock": "2027-01-09 11:44 ET",
+     "actor": "Claim Agent",
+     "type": "tool",
+     "what": "Read read_queue",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 62,
+     "clock": "2027-01-09 11:44 ET",
+     "actor": "Claim Agent",
+     "type": "ai",
+     "what": "Claim Agent said",
+     "detail": {
+      "text": "All open Northfield deduction cases have been fully resolved according to Northfield's evidence rules 2026.2:\n\n1. **DC-41102 (PO NR-46229)**: Requested the missing proof of delivery from Lakeline Freight and load scan from Kinross. Submitted a complete NF-7.4 evidence pack. Northfield reversed the charge, and remittance PMT-S4636 repayment was matched in Ashby's receivables, closing the case.\n2. **DC-41118 (PO NR-46237)**: Requested the missing proof of delivery from Lakeline Freight and load tally from Kinross. Submitted a complete NF-7.4 evidence pack. Northfield reversed the charge, and rem"
+     }
+    }
+   ],
+   "overhead": {
+    "model_calls": 32,
+    "tool_calls": 26,
+    "ms": 185568,
+    "model_routes": {
+     "primary · gemini-3.5-flash-lite": 26,
+     "secondary · gemini-3.8-flash": 6
+    }
+   }
+  }
+ }
+}

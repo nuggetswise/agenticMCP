@@ -4,7 +4,7 @@ Working copy: `docs/build-guide.md` in the repo. Reading copy: the Claude doc at
 
 ## How to use this guide
 
-This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit d38c580b71.
+This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 193dfa9.
 
 - **Start here:** follow R39. It picks your next task from the Tasks tables and says what to read first. For one prototype, run `node scripts/guide-pack.mjs P5` with its ID: it prints that prototype's job, ending, v8 section, the rules that apply, its agent, tools and anchors, and its tasks in order, so you read one page and the prototype's source.
 - **Authority, highest first:**
@@ -511,7 +511,7 @@ Both connections' tools, by kind of job, against the nearest published tool. Net
 
 ## Proofs, open items and drift control
 
-The gate and smoke tests pass at commit d38c580b71. Two of the plan's proofs have not been built or run.
+The gate and smoke tests pass at commit 193dfa9. Two of the plan's proofs have not been built or run.
 
 | Proof | Command or location | Result |
 | --- | --- | --- |
@@ -525,7 +525,7 @@ The gate and smoke tests pass at commit d38c580b71. Two of the plan's proofs hav
 | Golden questions, Northfield | `docs/phase2/golden-nf/grade-report.json` | 50 of 50 |
 | Live server | /healthz | ok, version 0.3.0, writes on, Aviator on, read on 14 November with commit cd9717d deployed |
 | Aviator loop, tool declarations, model fallback and refusals | `npm run aviator-test` | 11 passed, 0 failed, against a stand-in model. Live with gemini-3.5-flash-lite on the built world: P11's hold answered correctly, another supplier's cases refused, Ashby's own cases counted correctly (`docs/phase2/aviator-live-2026-11-13.txt`) |
-| Agent kit in a real browser: two decision controls, no green or tick, no raw X12 in a page's source, text or drawers, every interface tag opening a readable document, Aviator closed on load and honest without a connector | `npm run kit-check` | All passed at commit d38c580b71 |
+| Agent kit in a real browser: two decision controls, no green or tick, every colour, font, radius and type size from the design system tokens (`ui/ds/tokens.css`, `ui/ds/tokens-derived.css`), no raw X12 in a page's source, text or drawers, every interface tag opening a readable document, Aviator closed on load and honest without a connector | `npm run kit-check`, `npm run kit-tokens` | All passed at commit 193dfa9 |
 | Agent governance golden questions | `docs/phase2/golden-gov/grade-report.json` | 25 of 25 |
 | Property-based invariants on quantities, time order and money | — | Not built; the gate checks invariants on the one generated quarter only |
 | Fresh agent answers ten builder questions from the docs | Reader tests, 13 November. First: ten answered from the guide alone; gaps fixed in CALLS 31. Second, after the owner decisions: ten of ten correct, including where P4 ends and where P9's business problem is; gaps fixed in CALLS 34 | Passed |

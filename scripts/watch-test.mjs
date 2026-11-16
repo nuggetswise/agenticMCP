@@ -67,4 +67,12 @@ else for (const [name, v] of Object.entries(W.VARIATIONS)) {
   const s = W.getSession(r.watch.session); const o = detectors(name, s, 'watch');
   rows.push({ variation: name, actor: 'watch', on_time: o.sent_on_time.length, late: o.sent_late.length, kinross_asked: o.kinross_asked.join(' '), escalated: o.escalated.join(' '), closed: o.rows.filter((x) => x.closed).length, approvals: o.approvals, failed: o.actions_failed, same_as_baseline: r.automation.same_steps.length, agent_only: r.automation.agent_only.length, model_calls: r.watch.overhead.model_calls });
 }
+
+// Phase 3 step 4: an action refused twice stops the agent with a report of what waits; at its limit it says what it waits for.
+{ const bad = { name: 'propose_action', args: { action: 'release_document', order: 'NR-00000', rationale: 'scripted' } }; let k = 0;
+  const s3 = W.startSession(db, { variation: W.VARIATIONS.canonical }); const r3 = await W.runWatch(db, s3, { callModel: async () => ({ candidates: [{ content: { role: 'model', parts: [{ functionCall: k++ < 2 ? bad : { name: 'read_policy', args: {} } }] } }] }) });
+  check(r3.status === 'waiting_for_priya' && k === 2 && s3.trace.some((t) => /^Waiting for Priya Raman/.test(t.what)), 'fix: an action refused twice stops the agent, which reports what waits for Priya Raman instead of retrying to its limit');
+  const s4 = W.startSession(db, { variation: W.VARIATIONS.canonical }); const r4 = await W.runWatch(db, s4, { callModel: async () => ({ candidates: [{ content: { role: 'model', parts: [{ functionCall: { name: 'read_policy', args: {} } }] } }] }), maxToolCalls: 3 });
+  check(r4.status !== 'stopped' && s4.trace.some((t) => /^At its limit; waiting/.test(t.what)), 'fix: at its limit the agent reports what it is waiting for, never just stopped'); }
+
 console.table(rows); process.exit(fail ? 1 : 0);

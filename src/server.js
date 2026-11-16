@@ -18,6 +18,12 @@ import * as Aviator from './aviator.js';
 import * as Scout from './scout.js';
 import * as Watch from './watch.js';
 import * as Match from './match.js';
+import { runtimeTools } from './runtime.js';
+import { Claim } from './claim.js';
+import { Review } from './review.js';
+import { Pace } from './pace.js';
+import { Shelf } from './shelf.js';
+import { Chase } from './chase.js';
 import * as G from './governance.js';
 import { JOBS } from './agents.js';
 
@@ -356,6 +362,14 @@ const MATCH_TOOLS = [
   { name: 'match_baseline', title: 'Rule baseline on the held invoices', description: 'Runs the rule baseline on the same branch and facts: first the simplest baseline (the match shows Held with the failing rule), then fixed logic from the P14 decision table over the same reads and actions, with a labelled test approver. Returns its outcome and trace.', input: { variation: MATCH_VAR, facts: MATCH_FACTS_IN, policy: MATCH_POLICY_IN }, run: matchBaseline },
   { name: 'match_replay', title: 'Governance replay: baseline and Match Agent side by side', description: 'Runs the rule baseline and Match Agent on the same branch and facts, approving every proposal as a labelled test approver, and returns both outcomes, one-line traces, the steps where the two match (automation) and the agent’s overhead. Recorded on the change list as a trial. Pass detail full for every trace field. For governance review, not operation.', input: { variation: MATCH_VAR, facts: MATCH_FACTS_IN, policy: MATCH_POLICY_IN, detail: z.enum(['brief', 'full']).optional() }, run: (a) => matchReplay(a) },
 ];
+// ---------- Claim, Pace and Shelf (Ashby) and Review and Chase (Northfield): agents on the shared runtime (src/runtime.js, D61) ----------
+const rtModel = () => Scout.geminiCaller(Aviator.modelRoutes());
+const rtSet = (cid, rt, name, dataDb) => runtimeTools(rt, { name, db: dataDb, callModel: rtModel, paused: () => G.isPaused(db, rt.agent),
+  log: (tool, args, outcome, records, w) => log(cid, tool, [], args, outcome, records, w), recordTrial: (t) => G.recordTrial(db, cid, t), by: () => assistantOf(cid) });
+export const RUNTIME_TOOLS = { [AS]: [...rtSet(AS, Claim, 'claim', db), ...rtSet(AS, Pace, 'pace', db), ...rtSet(AS, Shelf, 'shelf', db)], [NF]: [...rtSet(NF, Review, 'review', nfDb), ...rtSet(NF, Chase, 'chase', nfDb)] };
+/** Every agent session tool on a connection, for MCP and REST: Scout, Watch and Match, and the shared-runtime agents. */
+const SESSION_TOOLS = (cid) => cid === AS ? [...SCOUT_TOOLS, ...WATCH_TOOLS, ...RUNTIME_TOOLS[AS]] : [...MATCH_TOOLS, ...RUNTIME_TOOLS[NF]];
+async function runSessionTool(cid, t, args) { let out; try { out = await t.run(args); if (cid === NF) out = linkify(out, SIDE[NF]); } catch (e) { out = { result: 'Invalid request', error: e.message }; } log(cid, t.name, [], args, out.result || out.status || 'Answered', []); return out; }
 function makeServer(cid) {
   const server = new McpServer({ name: cid === AS ? 'trading-grid-ashby' : 'trading-grid-northfield', title: cid === AS ? 'Trading Grid · Ashby Supplier' : 'Trading Grid · Northfield Retailer', version: '0.3.0' }, { instructions: INSTRUCTIONS[cid]() });
   for (const t of GOV_TOOLS[cid]) server.registerTool(t.name, { title: t.title, description: t.description, inputSchema: t.input, annotations: { readOnlyHint: !t.write, destructiveHint: false, openWorldHint: false } },
@@ -381,6 +395,8 @@ function makeServer(cid) {
     async (args = {}) => { let out; try { out = await t.run(args); } catch (e) { out = { result: 'Invalid request', error: e.message }; } log(cid, t.name, [], args, out.result || out.status || 'Answered', []); return { content: [{ type: 'text', text: JSON.stringify(out, null, 1) }] }; });
   if (cid === AS) for (const t of WATCH_TOOLS) server.registerTool(t.name, { title: t.title, description: t.description, inputSchema: t.input, annotations: { readOnlyHint: t.name === 'watch_setup', destructiveHint: false, openWorldHint: false } },
     async (args = {}) => { let out; try { out = await t.run(args); } catch (e) { out = { result: 'Invalid request', error: e.message }; } log(cid, t.name, [], args, out.result || out.status || 'Answered', []); return { content: [{ type: 'text', text: JSON.stringify(out, null, 1) }] }; });
+  for (const t of RUNTIME_TOOLS[cid]) server.registerTool(t.name, { title: t.title, description: t.description, inputSchema: t.input, annotations: { readOnlyHint: !!t.readOnly, destructiveHint: false, openWorldHint: false } },
+    async (args = {}) => ({ content: [{ type: 'text', text: JSON.stringify(await runSessionTool(cid, t, args), null, 1) }] }));
   if (cid === NF) for (const t of MATCH_TOOLS) server.registerTool(t.name, { title: t.title, description: t.description, inputSchema: t.input, annotations: { readOnlyHint: t.name === 'match_setup' || t.name === 'match_state', destructiveHint: false, openWorldHint: false } },
     async (args = {}) => { let out; try { out = linkify(await t.run(args), SIDE[NF]); } catch (e) { out = { result: 'Invalid request', error: e.message }; } log(cid, t.name, [], args, out.result || out.status || 'Answered', []); return { content: [{ type: 'text', text: JSON.stringify(out, null, 1) }] }; });
   return server;
@@ -414,13 +430,18 @@ for (const tool of [...TOOLS, ...BOUNDARY]) {
     res.json(call(AS, tool.name, args));
   });
 }
-app.get('/api/:token/tools', (req, res) => { const cid = cidOf(req, res); if (!cid) return; res.json({ instructions: INSTRUCTIONS[cid](), tools: [...(cid === AS ? ALL_TOOLS : ALL_NF_TOOLS), ...GOV_TOOLS[cid]].map((t) => ({ name: t.name, description: t.description, input: Object.fromEntries(Object.entries(t.input || {}).map(([k, v]) => [k, v.description || ''])) })) }); });
-app.all('/api/:token/tools/:name', (req, res) => { const cid = cidOf(req, res); if (!cid) return; res.json(call(cid, req.params.name, { ...req.query, ...(req.body || {}) })); });
+app.get('/api/:token/tools', (req, res) => { const cid = cidOf(req, res); if (!cid) return; res.json({ instructions: INSTRUCTIONS[cid](), tools: [...(cid === AS ? ALL_TOOLS : ALL_NF_TOOLS), ...GOV_TOOLS[cid], ...SESSION_TOOLS(cid)].map((t) => ({ name: t.name, description: t.description, input: Object.fromEntries(Object.entries(t.input || {}).map(([k, v]) => [k, v.description || ''])) })) }); });
+app.all('/api/:token/tools/:name', async (req, res) => { const cid = cidOf(req, res); if (!cid) return; const args = { ...req.query, ...(req.body || {}) };
+  // Agent session tools (scout_*, watch_*, match_*, claim_*, review_*, pace_*, shelf_*, chase_*) answer over REST too, so a page built
+  // outside Claude reaches the same agents with the connection's token held on its own server.
+  const t = SESSION_TOOLS(cid).find((x) => x.name === req.params.name); if (t) return res.json(await runSessionTool(cid, t, args));
+  res.json(call(cid, req.params.name, args)); });
 
 // A session's current view by its id, for recording a real run into a prototype page. Session ids are random and live in memory
 // only; the data is fictional. Builders fetch the views a connector already returned, so a page's recorded run is never retyped.
 app.get('/sessions/:id', (req, res) => { const id = String(req.params.id).replace(/\.json$/, '');
-  const v = id.startsWith('WS-') && Watch.getSession(id) ? watchView(Watch.getSession(id)) : id.startsWith('MS-') && Match.getSession(id) ? matchView(Match.getSession(id)) : null;
+  const rt = [[Claim, db], [Pace, db], [Shelf, db], [Review, nfDb], [Chase, nfDb]].find(([r]) => id.startsWith(`${r.prefix}-`) && r.getSession(id));
+  const v = id.startsWith('WS-') && Watch.getSession(id) ? watchView(Watch.getSession(id)) : id.startsWith('MS-') && Match.getSession(id) ? matchView(Match.getSession(id)) : rt ? rt[0].view(rt[1], rt[0].getSession(id)) : null;
   if (!v) return res.status(404).json({ error: 'No such session; sessions live in memory and end when the server restarts.' }); res.json(v); });
 app.get('/records/order/:po', (req, res) => res.type('html').send(recordPage(D.lifecycle(db, req.params.po))));
 app.get('/records/document/:id', (req, res) => res.type('html').send(documentPage(D.document(db, req.params.id))));

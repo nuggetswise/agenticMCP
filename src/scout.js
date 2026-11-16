@@ -262,10 +262,18 @@ const INSTRUCTION = (s) => `You are Scout Agent, working for Priya Raman at Ashb
 Goal: ${s.goal}
 You are working on PO NR-460207, shipping from Kinross Groveport to Northfield Retailer. Find out what threatens this shipment, decide what should happen, and propose actions with propose_action.
 Use only facts returned by your tools. Never state a record, quantity or confirmation the tools did not return. Read the policy before proposing. A proposal that waits for approval is not done; a Kinross task is done only when Kinross reports it completed; a ship notice is accepted by Northfield only on its receiving advice, not on a technical acknowledgment.
+Never retry an action the server refused; read the refusal and change course, or stop and say what waits for Priya.
 When you are waiting for Priya or for Kinross, stop and say in one or two sentences what you proposed and why. When new evidence arrives, re-read what changed and reconsider your plan; do not repeat an action a party has already rejected for the same reason.`;
 
 /** Runs Scout until it waits for a person, finishes, or hits a limit. `callModel(body)` returns a Gemini response (server-side only). */
 // Limits: per turn (until Scout waits or finishes) and per session, so a long case is not cut off by earlier turns' reads.
+/** At its limit the agent never just stops: it reports what it waits for, a proposal for Priya Raman or an answer from Kinross or Northfield. */
+function waitAtLimit(s, ag, t0) {
+  const aw = s.proposals.filter((p) => p.state === 'Awaiting approval');
+  ag.status = 'waiting_for_priya';
+  const what = aw.length ? `${aw.map((p) => p.id).join(', ')} waits for Priya Raman` : 'nothing left it may do; Priya Raman decides what is open';
+  trace(s, 'Scout', 'system', `At its limit; waiting: ${what}`, { tool_calls: ag.tool_calls, ms: Date.now() - t0 });
+}
 export async function runScout(db, s, { callModel, maxSteps = 12, maxToolCalls = 16, maxSessionCalls = 64, maxMs = 90000, event, paused = () => false } = {}) {
   // Pause and override are enforced here, before any model call: a paused Scout, or a case a person took over, gets no model turn.
   if (s.handed_over) return { ok: true, status: 'handed_to_person', awaiting: [] };
@@ -277,7 +285,7 @@ export async function runScout(db, s, { callModel, maxSteps = 12, maxToolCalls =
   const decl = declarations(AGENT_TOOLS);
   for (let step = 0; step < maxSteps; step++) {
     if (paused()) { ag.status = 'paused'; trace(s, 'Trading Grid', 'system', 'Scout Agent paused by the administrator; stopped before its next step', {}); break; }
-    if (Date.now() - t0 > maxMs || ag.tool_calls - turnStart >= maxToolCalls || ag.tool_calls >= maxSessionCalls) { ag.status = 'stopped'; trace(s, 'Scout', 'system', 'Stopped at its limit', { tool_calls: ag.tool_calls, ms: Date.now() - t0 }); break; }
+    if (Date.now() - t0 > maxMs || ag.tool_calls - turnStart >= maxToolCalls || ag.tool_calls >= maxSessionCalls) { waitAtLimit(s, ag, t0); break; }
     let data; try { data = await callModel({ systemInstruction: { parts: [{ text: INSTRUCTION(s) }] }, contents: ag.history, tools: [{ functionDeclarations: decl }], toolConfig: { functionCallingConfig: { mode: 'AUTO' } }, generationConfig: { temperature: 0 } }); ag.calls++; if (data?._route) (ag.routes ||= {})[data._route] = (ag.routes[data._route] || 0) + 1; }
     catch (e) { ag.status = 'model_failed'; trace(s, 'Scout', 'system', 'Model call failed; no state was changed', { error: String(e.message || e).slice(0, 200) }); return { ok: false, status: ag.status }; }
     // A pause that lands while the model is answering: nothing it returned is applied.
@@ -287,16 +295,18 @@ export async function runScout(db, s, { callModel, maxSteps = 12, maxToolCalls =
     if (content) ag.history.push(content);
     if (text) trace(s, 'Scout', 'ai', 'Scout said', { text: text.slice(0, 600) });
     if (!calls.length) { ag.status = s.proposals.some((p) => p.state === 'Awaiting approval') ? 'waiting_for_priya' : 'done'; break; }
-    const responses = []; let waiting = false;
+    const responses = []; let waiting = false; let blocked = null;
     for (const { functionCall: f } of calls) {
       ag.tool_calls++; const args = f.args || {}; let result;
-      if (f.name === 'propose_action') { const { action, rationale, alternatives, ...rest } = args; result = propose(db, s, 'Scout', action, rest, { rationale, alternatives }); if (result.state === 'Awaiting approval') waiting = true; }
+      if (f.name === 'propose_action') { const { action, rationale, alternatives, ...rest } = args; result = propose(db, s, 'Scout', action, rest, { rationale, alternatives }); if (result.state === 'Awaiting approval') waiting = true; 
+        if (result.state === 'Refused') { ag.refused = ag.refused || {}; ag.refused[action] = (ag.refused[action] || 0) + 1; if (ag.refused[action] >= 2) { blocked = result.message; result = { ...result, message: `${result.message} Refused twice: stop proposing ${action}; Priya Raman is told what is waiting.` }; } } }
       else if (READS[f.name]) { result = read(db, s, f.name, args); trace(s, 'Scout', 'tool', `Read ${f.name}`, { args }); }
       else result = { result: 'Refused', message: `No tool ${f.name}` };
       responses.push({ functionResponse: { name: f.name, ...(f.id ? { id: f.id } : {}), response: { result } } });
     }
     ag.history.push({ role: 'user', parts: responses });
     if (waiting) { ag.status = 'waiting_for_priya'; }
+    if (blocked) { ag.status = 'waiting_for_priya'; trace(s, 'Scout', 'system', `Waiting for Priya Raman: ${blocked}`, { refused: ag.refused }); break; }
   }
   ag.ms += Date.now() - t0;
   return { ok: true, status: ag.status, awaiting: s.proposals.filter((p) => p.state === 'Awaiting approval').map((p) => ({ id: p.id, action: p.action, args: p.args, rationale: p.rationale, alternatives: p.alternatives })) };

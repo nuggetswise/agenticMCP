@@ -33,14 +33,14 @@ export default function ({ ash, nf, ok, eq }) {
 
   // Story 2 and the decision table: the baseline's first step, the lines it proposes as clear, and the lines left with their settling record.
   const EXPECT = {
-    canonical: ['request_credit_or_corrected_invoice', '1,3', '2:above_received'],
-    correction_on_file: ['match_corrected_invoice', '1,3', '2:above_received'],
+    canonical: ['request_credit_or_corrected_invoice', '1,3', '2:short_pay_decided'],
+    correction_on_file: ['match_corrected_invoice', '1,3', '2:short_pay_decided'],
     price_set_by_change: ['clear_line_by_accepted_change', '1,2,3', ''],
     price_beyond_tolerance: ['request_credit_or_corrected_invoice', '1,2,3', ''],
     total_differs: ['reject_document_fault', '1,2,3', ''],
-    triple_mismatch: ['request_credit_or_corrected_invoice', '3', '1:above_received,2:above_received'],
-    ashby_free_text: ['request_credit_or_corrected_invoice', '1,3', '2:above_received'],
-    ashby_dispute: ['request_credit_or_corrected_invoice', '3', '1:above_shipped,2:above_received'],
+    triple_mismatch: ['request_credit_or_corrected_invoice', '3', '1:short_pay_decided,2:short_pay_decided'],
+    ashby_free_text: ['request_credit_or_corrected_invoice', '1,3', '2:short_pay_decided'],
+    ashby_dispute: ['request_credit_or_corrected_invoice', '3', '1:short_pay_decided,2:short_pay_decided'],
     ashby_no_answer: ['request_credit_or_corrected_invoice', '3', '1:above_shipped,2:above_received'],
   };
   const runs = {}; const leaks = []; const viol = [];
@@ -52,7 +52,7 @@ export default function ({ ash, nf, ok, eq }) {
     if (o.violations.length || JSON.stringify(s.cases[s.anchor].invoice) !== JSON.stringify(s.cases[s.anchor].original)) viol.push(`${name}: ${o.violations.join('; ') || 'invoice changed'}`);
   }
   const triple = runs.triple_mismatch.s; const tr = triple.reads.map((r) => r.name);
-  ok('match.triple_mismatch_reads_receiving_advice_first', tr.indexOf('read_receipts') >= 0 && tr.indexOf('read_receipts') < tr.indexOf('read_invoice') && /Receiving advice RCV-/.test(runs.triple_mismatch.o.lines.find((l) => l.line === 1).settling_record), tr.join());
+  ok('match.triple_mismatch_reads_receiving_advice_first', tr.indexOf('read_receipts') >= 0 && tr.indexOf('read_receipts') < tr.indexOf('read_invoice') && /Receiving advice RCV-|the receiving advice stands/.test(runs.triple_mismatch.o.lines.find((l) => l.line === 1).settling_record), tr.join());
   // Story 2, the mutation test: change one record and the next step switches, following the decision table.
   { const step = (facts) => { const s = M.startSession(nf, { facts }); const n = M.nextStep(nf, s, moment.anchor); return `${n.action}${n.args?.lines ? ' ' + n.args.lines.join(',') : ''}${n.args?.line ? ' ' + n.args.line : ''}`; };
     const one = (a, b) => Object.keys({ ...a, ...b }).filter((k) => JSON.stringify(a[k]) !== JSON.stringify(b[k]));
@@ -60,7 +60,7 @@ export default function ({ ash, nf, ok, eq }) {
     eq('match.story2_mutation_accepted_order_change_switches_hold_to_clear', [one(V.price_beyond_tolerance, V.price_set_by_change), step(V.price_beyond_tolerance), step(V.price_set_by_change)], [['price_change_line3'], 'request_credit_or_corrected_invoice 3', 'clear_line_by_accepted_change 3']);
     // Row 5 (all three disagree): once the corrected invoice is matched, a changed receiving advice decides line 1, and the lines proposed clear change.
     eq('match.story2_mutation_receiving_advice_changes_the_settling_record', [one(V.canonical, V.triple_mismatch), ...[V.canonical, V.triple_mismatch].map((f) => { const o = M.runBaseline(nf, M.startSession(nf, { facts: f })); const l = o.lines[0]; return `${l.status} ${/^Receiving advice RCV-/.test(l.settling_record || '') ? 'receiving advice' : l.settling_record}; clear ${o.proposed_clear_for_payment.join(',')}`; })],
-      [['received_line1'], 'clear null; clear 1,3', 'above_received receiving advice; clear 3']);
+      [['received_line1'], 'clear null; clear 1,3', 'short_pay_decided Jordan Ellis decided to short-pay line 1 by 8 cases at payment; the receiving advice stands (NF-5.5); clear 3']);  // the uncorrected line now goes to Jordan's short-pay decision (Phase 3 step 4)
     eq('match.story2_mutation_total_switches_to_reject', [one({ billed_line1: 270, received_line2: 120 }, V.total_differs), step({ billed_line1: 270, received_line2: 120 }), step(V.total_differs)], [['total_offset'], 'release_for_payment_proposal 1,2,3', 'reject_document_fault']);
     // The recorded world itself: before INV-7731C is on file the next step is a request; once the clock passes its recorded time the next step matches it.
     const s = M.startSession(nf); const before = M.nextStep(nf, s, moment.anchor); const p = M.propose(nf, s, 'Check', before.action, before.args); M.decide(nf, s, p.proposal, 'approve', 'Jordan Ellis'); const after = M.nextStep(nf, s, moment.anchor);
@@ -94,7 +94,8 @@ export default function ({ ash, nf, ok, eq }) {
     const pay = nf.prepare("SELECT (SELECT group_concat(status) FROM invoices WHERE po = 'NR-450118') st, (SELECT count(*) FROM remittance_items WHERE invoice LIKE 'INV-7731%') r").get();
     eq('match.story3_approval_names_person_and_record', [d.approval?.by, d.approval?.record, a.approver, a.record, t.actor, /INV-7731/.test(t.what), t.detail.record], ['Jordan Ellis', 'INV-7731', 'Jordan Ellis', 'INV-7731', 'Jordan Ellis', true, 'INV-7731']);
     eq('match.story3_approval_changes_no_payment_state', [d.approval?.payment, before, M.outcome(nf, s).payment_released, Object.values(M.ACTIONS).filter((x) => /payment/i.test(x.label)).map((x) => [x.mode, x.editable]), M.startSession(nf, { policy: { release_for_payment_proposal: 'approve' } }).modes.release_for_payment_proposal, [pay.st, pay.r]],
-      [M.PAYMENT_UNCHANGED, 'false', false, [['suggest', false]], 'suggest', ['Held, then replaced by INV-7731C,Delivered', nf.prepare("SELECT count(*) n FROM remittance_items WHERE invoice LIKE 'INV-7731%'").get().n]]);
+      [M.PAYMENT_UNCHANGED, 'false', false, [['suggest', false], ['approve', false]], 'suggest',  // release stays a suggestion; the short-pay decision is Jordan's approval and releases nothing
+      ['Held, then replaced by INV-7731C,Delivered', nf.prepare("SELECT count(*) n FROM remittance_items WHERE invoice LIKE 'INV-7731%'").get().n]]);
     const r = M.startSession(nf); const rp = M.propose(nf, r, 'Match Agent', 'request_credit_or_corrected_invoice', { invoice: 'INV-7731', lines: [1, 2] }); const rj = M.decide(nf, r, rp.proposal, 'reject', 'Jordan Ellis');
     eq('match.story3_rejection_names_person_and_sends_nothing', [rj.state, r.audit.at(-1).approver, r.audit.at(-1).record, r.requests.length], ['Rejected', 'Jordan Ellis', 'INV-7731', 0]); }
 

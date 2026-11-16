@@ -262,12 +262,16 @@ function buildNorthfieldView() {
     INSERT INTO people SELECT * FROM m.people; INSERT INTO locations SELECT * FROM m.locations; INSERT INTO items SELECT * FROM m.items;
     INSERT INTO rules SELECT * FROM m.rules WHERE owner NOT LIKE 'Ashby%'; INSERT INTO calendar SELECT * FROM m.calendar;
     INSERT INTO documents SELECT * FROM m.documents WHERE doc_type NOT IN ('940','945') AND partner_id <> 'LAKELINE';
+    -- On collect freight Northfield routes the load and Lakeline is its carrier (NF-3.3, freight_terms tendered_by NORTHFIELD),
+    -- so Lakeline's shipment status (214) on a routed load is Northfield's record too (P19 ship notice chase, owner 16 Nov).
+    INSERT INTO documents SELECT * FROM m.documents WHERE doc_type = '214' AND partner_id = 'LAKELINE' AND po IN (SELECT po FROM m.routing_requests);
     INSERT INTO orders SELECT * FROM m.orders; INSERT INTO order_lines SELECT * FROM m.order_lines; INSERT INTO order_changes SELECT * FROM m.order_changes;
     INSERT INTO shipments SELECT * FROM m.shipments; INSERT INTO shipment_lines SELECT * FROM m.shipment_lines; INSERT INTO cartons SELECT * FROM m.cartons;
     INSERT INTO receipts SELECT * FROM m.receipts; INSERT INTO invoices SELECT * FROM m.invoices; INSERT INTO invoice_lines SELECT * FROM m.invoice_lines;
     INSERT INTO remittance_items SELECT * FROM m.remittance_items; INSERT INTO adjustments SELECT * FROM m.adjustments;
     INSERT INTO errors SELECT * FROM m.errors; INSERT INTO store_activity SELECT * FROM m.store_activity;
-    INSERT INTO events SELECT * FROM m.events WHERE party = 'NORTHFIELD' OR system = 'Northfield deduction case' OR json_extract(data, '$.in_case') IS NOT NULL;
+    INSERT INTO events SELECT * FROM m.events WHERE party = 'NORTHFIELD' OR system = 'Northfield deduction case' OR json_extract(data, '$.in_case') IS NOT NULL
+      OR (kind = 'carrier.pickup_missed' AND po IN (SELECT po FROM m.routing_requests));
     INSERT INTO review_notes SELECT * FROM m.review_notes; INSERT INTO draft_rules SELECT * FROM m.draft_rules;
     INSERT INTO rule_versions SELECT * FROM m.rule_versions WHERE rule_id IN (SELECT id FROM rules); INSERT INTO rule_sets SELECT * FROM m.rule_sets WHERE id IN (SELECT rule_set FROM rule_versions);
     INSERT INTO item_versions SELECT * FROM m.item_versions; INSERT INTO item_prices SELECT * FROM m.item_prices;

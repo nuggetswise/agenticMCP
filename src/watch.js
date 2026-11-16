@@ -474,8 +474,16 @@ Goal: ${s.goal}
 Find the open orders that are missing a document Northfield requires, find out from the source records why each is missing, and propose the next step for each with propose_action.
 Use only facts returned by your tools. Never state a record, quantity or confirmation the tools did not return. Read the policy before proposing. A proposal that waits for approval is not done. A technical acknowledgment (997) is never business acceptance. A ship notice is confirmed only by Northfield's receiving advice (861); a Kinross request only by the 945. A late document stays Late after it is sent.
 A draft made under Priya's standing policy has not reached Northfield: once a document is drafted, propose release_document for it in the same pass, so every drafted document waits for Priya's decision rather than sitting unsent.
+Never retry an action the server refused; read the refusal and change course, or stop and say what waits for Priya.
 When you are waiting for Priya, Kinross or Northfield, stop and say in one or two sentences what you proposed and why. When new evidence arrives, re-read what changed and reconsider; do not repeat an action a party already answered for the same reason.`;
 
+/** At its limit the agent never just stops: it reports what it waits for, a proposal for Priya Raman or an answer from Kinross or Northfield. */
+function waitAtLimit(s, ag, t0) {
+  const aw = s.proposals.filter((p) => p.state === 'Awaiting approval');
+  ag.status = 'waiting_for_priya';
+  const what = aw.length ? `${aw.map((p) => p.id).join(', ')} waits for Priya Raman` : 'nothing left it may do; Priya Raman decides what is open';
+  trace(s, 'Watch Agent', 'system', `At its limit; waiting: ${what}`, { tool_calls: ag.tool_calls, ms: Date.now() - t0 });
+}
 export async function runWatch(db, s, { callModel, maxSteps = 14, maxToolCalls = 24, maxSessionCalls = 96, maxMs = 120000, event, paused = () => false } = {}) {
   if (s.handed_over) return { ok: true, status: 'handed_to_person', awaiting: [] };
   if (paused()) { s.agent.status = 'paused'; trace(s, 'Trading Grid', 'system', 'Watch Agent is paused by the administrator; the queue arrives as plain tasks with no proposal', {}); return { ok: true, status: 'paused', awaiting: [] }; }
@@ -486,7 +494,7 @@ export async function runWatch(db, s, { callModel, maxSteps = 14, maxToolCalls =
   const decl = declarations(AGENT_TOOLS);
   for (let step = 0; step < maxSteps; step++) {
     if (paused()) { ag.status = 'paused'; trace(s, 'Trading Grid', 'system', 'Watch Agent paused by the administrator; stopped before its next step', {}); break; }
-    if (Date.now() - t0 > maxMs || ag.tool_calls - turnStart >= maxToolCalls || ag.tool_calls >= maxSessionCalls) { ag.status = 'stopped'; trace(s, 'Watch Agent', 'system', 'Stopped at its limit', { tool_calls: ag.tool_calls, ms: Date.now() - t0 }); break; }
+    if (Date.now() - t0 > maxMs || ag.tool_calls - turnStart >= maxToolCalls || ag.tool_calls >= maxSessionCalls) { waitAtLimit(s, ag, t0); break; }
     let data; try { data = await callModel({ systemInstruction: { parts: [{ text: INSTRUCTION(s) }] }, contents: ag.history, tools: [{ functionDeclarations: decl }], toolConfig: { functionCallingConfig: { mode: 'AUTO' } }, generationConfig: { temperature: 0 } }); ag.calls++; if (data?._route) (ag.routes ||= {})[data._route] = (ag.routes[data._route] || 0) + 1; }
     catch (e) { ag.status = 'model_failed'; trace(s, 'Watch Agent', 'system', 'Model call failed; no state was changed', { error: String(e.message || e).slice(0, 200) }); return { ok: false, status: ag.status }; }
     if (paused()) { ag.status = 'paused'; trace(s, 'Trading Grid', 'system', 'Watch Agent paused by the administrator; the model’s last answer was not applied', {}); break; }
@@ -495,16 +503,18 @@ export async function runWatch(db, s, { callModel, maxSteps = 14, maxToolCalls =
     if (content) ag.history.push(content);
     if (text) trace(s, 'Watch Agent', 'ai', 'Watch Agent said', { text: text.slice(0, 600) });
     if (!calls.length) { ag.status = s.proposals.some((p) => p.state === 'Awaiting approval') ? 'waiting_for_priya' : s.pending.length ? 'waiting_for_records' : 'done'; break; }
-    const responses = []; let waiting = false;
+    const responses = []; let waiting = false; let blocked = null;
     for (const { functionCall: f } of calls) {
       ag.tool_calls++; const args = f.args || {}; let result;
-      if (f.name === 'propose_action') { const { action, rationale, alternatives, ...rest } = args; for (const k of Object.keys(rest)) if (rest[k] === undefined || rest[k] === '') delete rest[k]; result = propose(db, s, 'Watch Agent', action, rest, { rationale, alternatives }); if (result.state === 'Awaiting approval') waiting = true; }
+      if (f.name === 'propose_action') { const { action, rationale, alternatives, ...rest } = args; for (const k of Object.keys(rest)) if (rest[k] === undefined || rest[k] === '') delete rest[k]; result = propose(db, s, 'Watch Agent', action, rest, { rationale, alternatives }); if (result.state === 'Awaiting approval') waiting = true; 
+        if (result.state === 'Refused') { ag.refused = ag.refused || {}; ag.refused[action] = (ag.refused[action] || 0) + 1; if (ag.refused[action] >= 2) { blocked = result.message; result = { ...result, message: `${result.message} Refused twice: stop proposing ${action}; Priya Raman is told what is waiting.` }; } } }
       else if (READS[f.name]) { result = read(db, s, f.name, args); trace(s, 'Watch Agent', 'tool', `Read ${f.name}`, { args }); }
       else result = { result: 'Refused', message: `No tool ${f.name}` };
       responses.push({ functionResponse: { name: f.name, ...(f.id ? { id: f.id } : {}), response: { result } } });
     }
     ag.history.push({ role: 'user', parts: responses });
     if (waiting) ag.status = 'waiting_for_priya';
+    if (blocked) { ag.status = 'waiting_for_priya'; trace(s, 'Watch Agent', 'system', `Waiting for Priya Raman: ${blocked}`, { refused: ag.refused }); break; }
   }
   ag.ms += Date.now() - t0;
   return { ok: true, status: ag.status, awaiting: s.proposals.filter((p) => p.state === 'Awaiting approval').map((p) => ({ id: p.id, action: p.action, args: p.args, rationale: p.rationale, alternatives: p.alternatives })) };

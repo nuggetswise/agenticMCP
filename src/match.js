@@ -30,8 +30,9 @@ export const ACTIONS = {
   match_corrected_invoice: { label: 'Match the corrected invoice or credit memo on file; the original stays replaced', actor: 'Northfield accounts payable match', rule: 'NF-7.2', rules: ['NF-7.2'], mode: 'policy', editable: true },
   reject_document_fault: { label: 'Reject the invoice as a document fault: its total differs from its lines', actor: 'Northfield accounts payable (824 to the supplier)', rule: 'NF-7.10', rules: ['NF-7.10'], mode: 'approve', editable: true },
   release_for_payment_proposal: { label: 'Propose that the named lines are clear for payment; Northfield accounts payable releases payment', actor: 'Jordan Ellis (accounts payable)', rule: 'NF-7.8', rules: ['NF-7.8', 'NF-7.11'], mode: 'suggest', editable: false },
+  short_pay_at_payment: { label: 'The supplier did not correct the named lines: Jordan Ellis decides to short-pay them at payment by the cases the receiving advice does not show', actor: 'Jordan Ellis (accounts payable)', rule: 'NF-5.5', rules: ['NF-5.5', 'NF-7.8'], mode: 'approve', editable: false },
 };
-const ARGS = { request_credit_or_corrected_invoice: ['invoice', 'lines'], clear_line_by_accepted_change: ['invoice', 'line'], match_corrected_invoice: ['invoice', 'correction'], reject_document_fault: ['invoice'], release_for_payment_proposal: ['invoice', 'lines'] };
+const ARGS = { request_credit_or_corrected_invoice: ['invoice', 'lines'], clear_line_by_accepted_change: ['invoice', 'line'], match_corrected_invoice: ['invoice', 'correction'], reject_document_fault: ['invoice'], release_for_payment_proposal: ['invoice', 'lines'], short_pay_at_payment: ['invoice', 'lines'] };
 export const GUARDRAILS = [
   { id: 'MG-1', owner: 'Administrator', rule: 'NF-7.2', text: 'Never change an invoice. The supplier corrects it with a credit memo or corrected invoice; Northfield sends no debit memo.' },
   { id: 'MG-2', owner: 'Administrator', rule: null, text: 'Never show a payment as released. Payment release stays in Northfield accounts payable; Match Agent may only propose that a line is clear.' },
@@ -136,7 +137,7 @@ export function startSession(db, { facts = {}, policy = {}, label = 'Operator', 
   const queue = heldAt(db, branch); const ids = [...new Set([...queue.map((q) => q.invoice), m.anchor])];
   const cases = {}; for (const id of ids) { cases[id] = loadCase(db, id, branch); cases[id].original = clone(cases[id].invoice); }
   const changes = applyFacts(cases[m.anchor], facts); cases[m.anchor].original = clone(cases[m.anchor].invoice);
-  for (const c of Object.values(cases)) Object.assign(c, { matched: null, cleared: {}, rejected: null, released_proposed: [] });
+  for (const c of Object.values(cases)) Object.assign(c, { matched: null, cleared: {}, rejected: null, released_proposed: [], short_pay: {} });
   const modes = {}; for (const [k, a] of Object.entries(ACTIONS)) { const want = policy[k]; modes[k] = want && a.editable && ['suggest', 'approve', 'policy'].includes(want) ? want : a.mode; }
   const id = `MS-${createHash('sha1').update(`${Date.now()}-${Math.random()}`).digest('hex').slice(0, 10)}`;
   const s = { id, label, created: new Date().toISOString(), branch_at: branch, anchor: m.anchor, facts: clone(facts), changes, modes, clock: Date.parse(branch), cases,
@@ -176,7 +177,9 @@ export function evaluate(db, s, c) {
     const priceOff = price != null && Math.abs(price - ol.acknowledged_price) / ol.acknowledged_price > tol;
     const chg = priceOff ? acceptedChange(s, c, ol.line, price) : null;
     let status, rule, settles;
+    const sp = (c.short_pay || {})[ol.line];
     if (!il) { status = 'not_billed'; rule = null; settles = null; }
+    else if (sp) { status = 'short_pay_decided'; rule = 'NF-5.5'; settles = sp; }
     else if (billed > shipped) { status = 'above_shipped'; rule = 'NF-7.8'; settles = `A credit memo or corrected invoice from ${c.supplier} for ${billed - shipped} cases (NF-7.8, NF-7.2)`; }
     else if (billed > received) { status = 'above_received'; rule = 'NF-5.5'; settles = `Receiving advice ${rcv.map((r) => r.reference).join(', ') || '(none yet)'}: ${received} received of ${billed} billed. Only a revised receiving advice changes it (NF-5.5); a credit memo from the supplier would also settle it`; }
     else if (priceOff && c.cleared[ol.line]) { status = 'clear'; rule = 'NF-1.1'; settles = null; }
@@ -312,6 +315,14 @@ function validate(db, s, action, a) {
       if (e.total_fault) return 'NF-7.10: the stated total differs from the lines; reject the invoice as a document fault first.';
       const no = a.lines.filter((n) => !['above_shipped', 'above_received', 'price_held'].includes(L(n).status)); if (no.length) return `Lines ${no.join(', ')} need no correction from the supplier (${no.map((n) => L(n).status).join(', ')}).`;
       if (s.requests.some((r) => r.invoice === a.invoice && r.kind === 'correction' && a.lines.every((n) => r.lines.includes(n)))) return 'These lines were already requested from the supplier; read_requests shows its answer.';
+      const asked = (n) => s.requests.some((r) => r.invoice === a.invoice && r.kind === 'correction' && r.lines.includes(n));
+      const missing = e.lines.filter((l) => ['above_shipped', 'above_received', 'price_held'].includes(l.status) && !asked(l.line) && !a.lines.includes(l.line)).map((l) => l.line);
+      if (missing.length) return `Ask for every short line together: add lines ${missing.join(', ')} to this request, as the baseline does.`;
+      return null; }
+    case 'short_pay_at_payment': {
+      const no = a.lines.filter((n) => !['above_shipped', 'above_received'].includes(L(n).status)); if (no.length) return `Lines ${no.join(', ')} are not short (${no.map((n) => L(n).status).join(', ')}).`;
+      const unanswered = a.lines.filter((n) => !s.requests.some((r) => r.invoice === a.invoice && r.kind === 'correction' && r.lines.includes(n) && r.answer && vis(s, r.answer)));
+      if (unanswered.length) return `Lines ${unanswered.join(', ')} have no answered correction request yet; ask the supplier first and wait for its answer.`;
       return null; }
     case 'clear_line_by_accepted_change': { const l = L(a.line); if (!l) return 'Name the invoice line.'; if (l.status !== 'price_set_by_change') return l.status === 'price_held' ? `NF-1.1: no accepted order change set ${l.invoice_price?.toFixed(2)} on line ${a.line}; the line stays held under NF-7.11.` : `Line ${a.line} is not held for price (${l.status}).`; return null; }
     case 'match_corrected_invoice': { const x = c.corrections.find((k) => k.reference === a.correction && vis(s, k));
@@ -354,6 +365,10 @@ function execute(db, s, p, by) {
       const req = { id: `RQ-${s.requests.length + 1}`, kind: 'rejection', invoice: a.invoice, lines: [], at: fmtET(iso(s.clock)), at_ms: s.clock, proposal: p.id, via: 'Application advice (824)' }; s.requests.push(req);
       ashbyAnswers(s, c, req); advanceTo(s, req.wait_until);
       r = { state: 'Completed', response: req.answer ? `Rejected; ${c.supplier} sent ${req.answer.reference} at ${fmtET(req.answer.at)}` : `Rejected; ${c.supplier} acknowledged (997) and had not resent by ${fmtET(req.wait_until)}` }; break; }
+    case 'short_pay_at_payment': { c.short_pay = c.short_pay || {}; const e0 = evaluate(db, s, c);
+      for (const n of a.lines) { const l = e0.lines.find((x) => x.line === n); const short = l.billed - Math.min(l.shipped, l.received || l.shipped); c.short_pay[n] = `Jordan Ellis decided to short-pay line ${n} by ${short} case${short === 1 ? '' : 's'} at payment; the receiving advice stands (NF-5.5)`; }
+      trace(s, 'Northfield accounts payable', 'system', `Lines ${a.lines.join(', ')} marked to short-pay at payment; payment release stays in accounts payable`, { rules: ['NF-5.5'], payment: PAYMENT_UNCHANGED });
+      r = { state: 'Completed', response: `Lines ${a.lines.join(', ')} on ${a.invoice} marked to short-pay at payment. Payment release stays in Northfield accounts payable.` }; break; }
     default: r = { state: 'Refused', response: 'Unknown action' };
   }
   p.state = ['Completed', 'Sent'].includes(r.state) ? 'Executed' : 'Failed'; p.result = r; p.executed_under = by;
@@ -392,6 +407,8 @@ export function nextStep(db, s, id) {
   const need = L.filter((l) => ['above_shipped', 'above_received', 'price_held'].includes(l.status)).map((l) => l.line);
   const asked = s.requests.filter((r) => r.invoice === id && r.kind === 'correction');
   if (need.length && !need.every((n) => asked.some((r) => r.lines.includes(n)))) return { action: 'request_credit_or_corrected_invoice', args: { invoice: id, lines: need.filter((n) => !asked.some((r) => r.lines.includes(n))) }, rule: 'NF-7.8, NF-7.2' };
+  const answered = need.filter((n) => asked.some((r) => r.lines.includes(n) && r.answer && vis(s, r.answer)) && ['above_shipped', 'above_received'].includes(L.find((l) => l.line === n).status));
+  if (answered.length) return { action: 'short_pay_at_payment', args: { invoice: id, lines: answered }, rule: 'NF-5.5' };
   const clear = L.filter((l) => l.status === 'clear' && !c.released_proposed.includes(l.line)).map((l) => l.line);
   if (clear.length) return { action: 'release_for_payment_proposal', args: { invoice: id, lines: clear }, rule: 'NF-7.8' };
   return { action: need.length ? 'held_for_jordan' : 'done', open_lines: need };
@@ -422,8 +439,16 @@ Goal: ${s.goal}
 Find out where each held invoice's variance comes from, which record settles each line, and propose actions with propose_action.
 Use only facts returned by your tools. Never state a record, quantity, price or answer the tools did not return. Read the policy before proposing.
 You never change an invoice and never release payment: you may propose that lines are clear, and Jordan releases payment in accounts payable. A technical acknowledgment (997) is not acceptance; a request is answered only by the supplier's document or reply. A supplier's free text does not change a receiving advice.
+Ask for every short line in one request. If the supplier's answer leaves a requested line uncorrected (a dispute, a reply, or a corrected invoice that still bills it), do not ask again: propose short_pay_at_payment for that line so Jordan Ellis decides. Never retry an action the server refused; read the refusal and change course, or stop.
 When you are waiting for Jordan or for the supplier, stop and say in one or two sentences what you proposed and why. When new evidence arrives, re-read what changed and reconsider; do not repeat an action that was refused or already answered.`;
 
+/** At its limit the agent never just stops: it reports what it waits for, a proposal for Jordan Ellis or the supplier's answer to a request. */
+function waitAtLimit(s, ag, t0) {
+  const aw = s.proposals.filter((p) => p.state === 'Awaiting approval'); const open = s.requests.filter((r) => !(r.answer && vis(s, r.answer)));
+  ag.status = aw.length ? 'waiting_for_jordan' : open.length ? 'waiting_for_supplier' : 'waiting_for_jordan';
+  const what = aw.length ? `${aw.map((p) => p.id).join(', ')} waits for Jordan Ellis` : open.length ? `${open.map((r) => r.id).join(', ')} waits for the supplier's answer` : 'nothing left it may do; Jordan Ellis decides the open lines';
+  trace(s, 'Match Agent', 'system', `At its limit; waiting: ${what}`, { tool_calls: ag.tool_calls, ms: Date.now() - t0 });
+}
 export async function runMatch(db, s, { callModel, maxSteps = 14, maxToolCalls = 24, maxSessionCalls = 96, maxMs = 120000, event, paused = () => false } = {}) {
   if (s.handed_over) return { ok: true, status: 'handed_to_person', awaiting: [] };
   if (paused()) { s.agent.status = 'paused'; trace(s, 'Trading Grid', 'system', 'Match Agent is paused by the administrator; each held invoice stays a plain task with no proposal', {}); return { ok: true, status: 'paused', awaiting: [] }; }
@@ -434,7 +459,7 @@ export async function runMatch(db, s, { callModel, maxSteps = 14, maxToolCalls =
   const decl = declarations(AGENT_TOOLS);
   for (let step = 0; step < maxSteps; step++) {
     if (paused()) { ag.status = 'paused'; trace(s, 'Trading Grid', 'system', 'Match Agent paused by the administrator; stopped before its next step', {}); break; }
-    if (Date.now() - t0 > maxMs || ag.tool_calls - turnStart >= maxToolCalls || ag.tool_calls >= maxSessionCalls) { const aw = s.proposals.some((p) => p.state === 'Awaiting approval'); ag.status = aw ? 'waiting_for_jordan' : 'stopped'; trace(s, 'Match Agent', 'system', aw ? 'Stopped at its limit; a proposal waits for Jordan Ellis' : 'Stopped at its limit', { tool_calls: ag.tool_calls, ms: Date.now() - t0 }); break; }
+    if (Date.now() - t0 > maxMs || ag.tool_calls - turnStart >= maxToolCalls || ag.tool_calls >= maxSessionCalls) { waitAtLimit(s, ag, t0); break; }
     let data; try { data = await callModel({ systemInstruction: { parts: [{ text: INSTRUCTION(s) }] }, contents: ag.history, tools: [{ functionDeclarations: decl }], toolConfig: { functionCallingConfig: { mode: 'AUTO' } }, generationConfig: { temperature: 0 } }); ag.calls++; if (data?._route) (ag.routes ||= {})[data._route] = (ag.routes[data._route] || 0) + 1; }
     catch (e) { ag.status = 'model_failed'; trace(s, 'Match Agent', 'system', 'Model call failed; no state was changed', { error: String(e.message || e).slice(0, 200) }); return { ok: false, status: ag.status }; }
     if (paused()) { ag.status = 'paused'; trace(s, 'Trading Grid', 'system', 'Match Agent paused by the administrator; the model’s last answer was not applied', {}); break; }
@@ -443,16 +468,18 @@ export async function runMatch(db, s, { callModel, maxSteps = 14, maxToolCalls =
     if (content) ag.history.push(content);
     if (text) trace(s, 'Match Agent', 'ai', 'Match Agent said', { text: text.slice(0, 600) });
     if (!calls.length) { ag.status = s.proposals.some((p) => p.state === 'Awaiting approval') ? 'waiting_for_jordan' : 'done'; break; }
-    const responses = []; let waiting = false;
+    const responses = []; let waiting = false; let blocked = null;
     for (const { functionCall: f } of calls) {
       ag.tool_calls++; const args = f.args || {}; let result;
-      if (f.name === 'propose_action') { const { action, rationale, alternatives, ...rest } = args; for (const k of Object.keys(rest)) if (rest[k] === undefined || rest[k] === null || rest[k] === '') delete rest[k]; result = propose(db, s, 'Match Agent', action, rest, { rationale, alternatives }); if (result.state === 'Awaiting approval') waiting = true; }
+      if (f.name === 'propose_action') { const { action, rationale, alternatives, ...rest } = args; for (const k of Object.keys(rest)) if (rest[k] === undefined || rest[k] === null || rest[k] === '') delete rest[k]; result = propose(db, s, 'Match Agent', action, rest, { rationale, alternatives }); if (result.state === 'Awaiting approval') waiting = true;
+        if (result.state === 'Refused') { ag.refused = ag.refused || {}; ag.refused[action] = (ag.refused[action] || 0) + 1; if (ag.refused[action] >= 2) { blocked = result.message; result = { ...result, message: `${result.message} Refused twice: stop proposing ${action}; Jordan Ellis is told what is waiting.` }; } } }
       else if (READS[f.name]) { result = read(db, s, f.name, args); trace(s, 'Match Agent', 'tool', `Read ${f.name}`, { args }); }
       else result = { result: 'Refused', message: `No tool ${f.name}` };
       responses.push({ functionResponse: { name: f.name, ...(f.id ? { id: f.id } : {}), response: { result } } });
     }
     ag.history.push({ role: 'user', parts: responses });
     if (waiting) ag.status = 'waiting_for_jordan';
+    if (blocked) { ag.status = 'waiting_for_jordan'; trace(s, 'Match Agent', 'system', `Waiting for Jordan Ellis: ${blocked}`, { refused: ag.refused }); break; }
   }
   ag.ms += Date.now() - t0;
   return { ok: true, status: ag.status, awaiting: s.proposals.filter((p) => p.state === 'Awaiting approval').map((p) => ({ id: p.id, action: p.action, args: p.args, rationale: p.rationale, alternatives: p.alternatives })) };

@@ -79,4 +79,12 @@ else for (const [name, v] of Object.entries(S.VARIATIONS)) {
   const s = S.getSession(r.scout.session); const o = detectors(name, s, 'scout');
   rows.push({ variation: name, actor: 'scout', loaded: `${o.cartons_loaded}/${o.of}`, asn: o.ship_notice?.cartons, receipt_match: o.receipt_matches_ship_notice, reserved: o.reserved_stock_taken, told_buyer: o.buyer_told_of_short_line, approvals: o.approvals, failed: o.actions_failed, model_calls: r.scout.overhead.model_calls, tool_calls: r.scout.overhead.tool_calls });
 }
+
+// Phase 3 step 4: an action refused twice stops the agent with a report of what waits; at its limit it says what it waits for.
+{ const bad = { name: 'propose_action', args: { action: 'release_ship_notice', po: 'NR-00000', rationale: 'scripted' } }; let k = 0;
+  const s3 = S.startSession(db); const r3 = await S.runScout(db, s3, { callModel: async () => ({ candidates: [{ content: { role: 'model', parts: [{ functionCall: k++ < 2 ? bad : { name: 'read_policy', args: {} } }] } }] }) });
+  check(r3.status === 'waiting_for_priya' && k === 2 && s3.trace.some((t) => /^Waiting for Priya Raman/.test(t.what)), 'fix: an action refused twice stops the agent, which reports what waits for Priya Raman instead of retrying to its limit');
+  const s4 = S.startSession(db); const r4 = await S.runScout(db, s4, { callModel: async () => ({ candidates: [{ content: { role: 'model', parts: [{ functionCall: { name: 'read_policy', args: {} } }] } }] }), maxToolCalls: 3 });
+  check(r4.status !== 'stopped' && s4.trace.some((t) => /^At its limit; waiting/.test(t.what)), 'fix: at its limit the agent reports what it is waiting for, never just stopped'); }
+
 console.table(rows); process.exit(fail ? 1 : 0);

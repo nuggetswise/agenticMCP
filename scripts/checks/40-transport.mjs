@@ -107,6 +107,10 @@ export default function ({ db, ash, nf, ok, eq, none, n, ROOT }) {
   eq('transport.ashby_sees_its_carrier_documents', ash.prepare("SELECT count(*) n FROM documents WHERE partner_id = 'LAKELINE'").get().n, n("SELECT count(*) n FROM documents WHERE partner_id = 'LAKELINE'"));
   eq('transport.northfield_sees_routing_only', [cnt(nf, 'routing_requests'), cnt(nf, 'loads'), cnt(nf, 'shipment_status'), cnt(nf, 'freight_invoices'), cnt(nf, 'carrier_rates'), nf.prepare("SELECT count(*) n FROM freight_terms WHERE terms <> 'Collect'").get().n],
     [cnt(db, 'routing_requests'), 0, 0, 0, 0, 0]);
-  eq('transport.northfield_never_sees_carrier_documents', [nf.prepare("SELECT count(*) n FROM documents WHERE doc_type IN ('204','214','210') OR partner_id = 'LAKELINE'").get().n, nf.prepare("SELECT count(*) n FROM document_links l JOIN documents d ON d.doc_id = l.prev_doc_id WHERE d.doc_type IN ('204','214','210')").get().n,
+  // On collect freight Northfield routes the load and Lakeline is its carrier (NF-3.3), so Lakeline's 214 on a routed load is
+  // Northfield's record (P19, owner 16 Nov). Tenders (204), freight invoices (210) and every carrier document on prepaid loads stay Ashby's.
+  eq('transport.northfield_sees_status_on_routed_loads_only', [nf.prepare("SELECT count(*) n FROM documents WHERE doc_type = '214' AND po IN (SELECT po FROM routing_requests)").get().n, nf.prepare("SELECT count(*) n FROM documents WHERE partner_id = 'LAKELINE' AND (doc_type <> '214' OR po NOT IN (SELECT po FROM routing_requests))").get().n],
+    [n("SELECT count(*) n FROM documents WHERE doc_type = '214' AND partner_id = 'LAKELINE' AND po IN (SELECT po FROM routing_requests)"), 0]);
+  eq('transport.northfield_never_sees_carrier_documents', [nf.prepare("SELECT count(*) n FROM documents WHERE doc_type IN ('204','210') OR (partner_id = 'LAKELINE' AND doc_type <> '214')").get().n, nf.prepare("SELECT count(*) n FROM document_links l JOIN documents d ON d.doc_id = l.prev_doc_id WHERE d.doc_type IN ('204','214','210')").get().n,
     nf.prepare("SELECT count(*) n FROM documents WHERE doc_type IN ('753','754')").get().n], [0, 0, n("SELECT count(*) n FROM documents WHERE doc_type IN ('753','754')")]);
 }

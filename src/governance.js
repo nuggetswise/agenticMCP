@@ -15,6 +15,7 @@ export const AGENTS = {
   'Scout Agent': { connection: AS, jobs: ['shipment_risk'], authority: () => ({ rule: 'AP-3.2', mode: 'approve', says: 'Proposes Kinross tasks and Supplier ERP changes Priya Raman approves (AP-3.2); builds a ship notice only from the load scan under standing policy (AP-1.4); release always stays with Priya Raman (AP-1.3)' }) },
   'Pace Agent': { connection: AS, jobs: ['scorecard'], authority: () => ({ rule: null, mode: 'approve', says: 'Drafts a corrective task; Priya Raman approves' }) },
   'Review Agent': { connection: NF, jobs: ['deduction_review'], authority: () => ({ rule: 'NF-7.7', mode: 'suggest', says: 'Recommends only; Jordan Ellis decides each charge (NF-7.7)' }) },
+  'Chase Agent': { connection: NF, jobs: ['ship_notice_chase'], authority: () => ({ rule: 'NF-7.7', mode: 'approve', says: 'Proposes requests to the supplier and Lakeline; Jordan Ellis approves each and decides every charge (NF-7.7)' }) },
   'Match Agent': { connection: NF, jobs: ['three_way_match'], authority: () => ({ rule: null, mode: 'suggest', says: 'Names where a variance comes from and the next step; Jordan Ellis acts' }) },
 };
 export const agentOfJob = (job) => Object.keys(AGENTS).find((a) => AGENTS[a].jobs.includes(job)) || null;

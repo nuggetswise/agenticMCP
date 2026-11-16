@@ -29,9 +29,23 @@ function detectors(name, s, actor) {
   const never = async () => { throw new Error('model called'); };
   const ps = M.startSession(db); const r = await M.runMatch(db, ps, { callModel: never, paused: () => true });
   check(r.status === 'paused' && ps.agent.calls === 0 && !ps.proposals.length, 'guard: a paused Match Agent gets no model turn and proposes nothing');
-  const es = M.startSession(db); const ep = M.propose(db, es, 'Match Agent', 'request_credit_or_corrected_invoice', { invoice: 'INV-7731', lines: [1] }); M.decide(db, es, ep.proposal, 'edit', 'Jordan Ellis', 'Jordan calls Ashby');
+  const es = M.startSession(db); const ep = M.propose(db, es, 'Match Agent', 'request_credit_or_corrected_invoice', { invoice: 'INV-7731', lines: [1, 2] }); M.decide(db, es, ep.proposal, 'edit', 'Jordan Ellis', 'Jordan calls Ashby');
   check((await M.runMatch(db, es, { callModel: never })).status === 'handed_to_person' && es.audit.at(-1).approver === 'Jordan Ellis', 'guard: Edit suggestion hands the invoice to Jordan and the agent stops');
   check((await M.runMatch(db, M.startSession(db), {})).blocked?.startsWith('No model'), 'guard: no model configured, nothing simulated in its place'); }
+
+// Phase 3 step 4: every short line in one request; a refused credit goes to Jordan; refusals and the limit end in a report of what waits.
+{ const s1 = M.startSession(db); const one = M.propose(db, s1, 'Match Agent', 'request_credit_or_corrected_invoice', { invoice: 'INV-7731', lines: [1] });
+  check(one.state === 'Refused' && /every short line together/.test(one.message), 'fix: a request for line 1 alone is refused while line 2 is short; every short line goes in one request');
+  const s2 = M.startSession(db, { facts: M.VARIATIONS.ashby_dispute }); check(M.propose(db, s2, 'Match Agent', 'short_pay_at_payment', { invoice: 'INV-7731', lines: [1, 2] }).state === 'Refused', 'fix: no short-pay before the supplier has answered a request for those lines');
+  const rq = M.propose(db, s2, 'Match Agent', 'request_credit_or_corrected_invoice', { invoice: 'INV-7731', lines: [1, 2] }); M.decide(db, s2, rq.proposal, 'approve');
+  const sp = M.propose(db, s2, 'Match Agent', 'short_pay_at_payment', { invoice: 'INV-7731', lines: [1, 2] });
+  check(sp.state === 'Awaiting approval' && sp.approver === 'Jordan Ellis', 'fix: when the supplier refuses the credit, Match Agent escalates to Jordan Ellis with a short-pay proposal he decides');
+  const d = M.decide(db, s2, sp.proposal, 'approve'); check(d.state === 'Executed' && M.outcome(db, s2).payment_released === false && M.outcome(db, s2).lines.filter((l) => l.status === 'short_pay_decided').length === 2, 'fix: the short-pay decision settles both lines and releases no payment');
+  const bad = [[{ name: 'propose_action', args: { action: 'release_for_payment_proposal', invoice: 'INV-7731', lines: [2], rationale: 'scripted' } }], [{ name: 'propose_action', args: { action: 'release_for_payment_proposal', invoice: 'INV-7731', lines: [2], rationale: 'scripted' } }], [{ name: 'read_queue', args: {} }], [{ name: 'read_queue', args: {} }]];
+  let k = 0; const s3 = M.startSession(db); const r3 = await M.runMatch(db, s3, { callModel: async () => ({ candidates: [{ content: { role: 'model', parts: (bad[k++] || [{ name: 'read_queue', args: {} }]).map((f) => ({ functionCall: f })) } }] }) });
+  check(r3.status === 'waiting_for_jordan' && k === 2 && s3.trace.some((t) => /^Waiting for Jordan Ellis/.test(t.what)), 'fix: an action refused twice stops the agent, which reports what waits for Jordan Ellis instead of retrying to its limit');
+  const s4 = M.startSession(db); const r4 = await M.runMatch(db, s4, { callModel: async () => ({ candidates: [{ content: { role: 'model', parts: [{ functionCall: { name: 'read_queue', args: {} } }] } }] }), maxToolCalls: 3 });
+  check(r4.status !== 'stopped' && s4.trace.some((t) => /^At its limit; waiting/.test(t.what)), 'fix: at its limit Match Agent reports what it is waiting for, never just stopped'); }
 
 // Harness check of the agent loop with a scripted caller (not a model): tool calls reach the reads and the gate.
 { const script = [[{ name: 'read_queue', args: {} }], [{ name: 'propose_action', args: { action: 'release_for_payment_proposal', invoice: 'INV-7731', lines: [1, 3], rationale: 'scripted' } }], [{ name: 'propose_action', args: { action: 'request_credit_or_corrected_invoice', invoice: 'INV-7731', lines: [1, 2], rationale: 'scripted' } }], []];
@@ -70,6 +84,9 @@ function standIn() {
     const chg = L.find((l) => l.status === 'price_set_by_change'); if (chg) return propose('clear_line_by_accepted_change', { line: chg.line }, `read_invoice: ${chg.settling_record}`);
     const need = L.filter((l) => ['above_shipped', 'above_received', 'price_held'].includes(l.status) && !asked.includes(l.line)).map((l) => l.line);
     if (need.length) return propose('request_credit_or_corrected_invoice', { lines: need }, `read_receipts and read_invoice: lines ${need.join(', ')} do not match`);
+    const answered = results.read_requests.requests.filter((r) => r.invoice === inv && r.kind === 'correction' && /^Answered/.test(r.state)).flatMap((r) => r.lines);
+    const left = L.filter((l) => ['above_shipped', 'above_received'].includes(l.status) && answered.includes(l.line)).map((l) => l.line);
+    if (left.length) return propose('short_pay_at_payment', { lines: left }, `read_requests: the supplier's answer leaves lines ${left.join(', ')} uncorrected`);
     const done = props.filter((x) => x.action === 'release_for_payment_proposal').flatMap((x) => x.args.lines);
     const clear = L.filter((l) => l.status === 'clear' && !done.includes(l.line)).map((l) => l.line);
     if (clear.length) return propose('release_for_payment_proposal', { lines: clear }, `read_invoice: lines ${clear.join(', ')} match`);

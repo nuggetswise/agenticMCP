@@ -236,7 +236,7 @@ for (const p of REG.prototypes) {
   { const nfdb0 = new DatabaseSync(join(ROOT, 'build', 'northfield.db'), { readOnly: true }); const c1 = NR.caseNF(nfdb0, 'DC-40877', D.asOfDate('2026-12-30')), c2 = NR.caseNF(nfdb0, 'DC-40877', D.asOfDate('2027-01-06'));
     eq('nf.case.repaid_from_own_remittance', [c1.repaid.length, c2.repaid.map((r) => [r.payment, r.amount])], [0, [['PMT-991204', 88.4]]]); }
   const nfdb = new DatabaseSync(join(ROOT, 'build', 'northfield.db'), { readOnly: true });
-  eq('nf.view_holds_no_supplier_private_records', [nfdb.prepare("SELECT count(*) n FROM documents WHERE doc_type IN ('940','945')").get().n, nfdb.prepare("SELECT count(*) n FROM events WHERE system IN ('Supplier ERP','Kinross warehouse system','Lakeline Freight') AND json_extract(data,'$.in_case') IS NULL").get().n, nfdb.prepare("SELECT count(*) n FROM rules WHERE owner LIKE 'Ashby%'").get().n], [0, 0, 0]);
+  eq('nf.view_holds_no_supplier_private_records', [nfdb.prepare("SELECT count(*) n FROM documents WHERE doc_type IN ('940','945')").get().n, nfdb.prepare("SELECT count(*) n FROM events WHERE system IN ('Supplier ERP','Kinross warehouse system','Lakeline Freight') AND json_extract(data,'$.in_case') IS NULL AND NOT (kind = 'carrier.pickup_missed' AND po IN (SELECT po FROM routing_requests))").get().n, nfdb.prepare("SELECT count(*) n FROM rules WHERE owner LIKE 'Ashby%'").get().n], [0, 0, 0]);
   const asdb = new DatabaseSync(ASHBY_DB, { readOnly: true }); eq('ashby.view_holds_no_northfield_private_tables', asdb.prepare("SELECT count(*) n FROM sqlite_master WHERE name IN ('review_notes','draft_rules','rule_replays')").get().n, 0);
 }
 // ── Registry sync: registry, server and the three docs say the same thing ─────────────────────────────────────────

@@ -1,6 +1,6 @@
 {
  "file": "/home/claude/agenticmcp/docs/build-guide.md",
- "ran_at_head": "83cbff7",
+ "ran_at_head": "6015349",
  "results": [
   {
    "name": "as_of_commit_current",
@@ -27,7 +27,7 @@
    "name": "calls_refs_exist",
    "ok": true,
    "problems": [],
-   "info": "105 calls logged"
+   "info": "106 calls logged"
   },
   {
    "name": "inventory_and_grid_complete",
@@ -52,11 +52,8 @@
   },
   {
    "name": "no_repeated_passages",
-   "ok": false,
-   "problems": [
-    "source owner 16 november. the owner wanting the",
-    "owner 16 november. the owner wanting the rules"
-   ]
+   "ok": true,
+   "problems": []
   },
   {
    "name": "overlap_with_replaced_docs",

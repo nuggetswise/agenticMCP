@@ -161,7 +161,7 @@ export function makeRuntime(spec) {
   ];
   const INSTRUCTION = (s) => `You are ${agent}, working for ${person} at ${spec.company} on Trading Grid. All data is fictional.
 Goal: ${s.goal}
-${spec.instruction}
+${typeof spec.instruction === 'function' ? spec.instruction(s) : spec.instruction}
 Start with read_queue: every action's record argument is a row id from the queue, exactly as written there. Pass an action only the arguments read_policy lists for it.
 Use only facts returned by your tools. Never state a record, amount or confirmation the tools did not return. Read the policy before proposing. A proposal that waits for approval is not done.
 Never retry an action the server refused; read the refusal and change course, or stop and say what waits for ${person}.

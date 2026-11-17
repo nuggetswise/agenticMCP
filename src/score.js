@@ -33,7 +33,7 @@ export function otif(db, { supplier = 'ASHBY', from = QUARTER.start, to = QUARTE
     cases += l.qty_ordered; units.add(l.uom);
     const et = r ? fmtET(r.at) : null; const hour = et ? Number(et.slice(11, 13)) + Number(et.slice(14, 16)) / 60 : null; const [wOpen, wClose] = l.ship_to === 'DC4' ? [7, 15] : [6, 14];
     if (missed.has(l.po)) { reason = 'Collect freight not ready'; bad = l.qty_ordered; first = 'Carrier pickup record'; }
-    else if (r && (etDay(new Date(r.at)) > l.requested_delivery || hour < wOpen || hour > wClose)) { reason = own ? 'Prepaid arrived outside window' : 'Arrived outside the delivery window'; bad = l.qty_ordered; first = `Receiving advice ${r.receipt}`; }
+    else if (r && (etDay(new Date(r.at)) > l.requested_delivery || hour < wOpen || hour > wClose)) { reason = 'Prepaid arrived outside window'; bad = l.qty_ordered; first = `Receiving advice ${r.receipt}`; }
     else if (got < l.qty_ordered) { bad = l.qty_ordered - got;
       if (l.qty_accepted != null && l.qty_accepted < l.qty_ordered) { reason = 'Allocation cut'; first = 'Order acknowledgment'; }
       else if (s && s.q < l.qty_ordered) { reason = 'Short shipped, remainder cancelled'; first = `Ship notice ${s.asn}`; }

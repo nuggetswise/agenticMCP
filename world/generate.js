@@ -43,7 +43,8 @@ function buyerOrders(L, W) {
       // The Money in Motion fixture reuses 18 ship notice numbers across orders; the world keeps each number to one order.
       let e = e0; if (e[0] === 'asn' || e[0] === 'rcv') { const own = asnOwner.get(e[2]) ?? asnOwner.set(e[2], p.id).get(e[2]); if (own !== p.id) { e = [...e]; e[2] = `${e[2]}-${p.id.slice(3)}`; } }
       if (e[1] !== lastDay) { slot = 0; lastDay = e[1]; }
-      const at = t(e[1]);
+      // Receipts post at the DC dock's first hour (07:30 to 08:36 ET), inside Northfield's delivery window at DC 2 and DC 4.
+      const at = e[0] === 'rcv' && supplier !== 'ASHBY' ? dayAt(e[1], hm(base - 30)) : t(e[1]);
       if (e[0] === 'chg') D.change(L, O, at, ++seq, Object.entries(e[2]).map(([k, q]) => ({ line: ln(k).line, code: q === 0 ? 'DI' : q < ln(k).qty ? 'QD' : 'QI', qty: q, qty_left: q })));
       else if (e[0] === 'ack') D.ack(L, O, at, { ref: `ACK-${p.id.slice(3)}`, codes: Object.fromEntries(Object.entries(e[2]).map(([k, a]) => [ln(k).line, a[1]])), qty: Object.fromEntries(Object.entries(e[2]).map(([k, a]) => [ln(k).line, a[0]])), backorder: Object.fromEntries(Object.entries(e[2]).filter(([, a]) => a[2]).map(([k, a]) => [ln(k).line, a[2]])) });
       else if (e[0] === 'asn' && asnQty.set(e[2], e[3])) D.asn(L, O, supplier !== 'ASHBY' && idx % 8 === 3 && at >= et('2026-09-27', '00:00') ? new Date(at.getTime() + (31 + idx % 8) * 60000) : at, { ref: e[2], shippedAt: at, deliveryDate: etDay(dayAt(e[1] + fx.transit, '12:00')), lines: Object.entries(e[3]).map(([k, q]) => ({ line: ln(k).line, sku: ln(k).sku, qty: q, uom: 'EA' })), cartonCount: Math.max(1, Math.ceil(Object.values(e[3]).reduce((a, b) => a + b, 0) / 24)), status: e[4] ? 'CC' : 'BP', shipFrom: { name: PARTY[supplier].name, gln: PARTY[supplier].gln }, scac: 'LKLF' });

@@ -102,6 +102,8 @@ const docs = {
         out.push(seg('LIN', i + 1, 'VN', it.sku, 'UK', it.gtin));
         for (const w of it.waves) out.push(seg('QTY', '33', w.available, 'CA'), seg('DTM', '007', d8(w.at), t4(w.at)));
         out.push(seg('QTY', '17', it.on_hand, 'CA'), seg('DTM', '007', d8(d.as_of), t4(d.as_of)), seg('QTY', '33', it.available, 'CA'), seg('DTM', '007', d8(d.as_of), t4(d.as_of)));
+        // Cases held back for damage replacement, reported apart from the cases available to orders (QTY01 QH, quantity on hold).
+        if (it.held != null) out.push(seg('QTY', 'QH', it.held, 'CA'), seg('DTM', '007', d8(d.as_of), t4(d.as_of)));
       });
       out.push(seg('CTT', d.items.length));
       return out;
@@ -265,7 +267,10 @@ CREATE TABLE order_status (po TEXT NOT NULL REFERENCES orders(po), line INTEGER 
       const keys = led.keys.filter((k) => k.startsWith(`${site}|`));
       for (let day = led.startDay; day <= led.endDay; day = plusDays(day, 1)) {
         const asOf = Date.parse(`${day}T23:30:00Z`); const from = asOf - 24 * H;
-        const its = keys.map((k) => { const sku = k.split('|')[1]; const lv = led.level(k, asOf); return { sku, gtin: ITEM[sku].gtin, on_hand: lv, available: lv, waves: led.waves.filter((w) => w.key === k && w.t > from && w.t <= asOf).map((w) => ({ at: new Date(w.t).toISOString(), available: w.available })) }; });
+        // 17 November 2026 (P5): Kinross holds 2 cases of ASH-MUG-12 back at Groveport for damage replacement, outside the
+        // cases free for orders, and reports them apart. One replaces NR-460207's crushed carton at 17:46 ET on 8 December.
+        const heldOf = (k) => (k === 'KIN-GRV|ASH-MUG-12' ? (asOf >= Date.parse('2026-12-08T22:46:00Z') ? 1 : 2) : null);
+        const its = keys.map((k) => { const sku = k.split('|')[1]; const lv = led.level(k, asOf); const held = heldOf(k); return { sku, gtin: ITEM[sku].gtin, on_hand: lv + (held || 0), available: lv, ...(held != null ? { held } : {}), waves: led.waves.filter((w) => w.key === k && w.t > from && w.t <= asOf).map((w) => ({ at: new Date(w.t).toISOString(), available: w.available })) }; });
         doc({ type: '846', from: 'KINROSS', to: 'ASHBY', at: new Date(asOf + 10 * 60000), as_of: new Date(asOf).toISOString(), ref: `IA-${site.slice(4)}-${ymd(day)}`, site_name: LOC[site].name, site_gln: LOC[site].gln, client_name: ASH.name, client_gln: ASH.gln, items: its });
       }
     }
@@ -302,6 +307,7 @@ CREATE TABLE order_status (po TEXT NOT NULL REFERENCES orders(po), line INTEGER 
         for (const [at, rs] of byAt) {
           const oh = rs.find((r) => r.code === '17'); const av = rs.find((r) => r.code === '33');
           T.stock_positions.push({ site, sku: it.sku, as_of: at, kind: oh ? 'End of day' : 'Pick wave', on_hand: oh ? oh.qty : null, committed: null, available: av ? av.qty : null, unit: 'Cases', reported_by: d.sender, source: 'Inventory advice (846)', doc_id: d.doc_id, event_id: null });
+          const qh = rs.find((r) => r.code === 'QH'); if (qh) T.stock_positions.push({ site, sku: it.sku, as_of: at, kind: 'Held for damage replacement', on_hand: qh.qty, committed: null, available: 0, unit: 'Cases', reported_by: d.sender, source: 'Inventory advice (846)', doc_id: d.doc_id, event_id: null });
         }
       }
     } else if (d.type === '870') {

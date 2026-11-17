@@ -9,7 +9,7 @@ const supplierOf = (db, id) => db.prepare('SELECT id, name FROM parties WHERE id
 
 /**
  * On-time, in-full as Trading Grid calculates it from the documents it carries (P7): compliant cases ÷ all cases, counted
- * per order line, on Northfield's definition (NF-8.2, NF-8.3). A line's cases are compliant when Northfield's receiving
+ * per order line, on Northfield's definition (NF-8.2, NF-8.3). A line with no receiving advice at the measurement time is open and left out. A line's cases are compliant when Northfield's receiving
  * advice (861) shows them received inside the purchase order's delivery window and in full against the quantity after
  * accepted order changes (850, 860). Each failing line's reason is read from documents both companies hold: the order
  * acknowledgment (855), the ship notice (856), the receiving advice (861) and, on collect freight, the missed pickup.
@@ -25,15 +25,17 @@ export function otif(db, { supplier = 'ASHBY', from = QUARTER.start, to = QUARTE
   const sh = new Map(); for (const r of db.prepare(`SELECT l.po, l.line, sum(l.qty) q, min(l.shipment_id) asn FROM shipment_lines l JOIN shipments s ON s.shipment_id = l.shipment_id WHERE s.sent_at <= ? AND l.po IN ${pos} GROUP BY l.po, l.line`).all(T)) sh.set(`${r.po}|${r.line}`, r);
   const missed = new Set(db.prepare("SELECT po FROM events WHERE kind = 'carrier.pickup_missed' AND at <= ?").all(T).map((r) => r.po));
   const sites = new Map(db.prepare(`SELECT po, ship_from FROM shipments WHERE po IN ${pos}`).all().map((r) => [r.po, r.ship_from]));
-  let cases = 0, failing = 0; const rows = []; const units = new Set();
+  let cases = 0, failing = 0; const rows = []; const units = new Set(); const open = [];
   for (const l of lines) {
-    cases += l.qty_ordered; units.add(l.uom); const k = `${l.po}|${l.line}`; const r = rc.get(k); const got = r ? r.q : 0; const s = sh.get(k); let reason = null, bad = 0, first = null;
-    const et = r ? fmtET(r.at) : null; const hour = et ? Number(et.slice(11, 13)) + Number(et.slice(14, 16)) / 60 : null; const [open, close] = l.ship_to === 'DC4' ? [7, 15] : [6, 14];
+    const k = `${l.po}|${l.line}`; const r = rc.get(k); const got = r ? r.q : 0; const s = sh.get(k); let reason = null, bad = 0, first = null;
+    // A line with no receiving advice at the measurement time is open, not failing: it is left out of the rate and listed.
+    if (!r && !missed.has(l.po)) { open.push({ po: l.po, line: l.line, item: l.sku, cases: l.qty_ordered, delivery_date: l.requested_delivery, ship_notice: s ? s.asn : null, state: s ? 'Shipped, no receiving advice yet' : 'No ship notice or receiving advice yet' }); continue; }
+    cases += l.qty_ordered; units.add(l.uom);
+    const et = r ? fmtET(r.at) : null; const hour = et ? Number(et.slice(11, 13)) + Number(et.slice(14, 16)) / 60 : null; const [wOpen, wClose] = l.ship_to === 'DC4' ? [7, 15] : [6, 14];
     if (missed.has(l.po)) { reason = 'Collect freight not ready'; bad = l.qty_ordered; first = 'Carrier pickup record'; }
-    else if (r && (etDay(new Date(r.at)) > l.requested_delivery || hour < open || hour > close)) { reason = own ? 'Prepaid arrived outside window' : 'Arrived outside the delivery window'; bad = l.qty_ordered; first = `Receiving advice ${r.receipt}`; }
+    else if (r && (etDay(new Date(r.at)) > l.requested_delivery || hour < wOpen || hour > wClose)) { reason = own ? 'Prepaid arrived outside window' : 'Arrived outside the delivery window'; bad = l.qty_ordered; first = `Receiving advice ${r.receipt}`; }
     else if (got < l.qty_ordered) { bad = l.qty_ordered - got;
-      if (!r) { reason = s ? 'Shipped, no receiving advice' : 'No ship notice or receiving advice'; first = s ? `Ship notice ${s.asn}` : 'Purchase order'; }
-      else if (l.qty_accepted != null && l.qty_accepted < l.qty_ordered) { reason = 'Allocation cut'; first = 'Order acknowledgment'; }
+      if (l.qty_accepted != null && l.qty_accepted < l.qty_ordered) { reason = 'Allocation cut'; first = 'Order acknowledgment'; }
       else if (s && s.q < l.qty_ordered) { reason = 'Short shipped, remainder cancelled'; first = `Ship notice ${s.asn}`; }
       else { reason = 'Received below ship notice'; first = `Receiving advice ${r.receipt}`; } }
     if (bad) { failing += bad; rows.push({ po: l.po, line: l.line, item: l.sku, site: sites.get(l.po) || null, dc: l.ship_to === 'DC4' ? 'DC 4' : l.ship_to === 'DC2' ? 'DC 2' : l.ship_to, reason, cases: bad, ordered: l.qty_ordered, shipped: s ? s.q : 0, received: got, first_record: first, ship_notice: s ? s.asn : null, receiving_advice: r ? r.receipt : null }); }
@@ -41,8 +43,9 @@ export function otif(db, { supplier = 'ASHBY', from = QUARTER.start, to = QUARTE
   const by = {}; for (const r of rows) { (by[r.reason] ||= { reason: r.reason, lines: 0, cases: 0 }); by[r.reason].lines++; by[r.reason].cases += r.cases; }
   const compliant = cases - failing; const score = cases ? `${((compliant / cases) * 100).toFixed(1)}%` : null;
   return { calculated_by: 'Trading Grid', period: `${from} to ${to}`, definition: 'Northfield supplier guide 2026.2 (NF-8.2, NF-8.3): compliant cases ÷ all cases, counted per order line', programme: own ? 'DC replenishment' : 'All orders with a delivery date in the period',
-    counting_unit: own ? 'Cases' : [...units].map((u) => ({ CA: 'Cases', EA: 'Each', PR: 'Pairs' }[u] || u)).join(', ') || 'Cases', order_lines: lines.length, cases, failing_cases: failing, compliant_cases: compliant, score,
-    formula: cases ? `${money0(compliant)} ÷ ${money0(cases)} = ${score}` : null, failing_lines: rows.length, by_reason: Object.values(by).sort((a, b) => b.cases - a.cases), lines: rows.sort((a, b) => b.cases - a.cases) };
+    counting_unit: own ? 'Cases' : [...units].map((u) => ({ CA: 'Cases', EA: 'Each', PR: 'Pairs' }[u] || u)).join(', ') || 'Cases', order_lines: lines.length - open.length, cases, failing_cases: failing, compliant_cases: compliant, score,
+    formula: cases ? `${money0(compliant)} ÷ ${money0(cases)} = ${score}` : null, failing_lines: rows.length, by_reason: Object.values(by).sort((a, b) => b.cases - a.cases),
+    open_lines: { lines: open.length, cases: open.reduce((t, o) => t + o.cases, 0), note: 'No receiving advice at the measurement time: left out of the rate, neither compliant nor failing', ...(open.length ? { list: open.slice(0, 50) } : {}) }, lines: rows.sort((a, b) => b.cases - a.cases) };
 }
 
 /** Ashby's rate for the quarter (the figure every existing check reads). */
@@ -67,11 +70,11 @@ export function supplierRanking(db, asOf) {
   if (!closed || closed > asOf.toISOString()) return { as_of: fmtET(asOf), calculated: false, calculated_by: 'Trading Grid', message: `Trading Grid calculates the on-time, in-full rates for ${QUARTER.start} to ${QUARTER.end} when the quarter's last receiving advice arrives${closed ? `, ${fmtET(closed)}` : ''}. They are not calculated at ${fmtET(asOf)}.` };
   const ids = db.prepare("SELECT DISTINCT o.supplier_id id FROM orders o WHERE o.requested_delivery >= ? AND o.requested_delivery <= ? AND (o.supplier_id <> 'ASHBY' OR o.stream = 'replenishment')").all(QUARTER.start, QUARTER.end).map((r) => r.id);
   const rows = ids.map((id) => { const s = otif(db, { supplier: id, asOf }); return { supplier: supplierOf(db, id)?.name || id, supplier_id: id, score: s.score, _v: s.cases ? s.compliant_cases / s.cases : -1, counting_unit: s.counting_unit, order_lines: s.order_lines, cases: s.cases, compliant_cases: s.compliant_cases, formula: s.formula,
-    failing_lines: s.failing_lines, failing_cases: s.failing_cases, top_reason: s.by_reason[0] ? { reason: s.by_reason[0].reason, lines: s.by_reason[0].lines, cases: s.by_reason[0].cases } : null }; }).filter((r) => r.cases > 0)
+    failing_lines: s.failing_lines, failing_cases: s.failing_cases, open_lines: s.open_lines.lines, open_cases: s.open_lines.cases, top_reason: s.by_reason[0] ? { reason: s.by_reason[0].reason, lines: s.by_reason[0].lines, cases: s.by_reason[0].cases } : null }; }).filter((r) => r.cases > 0)
     .sort((a, b) => b._v - a._v || b.cases - a.cases || a.supplier.localeCompare(b.supplier));
   rows.forEach((r, i) => { r.rank = i + 1; delete r._v; });
   return { as_of: fmtET(asOf), calculated: true, calculated_by: 'Trading Grid', period: `${QUARTER.start} to ${QUARTER.end}`, definition: 'Northfield supplier guide 2026.2 (NF-8.2, NF-8.3): compliant cases ÷ all cases, counted per order line, the same formula for every supplier',
-    note: 'Each rate is calculated from the purchase orders, order changes, ship notices and receiving advice Trading Grid carries for that supplier. A line with no receiving advice inside its delivery window is not compliant.', suppliers: rows.length, ranking: rows };
+    note: 'Each rate is calculated from the purchase orders, order changes, ship notices and receiving advice Trading Grid carries for that supplier. A line with no receiving advice at the measurement time is open: it is left out of the rate and counted under open_lines.', suppliers: rows.length, ranking: rows };
 }
 
 /** In-full component and its OT01 charge (NF-8.2, NF-2.1): 3% of the goods value of in-full failing cases, by month of delivery, months under $1,000 waived. */

@@ -3,7 +3,7 @@
  "validator_published": "2026-11-08",
  "jar_bytes": 323801,
  "corpus": {
-  "sha256": "44a0b332e9da810df49bd096af8c901afa99dbc6e161decf4a140ee776ec3fbe",
+  "sha256": "bb3f90ca374cbed447a5a905d59be7f23bd352867191956ec98a2be99df5dc12",
   "files": 4252
  },
  "passed": true,

@@ -1,12 +1,12 @@
 {
  "file": "/home/claude/agenticmcp/docs/build-guide.md",
- "ran_at_head": "6181fc1",
+ "ran_at_head": "ac2e857",
  "results": [
   {
    "name": "as_of_commit_current",
    "ok": true,
    "problems": [],
-   "info": "6181fc1"
+   "info": "ac2e857"
   },
   {
    "name": "commits_exist",
@@ -37,11 +37,8 @@
   },
   {
    "name": "no_copied_world_values",
-   "ok": false,
-   "problems": [
-    "$80",
-    "$150"
-   ]
+   "ok": true,
+   "problems": []
   },
   {
    "name": "proof_counts_current",
@@ -50,10 +47,8 @@
   },
   {
    "name": "artifact_links_verified",
-   "ok": false,
-   "problems": [
-    "XvERP9L3d3QAMyUZvgvMZB"
-   ]
+   "ok": true,
+   "problems": []
   },
   {
    "name": "no_repeated_passages",
@@ -99,12 +94,9 @@
   },
   {
    "name": "tasks_have_ids_and_done_when",
-   "ok": false,
-   "problems": [
-    "T3.5: status \"Done: commit 6181fc1, CALLS 107; `scripts/walk-p21.mjs` 47 checks, kit-check `--tool` passing; AP-4.1 at $80 moves DC-40877 from Claim Agent to Priya Raman, at $150 moves nothing\"",
-    "T4.20: status \"Done: D75 closes Watch (P13 rebuilt with no agent); CALLS 107\""
-   ],
-   "info": "69 tasks: 53 done, 0 blocked"
+   "ok": true,
+   "problems": [],
+   "info": "69 tasks: 55 done, 0 blocked"
   }
  ]
 }

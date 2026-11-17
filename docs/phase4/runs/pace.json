@@ -1,128 +1,769 @@
 {
  "agent": {
-  "session": "PC-51352f5b3c",
+  "session": "PC-8dbbe22a1c",
   "status": "done",
   "outcome": {
-   "as_of": "2026-12-29 09:07 ET",
-   "tasks": {
-    "quarter": {
-     "cause": "Stock below available-to-promise figure at Kinross Joliet",
-     "owner": "Ashby Supplier ERP / Kinross Joliet Warehouse",
-     "at": "2026-12-28 09:04 ET",
-     "after_answer": false
+   "as_of": "2026-12-28 09:06 ET",
+   "calculated_by": "Trading Grid",
+   "rate": "91.0%",
+   "formula": "43,680 ÷ 48,000 = 91.0%",
+   "failing_lines": 108,
+   "by_reason": [
+    {
+     "reason": "Short shipped, remainder cancelled",
+     "lines": 31,
+     "cases": 1794
+    },
+    {
+     "reason": "Collect freight not ready",
+     "lines": 18,
+     "cases": 1260
+    },
+    {
+     "reason": "Allocation cut",
+     "lines": 9,
+     "cases": 720
+    },
+    {
+     "reason": "Prepaid arrived outside window",
+     "lines": 6,
+     "cases": 480
+    },
+    {
+     "reason": "Received below ship notice",
+     "lines": 44,
+     "cases": 66
+    }
+   ],
+   "attributions": {
+    "short_shipped": {
+     "attributed_to": "Kinross",
+     "first_record": "Kinross short pick",
+     "basis": "Kinross's short pick record shows the shortfall before the ship notice across both Kinross Joliet and Kinross Groveport warehouses.",
+     "causes": [
+      {
+       "lines": 26,
+       "cases": 1484,
+       "warehouse": "Kinross Joliet",
+       "cause": "Kinross short pick"
+      },
+      {
+       "lines": 5,
+       "cause": "Kinross short pick",
+       "warehouse": "Kinross Groveport",
+       "cases": 310
+      }
+     ],
+     "at": "2026-12-28 09:01 ET"
+    },
+    "collect_not_ready": {
+     "attributed_to": "Kinross",
+     "first_record": "carrier's missed pickup",
+     "basis": "The carrier's missed pickup record shows collect freight not ready at Kinross's docks across both Kinross Groveport and Kinross Joliet warehouses.",
+     "causes": [
+      {
+       "warehouse": "Kinross Groveport",
+       "cases": 862,
+       "lines": 12,
+       "cause": "carrier missed pickup (collect not ready)"
+      },
+      {
+       "cause": "carrier missed pickup (collect not ready)",
+       "warehouse": "Kinross Joliet",
+       "cases": 398,
+       "lines": 6
+      }
+     ],
+     "at": "2026-12-28 09:02 ET"
+    },
+    "allocation_cut": {
+     "attributed_to": "Ashby",
+     "first_record": "Supplier ERP allocation",
+     "basis": "Ashby's Supplier ERP allocation record caused the shortfall before the ship notice across both Kinross Joliet and Kinross Groveport warehouses.",
+     "causes": [
+      {
+       "lines": 5,
+       "warehouse": "Kinross Joliet",
+       "cause": "Supplier ERP allocation cut",
+       "cases": 400
+      },
+      {
+       "lines": 4,
+       "warehouse": "Kinross Groveport",
+       "cause": "Supplier ERP allocation cut",
+       "cases": 320
+      }
+     ],
+     "at": "2026-12-28 09:03 ET"
+    },
+    "outside_window": {
+     "attributed_to": "Ashby",
+     "first_record": "carrier's missed pickup or freight arrangement",
+     "basis": "Ashby arranged the prepaid freight that arrived outside the delivery window across Kinross Joliet and Kinross Groveport warehouses.",
+     "causes": [
+      {
+       "cause": "prepaid freight arrived outside window",
+       "lines": 5,
+       "cases": 423,
+       "warehouse": "Kinross Joliet"
+      },
+      {
+       "cause": "prepaid freight arrived outside window",
+       "lines": 1,
+       "warehouse": "Kinross Groveport",
+       "cases": 57
+      }
+     ],
+     "at": "2026-12-28 09:04 ET"
+    },
+    "received_below": {
+     "attributed_to": "Northfield receiving",
+     "first_record": "receiving advice",
+     "basis": "The ship notice, full SSCC load scan, and clean carrier delivery receipt match while only Northfield's receiving advice counts fewer cases across Kinross Joliet and Kinross Groveport warehouses.",
+     "causes": [
+      {
+       "warehouse": "Kinross Joliet",
+       "cases": 34,
+       "cause": "receiving advice discrepancy below ship notice",
+       "lines": 22
+      },
+      {
+       "lines": 22,
+       "cause": "receiving advice discrepancy below ship notice",
+       "cases": 32,
+       "warehouse": "Kinross Groveport"
+      }
+     ],
+     "at": "2026-12-28 09:05 ET"
     },
     "week_nov22": {
-     "cause": "Incorrect stock count for ASH-NAP-4 at Kinross Groveport",
-     "owner": "Ashby Supplier ERP / Kinross Groveport Warehouse",
-     "at": "2026-12-28 09:24 ET",
-     "after_answer": true
+     "attributed_to": "Each warehouse separately",
+     "first_record": "Kinross short pick",
+     "basis": "Kinross's short pick record shows stock below available-to-promise before the ship notice across both Kinross Groveport and Kinross Joliet warehouses for the week of November 22.",
+     "causes": [
+      {
+       "warehouse": "Kinross Groveport",
+       "cause": "Kinross short pick",
+       "lines": 3,
+       "cases": 175
+      },
+      {
+       "cause": "Kinross short pick",
+       "warehouse": "Kinross Joliet",
+       "lines": 2,
+       "cases": 121
+      }
+     ],
+     "at": "2026-12-28 09:06 ET"
     }
    },
-   "questions": {
-    "week_nov22": {
-     "question": "The week_nov22 short shipments split across Kinross Groveport (40%) and Kinross Joliet (60%), with no single site carrying a dominant share. Which warehouse and cause should lead the corrective task for this period?",
-     "at": "2026-12-28 09:00 ET"
-    }
-   },
-   "answers": {
-    "week_nov22": "Groveport leads: the ASH-NAP-4 stock count there is wrong; Joliet\u2019s honey shortfall is a supplier delivery issue I am handling separately."
-   },
-   "explanation": {
-    "shared": "2026-12-28 09:07 ET",
-    "northfield": "yes"
-   },
-   "official_score_changed": false,
+   "unattributed": [],
+   "sent": "Nothing",
+   "plan_or_task_drafted": false,
+   "improvement_claimed": false,
    "violations": [],
-   "synthetic": "Priya\u2019s answer and Northfield\u2019s acceptance are synthetic, from src/pace.js; the scorecard and short-pick records are recorded."
+   "synthetic": "Nothing in this run is synthetic: the rate and every record are the recorded world’s; an attribution is a line on Ashby’s own view."
   },
   "overhead": {
-   "model_calls": 18,
-   "tool_calls": 13,
-   "ms": 62779
+   "model_calls": 14,
+   "tool_calls": 14,
+   "ms": 88204,
+   "model_routes": {
+    "primary · gemini-3.5-flash-lite": 14
+   }
   },
   "trace": [
-   "1. 09:00 Trading Grid [System] Session branched from the recorded world",
-   "2. 09:00 Rule engine [Fixed rule] 3 periods to explain to work",
-   "7. 09:00 Pace Agent [AI judgment] Proposed: Draft a corrective task with its cause, owner and warehouse for Ashby\u2019s plan {\"owner\":\"Ashby Supplier ERP / Kinross Joliet Warehouse\",\"cause\":\"Stock below available-to-promise figure at Kinross Joliet\",\"record\":\"quarter\"} \u00b7 why: The quarter records show 31 short-shipped lines with ASH-MUG-12 at Kinross Joliet carrying 77% of the short shipments, supporting a focused corrective task for that warehouse and cause.",
-   "9. 09:00 Pace Agent [AI judgment] Proposed: Ask Priya Raman a question before drafting {\"question\":\"The week_nov22 short shipments split across Kinross Groveport (40%) and Kinross Joliet (60%), with no single site carrying a dominant share. Which warehouse and cause should lead the corrective task for this period?\",\"record\":\"week_nov22\"} \u00b7 why: The short shipments for week_nov22 are split between Kinross Groveport and Kinross Joliet without a dominant single site, so guardrail NF-9.3 requires asking Priya before drafting a plan.",
-   "10. 09:01 Trading Grid (notice to Priya) [External confirmation] Executed: Ask Priya Raman a question before drafting \u00b7 Question sent to Priya Raman",
-   "11. 09:01 Pace Agent [AI judgment] Proposed: Share the explanation of the official and network-calculated scores, with the lines and documents behind it, with Jordan Ellis {\"record\":\"explanation\"} \u00b7 why: Northfield's scorecard and explanation record show an official score of 91.0% and a network-calculated score of 92.4% across 108 failing lines, with PO NR-450118 line 2 explaining the difference due to a receipt count awaiting receiving revision.",
-   "12. 09:01 Pace Agent [AI judgment] Pace Agent said",
-   "13. 09:02 Test approver (replay) [Human approval] Approved PCP-1: Draft a corrective task with its cause, owner and warehouse for Ashby\u2019s plan {\"owner\":\"Ashby Supplier ERP / Kinross Joliet Warehouse\",\"cause\":\"Stock below available-to-promise figure at Kinross Joliet\",\"record\":\"quarter\"}",
-   "14. 09:04 Trading Grid (task to Kinross and Supplier ERP owners) [External confirmation] Executed: Draft a corrective task with its cause, owner and warehouse for Ashby\u2019s plan \u00b7 Corrective task drafted for Quarter, 27 September to 26 December: Stock below available-to-promise figure at Kinross Joliet; owner Ashby Supplier ERP / Kinross Joliet Warehouse",
-   "15. 09:05 Test approver (replay) [Human approval] Approved PCP-3: Share the explanation of the official and network-calculated scores, with the lines and documents behind it, with Jordan Ellis {\"record\":\"explanation\"}",
-   "16. 09:07 Northfield (shared performance review) [External confirmation] Executed: Share the explanation of the official and network-calculated scores, with the lines and documents behind it, with Jordan Ellis \u00b7 Explanation shared with Jordan Ellis; Northfield\u2019s official score is unchanged",
-   "19. 09:07 Pace Agent [AI judgment] Pace Agent said",
-   "20. 09:21 Priya Raman (synthetic) [External confirmation] Priya Raman answered: Groveport leads: the ASH-NAP-4 stock count there is wrong; Joliet\u2019s honey shortfall is a supplier delivery issue I am handling separately.",
-   "21. 09:21 Pace Agent [AI judgment] Proposed: Draft a corrective task with its cause, owner and warehouse for Ashby\u2019s plan {\"cause\":\"Incorrect stock count for ASH-NAP-4 at Kinross Groveport\",\"record\":\"week_nov22\",\"owner\":\"Ashby Supplier ERP / Kinross Groveport Warehouse\"} \u00b7 why: Priya Raman designated Kinross Groveport as the lead site for week_nov22 due to the incorrect ASH-NAP-4 stock count there, supporting a corrective task for this cause under guardrail NF-9.3.",
-   "22. 09:21 Pace Agent [AI judgment] Pace Agent said",
-   "23. 09:22 Test approver (replay) [Human approval] Approved PCP-4: Draft a corrective task with its cause, owner and warehouse for Ashby\u2019s plan {\"cause\":\"Incorrect stock count for ASH-NAP-4 at Kinross Groveport\",\"record\":\"week_nov22\",\"owner\":\"Ashby Supplier ERP / Kinross Groveport Warehouse\"}",
-   "24. 09:24 Trading Grid (task to Kinross and Supplier ERP owners) [External confirmation] Executed: Draft a corrective task with its cause, owner and warehouse for Ashby\u2019s plan \u00b7 Corrective task drafted for Week of 22 to 28 November: Incorrect stock count for ASH-NAP-4 at Kinross Groveport; owner Ashby Supplier ERP / Kinross Groveport Warehouse",
-   "26. 09:24 Pace Agent [AI judgment] Pace Agent said",
-   "27. 09:07 Northfield (synthetic) [External confirmation] Jordan Ellis accepted the explanation; the official score stays 91.0%",
-   "29. 09:07 Pace Agent [AI judgment] Pace Agent said"
-  ]
+   {
+    "n": 1,
+    "clock": "2026-12-28 09:00 ET",
+    "actor": "Trading Grid",
+    "type": "system",
+    "what": "Session branched from the recorded world",
+    "detail": {
+     "at": "2026-12-28 09:00 ET",
+     "hidden": "Every recorded record after this time",
+     "changes": []
+    }
+   },
+   {
+    "n": 2,
+    "clock": "2026-12-28 09:00 ET",
+    "actor": "Rule engine",
+    "type": "rule",
+    "what": "6 groups of failing order lines to explain to work",
+    "detail": {
+     "rows": [
+      "short_shipped: Short shipped, remainder cancelled: 31 order lines, 1,794 cases",
+      "collect_not_ready: Collect freight not ready: 18 order lines, 1,260 cases",
+      "allocation_cut: Allocation cut: 9 order lines, 720 cases",
+      "outside_window: Prepaid arrived outside window: 6 order lines, 480 cases",
+      "received_below: Received below ship notice: 44 order lines, 66 cases",
+      "week_nov22: Week of 22 to 28 November: 5 short-shipped lines at Kinross Groveport and Kinross Joliet"
+     ]
+    }
+   },
+   {
+    "n": 3,
+    "clock": "2026-12-28 09:00 ET",
+    "actor": "Pace Agent",
+    "type": "tool",
+    "what": "Read read_queue",
+    "detail": {
+     "args": {}
+    }
+   },
+   {
+    "n": 4,
+    "clock": "2026-12-28 09:00 ET",
+    "actor": "Pace Agent",
+    "type": "tool",
+    "what": "Read read_policy",
+    "detail": {
+     "args": {}
+    }
+   },
+   {
+    "n": 5,
+    "clock": "2026-12-28 09:00 ET",
+    "actor": "Pace Agent",
+    "type": "tool",
+    "what": "Read read_failing_lines",
+    "detail": {
+     "args": {
+      "record": "short_shipped"
+     }
+    }
+   },
+   {
+    "n": 6,
+    "clock": "2026-12-28 09:00 ET",
+    "actor": "Pace Agent",
+    "type": "ai",
+    "what": "Proposed: Show on Ashby’s performance view where a group of failing order lines first went wrong and who owns it",
+    "detail": {
+     "proposal": "PCP-1",
+     "args": {
+      "attributed_to": "Kinross",
+      "basis": "Kinross's short pick record shows the shortfall before the ship notice across both Kinross Joliet and Kinross Groveport warehouses.",
+      "first_record": "Kinross short pick",
+      "causes": [
+       {
+        "lines": 26,
+        "cases": 1484,
+        "warehouse": "Kinross Joliet",
+        "cause": "Kinross short pick"
+       },
+       {
+        "lines": 5,
+        "cause": "Kinross short pick",
+        "warehouse": "Kinross Groveport",
+        "cases": 310
+       }
+      ],
+      "record": "short_shipped"
+     },
+     "rationale": "Readings of short_shipped show Kinross short picks recorded prior to the ship notice for all 31 lines across Kinross Joliet and Kinross Groveport.",
+     "alternatives": [
+      "Attredit to Ashby Supplier ERP allocation",
+      "Attribute to Northfield receiving advice"
+     ],
+     "needs": "policy"
+    }
+   },
+   {
+    "n": 7,
+    "clock": "2026-12-28 09:01 ET",
+    "actor": "Trading Grid (Ashby’s own performance view; nothing is sent)",
+    "type": "external",
+    "what": "Executed: Show on Ashby’s performance view where a group of failing order lines first went wrong and who owns it",
+    "detail": {
+     "proposal": "PCP-1",
+     "response": "Shown on Ashby’s performance view: short_shipped, 2 causes. Nothing was sent."
+    }
+   },
+   {
+    "n": 8,
+    "clock": "2026-12-28 09:01 ET",
+    "actor": "Pace Agent",
+    "type": "tool",
+    "what": "Read read_failing_lines",
+    "detail": {
+     "args": {
+      "record": "collect_not_ready"
+     }
+    }
+   },
+   {
+    "n": 9,
+    "clock": "2026-12-28 09:01 ET",
+    "actor": "Pace Agent",
+    "type": "ai",
+    "what": "Proposed: Show on Ashby’s performance view where a group of failing order lines first went wrong and who owns it",
+    "detail": {
+     "proposal": "PCP-2",
+     "args": {
+      "basis": "The carrier's missed pickup record shows collect freight not ready at Kinross's docks across both Kinross Groveport and Kinross Joliet warehouses.",
+      "causes": [
+       {
+        "warehouse": "Kinross Groveport",
+        "cases": 862,
+        "lines": 12,
+        "cause": "carrier missed pickup (collect not ready)"
+       },
+       {
+        "cause": "carrier missed pickup (collect not ready)",
+        "warehouse": "Kinross Joliet",
+        "cases": 398,
+        "lines": 6
+       }
+      ],
+      "first_record": "carrier's missed pickup",
+      "record": "collect_not_ready",
+      "attributed_to": "Kinross"
+     },
+     "rationale": "Readings of collect_not_ready show the carrier's missed pickup record for collect freight not ready across Kinross Groveport and Kinross Joliet.",
+     "alternatives": [
+      "Attribute to Kinross short pick",
+      "Attribute to Northfield receiving advice"
+     ],
+     "needs": "policy"
+    }
+   },
+   {
+    "n": 10,
+    "clock": "2026-12-28 09:02 ET",
+    "actor": "Trading Grid (Ashby’s own performance view; nothing is sent)",
+    "type": "external",
+    "what": "Executed: Show on Ashby’s performance view where a group of failing order lines first went wrong and who owns it",
+    "detail": {
+     "proposal": "PCP-2",
+     "response": "Shown on Ashby’s performance view: collect_not_ready, 2 causes. Nothing was sent."
+    }
+   },
+   {
+    "n": 11,
+    "clock": "2026-12-28 09:02 ET",
+    "actor": "Pace Agent",
+    "type": "tool",
+    "what": "Read read_failing_lines",
+    "detail": {
+     "args": {
+      "record": "allocation_cut"
+     }
+    }
+   },
+   {
+    "n": 12,
+    "clock": "2026-12-28 09:02 ET",
+    "actor": "Pace Agent",
+    "type": "ai",
+    "what": "Proposed: Show on Ashby’s performance view where a group of failing order lines first went wrong and who owns it",
+    "detail": {
+     "proposal": "PCP-3",
+     "args": {
+      "first_record": "Supplier ERP allocation",
+      "basis": "Ashby's Supplier ERP allocation record caused the shortfall before the ship notice across both Kinross Joliet and Kinross Groveport warehouses.",
+      "attributed_to": "Ashby",
+      "record": "allocation_cut",
+      "causes": [
+       {
+        "lines": 5,
+        "warehouse": "Kinross Joliet",
+        "cause": "Supplier ERP allocation cut",
+        "cases": 400
+       },
+       {
+        "lines": 4,
+        "warehouse": "Kinross Groveport",
+        "cause": "Supplier ERP allocation cut",
+        "cases": 320
+       }
+      ]
+     },
+     "rationale": "Readings of allocation_cut show Ashby's Supplier ERP allocation record cutting the quantity before the ship notice across Kinross Joliet and Kinross Groveport.",
+     "alternatives": [
+      "Attribute to Kinross short pick",
+      "Attribute to Northfield receiving advice"
+     ],
+     "needs": "policy"
+    }
+   },
+   {
+    "n": 13,
+    "clock": "2026-12-28 09:03 ET",
+    "actor": "Trading Grid (Ashby’s own performance view; nothing is sent)",
+    "type": "external",
+    "what": "Executed: Show on Ashby’s performance view where a group of failing order lines first went wrong and who owns it",
+    "detail": {
+     "proposal": "PCP-3",
+     "response": "Shown on Ashby’s performance view: allocation_cut, 2 causes. Nothing was sent."
+    }
+   },
+   {
+    "n": 14,
+    "clock": "2026-12-28 09:03 ET",
+    "actor": "Pace Agent",
+    "type": "tool",
+    "what": "Read read_failing_lines",
+    "detail": {
+     "args": {
+      "record": "outside_window"
+     }
+    }
+   },
+   {
+    "n": 15,
+    "clock": "2026-12-28 09:03 ET",
+    "actor": "Pace Agent",
+    "type": "ai",
+    "what": "Proposed: Show on Ashby’s performance view where a group of failing order lines first went wrong and who owns it",
+    "detail": {
+     "proposal": "PCP-4",
+     "args": {
+      "first_record": "carrier's missed pickup or freight arrangement",
+      "basis": "Ashby arranged the prepaid freight that arrived outside the delivery window across Kinross Joliet and Kinross Groveport warehouses.",
+      "attributed_to": "Ashby",
+      "record": "outside_window",
+      "causes": [
+       {
+        "cause": "prepaid freight arrived outside window",
+        "lines": 5,
+        "cases": 423,
+        "warehouse": "Kinross Joliet"
+       },
+       {
+        "cause": "prepaid freight arrived outside window",
+        "lines": 1,
+        "warehouse": "Kinross Groveport",
+        "cases": 57
+       }
+      ]
+     },
+     "rationale": "Readings of outside_window show prepaid shipments arriving outside the delivery window across Kinross Joliet and Kinross Groveport.",
+     "alternatives": [
+      "Attribute to Kinross short pick",
+      "Attribute to Ashby Supplier ERP allocation"
+     ],
+     "needs": "policy"
+    }
+   },
+   {
+    "n": 16,
+    "clock": "2026-12-28 09:04 ET",
+    "actor": "Trading Grid (Ashby’s own performance view; nothing is sent)",
+    "type": "external",
+    "what": "Executed: Show on Ashby’s performance view where a group of failing order lines first went wrong and who owns it",
+    "detail": {
+     "proposal": "PCP-4",
+     "response": "Shown on Ashby’s performance view: outside_window, 2 causes. Nothing was sent."
+    }
+   },
+   {
+    "n": 17,
+    "clock": "2026-12-28 09:04 ET",
+    "actor": "Pace Agent",
+    "type": "tool",
+    "what": "Read read_failing_lines",
+    "detail": {
+     "args": {
+      "record": "received_below"
+     }
+    }
+   },
+   {
+    "n": 18,
+    "clock": "2026-12-28 09:04 ET",
+    "actor": "Pace Agent",
+    "type": "ai",
+    "what": "Proposed: Show on Ashby’s performance view where a group of failing order lines first went wrong and who owns it",
+    "detail": {
+     "proposal": "PCP-5",
+     "args": {
+      "basis": "The ship notice, full SSCC load scan, and clean carrier delivery receipt match while only Northfield's receiving advice counts fewer cases across Kinross Joliet and Kinross Groveport warehouses.",
+      "attributed_to": "Northfield receiving",
+      "record": "received_below",
+      "first_record": "receiving advice",
+      "causes": [
+       {
+        "warehouse": "Kinross Joliet",
+        "cases": 34,
+        "cause": "receiving advice discrepancy below ship notice",
+        "lines": 22
+       },
+       {
+        "lines": 22,
+        "cause": "receiving advice discrepancy below ship notice",
+        "cases": 32,
+        "warehouse": "Kinross Groveport"
+       }
+      ]
+     },
+     "rationale": "Readings of received_below show ship notices, SSCC load scans, and clean delivery receipts agreeing while the receiving advice records a lower quantity across Kinross Joliet and Kinross Groveport.",
+     "alternatives": [
+      "Attribute to Kinross short pick",
+      "Attribute to Ashby Supplier ERP allocation"
+     ],
+     "needs": "policy"
+    }
+   },
+   {
+    "n": 19,
+    "clock": "2026-12-28 09:05 ET",
+    "actor": "Trading Grid (Ashby’s own performance view; nothing is sent)",
+    "type": "external",
+    "what": "Executed: Show on Ashby’s performance view where a group of failing order lines first went wrong and who owns it",
+    "detail": {
+     "proposal": "PCP-5",
+     "response": "Shown on Ashby’s performance view: received_below, 2 causes. Nothing was sent."
+    }
+   },
+   {
+    "n": 20,
+    "clock": "2026-12-28 09:05 ET",
+    "actor": "Pace Agent",
+    "type": "tool",
+    "what": "Read read_short_shipments",
+    "detail": {
+     "args": {
+      "record": "week_nov22"
+     }
+    }
+   },
+   {
+    "n": 21,
+    "clock": "2026-12-28 09:05 ET",
+    "actor": "Pace Agent",
+    "type": "ai",
+    "what": "Proposed: Show on Ashby’s performance view where a group of failing order lines first went wrong and who owns it",
+    "detail": {
+     "proposal": "PCP-6",
+     "args": {
+      "record": "week_nov22",
+      "basis": "Kinross's short pick record shows stock below available-to-promise before the ship notice across both Kinross Groveport and Kinross Joliet warehouses for the week of November 22.",
+      "causes": [
+       {
+        "warehouse": "Kinross Groveport",
+        "cause": "Kinross short pick",
+        "lines": 3,
+        "cases": 175
+       },
+       {
+        "cause": "Kinross short pick",
+        "warehouse": "Kinross Joliet",
+        "lines": 2,
+        "cases": 121
+       }
+      ],
+      "first_record": "Kinross short pick",
+      "attributed_to": "Kinross"
+     },
+     "rationale": "Readings of week_nov22 short shipments show Kinross short picks recorded prior to the ship notice at Kinross Groveport and Kinross Joliet.",
+     "alternatives": [
+      "Attribute to Ashby Supplier ERP allocation",
+      "Attribute to Northfield receiving advice"
+     ],
+     "needs": "policy"
+    }
+   },
+   {
+    "n": 22,
+    "clock": "2026-12-28 09:06 ET",
+    "actor": "Trading Grid (Ashby’s own performance view; nothing is sent)",
+    "type": "external",
+    "what": "Executed: Show on Ashby’s performance view where a group of failing order lines first went wrong and who owns it",
+    "detail": {
+     "proposal": "PCP-6",
+     "response": "Shown on Ashby’s performance view: week_nov22, 2 causes. Nothing was sent."
+    }
+   }
+  ],
+  "roles": [
+   {
+    "proposal": "PCP-1",
+    "action": "record_attribution",
+    "recommended_by": "Pace Agent",
+    "authorised_by": "Standing policy (AP-3.3)",
+    "carried_out_by": "Trading Grid (Ashby’s own performance view; nothing is sent)",
+    "state": "Executed"
+   },
+   {
+    "proposal": "PCP-2",
+    "action": "record_attribution",
+    "recommended_by": "Pace Agent",
+    "authorised_by": "Standing policy (AP-3.3)",
+    "carried_out_by": "Trading Grid (Ashby’s own performance view; nothing is sent)",
+    "state": "Executed"
+   },
+   {
+    "proposal": "PCP-3",
+    "action": "record_attribution",
+    "recommended_by": "Pace Agent",
+    "authorised_by": "Standing policy (AP-3.3)",
+    "carried_out_by": "Trading Grid (Ashby’s own performance view; nothing is sent)",
+    "state": "Executed"
+   },
+   {
+    "proposal": "PCP-4",
+    "action": "record_attribution",
+    "recommended_by": "Pace Agent",
+    "authorised_by": "Standing policy (AP-3.3)",
+    "carried_out_by": "Trading Grid (Ashby’s own performance view; nothing is sent)",
+    "state": "Executed"
+   },
+   {
+    "proposal": "PCP-5",
+    "action": "record_attribution",
+    "recommended_by": "Pace Agent",
+    "authorised_by": "Standing policy (AP-3.3)",
+    "carried_out_by": "Trading Grid (Ashby’s own performance view; nothing is sent)",
+    "state": "Executed"
+   },
+   {
+    "proposal": "PCP-6",
+    "action": "record_attribution",
+    "recommended_by": "Pace Agent",
+    "authorised_by": "Standing policy (AP-3.3)",
+    "carried_out_by": "Trading Grid (Ashby’s own performance view; nothing is sent)",
+    "state": "Executed"
+   }
+  ],
+  "queue": {
+   "as_of": "2026-12-28 09:06 ET",
+   "calculated_by": "Trading Grid",
+   "rate": "91.0%",
+   "formula": "43,680 ÷ 48,000 = 91.0%",
+   "failing_lines": 108,
+   "rows": [
+    {
+     "id": "short_shipped",
+     "record": "short_shipped",
+     "what": "Short shipped, remainder cancelled: 31 order lines, 1,794 cases",
+     "state": "Attributed to Kinross",
+     "closed": true
+    },
+    {
+     "id": "collect_not_ready",
+     "record": "collect_not_ready",
+     "what": "Collect freight not ready: 18 order lines, 1,260 cases",
+     "state": "Attributed to Kinross",
+     "closed": true
+    },
+    {
+     "id": "allocation_cut",
+     "record": "allocation_cut",
+     "what": "Allocation cut: 9 order lines, 720 cases",
+     "state": "Attributed to Ashby",
+     "closed": true
+    },
+    {
+     "id": "outside_window",
+     "record": "outside_window",
+     "what": "Prepaid arrived outside window: 6 order lines, 480 cases",
+     "state": "Attributed to Ashby",
+     "closed": true
+    },
+    {
+     "id": "received_below",
+     "record": "received_below",
+     "what": "Received below ship notice: 44 order lines, 66 cases",
+     "state": "Attributed to Northfield receiving",
+     "closed": true
+    },
+    {
+     "id": "week_nov22",
+     "record": "week_nov22",
+     "what": "Week of 22 to 28 November: 5 short-shipped lines at Kinross Groveport and Kinross Joliet",
+     "state": "Shown as 2 causes",
+     "closed": true,
+     "split": true
+    }
+   ]
+  }
  },
- "tool": "pace_replay",
+ "tool": "pace_start",
  "args": {
-  "variation": "canonical",
-  "detail": "brief"
+  "variation": "canonical"
  },
- "job": "JOB-4e177b2e5712",
  "status": "finished",
- "started": "2026-11-16T22:06:04.562Z",
- "finished": "2026-11-16T22:07:07.517Z",
- "commit": "08a4a5c",
- "trial": "CL-0002",
+ "recorded": "2026-11-17",
+ "commit": "a03856c",
+ "server_version": "0.3.3",
  "changes": [],
  "evidence_cutoff": "2026-12-28 09:00 ET",
  "baseline": {
-  "session": "PC-7df777c4aa",
+  "session": "PC-f09ec1c620",
   "outcome": {
-   "as_of": "2026-12-28 09:06 ET",
-   "tasks": {
-    "quarter": {
-     "cause": "ASH-MUG-12 at Kinross Joliet: stock below the available-to-promise figure",
-     "owner": "Kinross Joliet",
-     "at": "2026-12-28 09:03 ET",
-     "after_answer": false
+   "as_of": "2026-12-28 09:00 ET",
+   "calculated_by": "Trading Grid",
+   "rate": "91.0%",
+   "formula": "43,680 ÷ 48,000 = 91.0%",
+   "failing_lines": 108,
+   "by_reason": [
+    {
+     "reason": "Short shipped, remainder cancelled",
+     "lines": 31,
+     "cases": 1794
     },
-    "week_nov22": {
-     "cause": "ASH-NAP-4 at Kinross Groveport: stock below the available-to-promise figure",
-     "owner": "Kinross Groveport",
-     "at": "2026-12-28 09:06 ET",
-     "after_answer": false
+    {
+     "reason": "Collect freight not ready",
+     "lines": 18,
+     "cases": 1260
+    },
+    {
+     "reason": "Allocation cut",
+     "lines": 9,
+     "cases": 720
+    },
+    {
+     "reason": "Prepaid arrived outside window",
+     "lines": 6,
+     "cases": 480
+    },
+    {
+     "reason": "Received below ship notice",
+     "lines": 44,
+     "cases": 66
     }
-   },
-   "questions": {},
-   "answers": {},
-   "explanation": "Not shared",
-   "official_score_changed": false,
-   "violations": [
-    "Task drafted for Week of 22 to 28 November on a split cause without asking Priya"
    ],
-   "synthetic": "Priya\u2019s answer and Northfield\u2019s acceptance are synthetic, from src/pace.js; the scorecard and short-pick records are recorded."
+   "attributions": {
+    "short_shipped": "None: grouped by reason code only",
+    "collect_not_ready": "None: grouped by reason code only",
+    "allocation_cut": "None: grouped by reason code only",
+    "outside_window": "None: grouped by reason code only",
+    "received_below": "None: grouped by reason code only",
+    "week_nov22": "None: grouped by reason code only"
+   },
+   "unattributed": [
+    "short_shipped",
+    "collect_not_ready",
+    "allocation_cut",
+    "outside_window",
+    "received_below",
+    "week_nov22"
+   ],
+   "sent": "Nothing",
+   "plan_or_task_drafted": false,
+   "improvement_claimed": false,
+   "violations": [],
+   "synthetic": "Nothing in this run is synthetic: the rate and every record are the recorded world’s; an attribution is a line on Ashby’s own view."
   },
   "trace": [
    "1. 09:00 Trading Grid [System] Session branched from the recorded world",
-   "2. 09:00 Rule engine [Fixed rule] 3 periods to explain to work",
-   "3. 09:00 Baseline [Fixed rule] Proposed: Draft a corrective task with its cause, owner and warehouse for Ashby\u2019s plan {\"record\":\"quarter\",\"cause\":\"ASH-MUG-12 at Kinross Joliet: stock below the available-to-promise figure\",\"owner\":\"Kinross Joliet\"}",
-   "4. 09:01 Test approver (replay) [Human approval] Approved PCP-1: Draft a corrective task with its cause, owner and warehouse for Ashby\u2019s plan {\"record\":\"quarter\",\"cause\":\"ASH-MUG-12 at Kinross Joliet: stock below the available-to-promise figure\",\"owner\":\"Kinross Joliet\"}",
-   "5. 09:03 Trading Grid (task to Kinross and Supplier ERP owners) [External confirmation] Executed: Draft a corrective task with its cause, owner and warehouse for Ashby\u2019s plan \u00b7 Corrective task drafted for Quarter, 27 September to 26 December: ASH-MUG-12 at Kinross Joliet: stock below the available-to-promise figure; owner Kinross Joliet",
-   "6. 09:03 Baseline [Fixed rule] Proposed: Draft a corrective task with its cause, owner and warehouse for Ashby\u2019s plan {\"record\":\"week_nov22\",\"cause\":\"ASH-NAP-4 at Kinross Groveport: stock below the available-to-promise figure\",\"owner\":\"Kinross Groveport\"}",
-   "7. 09:04 Test approver (replay) [Human approval] Approved PCP-2: Draft a corrective task with its cause, owner and warehouse for Ashby\u2019s plan {\"record\":\"week_nov22\",\"cause\":\"ASH-NAP-4 at Kinross Groveport: stock below the available-to-promise figure\",\"owner\":\"Kinross Groveport\"}",
-   "8. 09:06 Trading Grid (task to Kinross and Supplier ERP owners) [External confirmation] Executed: Draft a corrective task with its cause, owner and warehouse for Ashby\u2019s plan \u00b7 Corrective task drafted for Week of 22 to 28 November: ASH-NAP-4 at Kinross Groveport: stock below the available-to-promise figure; owner Kinross Groveport"
-  ]
+   "2. 09:00 Rule engine [Fixed rule] 6 groups of failing order lines to explain to work"
+  ],
+  "from": "pace_replay JOB-3ac4e8a11f7a"
  },
  "automation": {
-  "same_steps": [
-   "draft_corrective_task quarter",
-   "draft_corrective_task week_nov22"
-  ],
+  "same_steps": [],
   "baseline_only": [],
   "agent_only": [
-   "ask_priya week_nov22",
-   "share_explanation explanation"
+   "record_attribution short_shipped",
+   "record_attribution collect_not_ready",
+   "record_attribution allocation_cut",
+   "record_attribution outside_window",
+   "record_attribution received_below",
+   "record_attribution week_nov22"
   ]
- }
+ },
+ "note": "Agent session started with pace_start on the live server; the rule baseline is the baseline of replay JOB-3ac4e8a11f7a on the same branch. The replay's own agent run is pace-failed-3.json."
 }

@@ -28,7 +28,7 @@ h1{margin:0;font-size:22px;color:var(--tgk-ink);text-wrap:balance}.lead{margin:4
 </style>
 </head>
 <body>
-<header class="top"><span class="mark" aria-hidden="true"></span><b>Trading Grid</b><span class="ws">Ashby Supplier · Shipping operations</span><span class="sp"></span><span class="clk" id="clk"></span><button class="tgk-btn" type="button" id="hist">History</button><button class="tgk-btn" type="button" id="agents">Agents</button><span class="who">Priya Raman</span></header>
+<header class="top"><span class="mark" aria-hidden="true"></span><b>Trading Grid</b><span class="ws">Ashby Supplier · Shipping operations</span><span class="sp"></span><span id="sim"></span><span class="clk" id="clk"></span><button class="tgk-btn" type="button" id="hist">History</button><button class="tgk-btn" type="button" id="agents">Agents</button><span class="who">Priya Raman</span></header>
 <main>
 <h1 id="h1">Northfield shipments at risk before they leave Kinross</h1>
 <p class="lead" id="lead">Scout Agent is checking open shipments. Nothing reaches Kinross, the Ashby order desk or Northfield until Priya Raman approves it.</p>
@@ -96,6 +96,7 @@ h1{margin:0;font-size:22px;color:var(--tgk-ink);text-wrap:balance}.lead{margin:4
       case 'kinross_replace_reserved': return { action: `Load ${a.cases} replacement case of ${a.sku} from stock held for other orders`, now: `${S.view.load.loaded} of ${S.view.load.of} loaded`, after: `${S.view.load.loaded + a.cases} of ${S.view.load.of} loaded`, goesTo: 'Kinross Logistics', via: 'API' };
       case 'kinross_relabel': return { action: `Relabel carton ${a.sscc}`, now: 'Label unreadable', after: 'New SSCC, on trailer', goesTo: 'Kinross Logistics', via: 'API' };
       case 'kinross_overpack': return { action: `Overpack carton ${a.sscc}`, now: 'Carton crushed', after: 'New carton, on trailer', goesTo: 'Kinross Logistics', via: 'API' };
+      case 'erp_correct_invoice': return { action: `Correct invoice ${a.invoice} line ${a.line}`, now: `${q.now || ''}`, after: `${a.qty} cases`, goesTo: 'Ashby billing desk', via: 'Task' };
       case 'erp_align_order': return { action: 'Correct ship-to on the sales order', now: 'DC 4', after: 'DC 2', goesTo: 'Ashby order desk', via: 'Task' };
       case 'release_ship_notice': return { action: `Release ship notice for ${S.view.ship_notice ? S.view.ship_notice.cartons : S.view.load.loaded} cartons`, now: 'Built, not sent', after: 'Sent after departure', goesTo: 'Northfield', via: 'EDI 856' };
       case 'notify_buyer_short': return { action: `Tell the buyer line ${a.line} ships short`, now: '400 cases ordered', after: `${a.shipped} cases shipped`, goesTo: 'Jordan Ellis', via: 'Email' };
@@ -139,7 +140,7 @@ h1{margin:0;font-size:22px;color:var(--tgk-ink);text-wrap:balance}.lead{margin:4
   function workFor(r) {
     const steps = traceFor(r.po).filter((t) => /^Proposed:|^Detected|^Read |rule risks/.test(t.what) || t.type === 'tool').map((t) => ({ text: `${actor(t) === 'Rule' ? 'Rule check' : actor(t)} · ${short(plain(t.what).replace(/^Proposed: /, 'Proposed: '), 18)}` }));
     const reads = ((S.view.trace) || []).filter((t) => t.type === 'tool' && r.po === HERO).map((t) => ({ text: { read_order: 'Read the order, its changes and the Supplier ERP sales order', read_load: 'Read the Kinross load scan', read_inventory: 'Read Groveport stock of the carton’s item', read_tasks: 'Read Kinross’s task answers', read_rules: 'Read the rules that apply', read_policy: 'Read what needs Priya Raman’s approval', read_findings: 'Read the rule check results', read_proposals: 'Read what is already proposed', read_site_orders: 'Read the later orders that share the stock' }[String(t.what).replace('Read ', '')] || plain(t.what), system: /load|inventory|tasks/.test(t.what) ? 'Kinross' : /order/.test(t.what) ? 'Supplier ERP' : null, via: /load|inventory|tasks|order/.test(t.what) ? 'API' : null }));
-    const seen = new Set(); const all = [...reads, ...steps].filter((x) => !seen.has(x.text) && seen.add(x.text)).slice(-4);
+    const seen = new Set(); const all = [...reads, ...steps].filter((x) => !seen.has(x.text) && seen.add(x.text)).slice(-3);
     return K.agentWork({ agent: r.po === HERO ? 'Scout Agent' : 'the rule check', working: S.busy || (S.view.status === 'running'), steps: all.length ? all : [{ text: 'Rule check flagged this shipment from its records' }] });
   }
   function draw() {
@@ -147,13 +148,14 @@ h1{margin:0;font-size:22px;color:var(--tgk-ink);text-wrap:balance}.lead{margin:4
     if (!S.view) { rec.replaceChildren(K.el('p', { class: 'wait', text: S.notice || 'Scout Agent is reading the Kinross load scan.' })); return; }
     if (!r) { rec.replaceChildren(K.el('p', { class: 'wait', text: 'No shipment is at risk.' })); return; }
     const props = awaitingFor(r.po); const ruleOnly = props.length && props.every((p) => p.proposed_by !== 'Scout');
-    const parts = [K.recordHeader({ title: r.po, deadline: r.po === HERO && r.running ? `${r.cutoff} in ${hm(r.cutoff_minutes)}` : null, sub: r.po === HERO ? 'Kinross Groveport to Northfield DC 2 · door 7' : `${r.cutoff} in ${hm(r.cutoff_minutes)}` }),
+    const head = K.recordHeader({ title: r.po, deadline: r.po === HERO && r.running ? `${r.cutoff} in ${hm(r.cutoff_minutes)}` : null, sub: r.po === HERO ? 'Kinross Groveport to Northfield DC 2 · door 7' : `${r.cutoff} in ${hm(r.cutoff_minutes)}` });
+    document.getElementById('sim').replaceChildren(...(S.sim ? [K.simulated({ note: 'Scout Agent could not be reached; this is the last recorded real run' })] : []));
+    const parts = [head,
       K.el('div', { class: 'sec' }, K.el('h3', { class: 'tgk-label', text: 'What is wrong' }), ...factsFor(r)), workFor(r)];
     if (props.length) {
       const base = props.map((p) => rowOf(p, r)); if (!S.rows || S.rowsFor !== r.po) { S.rows = base.map((x) => ({ ...x })); S.rowsFor = r.po; }
       const list = S.editing ? S.rows : base;
-      parts.push(K.el('div', { class: 'scroll' }, K.nowAfter({ agent: ruleOnly ? 'Trading Grid' : 'Scout Agent', rows: list, editable: S.editing, reason: short(props.map((p) => p.rationale).filter(Boolean).pop() || r.problem), onChange: (x) => { S.rows = x; draw(); } })));
-      if (S.sim) parts.push(K.el('div', {}, K.simulated({ note: 'Scout Agent could not be reached; this is the last recorded real run' })));
+      parts.push(K.el('div', { class: 'scroll' }, K.nowAfter({ agent: ruleOnly ? 'Trading Grid' : 'Scout Agent', rows: list, editable: S.editing, reason: short(props.map((p) => p.rationale).filter(Boolean).pop() || r.problem, 16), onChange: (x) => { S.rows = x; draw(); } })));
       const noDecision = r.po === HERO && r.running && r.consequence ? `No decision before the seal: ${r.consequence}.` : r.consequence ? `No decision before the cutoff: ${r.consequence}.` : null;
       parts.push(K.decisionBar({ says: says(S.editing ? props.slice(0, list.length) : props, list), noDecision, busy: S.busy,
         onApprove: () => { if (S.editing) { S.edited[r.po] = true; decide(props, 'edit', list.length ? `Priya Raman does it by hand: ${list.map((x) => `${x.action} (${x.now} to ${x.after})`).join('; ')}` : 'Priya Raman declined every action and works the shipment by hand'); } else decide(props, 'approve'); },
@@ -166,7 +168,7 @@ h1{margin:0;font-size:22px;color:var(--tgk-ink);text-wrap:balance}.lead{margin:4
   }
   const move = (d) => { const l = rows(); const i = l.findIndex((r) => r.po === S.open); const n = l[(i + d + l.length) % l.length]; if (n) { S.open = n.po; S.editing = false; S.rows = null; draw(); } };
   document.getElementById('prev').onclick = () => move(-1); document.getElementById('next').onclick = () => move(1);
-  document.getElementById('hist').onclick = () => K.drawer({ title: 'History', content: K.el('div', { class: 'drawerbody' }, ...((S.view && S.view.trace) || []).filter((t) => t.type !== 'tool' && !/^Session branched|Scout said|^At its limit/.test(t.what)).map((t) => { const p = (S.view.proposals || []).find((x) => x.id === (t.detail && t.detail.proposal));
+  document.getElementById('hist').onclick = () => K.drawer({ title: 'History', content: K.el('div', { class: 'drawerbody' }, ...((S.view && S.view.trace) || []).filter((t) => t.type !== 'tool' && !/^Session branched|Scout said|^At its limit|^Refused |^Waiting for Priya/.test(t.what)).map((t) => { const p = (S.view.proposals || []).find((x) => x.id === (t.detail && t.detail.proposal));
     return K.traceLine({ kind: KIND[t.type] || 'system', actor: actor(t), text: `${time(t.clock)} · ${(t.detail && t.detail.po) || HERO} · ${plain(t.what)}${t.detail && t.detail.response ? ` · ${plain(t.detail.response)}` : ''}`, synthetic: t.type === 'external', roles: p && /^Proposed:/.test(t.what) ? { recommended: p.by === 'Scout' ? 'Scout Agent' : 'Rule', authorised: p.approved_by || p.taken_over_by || (p.needs === 'policy' ? 'Priya Raman’s standing policy' : null), carriedOut: p.state === 'Executed' ? (p.action.startsWith('kinross') ? 'Kinross' : p.action === 'erp_correct_invoice' ? 'Ashby billing desk' : p.action === 'erp_align_order' ? 'Ashby order desk' : 'Trading Grid') : null } : null }); })) });
   const setupFor = (s) => ({ facts: Object.entries(s.facts || {}).map(([key, f]) => ({ key, label: f.says, recorded: f.recorded, options: f.values, type: f.values ? null : 'number' })),
     actions: Object.entries(s.actions || {}).map(([key, a]) => ({ key, label: a.does.replace(/ under NF-2\.1/, ''), rule: RULES[a.rule] || 'Ashby rule', mode: a.mode, modes: a.modes, editable: a.priya_may_change })),

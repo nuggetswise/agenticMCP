@@ -13,11 +13,12 @@ export function rng(seed) {
 
 // All demo times are US Eastern. Conversion goes through Intl so the DST change on 1 Nov 2026 is handled.
 const TZ = 'America/New_York';
+const OFFSET_FMT = new Intl.DateTimeFormat('en-US', {
+  timeZone: TZ, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', second: '2-digit',
+});
 function offsetMinutes(utcMs) {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: TZ, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-  }).formatToParts(new Date(utcMs));
+  const parts = OFFSET_FMT.formatToParts(new Date(utcMs));
   const g = (t) => +parts.find((p) => p.type === t).value;
   const asUtc = Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'), g('second'));
   return (asUtc - utcMs) / 60000;
@@ -38,17 +39,18 @@ export const addH = (d, h) => new Date(d.getTime() + h * H);
 export const addD = (d, n) => new Date(d.getTime() + n * 24 * H);
 
 /** Eastern calendar day (YYYY-MM-DD) of a Date. */
+// One formatter each, built once: a formatter per call holds native memory until garbage collection and exhausted the server.
+const DAY_FMT = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
+const ET_FMT = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 export function etDay(d) {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+  return DAY_FMT.format(d);
 }
 
 /** Readable Eastern time: "2026-11-17 11:00 ET". */
 export function fmtET(d) {
   if (!d) return null;
   const dt = d instanceof Date ? d : new Date(d);
-  const p = new Intl.DateTimeFormat('en-CA', {
-    timeZone: TZ, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
-  }).formatToParts(dt);
+  const p = ET_FMT.formatToParts(dt);
   const g = (t) => p.find((x) => x.type === t).value;
   return `${g('year')}-${g('month')}-${g('day')} ${g('hour')}:${g('minute')} ET`;
 }

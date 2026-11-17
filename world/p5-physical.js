@@ -13,11 +13,9 @@ export const P5 = {
   carton: { sscc: '006141410006005172', line: 1, sku: 'ASH-MUG-12', condition: 'crushed', contents: 'damaged', label: 'readable', staged: true },
   load_minutes: 5,                            // Kinross moves a staged carton onto the trailer
   relabel_minutes: 10, overpack_minutes: 15,
-  // Groveport stock of the carton's item. All 520 cases are reserved across the three ASH-MUG-12 orders the
-  // 17:10 inventory record names (NR-460262 and two others, 640 ordered); none is free.
-  stock: [{ sku: 'ASH-MUG-12', site: 'KIN-GRV', on_hand: 520, reserved: 520, reserved_for: 'NR-460262 and two other ASH-MUG-12 orders (640 ordered)', staging_minutes: 25 }],
-  // Free text Kinross adds to a task response, if any. Null: Kinross answers with its structured reason only.
-  kinross_note: null,
+  // Groveport stock of the carton's item: 590 cases free, none reserved, against 619 released to Kinross on the three
+  // ASH-MUG-12 orders the 16:42 inventory record names (29 short before anything is taken for this shipment).
+  stock: [{ sku: 'ASH-MUG-12', site: 'KIN-GRV', on_hand: 590, reserved: 0, reserved_for: 'No order', staging_minutes: 25 }],
   // Carrier hold: Northfield routes collect freight with Lakeline; a hold request gets no answer before the seal.
   hold_answer: null,
   // SSCC serials Ashby may issue for a replacement or overpacked carton (GS1 prefix 0614141, AP-2.2, NF-4.1).
@@ -25,4 +23,4 @@ export const P5 = {
 };
 
 /** The variations a governance replay may set. Each changes Kinross-held physical facts only; nothing else. */
-export const VARIATION_FIELDS = ['carton.condition', 'carton.contents', 'carton.label', 'stock.0.reserved', 'stock.0.on_hand', 'stock.0.staging_minutes', 'kinross_note', 'load_minutes'];
+export const VARIATION_FIELDS = ['carton.condition', 'carton.contents', 'carton.label', 'stock.0.reserved', 'stock.0.on_hand', 'stock.0.staging_minutes', 'load_minutes'];

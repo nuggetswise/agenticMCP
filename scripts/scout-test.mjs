@@ -41,29 +41,42 @@ function detectors(name, sess, actor) {
   S.decide(db, s, p.proposal, 'approve'); check(S.decide(db, s, p.proposal, 'approve').state === 'Refused', 'guard: an approval cannot be replayed');
   check(S.propose(db, s, 'Test', 'kinross_load', { sscc: '006141410009999999' }).state === 'Refused', 'guard: a task for a carton not staged is refused');
   check(S.startSession(db, { policy: { release_ship_notice: 'policy' } }).modes.release_ship_notice === 'approve', 'guard: AP-1.3 release cannot be set to run under policy');
-  { const g = S.startSession(db, { variation: S.VARIATIONS.unforeseen_overpack_note }); const ok1 = (r) => (r.state === 'Awaiting approval' ? S.decide(db, g, r.proposal, 'approve') : r);
+  { const g = S.startSession(db, { variation: { 'carton.contents': 'intact' } }); const ok1 = (r) => (r.state === 'Awaiting approval' ? S.decide(db, g, r.proposal, 'approve') : r);
     ok1(S.propose(db, g, 'Test', 'erp_align_order')); S.propose(db, g, 'Test', 'build_ship_notice'); ok1(S.propose(db, g, 'Test', 'kinross_overpack', { sscc: g.world.carton.sscc }));
     check(S.propose(db, g, 'Test', 'release_ship_notice').state === 'Refused', 'guard: AP-1.4 refuses releasing a ship notice built for an earlier load');
     check(S.propose(db, g, 'Test', 'build_ship_notice').state === 'Executed' && g.asn.cartons === 660, 'guard: the ship notice can be rebuilt from the new load'); }
   // T2.3: a paused Scout gets no model turn; a proposal a person takes over (Edit suggestion) stops Scout in that session; every state change is attributed.
   { const never = async () => { throw new Error('model called'); }; const ps = S.startSession(db); const r = await S.runScout(db, ps, { callModel: never, paused: () => true });
-    check(r.status === 'paused' && ps.agent.calls === 0 && !ps.proposals.length, 'guard: a paused Scout gets no model turn and proposes nothing');
+    check(r.status === 'paused' && ps.agent.calls === 0 && !ps.proposals.some((p) => p.by === 'Scout'), 'guard: a paused Scout gets no model turn and proposes nothing');
     const es = S.startSession(db); const ep = S.propose(db, es, 'Scout', 'kinross_load', { sscc: es.world.carton.sscc }); S.decide(db, es, ep.proposal, 'edit', 'Priya Raman');
     check((await S.runScout(db, es, { callModel: never })).status === 'handed_to_person' && es.audit.at(-1).approver === 'Priya Raman', 'guard: Edit suggestion hands the case to Priya and Scout stops'); }
   let threw = false; try { S.startSession(db, { variation: { 'erp.ship_to': 'DC 2' } }); } catch { threw = true; } check(threw, 'guard: a replay may only change declared physical fields'); }
 
 // What the rule baseline must reach in each case, so a regression in the baseline cannot pass silently.
-const EXPECT = { canonical: 659, free_stock: 660, no_time: 659, bad_label: 660, unforeseen_overpack_note: 659 };
+const EXPECT = { canonical: 660, no_free_stock: 659, no_time: 659, bad_label: 660 };
 // Facts set by hand before a run: checked, and the rule baseline's outcome follows the facts, not a preset name.
 { const run = (facts, policy) => { const s = S.startSession(db, { variation: S.factsToVariation(facts), policy }); return [S.runBaseline(db, s), s]; };
   check(run({ free_cases: 3 })[0].cartons_loaded === 660, 'facts: 3 free cases, baseline loads 660');
   check(run({ free_cases: 3, staging_minutes: 60 })[0].cartons_loaded === 659, 'facts: free cases but 60 minutes to stage, baseline loads 659');
   check(run({ carton_condition: 'good', carton_contents: 'intact' })[0].cartons_loaded === 660, 'facts: carton in good condition, baseline loads 660');
   const bad = (f) => { try { S.factsToVariation(f); return false; } catch { return true; } };
-  check(bad({ free_cases: 9999 }) && bad({ carton_condition: 'missing' }) && bad({ ship_to: 'DC 2' }) && bad({ kinross_note: 'x'.repeat(301) }), 'facts: out-of-range, unknown and over-long values are refused');
+  check(bad({ free_cases: 9999 }) && bad({ carton_condition: 'missing' }) && bad({ ship_to: 'DC 2' }) && bad({ kinross_note: 'Overpack it' }), 'facts: out-of-range and unknown values are refused, a free-text Kinross note among them');
   const [, s2] = run({}, { kinross_load: 'policy', release_ship_notice: 'policy' });
   check(s2.proposals.find((p) => p.action === 'kinross_load')?.executed_under === 'Standing policy' && s2.proposals.find((p) => p.action === 'release_ship_notice')?.approved_by, 'policy: a Kinross load set to standing policy runs without asking; release still needs a person (AP-1.3)');
-  const su = S.setup(); check(su.facts.free_cases.recorded === 0 && su.actions.release_ship_notice.priya_may_change === false && su.guardrails.length === 3, 'setup: recorded facts, locked actions and guardrails are listed'); }
+  const su = S.setup(); check(su.facts.free_cases.recorded === 590 && !('kinross_note' in su.facts) && su.actions.release_ship_notice.priya_may_change === false && su.guardrails.length === 3, 'setup: recorded facts, locked actions and guardrails are listed'); }
+// The queue (P5 rebuild): six rows from world records, four fixed-rule fixes waiting for Priya, and the Groveport plan.
+{ const s = S.startSession(db); const q = S.queueView(s); const g = q.rows.find((r) => r.kind === 'stock');
+  check(q.rows.length === 6 && q.rows[0].po === 'NR-460207' && q.rows.every((r, i) => !i || r.cutoff_minutes >= q.rows[i - 1].cutoff_minutes) && q.checked > 6, `queue: six rows, soonest cutoff first, NR-460207 on top (${q.checked} open shipments checked)`);
+  check(g.on_hand === 590 && g.ordered === 619 && g.short === 29 && g.state === 'Choice needed', 'queue: Groveport reads 590 against 619 ordered, 29 short, before the load takes a case');
+  const world = s.grove.orders.map((o) => db.prepare("SELECT l.qty_original q, x.ship_from f, x.shipped_at t FROM order_lines l JOIN shipments x ON x.po = l.po WHERE l.po = ? AND l.sku = 'ASH-MUG-12'").get(o.po));
+  check(world.every((w, i) => w && w.f === 'KIN-GRV' && w.t > s.world.branch_at && (w.q === s.grove.orders[i].cases || w.q === s.grove.orders[i].po_reads)) && s.grove.orders.reduce((a, o) => a + o.cases, 0) === 619, 'queue: the three Groveport orders are world orders shipping from Groveport after 17:12, and their cases add to 619');
+  const rule = s.proposals.filter((p) => p.by === 'Rule engine'); check(rule.length === 4 && rule.every((p) => p.state === 'Awaiting approval' && p.po !== 'NR-460207'), 'queue: four fixed-rule fixes wait for Priya, none sent');
+  const o = S.runBaseline(db, s); check(o.cartons_loaded === 660 && o.groveport.short === 30 && o.groveport.plan === null && o.groveport.shortage_planned_before_cutoff === false, 'baseline: replaces the crushed carton from free stock and leaves Groveport 30 short with no plan');
+  check(S.propose(db, s, 'Scout', 'request_order_change', { po: 'NR-460262', cases: 280 }).state === 'Refused' && S.propose(db, s, 'Scout', 'request_order_change', { po: 'NR-460207', cases: 370 }).state === 'Refused', 'guard: an order change must cover exactly the shortage, on an order that shares the stock');
+  const p = S.propose(db, s, 'Scout', 'request_order_change', { po: 'NR-460262', cases: 270 }); const d = S.decide(db, s, p.proposal, 'approve', 'Priya Raman', null, 'NR-46581');
+  check(d.state === 'Executed' && s.grove.plan.po === 'NR-46581' && s.grove.plan.cases === 19 && s.grove.plan.recommended_by_scout === 'NR-460262' && S.outcome(s).groveport.shortage_planned_before_cutoff, 'choice: Priya may pick a different order; the plan records her choice and Scout’s recommendation');
+  const q2 = S.startSession(db); const ip = q2.proposals.find((x) => x.action === 'erp_correct_invoice'); S.decide(db, q2, ip.id, 'edit', 'Priya Raman');
+  check(!q2.handed_over && S.queueView(q2).rows.find((r) => r.kind === 'invoice').state === 'Edited by Priya Raman', 'edit: taking over a queue fix does not stop Scout on the other shipments'); }
 const rows = [];
 for (const [name, v] of Object.entries(S.VARIATIONS)) {
   const s = S.startSession(db, { variation: v, label: `test ${name}` }); const o = S.runBaseline(db, s); detectors(name, s, 'baseline');

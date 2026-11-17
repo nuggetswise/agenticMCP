@@ -30,12 +30,12 @@ export default function ({ db, ash, nf, ok, eq, none, n, ROOT }) {
   none('planning.forecast_lines_name_masters', 'SELECT forecast_id FROM forecast_lines WHERE sku NOT IN (SELECT sku FROM items) OR location NOT IN (SELECT id FROM locations)');
 
   // ---- stock positions agree with the records already in the world ----
-  // Kinross's inventory read on 8 December (P5): 520 ASH-MUG-12 at Groveport, and the 846 that evening says the same.
+  // Kinross's inventory read on 8 December (P5): 590 ASH-MUG-12 at Groveport, and the 846 that evening says the same.
   const inv = db.prepare("SELECT id, at, data FROM events WHERE kind = 'wms.inventory'").get(); const iv = J(inv.data);
   const eod = db.prepare("SELECT available, on_hand FROM stock_positions WHERE site = 'KIN-GRV' AND sku = ? AND kind = 'End of day' AND as_of > ? ORDER BY as_of LIMIT 1").get(iv.sku, inv.at);
   const read = db.prepare('SELECT available FROM stock_positions WHERE event_id = ?').get(inv.id);
   const between = n("SELECT count(*) n FROM stock_positions WHERE site = 'KIN-GRV' AND sku = ? AND kind = 'Pick wave' AND as_of > ? AND as_of <= ?", iv.sku, inv.at, `${inv.at.slice(0, 10)}T23:30:00.000Z`);
-  eq('planning.stock_agrees_with_kinross_read', [iv.available, read?.available, eod?.available, eod?.on_hand, between], [520, 520, 520, 520, 0]);
+  eq('planning.stock_agrees_with_kinross_read', [iv.available, read?.available, eod?.available, eod?.on_hand, between], [590, 590, 590, 590, 0]);
   // Ashby's ERP reads (Northfield's API read among them) are kept as they were read.
   none('planning.stock_agrees_with_erp_reads', "SELECT e.id FROM events e LEFT JOIN stock_positions s ON s.event_id = e.id WHERE e.kind = 'erp.inventory_read' AND (s.event_id IS NULL OR coalesce(s.on_hand, -1) <> coalesce(json_extract(e.data, '$.on_hand'), -1) OR coalesce(s.available, -1) <> coalesce(json_extract(e.data, '$.available'), -1) OR coalesce(s.committed, -1) <> coalesce(json_extract(e.data, '$.committed'), -1) OR s.sku <> json_extract(e.data, '$.sku'))");
   // Every Kinross pick wave: the 846 states the stock at the wave, it covers what the ship notices say was shipped, and

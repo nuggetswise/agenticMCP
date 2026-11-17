@@ -145,7 +145,7 @@ const docs = {
  *    shipped while the ship notice, receipt and pick record carry the smaller figure; the 945s are kept as they are
  *    and the stock follows the pick record (scripts/checks/30-planning.mjs lists them).
  *  - a short pick means the stock at that wave was exactly what was picked;
- *  - Kinross's inventory read on 8 December (520 ASH-MUG-12 at Groveport, P5) is the stock at that minute.
+ *  - Kinross's inventory read on 8 December (590 ASH-MUG-12 at Groveport, P5) is the stock at that minute.
  * Inbound stock is invented: receipts at Kinross's two dock slots (12:00 and 17:30 UTC), sized just in time to hold a
  * small buffer and to land exactly on each recorded figure. Write-downs are counted, and are expected to be none.
  */

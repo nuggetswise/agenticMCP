@@ -198,8 +198,11 @@ export function anchors(L, W) {
     ev(L, addH(t0, -2), 'erp.invoice_draft', inv.po, 'Supplier ERP', 'ASHBY', 'API', { invoice: 'INV-8012', line: 2, billed: 180, shipped: 176, over_value: 153.6, batch_sends_in_minutes: 168 });
     const route = A.riskRoute = risk('NR-460241', [['ASH-MUG-12', 220]], { recv: day('2026-12-07', '11:00'), site: 'KIN-JOL', ackH: 20.5, requested: '2026-12-11' });
     ev(L, addH(t0, -1), 'routing.request', route.po, 'Northfield transportation', 'ASHBY', 'EDI', { state: 'Missing', freight: 'Collect', cases: 220, due_in_minutes: 1068, rule: 'NF-3.2' });
+    // Groveport stock (P5 rebuild, D80): 590 cases free against 619 released to Kinross on three orders that load together
+    // (NR-460262 300, NR-460274 at the 270 agreed by phone, NR-46581 49). One case replaces NR-460207's crushed carton, which
+    // leaves 589 against 619: the 30 cases Northfield later cuts from NR-460262.
     const alloc = A.riskAlloc = risk('NR-460262', [['ASH-MUG-12', 300]], { recv: day('2026-12-07', '15:00'), site: 'KIN-GRV', ackH: 23.0, requested: '2026-12-11' });
-    ev(L, addH(t0, -0.5), 'wms.inventory', alloc.po, 'Kinross warehouse system', 'KINROSS', 'API', { sku: 'ASH-MUG-12', site: 'Kinross Groveport', available: 520, ordered_across_orders: 640, orders: 3, change_cutoff_in_minutes: 1248 });
+    ev(L, addH(t0, -0.5), 'wms.inventory', alloc.po, 'Kinross warehouse system', 'KINROSS', 'API', { sku: 'ASH-MUG-12', site: 'Kinross Groveport', available: 590, ordered_across_orders: 619, orders: 3, order_list: [{ po: 'NR-460262', cases: 300 }, { po: 'NR-460274', cases: 270, po_reads: 300 }, { po: 'NR-46581', cases: 49 }], change_cutoff_in_minutes: 1248 });
     const lab = A.riskLab = risk('NR-460233', [['ASH-HNY-340', 96]], { recv: day('2026-12-06', '09:00'), site: 'KIN-JOL', ackH: 19.75, requested: '2026-12-10' });
     ev(L, addH(t0, -0.7), 'wms.label_scan', lab.po, 'Kinross warehouse system', 'KINROSS', 'API', { cartons: 96, reused_sscc: 12, first_used_on: W.anchor.p1, rule: 'NF-4.1', loading_starts_in_minutes: 1368 });
     const off = A.riskOff = risk('NR-460274', [['ASH-MUG-12', 300]], { recv: day('2026-12-08', '09:30'), site: 'KIN-GRV', ackH: 3.25, requested: '2026-12-11' });

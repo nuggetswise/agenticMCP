@@ -200,7 +200,7 @@ for (const p of REG.prototypes) {
     eq('governance.pause_is_per_connection', G.setAgentState(gdb, G.NF, { agent: 'Claim Agent', state: 'paused', by: 'Jordan Ellis' }).result, 'Invalid request'); }
   { G.setAgentState(gdb, G.AS, { agent: 'Scout', state: 'paused', by: 'Priya Raman' }); const s = Scout.startSession(db);
     const run = await Scout.runScout(db, s, { callModel: noModel, paused: () => G.isPaused(gdb, 'Scout Agent') });
-    eq('governance.paused_scout_gets_no_model_turn', [run.status, s.agent.calls, s.proposals.length], ['paused', 0, 0]); G.setAgentState(gdb, G.AS, { agent: 'Scout Agent', state: 'active', by: 'Priya Raman' }); }
+    eq('governance.paused_scout_gets_no_model_turn', [run.status, s.agent.calls, s.proposals.filter((p) => p.by === 'Scout').length], ['paused', 0, 0]); G.setAgentState(gdb, G.AS, { agent: 'Scout Agent', state: 'active', by: 'Priya Raman' }); }
   { const s = Scout.startSession(db); const p = Scout.propose(db, s, 'Scout', 'kinross_load', { sscc: s.world.carton.sscc });
     const d = Scout.decide(db, s, p.proposal, 'edit', 'Priya Raman', 'Calls Kinross herself'); const a = s.audit.at(-1); const run = await Scout.runScout(db, s, { callModel: noModel });
     eq('governance.override_is_recorded_with_who_made_it', [d.state, a.approver, /^Taken over by Priya Raman/.test(a.outcome), s.handed_over?.by, run.status, s.agent.calls, Scout.decide(db, s, p.proposal, 'approve').state], ['Taken over', 'Priya Raman', true, 'Priya Raman', 'handed_to_person', 0, 'Refused']); }

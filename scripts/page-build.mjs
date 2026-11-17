@@ -20,6 +20,9 @@ const DATA = {
   // P14: the last recorded real run through Northfield's connector, view by view (docs/phase4/runs/match-steps.json).
   p14: async () => { const M = await import('../src/match.js'); const f = join(ROOT, 'docs', 'phase4', 'runs', 'match-steps.json'); const db = new DatabaseSync(join(ROOT, 'build', 'northfield.db'), { readOnly: true });
     const rec = existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : {}; return { steps: rec.steps || [], recorded_at: rec.recorded_at || null, setup: M.setup(db) }; },
+  // P5: the last recorded real run through Ashby's connector, view by view (docs/phase4/runs/scout.json), with the setup and the baseline comparison.
+  p5: async () => { const Scout = await import('../src/scout.js'); const f = join(ROOT, 'docs', 'phase4', 'runs', 'scout.json'); const rec = existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : {};
+    return { steps: rec.steps || [], recorded_at: rec.recorded_at || null, governance: rec.governance || null, setup: Scout.setup() }; },
   // P21: what each side's connection answers at the start of the demo, for a viewer whose connector cannot be reached (Simulated).
   p21: async () => { const G = await import('../src/governance.js'); const db = new DatabaseSync(join(ROOT, 'build', 'tg.db'), { readOnly: true }); const nf = new DatabaseSync(join(ROOT, 'build', 'northfield.db'), { readOnly: true });
     const { Claim } = await import('../src/claim.js'); const { Pace } = await import('../src/pace.js'); const { Shelf } = await import('../src/shelf.js'); const { Review } = await import('../src/review.js'); const { Chase } = await import('../src/chase.js');

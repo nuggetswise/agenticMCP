@@ -1,0 +1,2120 @@
+{
+ "recorded_at": "2026-11-17T12:03Z",
+ "connector": "RetailStrategy (live, commit 6012604)",
+ "session": "SC-6674eab8f6",
+ "why_failed": "Scout chose an order for the Groveport shortage but named a case count the server required to equal the shortage exactly; refused twice, Scout stopped before proposing the plan or the ship notice release. Fixed: the server sets the cases from the shortage (commit after 6012604).",
+ "steps": [
+  {
+   "session": "SC-6674eab8f6",
+   "label": "Priya Raman",
+   "clock": "2026-12-08 17:12 ET",
+   "status": "waiting_for_priya",
+   "variation": [],
+   "awaiting": [
+    {
+     "id": "SP-1",
+     "po": "NR-460219",
+     "action": "erp_correct_invoice",
+     "does": "Correct an invoice draft line in the Supplier ERP to the shipped quantity",
+     "args": {
+      "po": "NR-460219",
+      "invoice": "INV-8012",
+      "line": 2,
+      "qty": 176
+     },
+     "proposed_by": "Rule engine",
+     "rationale": "Invoice draft INV-8012 line 2 bills 180 cases; 176 shipped; $153.60 over",
+     "alternatives": [],
+     "rule": "AP-3.2"
+    },
+    {
+     "id": "SP-2",
+     "po": "NR-460241",
+     "action": "send_routing_request",
+     "does": "Send the routing request for a collect load to Northfield",
+     "args": {
+      "po": "NR-460241",
+      "cases": 220
+     },
+     "proposed_by": "Rule engine",
+     "rationale": "Collect freight, 220 cases from Kinross Joliet; no routing request sent",
+     "alternatives": [],
+     "rule": "AP-3.2"
+    },
+    {
+     "id": "SP-3",
+     "po": "NR-460233",
+     "action": "kinross_relabel_cartons",
+     "does": "Ask Kinross to relabel cartons that carry SSCCs already used",
+     "args": {
+      "po": "NR-460233",
+      "cartons": 12
+     },
+     "proposed_by": "Rule engine",
+     "rationale": "12 of 96 honey cartons carry SSCCs already used",
+     "alternatives": [],
+     "rule": "AP-3.2"
+    },
+    {
+     "id": "SP-4",
+     "po": "NR-460274",
+     "action": "ask_buyer_order_change",
+     "does": "Ask the buyer for the order change behind a quantity agreed by phone",
+     "args": {
+      "po": "NR-460274",
+      "cases": 270
+     },
+     "proposed_by": "Rule engine",
+     "rationale": "Jordan Ellis agreed 270 cases by phone; the PO still reads 300; no order change received",
+     "alternatives": [],
+     "rule": "AP-3.2"
+    },
+    {
+     "id": "SP-5",
+     "po": "NR-460207",
+     "action": "erp_align_order",
+     "does": "Align the Supplier ERP sales order to Northfield’s current order (ship-to and line numbers)",
+     "args": {},
+     "proposed_by": "Scout",
+     "rationale": "Supplier ERP sales order currently carries the old line numbers and ship-to DC 4, whereas Northfield current order change 1 specifies ship-to DC 2, violating rules NF-4.7 and NF-4.8.",
+     "alternatives": [
+      "Leave ERP sales order out of alignment"
+     ],
+     "rule": "AP-3.2"
+    },
+    {
+     "id": "SP-6",
+     "po": "NR-460207",
+     "action": "kinross_load",
+     "does": "Ask Kinross to load a staged carton",
+     "args": {
+      "sscc": "006141410006005172"
+     },
+     "proposed_by": "Scout",
+     "rationale": "Kinross load scan shows 659 of 660 cartons loaded, with 1 carton of ASH-MUG-12 staged and not loaded under SSCC 006141410006005172, and 40 minutes remaining until the trailer seal.",
+     "alternatives": [
+      "Leave carton staged"
+     ],
+     "rule": "AP-3.2"
+    }
+   ],
+   "queue": {
+    "checked": 123,
+    "rows": [
+     {
+      "po": "NR-460207",
+      "kind": "load",
+      "running": true,
+      "cutoff": "Trailer seals",
+      "cutoff_minutes": 40,
+      "door": 7,
+      "source": "Kinross scan · API",
+      "problem": "Load scan 659 of 660 cartons; carton 006141410006005172 staged, not loaded. Order change moved ship-to from DC 4 to DC 2; Supplier ERP shows DC 4",
+      "consequence": "the order ships 659 of 660 cartons",
+      "state": "Ready to approve"
+     },
+     {
+      "po": "NR-460219",
+      "kind": "invoice",
+      "problem": "Invoice draft INV-8012 line 2 bills 180 cases; 176 shipped; $153.60 over",
+      "consequence": "the invoice batch sends 180 cases billed against 176 shipped",
+      "cutoff_minutes": 168,
+      "cutoff": "Invoice batch",
+      "source": "Supplier ERP · API",
+      "now": "180 cases",
+      "after": "176 cases",
+      "what": "Invoice INV-8012 line 2",
+      "goes_to": "Supplier ERP · API",
+      "state": "Ready to approve"
+     },
+     {
+      "po": "NR-460241",
+      "kind": "routing",
+      "problem": "Collect freight, 220 cases from Kinross Joliet; no routing request sent",
+      "consequence": "Northfield books no pickup for the 220 cases",
+      "cutoff_minutes": 1068,
+      "cutoff": "Routing request due",
+      "source": "EDI 753",
+      "now": "Not sent",
+      "after": "Sent for 220 cases",
+      "what": "Routing request",
+      "goes_to": "Northfield transportation · EDI 753",
+      "state": "Ready to approve"
+     },
+     {
+      "po": "NR-460262",
+      "kind": "stock",
+      "cutoff_minutes": 1248,
+      "cutoff": "Order-change cutoff",
+      "source": "Kinross inventory · API",
+      "state": "Choice needed",
+      "on_hand": 590,
+      "ordered": 619,
+      "short": 29,
+      "problem": "Kinross Groveport: 590 cases ASH-MUG-12 against 619 ordered on 3 orders; 29 short",
+      "consequence": "the 3 orders pick 29 cases short"
+     },
+     {
+      "po": "NR-460233",
+      "kind": "label",
+      "problem": "12 of 96 honey cartons carry SSCCs already used",
+      "consequence": "12 cartons load with SSCCs Northfield has already received",
+      "cutoff_minutes": 1368,
+      "cutoff": "Loading starts",
+      "source": "Kinross scan · API",
+      "now": "SSCCs already used",
+      "after": "New SSCCs",
+      "what": "Relabel 12 cartons",
+      "goes_to": "Kinross Logistics · API",
+      "state": "Ready to approve"
+     },
+     {
+      "po": "NR-460274",
+      "kind": "phone",
+      "problem": "Jordan Ellis agreed 270 cases by phone; the PO still reads 300; no order change received",
+      "consequence": "Kinross picks 300 cases against the 270 agreed",
+      "cutoff_minutes": 1488,
+      "cutoff": "Loading starts",
+      "source": "Phone note",
+      "now": "PO reads 300",
+      "after": "Order change to 270",
+      "what": "Order change request",
+      "goes_to": "Jordan Ellis · Email",
+      "state": "Ready to approve"
+     }
+    ]
+   },
+   "tasks": [],
+   "proposals": [
+    {
+     "id": "SP-1",
+     "po": "NR-460219",
+     "action": "erp_correct_invoice",
+     "args": {
+      "po": "NR-460219",
+      "invoice": "INV-8012",
+      "line": 2,
+      "qty": 176
+     },
+     "by": "Rule engine",
+     "state": "Awaiting approval",
+     "needs": "approve",
+     "approved_by": null,
+     "taken_over_by": null,
+     "result": null,
+     "at": "2026-12-08 17:12 ET"
+    },
+    {
+     "id": "SP-2",
+     "po": "NR-460241",
+     "action": "send_routing_request",
+     "args": {
+      "po": "NR-460241",
+      "cases": 220
+     },
+     "by": "Rule engine",
+     "state": "Awaiting approval",
+     "needs": "approve",
+     "approved_by": null,
+     "taken_over_by": null,
+     "result": null,
+     "at": "2026-12-08 17:12 ET"
+    },
+    {
+     "id": "SP-3",
+     "po": "NR-460233",
+     "action": "kinross_relabel_cartons",
+     "args": {
+      "po": "NR-460233",
+      "cartons": 12
+     },
+     "by": "Rule engine",
+     "state": "Awaiting approval",
+     "needs": "approve",
+     "approved_by": null,
+     "taken_over_by": null,
+     "result": null,
+     "at": "2026-12-08 17:12 ET"
+    },
+    {
+     "id": "SP-4",
+     "po": "NR-460274",
+     "action": "ask_buyer_order_change",
+     "args": {
+      "po": "NR-460274",
+      "cases": 270
+     },
+     "by": "Rule engine",
+     "state": "Awaiting approval",
+     "needs": "approve",
+     "approved_by": null,
+     "taken_over_by": null,
+     "result": null,
+     "at": "2026-12-08 17:12 ET"
+    },
+    {
+     "id": "SP-5",
+     "po": "NR-460207",
+     "action": "erp_align_order",
+     "args": {},
+     "by": "Scout",
+     "state": "Awaiting approval",
+     "needs": "approve",
+     "approved_by": null,
+     "taken_over_by": null,
+     "result": null,
+     "at": "2026-12-08 17:12 ET"
+    },
+    {
+     "id": "SP-6",
+     "po": "NR-460207",
+     "action": "kinross_load",
+     "args": {
+      "sscc": "006141410006005172"
+     },
+     "by": "Scout",
+     "state": "Awaiting approval",
+     "needs": "approve",
+     "approved_by": null,
+     "taken_over_by": null,
+     "result": null,
+     "at": "2026-12-08 17:12 ET"
+    }
+   ],
+   "ship_notice": null,
+   "receipt": null,
+   "load": {
+    "loaded": 659,
+    "of": 660,
+    "staged": [
+     "006141410006005172"
+    ],
+    "sealed": false
+   },
+   "outcome": {
+    "cartons_loaded": 659,
+    "of": 660,
+    "in_full": false,
+    "ship_notice": null,
+    "receipt_matches_ship_notice": null,
+    "ship_to_correct": false,
+    "reserved_stock_taken": false,
+    "buyer_told_of_short_line": false,
+    "approvals": 0,
+    "actions_executed": 0,
+    "actions_failed": 0,
+    "actions_refused": 1,
+    "violations": [],
+    "groveport": {
+     "on_hand": 590,
+     "ordered": 619,
+     "short": 29,
+     "plan": null,
+     "shortage_planned_before_cutoff": false
+    },
+    "synthetic": "Kinross and Northfield answers are synthetic, produced by the deterministic rules in src/scout.js"
+   },
+   "trace": [
+    {
+     "n": 1,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Session branched from the recorded world",
+     "detail": {
+      "at": "2026-12-08 17:12 ET",
+      "hidden": "Every recorded event after this time",
+      "changes": []
+     }
+    },
+    {
+     "n": 2,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "Detected 3 rule risks on NR-460207 before the seal",
+     "detail": {
+      "findings": [
+       {
+        "rule": "NF-4.5",
+        "finding": "659 of 660 cartons loaded; the ship notice must match the load carton for carton"
+       },
+       {
+        "rule": "NF-4.7",
+        "finding": "Supplier ERP ship-to DC 4; Northfield’s current order (change 1) says DC 2"
+       },
+       {
+        "rule": "NF-4.8",
+        "finding": "Supplier ERP sales order carries the old line numbers"
+       }
+      ],
+      "seal_in_minutes": 40
+     }
+    },
+    {
+     "n": 3,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "Proposed: Correct an invoice draft line in the Supplier ERP to the shipped quantity",
+     "detail": {
+      "proposal": "SP-1",
+      "po": "NR-460219",
+      "args": {
+       "po": "NR-460219",
+       "invoice": "INV-8012",
+       "line": 2,
+       "qty": 176
+      },
+      "rationale": "Invoice draft INV-8012 line 2 bills 180 cases; 176 shipped; $153.60 over",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 4,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "Proposed: Send the routing request for a collect load to Northfield",
+     "detail": {
+      "proposal": "SP-2",
+      "po": "NR-460241",
+      "args": {
+       "po": "NR-460241",
+       "cases": 220
+      },
+      "rationale": "Collect freight, 220 cases from Kinross Joliet; no routing request sent",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 5,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "Proposed: Ask Kinross to relabel cartons that carry SSCCs already used",
+     "detail": {
+      "proposal": "SP-3",
+      "po": "NR-460233",
+      "args": {
+       "po": "NR-460233",
+       "cartons": 12
+      },
+      "rationale": "12 of 96 honey cartons carry SSCCs already used",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 6,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "Proposed: Ask the buyer for the order change behind a quantity agreed by phone",
+     "detail": {
+      "proposal": "SP-4",
+      "po": "NR-460274",
+      "args": {
+       "po": "NR-460274",
+       "cases": 270
+      },
+      "rationale": "Jordan Ellis agreed 270 cases by phone; the PO still reads 300; no order change received",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 7,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_order",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 8,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_load",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 9,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_findings",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 10,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_policy",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 11,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Trading Grid",
+     "type": "rule",
+     "what": "Refused kinross_load",
+     "detail": {
+      "by": "Scout",
+      "reason": "kinross_load takes only sscc; refused sku, line, cases."
+     }
+    },
+    {
+     "n": 12,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Proposed: Align the Supplier ERP sales order to Northfield’s current order (ship-to and line numbers)",
+     "detail": {
+      "proposal": "SP-5",
+      "po": "NR-460207",
+      "args": {},
+      "rationale": "Supplier ERP sales order currently carries the old line numbers and ship-to DC 4, whereas Northfield current order change 1 specifies ship-to DC 2, violating rules NF-4.7 and NF-4.8.",
+      "alternatives": [
+       "Leave ERP sales order out of alignment"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 13,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Proposed: Ask Kinross to load a staged carton",
+     "detail": {
+      "proposal": "SP-6",
+      "po": "NR-460207",
+      "args": {
+       "sscc": "006141410006005172"
+      },
+      "rationale": "Kinross load scan shows 659 of 660 cartons loaded, with 1 carton of ASH-MUG-12 staged and not loaded under SSCC 006141410006005172, and 40 minutes remaining until the trailer seal.",
+      "alternatives": [
+       "Leave carton staged"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 14,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Scout said",
+     "detail": {
+      "text": "I have proposed two actions to address the findings for shipment SHP-460207:\n1. **`kinross_load`** (awaiting Priya Raman's approval): Ask Kinross to load the 1 staged carton of `ASH-MUG-12` (SSCC `006141410006005172`) that is currently sitting at door 7 with 40 minutes remaining until the trailer seal, ensuring all 660 cartons are loaded per rule NF-4.5.\n2. **`erp_align_order`** (awaiting Priya Raman's approval): Align the Supplier ERP sales order ship-to and line numbers with Northfield's current order change 1 (DC 2 and updated line numbers) to resolve rules NF-4.7 and NF-4.8."
+     }
+    }
+   ],
+   "overhead": {
+    "model_calls": 4,
+    "tool_calls": 7,
+    "ms": 38292,
+    "model_routes": {
+     "primary · gemini-3.5-flash-lite": 4
+    }
+   }
+  },
+  {
+   "session": "SC-6674eab8f6",
+   "label": "Priya Raman",
+   "clock": "2026-12-08 17:14 ET",
+   "status": "waiting_for_priya",
+   "variation": [],
+   "awaiting": [
+    {
+     "id": "SP-1",
+     "po": "NR-460219",
+     "action": "erp_correct_invoice",
+     "does": "Correct an invoice draft line in the Supplier ERP to the shipped quantity",
+     "args": {
+      "po": "NR-460219",
+      "invoice": "INV-8012",
+      "line": 2,
+      "qty": 176
+     },
+     "proposed_by": "Rule engine",
+     "rationale": "Invoice draft INV-8012 line 2 bills 180 cases; 176 shipped; $153.60 over",
+     "alternatives": [],
+     "rule": "AP-3.2"
+    },
+    {
+     "id": "SP-2",
+     "po": "NR-460241",
+     "action": "send_routing_request",
+     "does": "Send the routing request for a collect load to Northfield",
+     "args": {
+      "po": "NR-460241",
+      "cases": 220
+     },
+     "proposed_by": "Rule engine",
+     "rationale": "Collect freight, 220 cases from Kinross Joliet; no routing request sent",
+     "alternatives": [],
+     "rule": "AP-3.2"
+    },
+    {
+     "id": "SP-3",
+     "po": "NR-460233",
+     "action": "kinross_relabel_cartons",
+     "does": "Ask Kinross to relabel cartons that carry SSCCs already used",
+     "args": {
+      "po": "NR-460233",
+      "cartons": 12
+     },
+     "proposed_by": "Rule engine",
+     "rationale": "12 of 96 honey cartons carry SSCCs already used",
+     "alternatives": [],
+     "rule": "AP-3.2"
+    },
+    {
+     "id": "SP-4",
+     "po": "NR-460274",
+     "action": "ask_buyer_order_change",
+     "does": "Ask the buyer for the order change behind a quantity agreed by phone",
+     "args": {
+      "po": "NR-460274",
+      "cases": 270
+     },
+     "proposed_by": "Rule engine",
+     "rationale": "Jordan Ellis agreed 270 cases by phone; the PO still reads 300; no order change received",
+     "alternatives": [],
+     "rule": "AP-3.2"
+    },
+    {
+     "id": "SP-7",
+     "po": "NR-460207",
+     "action": "kinross_replace",
+     "does": "Ask Kinross to load a replacement case from free stock",
+     "args": {
+      "sku": "ASH-MUG-12",
+      "cases": 1
+     },
+     "proposed_by": "Scout",
+     "rationale": "Kinross reported the staged carton crushed (KT-1), and free stock at Kinross Groveport has 590 units of ASH-MUG-12 with 25 staging minutes, which covers 1 replacement case.",
+     "alternatives": [
+      "kinross_replace_reserved",
+      "notify_buyer_short"
+     ],
+     "rule": "AP-3.2"
+    }
+   ],
+   "queue": {
+    "checked": 123,
+    "rows": [
+     {
+      "po": "NR-460207",
+      "kind": "load",
+      "running": true,
+      "cutoff": "Trailer seals",
+      "cutoff_minutes": 38,
+      "door": 7,
+      "source": "Kinross scan · API",
+      "problem": "Load scan 659 of 660 cartons; carton 006141410006005172 staged, not loaded",
+      "consequence": "the order ships 659 of 660 cartons",
+      "state": "Ready to approve"
+     },
+     {
+      "po": "NR-460219",
+      "kind": "invoice",
+      "problem": "Invoice draft INV-8012 line 2 bills 180 cases; 176 shipped; $153.60 over",
+      "consequence": "the invoice batch sends 180 cases billed against 176 shipped",
+      "cutoff_minutes": 166,
+      "cutoff": "Invoice batch",
+      "source": "Supplier ERP · API",
+      "now": "180 cases",
+      "after": "176 cases",
+      "what": "Invoice INV-8012 line 2",
+      "goes_to": "Supplier ERP · API",
+      "state": "Ready to approve"
+     },
+     {
+      "po": "NR-460241",
+      "kind": "routing",
+      "problem": "Collect freight, 220 cases from Kinross Joliet; no routing request sent",
+      "consequence": "Northfield books no pickup for the 220 cases",
+      "cutoff_minutes": 1066,
+      "cutoff": "Routing request due",
+      "source": "EDI 753",
+      "now": "Not sent",
+      "after": "Sent for 220 cases",
+      "what": "Routing request",
+      "goes_to": "Northfield transportation · EDI 753",
+      "state": "Ready to approve"
+     },
+     {
+      "po": "NR-460262",
+      "kind": "stock",
+      "cutoff_minutes": 1246,
+      "cutoff": "Order-change cutoff",
+      "source": "Kinross inventory · API",
+      "state": "Choice needed",
+      "on_hand": 590,
+      "ordered": 619,
+      "short": 29,
+      "problem": "Kinross Groveport: 590 cases ASH-MUG-12 against 619 ordered on 3 orders; 29 short",
+      "consequence": "the 3 orders pick 29 cases short"
+     },
+     {
+      "po": "NR-460233",
+      "kind": "label",
+      "problem": "12 of 96 honey cartons carry SSCCs already used",
+      "consequence": "12 cartons load with SSCCs Northfield has already received",
+      "cutoff_minutes": 1366,
+      "cutoff": "Loading starts",
+      "source": "Kinross scan · API",
+      "now": "SSCCs already used",
+      "after": "New SSCCs",
+      "what": "Relabel 12 cartons",
+      "goes_to": "Kinross Logistics · API",
+      "state": "Ready to approve"
+     },
+     {
+      "po": "NR-460274",
+      "kind": "phone",
+      "problem": "Jordan Ellis agreed 270 cases by phone; the PO still reads 300; no order change received",
+      "consequence": "Kinross picks 300 cases against the 270 agreed",
+      "cutoff_minutes": 1486,
+      "cutoff": "Loading starts",
+      "source": "Phone note",
+      "now": "PO reads 300",
+      "after": "Order change to 270",
+      "what": "Order change request",
+      "goes_to": "Jordan Ellis · Email",
+      "state": "Ready to approve"
+     }
+    ]
+   },
+   "tasks": [
+    {
+     "id": "KT-1",
+     "kind": "load",
+     "proposal": "SP-6",
+     "sent_at": "2026-12-08 17:14 ET",
+     "state": "Rejected",
+     "response": "Carton crushed; it cannot be loaded"
+    }
+   ],
+   "proposals": [
+    {
+     "id": "SP-1",
+     "po": "NR-460219",
+     "action": "erp_correct_invoice",
+     "args": {
+      "po": "NR-460219",
+      "invoice": "INV-8012",
+      "line": 2,
+      "qty": 176
+     },
+     "by": "Rule engine",
+     "state": "Awaiting approval",
+     "needs": "approve",
+     "approved_by": null,
+     "taken_over_by": null,
+     "result": null,
+     "at": "2026-12-08 17:12 ET"
+    },
+    {
+     "id": "SP-2",
+     "po": "NR-460241",
+     "action": "send_routing_request",
+     "args": {
+      "po": "NR-460241",
+      "cases": 220
+     },
+     "by": "Rule engine",
+     "state": "Awaiting approval",
+     "needs": "approve",
+     "approved_by": null,
+     "taken_over_by": null,
+     "result": null,
+     "at": "2026-12-08 17:12 ET"
+    },
+    {
+     "id": "SP-3",
+     "po": "NR-460233",
+     "action": "kinross_relabel_cartons",
+     "args": {
+      "po": "NR-460233",
+      "cartons": 12
+     },
+     "by": "Rule engine",
+     "state": "Awaiting approval",
+     "needs": "approve",
+     "approved_by": null,
+     "taken_over_by": null,
+     "result": null,
+     "at": "2026-12-08 17:12 ET"
+    },
+    {
+     "id": "SP-4",
+     "po": "NR-460274",
+     "action": "ask_buyer_order_change",
+     "args": {
+      "po": "NR-460274",
+      "cases": 270
+     },
+     "by": "Rule engine",
+     "state": "Awaiting approval",
+     "needs": "approve",
+     "approved_by": null,
+     "taken_over_by": null,
+     "result": null,
+     "at": "2026-12-08 17:12 ET"
+    },
+    {
+     "id": "SP-5",
+     "po": "NR-460207",
+     "action": "erp_align_order",
+     "args": {},
+     "by": "Scout",
+     "state": "Executed",
+     "needs": "approve",
+     "approved_by": "Priya Raman",
+     "taken_over_by": null,
+     "result": "Applied in Supplier ERP",
+     "at": "2026-12-08 17:12 ET"
+    },
+    {
+     "id": "SP-6",
+     "po": "NR-460207",
+     "action": "kinross_load",
+     "args": {
+      "sscc": "006141410006005172"
+     },
+     "by": "Scout",
+     "state": "Failed",
+     "needs": "approve",
+     "approved_by": "Priya Raman",
+     "taken_over_by": null,
+     "result": "Carton crushed; it cannot be loaded",
+     "at": "2026-12-08 17:12 ET"
+    },
+    {
+     "id": "SP-7",
+     "po": "NR-460207",
+     "action": "kinross_replace",
+     "args": {
+      "sku": "ASH-MUG-12",
+      "cases": 1
+     },
+     "by": "Scout",
+     "state": "Awaiting approval",
+     "needs": "approve",
+     "approved_by": null,
+     "taken_over_by": null,
+     "result": null,
+     "at": "2026-12-08 17:14 ET"
+    }
+   ],
+   "ship_notice": null,
+   "receipt": null,
+   "load": {
+    "loaded": 659,
+    "of": 660,
+    "staged": [
+     "006141410006005172"
+    ],
+    "sealed": false
+   },
+   "outcome": {
+    "cartons_loaded": 659,
+    "of": 660,
+    "in_full": false,
+    "ship_notice": null,
+    "receipt_matches_ship_notice": null,
+    "ship_to_correct": true,
+    "reserved_stock_taken": false,
+    "buyer_told_of_short_line": false,
+    "approvals": 2,
+    "actions_executed": 1,
+    "actions_failed": 1,
+    "actions_refused": 2,
+    "violations": [],
+    "groveport": {
+     "on_hand": 590,
+     "ordered": 619,
+     "short": 29,
+     "plan": null,
+     "shortage_planned_before_cutoff": false
+    },
+    "synthetic": "Kinross and Northfield answers are synthetic, produced by the deterministic rules in src/scout.js"
+   },
+   "trace": [
+    {
+     "n": 1,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Session branched from the recorded world",
+     "detail": {
+      "at": "2026-12-08 17:12 ET",
+      "hidden": "Every recorded event after this time",
+      "changes": []
+     }
+    },
+    {
+     "n": 2,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "Detected 3 rule risks on NR-460207 before the seal",
+     "detail": {
+      "findings": [
+       {
+        "rule": "NF-4.5",
+        "finding": "659 of 660 cartons loaded; the ship notice must match the load carton for carton"
+       },
+       {
+        "rule": "NF-4.7",
+        "finding": "Supplier ERP ship-to DC 4; Northfield’s current order (change 1) says DC 2"
+       },
+       {
+        "rule": "NF-4.8",
+        "finding": "Supplier ERP sales order carries the old line numbers"
+       }
+      ],
+      "seal_in_minutes": 40
+     }
+    },
+    {
+     "n": 3,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "Proposed: Correct an invoice draft line in the Supplier ERP to the shipped quantity",
+     "detail": {
+      "proposal": "SP-1",
+      "po": "NR-460219",
+      "args": {
+       "po": "NR-460219",
+       "invoice": "INV-8012",
+       "line": 2,
+       "qty": 176
+      },
+      "rationale": "Invoice draft INV-8012 line 2 bills 180 cases; 176 shipped; $153.60 over",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 4,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "Proposed: Send the routing request for a collect load to Northfield",
+     "detail": {
+      "proposal": "SP-2",
+      "po": "NR-460241",
+      "args": {
+       "po": "NR-460241",
+       "cases": 220
+      },
+      "rationale": "Collect freight, 220 cases from Kinross Joliet; no routing request sent",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 5,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "Proposed: Ask Kinross to relabel cartons that carry SSCCs already used",
+     "detail": {
+      "proposal": "SP-3",
+      "po": "NR-460233",
+      "args": {
+       "po": "NR-460233",
+       "cartons": 12
+      },
+      "rationale": "12 of 96 honey cartons carry SSCCs already used",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 6,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "Proposed: Ask the buyer for the order change behind a quantity agreed by phone",
+     "detail": {
+      "proposal": "SP-4",
+      "po": "NR-460274",
+      "args": {
+       "po": "NR-460274",
+       "cases": 270
+      },
+      "rationale": "Jordan Ellis agreed 270 cases by phone; the PO still reads 300; no order change received",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 7,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_order",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 8,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_load",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 9,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_findings",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 10,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_policy",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 11,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Trading Grid",
+     "type": "rule",
+     "what": "Refused kinross_load",
+     "detail": {
+      "by": "Scout",
+      "reason": "kinross_load takes only sscc; refused sku, line, cases."
+     }
+    },
+    {
+     "n": 12,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Proposed: Align the Supplier ERP sales order to Northfield’s current order (ship-to and line numbers)",
+     "detail": {
+      "proposal": "SP-5",
+      "po": "NR-460207",
+      "args": {},
+      "rationale": "Supplier ERP sales order currently carries the old line numbers and ship-to DC 4, whereas Northfield current order change 1 specifies ship-to DC 2, violating rules NF-4.7 and NF-4.8.",
+      "alternatives": [
+       "Leave ERP sales order out of alignment"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 13,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Proposed: Ask Kinross to load a staged carton",
+     "detail": {
+      "proposal": "SP-6",
+      "po": "NR-460207",
+      "args": {
+       "sscc": "006141410006005172"
+      },
+      "rationale": "Kinross load scan shows 659 of 660 cartons loaded, with 1 carton of ASH-MUG-12 staged and not loaded under SSCC 006141410006005172, and 40 minutes remaining until the trailer seal.",
+      "alternatives": [
+       "Leave carton staged"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 14,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Scout said",
+     "detail": {
+      "text": "I have proposed two actions to address the findings for shipment SHP-460207:\n1. **`kinross_load`** (awaiting Priya Raman's approval): Ask Kinross to load the 1 staged carton of `ASH-MUG-12` (SSCC `006141410006005172`) that is currently sitting at door 7 with 40 minutes remaining until the trailer seal, ensuring all 660 cartons are loaded per rule NF-4.5.\n2. **`erp_align_order`** (awaiting Priya Raman's approval): Align the Supplier ERP sales order ship-to and line numbers with Northfield's current order change 1 (DC 2 and updated line numbers) to resolve rules NF-4.7 and NF-4.8."
+     }
+    },
+    {
+     "n": 15,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Priya Raman",
+     "type": "human",
+     "what": "Approved SP-5: Align the Supplier ERP sales order to Northfield’s current order (ship-to and line numbers)",
+     "detail": {
+      "po": "NR-460207",
+      "args": {}
+     }
+    },
+    {
+     "n": 16,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Supplier ERP",
+     "type": "external",
+     "what": "Sales order updated: ship-to DC 2, current line numbers",
+     "detail": {
+      "proposal": "SP-5"
+     }
+    },
+    {
+     "n": 17,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_proposals",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 18,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_load",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 19,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_findings",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 20,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Scout said",
+     "detail": {
+      "text": "I see that proposal SP-5 (`erp_align_order`) has been approved by Priya Raman and executed successfully in the Supplier ERP, leaving only rule NF-4.5 regarding the loaded carton count. \n\nProposal SP-6 (`kinross_load` for SSCC `006141410006005172`) is currently awaiting Priya Raman's approval, with 38 minutes remaining until the trailer seal. I am waiting for Priya's approval on SP-6 so Kinross can load the final staged carton."
+     }
+    },
+    {
+     "n": 21,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Priya Raman",
+     "type": "human",
+     "what": "Approved SP-6: Ask Kinross to load a staged carton",
+     "detail": {
+      "po": "NR-460207",
+      "args": {
+       "sscc": "006141410006005172"
+      }
+     }
+    },
+    {
+     "n": 22,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Kinross",
+     "type": "external",
+     "what": "Kinross rejected load",
+     "detail": {
+      "task": "KT-1",
+      "po": "NR-460207",
+      "response": "Carton crushed; it cannot be loaded"
+     }
+    },
+    {
+     "n": 23,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_tasks",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 24,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_load",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 25,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_findings",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 26,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_inventory",
+     "detail": {
+      "args": {
+       "sku": "ASH-MUG-12"
+      }
+     }
+    },
+    {
+     "n": 27,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_site_orders",
+     "detail": {
+      "args": {
+       "sku": "ASH-MUG-12"
+      }
+     }
+    },
+    {
+     "n": 28,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Trading Grid",
+     "type": "rule",
+     "what": "Refused kinross_replace",
+     "detail": {
+      "by": "Scout",
+      "reason": "kinross_replace takes only sku, cases; refused line."
+     }
+    },
+    {
+     "n": 29,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Proposed: Ask Kinross to load a replacement case from free stock",
+     "detail": {
+      "proposal": "SP-7",
+      "po": "NR-460207",
+      "args": {
+       "sku": "ASH-MUG-12",
+       "cases": 1
+      },
+      "rationale": "Kinross reported the staged carton crushed (KT-1), and free stock at Kinross Groveport has 590 units of ASH-MUG-12 with 25 staging minutes, which covers 1 replacement case.",
+      "alternatives": [
+       "kinross_replace_reserved",
+       "notify_buyer_short"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 30,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Scout said",
+     "detail": {
+      "text": "Kinross rejected task KT-1 because the carton is crushed and cannot be loaded. \n\nSince free stock at Kinross Groveport has 590 units of `ASH-MUG-12` available, I have proposed **`kinross_replace`** (SP-7, awaiting Priya Raman's approval) to ask Kinross to load 1 replacement case from free stock before the trailer seal."
+     }
+    }
+   ],
+   "overhead": {
+    "model_calls": 10,
+    "tool_calls": 17,
+    "ms": 55753,
+    "model_routes": {
+     "primary · gemini-3.5-flash-lite": 10
+    }
+   }
+  },
+  {
+   "session": "SC-6674eab8f6",
+   "label": "Priya Raman",
+   "clock": "2026-12-08 17:39 ET",
+   "status": "waiting_for_priya",
+   "variation": [],
+   "awaiting": [
+    {
+     "id": "SP-1",
+     "po": "NR-460219",
+     "action": "erp_correct_invoice",
+     "does": "Correct an invoice draft line in the Supplier ERP to the shipped quantity",
+     "args": {
+      "po": "NR-460219",
+      "invoice": "INV-8012",
+      "line": 2,
+      "qty": 176
+     },
+     "proposed_by": "Rule engine",
+     "rationale": "Invoice draft INV-8012 line 2 bills 180 cases; 176 shipped; $153.60 over",
+     "alternatives": [],
+     "rule": "AP-3.2"
+    },
+    {
+     "id": "SP-2",
+     "po": "NR-460241",
+     "action": "send_routing_request",
+     "does": "Send the routing request for a collect load to Northfield",
+     "args": {
+      "po": "NR-460241",
+      "cases": 220
+     },
+     "proposed_by": "Rule engine",
+     "rationale": "Collect freight, 220 cases from Kinross Joliet; no routing request sent",
+     "alternatives": [],
+     "rule": "AP-3.2"
+    },
+    {
+     "id": "SP-3",
+     "po": "NR-460233",
+     "action": "kinross_relabel_cartons",
+     "does": "Ask Kinross to relabel cartons that carry SSCCs already used",
+     "args": {
+      "po": "NR-460233",
+      "cartons": 12
+     },
+     "proposed_by": "Rule engine",
+     "rationale": "12 of 96 honey cartons carry SSCCs already used",
+     "alternatives": [],
+     "rule": "AP-3.2"
+    },
+    {
+     "id": "SP-4",
+     "po": "NR-460274",
+     "action": "ask_buyer_order_change",
+     "does": "Ask the buyer for the order change behind a quantity agreed by phone",
+     "args": {
+      "po": "NR-460274",
+      "cases": 270
+     },
+     "proposed_by": "Rule engine",
+     "rationale": "Jordan Ellis agreed 270 cases by phone; the PO still reads 300; no order change received",
+     "alternatives": [],
+     "rule": "AP-3.2"
+    }
+   ],
+   "queue": {
+    "checked": 123,
+    "rows": [
+     {
+      "po": "NR-460207",
+      "kind": "load",
+      "running": true,
+      "cutoff": "Trailer seals",
+      "cutoff_minutes": 13,
+      "door": 7,
+      "source": "Kinross scan · API",
+      "problem": "660 of 660 cartons loaded; ship-to DC 2",
+      "consequence": null,
+      "state": "Sent"
+     },
+     {
+      "po": "NR-460219",
+      "kind": "invoice",
+      "problem": "Invoice draft INV-8012 line 2 bills 180 cases; 176 shipped; $153.60 over",
+      "consequence": "the invoice batch sends 180 cases billed against 176 shipped",
+      "cutoff_minutes": 141,
+      "cutoff": "Invoice batch",
+      "source": "Supplier ERP · API",
+      "now": "180 cases",
+      "after": "176 cases",
+      "what": "Invoice INV-8012 line 2",
+      "goes_to": "Supplier ERP · API",
+      "state": "Ready to approve"
+     },
+     {
+      "po": "NR-460241",
+      "kind": "routing",
+      "problem": "Collect freight, 220 cases from Kinross Joliet; no routing request sent",
+      "consequence": "Northfield books no pickup for the 220 cases",
+      "cutoff_minutes": 1041,
+      "cutoff": "Routing request due",
+      "source": "EDI 753",
+      "now": "Not sent",
+      "after": "Sent for 220 cases",
+      "what": "Routing request",
+      "goes_to": "Northfield transportation · EDI 753",
+      "state": "Ready to approve"
+     },
+     {
+      "po": "NR-460262",
+      "kind": "stock",
+      "cutoff_minutes": 1221,
+      "cutoff": "Order-change cutoff",
+      "source": "Kinross inventory · API",
+      "state": "Choice needed",
+      "on_hand": 589,
+      "ordered": 619,
+      "short": 30,
+      "problem": "Kinross Groveport: 589 cases ASH-MUG-12 against 619 ordered on 3 orders; 30 short",
+      "consequence": "the 3 orders pick 30 cases short"
+     },
+     {
+      "po": "NR-460233",
+      "kind": "label",
+      "problem": "12 of 96 honey cartons carry SSCCs already used",
+      "consequence": "12 cartons load with SSCCs Northfield has already received",
+      "cutoff_minutes": 1341,
+      "cutoff": "Loading starts",
+      "source": "Kinross scan · API",
+      "now": "SSCCs already used",
+      "after": "New SSCCs",
+      "what": "Relabel 12 cartons",
+      "goes_to": "Kinross Logistics · API",
+      "state": "Ready to approve"
+     },
+     {
+      "po": "NR-460274",
+      "kind": "phone",
+      "problem": "Jordan Ellis agreed 270 cases by phone; the PO still reads 300; no order change received",
+      "consequence": "Kinross picks 300 cases against the 270 agreed",
+      "cutoff_minutes": 1461,
+      "cutoff": "Loading starts",
+      "source": "Phone note",
+      "now": "PO reads 300",
+      "after": "Order change to 270",
+      "what": "Order change request",
+      "goes_to": "Jordan Ellis · Email",
+      "state": "Ready to approve"
+     }
+    ]
+   },
+   "tasks": [
+    {
+     "id": "KT-1",
+     "kind": "load",
+     "proposal": "SP-6",
+     "sent_at": "2026-12-08 17:14 ET",
+     "state": "Rejected",
+     "response": "Carton crushed; it cannot be loaded"
+    },
+    {
+     "id": "KT-2",
+     "kind": "replacement",
+     "proposal": "SP-7",
+     "sent_at": "2026-12-08 17:39 ET",
+     "state": "Completed",
+     "response": "Replacement case loaded as 006141410009050018",
+     "new_sscc": "006141410009050018",
+     "loaded": 660
+    }
+   ],
+   "proposals": [
+    {
+     "id": "SP-1",
+     "po": "NR-460219",
+     "action": "erp_correct_invoice",
+     "args": {
+      "po": "NR-460219",
+      "invoice": "INV-8012",
+      "line": 2,
+      "qty": 176
+     },
+     "by": "Rule engine",
+     "state": "Awaiting approval",
+     "needs": "approve",
+     "approved_by": null,
+     "taken_over_by": null,
+     "result": null,
+     "at": "2026-12-08 17:12 ET"
+    },
+    {
+     "id": "SP-2",
+     "po": "NR-460241",
+     "action": "send_routing_request",
+     "args": {
+      "po": "NR-460241",
+      "cases": 220
+     },
+     "by": "Rule engine",
+     "state": "Awaiting approval",
+     "needs": "approve",
+     "approved_by": null,
+     "taken_over_by": null,
+     "result": null,
+     "at": "2026-12-08 17:12 ET"
+    },
+    {
+     "id": "SP-3",
+     "po": "NR-460233",
+     "action": "kinross_relabel_cartons",
+     "args": {
+      "po": "NR-460233",
+      "cartons": 12
+     },
+     "by": "Rule engine",
+     "state": "Awaiting approval",
+     "needs": "approve",
+     "approved_by": null,
+     "taken_over_by": null,
+     "result": null,
+     "at": "2026-12-08 17:12 ET"
+    },
+    {
+     "id": "SP-4",
+     "po": "NR-460274",
+     "action": "ask_buyer_order_change",
+     "args": {
+      "po": "NR-460274",
+      "cases": 270
+     },
+     "by": "Rule engine",
+     "state": "Awaiting approval",
+     "needs": "approve",
+     "approved_by": null,
+     "taken_over_by": null,
+     "result": null,
+     "at": "2026-12-08 17:12 ET"
+    },
+    {
+     "id": "SP-5",
+     "po": "NR-460207",
+     "action": "erp_align_order",
+     "args": {},
+     "by": "Scout",
+     "state": "Executed",
+     "needs": "approve",
+     "approved_by": "Priya Raman",
+     "taken_over_by": null,
+     "result": "Applied in Supplier ERP",
+     "at": "2026-12-08 17:12 ET"
+    },
+    {
+     "id": "SP-6",
+     "po": "NR-460207",
+     "action": "kinross_load",
+     "args": {
+      "sscc": "006141410006005172"
+     },
+     "by": "Scout",
+     "state": "Failed",
+     "needs": "approve",
+     "approved_by": "Priya Raman",
+     "taken_over_by": null,
+     "result": "Carton crushed; it cannot be loaded",
+     "at": "2026-12-08 17:12 ET"
+    },
+    {
+     "id": "SP-7",
+     "po": "NR-460207",
+     "action": "kinross_replace",
+     "args": {
+      "sku": "ASH-MUG-12",
+      "cases": 1
+     },
+     "by": "Scout",
+     "state": "Executed",
+     "needs": "approve",
+     "approved_by": "Priya Raman",
+     "taken_over_by": null,
+     "result": "Replacement case loaded as 006141410009050018",
+     "at": "2026-12-08 17:14 ET"
+    },
+    {
+     "id": "SP-8",
+     "po": "NR-460207",
+     "action": "build_ship_notice",
+     "args": {},
+     "by": "Scout",
+     "state": "Executed",
+     "needs": "policy",
+     "approved_by": null,
+     "taken_over_by": null,
+     "result": "Built ASN-460207-S6674 for 660 cartons; not sent",
+     "at": "2026-12-08 17:39 ET"
+    }
+   ],
+   "ship_notice": {
+    "reference": "ASN-460207-S6674",
+    "built_from": "Kinross load scan (confirmed)",
+    "cartons": 660,
+    "line_1": 400,
+    "line_2": 260,
+    "ship_to": "DC 2",
+    "lines": "Current",
+    "removed": [
+     "006141410006005172"
+    ],
+    "released": false,
+    "synthetic": true
+   },
+   "receipt": null,
+   "load": {
+    "loaded": 660,
+    "of": 660,
+    "staged": [],
+    "sealed": false
+   },
+   "outcome": {
+    "cartons_loaded": 660,
+    "of": 660,
+    "in_full": true,
+    "ship_notice": {
+     "reference": "ASN-460207-S6674",
+     "cartons": 660,
+     "released": false,
+     "on_time": null
+    },
+    "receipt_matches_ship_notice": null,
+    "ship_to_correct": true,
+    "reserved_stock_taken": false,
+    "buyer_told_of_short_line": false,
+    "approvals": 3,
+    "actions_executed": 3,
+    "actions_failed": 1,
+    "actions_refused": 4,
+    "violations": [],
+    "groveport": {
+     "on_hand": 589,
+     "ordered": 619,
+     "short": 30,
+     "plan": null,
+     "shortage_planned_before_cutoff": false
+    },
+    "synthetic": "Kinross and Northfield answers are synthetic, produced by the deterministic rules in src/scout.js"
+   },
+   "trace": [
+    {
+     "n": 1,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Session branched from the recorded world",
+     "detail": {
+      "at": "2026-12-08 17:12 ET",
+      "hidden": "Every recorded event after this time",
+      "changes": []
+     }
+    },
+    {
+     "n": 2,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "Detected 3 rule risks on NR-460207 before the seal",
+     "detail": {
+      "findings": [
+       {
+        "rule": "NF-4.5",
+        "finding": "659 of 660 cartons loaded; the ship notice must match the load carton for carton"
+       },
+       {
+        "rule": "NF-4.7",
+        "finding": "Supplier ERP ship-to DC 4; Northfield’s current order (change 1) says DC 2"
+       },
+       {
+        "rule": "NF-4.8",
+        "finding": "Supplier ERP sales order carries the old line numbers"
+       }
+      ],
+      "seal_in_minutes": 40
+     }
+    },
+    {
+     "n": 3,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "Proposed: Correct an invoice draft line in the Supplier ERP to the shipped quantity",
+     "detail": {
+      "proposal": "SP-1",
+      "po": "NR-460219",
+      "args": {
+       "po": "NR-460219",
+       "invoice": "INV-8012",
+       "line": 2,
+       "qty": 176
+      },
+      "rationale": "Invoice draft INV-8012 line 2 bills 180 cases; 176 shipped; $153.60 over",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 4,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "Proposed: Send the routing request for a collect load to Northfield",
+     "detail": {
+      "proposal": "SP-2",
+      "po": "NR-460241",
+      "args": {
+       "po": "NR-460241",
+       "cases": 220
+      },
+      "rationale": "Collect freight, 220 cases from Kinross Joliet; no routing request sent",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 5,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "Proposed: Ask Kinross to relabel cartons that carry SSCCs already used",
+     "detail": {
+      "proposal": "SP-3",
+      "po": "NR-460233",
+      "args": {
+       "po": "NR-460233",
+       "cartons": 12
+      },
+      "rationale": "12 of 96 honey cartons carry SSCCs already used",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 6,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "Proposed: Ask the buyer for the order change behind a quantity agreed by phone",
+     "detail": {
+      "proposal": "SP-4",
+      "po": "NR-460274",
+      "args": {
+       "po": "NR-460274",
+       "cases": 270
+      },
+      "rationale": "Jordan Ellis agreed 270 cases by phone; the PO still reads 300; no order change received",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 7,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_order",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 8,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_load",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 9,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_findings",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 10,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_policy",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 11,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Trading Grid",
+     "type": "rule",
+     "what": "Refused kinross_load",
+     "detail": {
+      "by": "Scout",
+      "reason": "kinross_load takes only sscc; refused sku, line, cases."
+     }
+    },
+    {
+     "n": 12,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Proposed: Align the Supplier ERP sales order to Northfield’s current order (ship-to and line numbers)",
+     "detail": {
+      "proposal": "SP-5",
+      "po": "NR-460207",
+      "args": {},
+      "rationale": "Supplier ERP sales order currently carries the old line numbers and ship-to DC 4, whereas Northfield current order change 1 specifies ship-to DC 2, violating rules NF-4.7 and NF-4.8.",
+      "alternatives": [
+       "Leave ERP sales order out of alignment"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 13,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Proposed: Ask Kinross to load a staged carton",
+     "detail": {
+      "proposal": "SP-6",
+      "po": "NR-460207",
+      "args": {
+       "sscc": "006141410006005172"
+      },
+      "rationale": "Kinross load scan shows 659 of 660 cartons loaded, with 1 carton of ASH-MUG-12 staged and not loaded under SSCC 006141410006005172, and 40 minutes remaining until the trailer seal.",
+      "alternatives": [
+       "Leave carton staged"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 14,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Scout said",
+     "detail": {
+      "text": "I have proposed two actions to address the findings for shipment SHP-460207:\n1. **`kinross_load`** (awaiting Priya Raman's approval): Ask Kinross to load the 1 staged carton of `ASH-MUG-12` (SSCC `006141410006005172`) that is currently sitting at door 7 with 40 minutes remaining until the trailer seal, ensuring all 660 cartons are loaded per rule NF-4.5.\n2. **`erp_align_order`** (awaiting Priya Raman's approval): Align the Supplier ERP sales order ship-to and line numbers with Northfield's current order change 1 (DC 2 and updated line numbers) to resolve rules NF-4.7 and NF-4.8."
+     }
+    },
+    {
+     "n": 15,
+     "clock": "2026-12-08 17:12 ET",
+     "actor": "Priya Raman",
+     "type": "human",
+     "what": "Approved SP-5: Align the Supplier ERP sales order to Northfield’s current order (ship-to and line numbers)",
+     "detail": {
+      "po": "NR-460207",
+      "args": {}
+     }
+    },
+    {
+     "n": 16,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Supplier ERP",
+     "type": "external",
+     "what": "Sales order updated: ship-to DC 2, current line numbers",
+     "detail": {
+      "proposal": "SP-5"
+     }
+    },
+    {
+     "n": 17,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_proposals",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 18,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_load",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 19,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_findings",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 20,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Scout said",
+     "detail": {
+      "text": "I see that proposal SP-5 (`erp_align_order`) has been approved by Priya Raman and executed successfully in the Supplier ERP, leaving only rule NF-4.5 regarding the loaded carton count. \n\nProposal SP-6 (`kinross_load` for SSCC `006141410006005172`) is currently awaiting Priya Raman's approval, with 38 minutes remaining until the trailer seal. I am waiting for Priya's approval on SP-6 so Kinross can load the final staged carton."
+     }
+    },
+    {
+     "n": 21,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Priya Raman",
+     "type": "human",
+     "what": "Approved SP-6: Ask Kinross to load a staged carton",
+     "detail": {
+      "po": "NR-460207",
+      "args": {
+       "sscc": "006141410006005172"
+      }
+     }
+    },
+    {
+     "n": 22,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Kinross",
+     "type": "external",
+     "what": "Kinross rejected load",
+     "detail": {
+      "task": "KT-1",
+      "po": "NR-460207",
+      "response": "Carton crushed; it cannot be loaded"
+     }
+    },
+    {
+     "n": 23,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_tasks",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 24,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_load",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 25,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_findings",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 26,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_inventory",
+     "detail": {
+      "args": {
+       "sku": "ASH-MUG-12"
+      }
+     }
+    },
+    {
+     "n": 27,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_site_orders",
+     "detail": {
+      "args": {
+       "sku": "ASH-MUG-12"
+      }
+     }
+    },
+    {
+     "n": 28,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Trading Grid",
+     "type": "rule",
+     "what": "Refused kinross_replace",
+     "detail": {
+      "by": "Scout",
+      "reason": "kinross_replace takes only sku, cases; refused line."
+     }
+    },
+    {
+     "n": 29,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Proposed: Ask Kinross to load a replacement case from free stock",
+     "detail": {
+      "proposal": "SP-7",
+      "po": "NR-460207",
+      "args": {
+       "sku": "ASH-MUG-12",
+       "cases": 1
+      },
+      "rationale": "Kinross reported the staged carton crushed (KT-1), and free stock at Kinross Groveport has 590 units of ASH-MUG-12 with 25 staging minutes, which covers 1 replacement case.",
+      "alternatives": [
+       "kinross_replace_reserved",
+       "notify_buyer_short"
+      ],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 30,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Scout said",
+     "detail": {
+      "text": "Kinross rejected task KT-1 because the carton is crushed and cannot be loaded. \n\nSince free stock at Kinross Groveport has 590 units of `ASH-MUG-12` available, I have proposed **`kinross_replace`** (SP-7, awaiting Priya Raman's approval) to ask Kinross to load 1 replacement case from free stock before the trailer seal."
+     }
+    },
+    {
+     "n": 31,
+     "clock": "2026-12-08 17:14 ET",
+     "actor": "Priya Raman",
+     "type": "human",
+     "what": "Approved SP-7: Ask Kinross to load a replacement case from free stock",
+     "detail": {
+      "po": "NR-460207",
+      "args": {
+       "sku": "ASH-MUG-12",
+       "cases": 1
+      }
+     }
+    },
+    {
+     "n": 32,
+     "clock": "2026-12-08 17:39 ET",
+     "actor": "Kinross",
+     "type": "external",
+     "what": "Kinross completed replacement",
+     "detail": {
+      "task": "KT-2",
+      "po": "NR-460207",
+      "response": "Replacement case loaded as 006141410009050018"
+     }
+    },
+    {
+     "n": 33,
+     "clock": "2026-12-08 17:39 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_findings",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 34,
+     "clock": "2026-12-08 17:39 ET",
+     "actor": "Scout",
+     "type": "tool",
+     "what": "Read read_site_orders",
+     "detail": {
+      "args": {
+       "sku": "ASH-MUG-12"
+      }
+     }
+    },
+    {
+     "n": 35,
+     "clock": "2026-12-08 17:39 ET",
+     "actor": "Trading Grid",
+     "type": "rule",
+     "what": "Refused request_order_change",
+     "detail": {
+      "by": "Scout",
+      "reason": "request_order_change takes only po, cases; refused sku."
+     }
+    },
+    {
+     "n": 36,
+     "clock": "2026-12-08 17:39 ET",
+     "actor": "Scout",
+     "type": "ai",
+     "what": "Proposed: Build the ship notice from the confirmed load scan",
+     "detail": {
+      "proposal": "SP-8",
+      "po": "NR-460207",
+      "args": {},
+      "rationale": "All 660 cartons are now successfully loaded (including replacement SSCC 006141410009050018), and no rule findings remain against shipment SHP-460207.",
+      "alternatives": [],
+      "needs": "policy"
+     }
+    },
+    {
+     "n": 37,
+     "clock": "2026-12-08 17:39 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "Ship notice built from the load scan: 660 cartons",
+     "detail": {
+      "asn": "ASN-460207-S6674",
+      "checks": [
+       "NF-4.5 matches the load",
+       "NF-4.7 ship-to DC 2",
+       "NF-4.8 current line numbers"
+      ]
+     }
+    },
+    {
+     "n": 38,
+     "clock": "2026-12-08 17:39 ET",
+     "actor": "Trading Grid",
+     "type": "rule",
+     "what": "Refused request_order_change",
+     "detail": {
+      "by": "Scout",
+      "reason": "The stock is 30 cases short; NR-460274 would change from 270 to 240 cases."
+     }
+    },
+    {
+     "n": 39,
+     "clock": "2026-12-08 17:39 ET",
+     "actor": "Scout",
+     "type": "system",
+     "what": "Waiting for Priya Raman: The stock is 30 cases short; NR-460274 would change from 270 to 240 cases.",
+     "detail": {
+      "refused": {
+       "kinross_load": 1,
+       "kinross_replace": 1,
+       "request_order_change": 2
+      }
+     }
+    }
+   ],
+   "overhead": {
+    "model_calls": 13,
+    "tool_calls": 22,
+    "ms": 60865,
+    "model_routes": {
+     "primary · gemini-3.5-flash-lite": 13
+    }
+   }
+  }
+ ]
+}

@@ -121,7 +121,7 @@ function ruleQueue(db, s) {
   s.checked = db.prepare("SELECT count(*) n FROM orders o WHERE supplier_id = 'ASHBY' AND received_at <= ? AND NOT EXISTS (SELECT 1 FROM shipments x WHERE x.po = o.po AND x.shipped_at <= ?)").get(cut, cut).n;
 }
 const groveShort = (s) => s.grove ? Math.max(0, s.grove.ordered - s.world.stock[0].on_hand) : 0;
-const SENT = { erp_correct_invoice: 'Corrected in Supplier ERP', send_routing_request: 'Routing request sent', kinross_relabel_cartons: 'Relabel task sent to Kinross', ask_buyer_order_change: 'Awaiting Jordan Ellis', request_order_change: 'Awaiting Northfield' };
+const SENT = { erp_align_order: 'Ship-to corrected', kinross_replace: 'Replacement case loaded', kinross_replace_reserved: 'Replacement case loaded', kinross_load: 'Carton loaded', build_ship_notice: 'Ship notice built, not sent', notify_buyer_short: 'Buyer told of short line', erp_correct_invoice: 'Corrected in Supplier ERP', send_routing_request: 'Routing request sent', kinross_relabel_cartons: 'Relabel task sent to Kinross', ask_buyer_order_change: 'Awaiting Jordan Ellis', request_order_change: 'Awaiting Northfield' };
 /** The queue as the screen shows it: every row states its own problem in values, soonest cutoff first. */
 export function queueView(s) {
   const elapsed = Math.round((s.clock - Date.parse(s.world.branch_at)) / MIN);
@@ -177,6 +177,8 @@ export function read(db, s, name, args = {}) { const r = READS[name]; if (!r) re
 const keyOf = (action, args) => createHash('sha1').update(JSON.stringify([action, args])).digest('hex').slice(0, 16);
 export function propose(db, s, by, action, args = {}, why = {}) {
   const def = ACTIONS[action]; if (!def) return { state: 'Refused', message: `No action ${action}` };
+  // An order change covers exactly the shortage: the server works out the cases from the order chosen, so the agent names only the order.
+  if (action === 'request_order_change') { const { sku, cases, ...rest } = args; const o = s.grove?.orders.find((x) => x.po === rest.po); args = o && groveShort(s) ? { ...rest, cases: o.cases - groveShort(s) } : { ...rest, ...(cases != null ? { cases } : {}) }; }
   const key = keyOf(action, action === 'build_ship_notice' ? { load: cartonsLoaded(s) } : args);
   const open = s.proposals.find((p) => p.key === key && ['Awaiting approval', 'Executed', 'Approved'].includes(p.state));
   if (open) return { state: 'Duplicate', proposal: open.id, message: `The same action is already ${open.state.toLowerCase()} (${open.id}).` };
@@ -207,7 +209,7 @@ function validate(s, action, a) {
   if (action === 'request_order_change') { const o = s.grove?.orders.find((x) => x.po === a.po); const short = groveShort(s);
     if (!o) return `${a.po} is not one of the orders sharing this stock: ${s.grove?.orders.map((x) => x.po).join(', ')}.`;
     if (!short) return 'The stock covers every order; no order needs to change.';
-    if (a.cases !== o.cases - short) return `The stock is ${short} cases short; ${a.po} would change from ${o.cases} to ${o.cases - short} cases.`; }
+    if (o.cases - short < 0) return `The stock is ${short} cases short; ${a.po} would change from ${o.cases} to ${o.cases - short} cases.`; }
   if (left < -60 && action !== 'release_ship_notice' && !QUEUE_ACTIONS.includes(action)) return 'The shipment has left.';
   return null;
 }
@@ -324,7 +326,7 @@ export function runBaseline(db, s, approve = (p) => decide(db, s, p, 'approve', 
 // ---------- Scout: a model choosing reads and proposing actions ----------
 const AGENT_TOOLS = [
   ...Object.entries(READS).map(([name, r]) => ({ name, description: r.description, input: r.input })),
-  { name: 'propose_action', description: `Propose one action. The server decides whether it runs under policy or waits for Priya Raman, and refuses anything a rule or guardrail forbids. Actions: ${Object.entries(ACTIONS).map(([k, a]) => `${k} (${a.label})`).join('; ')}. Give the arguments the action needs (sscc for carton tasks; sku and cases for replacements; line and shipped for notify_buyer_short; po and cases for request_order_change), a short rationale grounded in records you read, and the alternatives you considered with why you did not choose them.`,
+  { name: 'propose_action', description: `Propose one action. The server decides whether it runs under policy or waits for Priya Raman, and refuses anything a rule or guardrail forbids. Actions: ${Object.entries(ACTIONS).map(([k, a]) => `${k} (${a.label})`).join('; ')}. Give the arguments the action needs (sscc for carton tasks; sku and cases for replacements; line and shipped for notify_buyer_short; po only for request_order_change), a short rationale grounded in records you read, and the alternatives you considered with why you did not choose them.`,
     input: { action: z.enum(Object.keys(ACTIONS)), po: z.string().optional().describe('Order, for request_order_change'), sscc: z.string().optional(), sku: z.string().optional(), cases: z.number().int().optional(), line: z.number().int().optional(), shipped: z.number().int().optional(), rationale: z.string().describe('One or two sentences citing the records read'), alternatives: z.array(z.string()).optional().describe('Options considered and why not chosen') } },
 ];
 const INSTRUCTION = (s) => `You are Scout Agent, working for Priya Raman at Ashby Supplier on Trading Grid. All data is fictional.
@@ -332,7 +334,7 @@ Goal: ${s.goal}
 You are working on PO NR-460207, shipping from Kinross Groveport to Northfield Retailer. Find out what threatens this shipment, decide what should happen, and propose actions with propose_action.
 Use only facts returned by your tools. Never state a record, quantity or confirmation the tools did not return. Read the policy before proposing. A proposal that waits for approval is not done; a Kinross task is done only when Kinross reports it completed; a ship notice is accepted by Northfield only on its receiving advice, not on a technical acknowledgment.
 The rule engine has already proposed fixed-rule fixes on other shipments (read_proposals shows them, proposed by Rule engine); leave those to Priya.
-You also watch what your own actions do to other orders. If stock you used leaves later orders short, read them with read_site_orders and propose which one order ships short with request_order_change (po and cases), giving your reason from the records and the orders you did not choose as alternatives. Priya Raman chooses; she may pick a different order.
+You also watch what your own actions do to other orders. If stock you used leaves later orders short, read them with read_site_orders and propose which one order ships short with request_order_change (po only; the server sets the cases to cover the shortage), giving your reason from the records and the orders you did not choose as alternatives. Priya Raman chooses; she may pick a different order.
 Never retry an action the server refused; read the refusal and change course, or stop and say what waits for Priya.
 When you are waiting for Priya or for Kinross, stop and say in one or two sentences what you proposed and why. When new evidence arrives, re-read what changed and reconsider your plan; do not repeat an action a party has already rejected for the same reason.`;
 

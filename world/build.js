@@ -206,10 +206,13 @@ export function buildWorld({ quiet = false } = {}) {
   const dec = T.events.filter((e) => e.kind === 'case.decision');
   insert(db, 'review_notes', dec.map((e) => { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; return { case_id: d.case, charge: d.charge, at: new Date(Date.parse(e.at) - 3600000).toISOString(), author: 'Jordan Ellis',
     note: d.decision === 'Reversed' ? 'Load scan time is before the seal time on the bill of lading; seal intact at DC 2. Reverse the shortage. Receipt stays as recorded until receiving revises it.' : 'Ship notice still differs from the receiving advice on record. No revised receiving advice. Uphold.' }; }));
+  const IN_FORCE_FROM = '2027-01-04T05:00:00.000Z'; // Monday 4 January 2027, 00:00 Eastern (D72)
   insert(db, 'draft_rules', [
-    { id: 'NFD-1', created_at: '2026-11-10T15:00:00.000Z', author: 'Jordan Ellis', statement: 'Send the ship notice within 30 minutes of departure', check_kind: 'ship_notice_minutes', value: 30, charge: 150, state: 'Draft', charge_basis: 'per document', basis: 'Northfield' },
+    { id: 'NFD-1', in_force_from: null, created_at: '2026-11-10T15:00:00.000Z', author: 'Jordan Ellis', statement: 'Send the ship notice within 30 minutes of departure', check_kind: 'ship_notice_minutes', value: 30, charge: 150, state: 'Draft', charge_basis: 'per document', basis: 'Northfield' },
     { id: 'NFD-2', created_at: '2026-11-10T15:30:00.000Z', author: 'Jordan Ellis', statement: 'Invoice line prices within 0.25% of the purchase order price', check_kind: 'price_tolerance_pct', value: 0.25, charge: 100, state: 'Draft', charge_basis: 'per document', basis: 'Northfield' },
-    // Change list 4 (owner decision, 16 November 2026): two real retailers' published chargeback rules as Northfield drafts. Neither retailer
+    // Change list 4 (owner decision, 16 November 2026): two real retailers' published chargeback rules as Northfield rules. Neither retailer
+    // is named (R04). D72: they are published and go into force on IN_FORCE_FROM, after the quarter's last shipment, so no shipment in the
+    // demo is charged under them and every charge already in the world stands.
     // is named (R04). Values as published; a charge the source leaves open stays null ("to set"). Drafts change nothing until published.
     ...[['NFD-3', 'Supplier’s functional acknowledgment (997) to an order within 48 hours', 'supplier_997_hours', 48, 100, 'per document', 'retailer guide A'],
       ['NFD-4', 'Ship-to on the ship notice matches the order: $75 below an order-value threshold, $150 at or above it (threshold to set; replayed at $150)', 'ship_to_mismatch', 0, 150, 'per document', 'retailer guide A'],
@@ -224,7 +227,7 @@ export function buildWorld({ quiet = false } = {}) {
       ['NFD-13', 'No carton holds a unit over 23 kg: $25 per carton', 'unit_over_kg', 23, 25, 'per carton', 'marketplace retailer B'],
       ['NFD-14', 'Carton contents match the ship notice: $2.60 per unit that differs', 'carton_contents_units', 0, 2.6, 'per unit', 'marketplace retailer B'],
       ['NFD-15', 'Ship notice accurate and complete: 2% of the order’s cost when it fails (low end of the published 2 to 6%)', 'ship_notice_accuracy_pct', 2, 2, 'percent of order value', 'marketplace retailer B']]
-      .map(([id, statement, check_kind, value, charge, charge_basis, src]) => ({ id, created_at: '2026-11-16T17:00:00.000Z', author: 'Jordan Ellis', statement, check_kind, value, charge, state: 'Draft', charge_basis, basis: `Adapted from ${src} (owner-supplied)` }))]);
+      .map(([id, statement, check_kind, value, charge, charge_basis, src]) => ({ id, created_at: '2026-11-16T17:00:00.000Z', author: 'Jordan Ellis', statement, check_kind, value, charge, state: 'Scheduled', in_force_from: IN_FORCE_FROM, charge_basis, basis: `Adapted from ${src} (owner-supplied)` }))]);
   const fk = db.prepare('PRAGMA foreign_key_check').all();
   if (fk.length) { const by = {}; for (const r of fk) { const k = `${r.table}→${r.parent}`; by[k] = (by[k] || 0) + 1; } db.exec('ROLLBACK'); throw new Error(`Declared keys without a row to point at: ${JSON.stringify(by)}`); }
   db.exec('COMMIT'); db.close();

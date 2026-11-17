@@ -130,6 +130,8 @@ export function replayAgentRule(db, { job, change, records, asOf }) {
   const now = records.map((r) => pick(f(db, r, asOf)));
   const proposed = withRuleChange(change, () => records.map((r) => pick(f(db, r, asOf))));
   const rows = records.map((r, i) => ({ record: r, now: now[i], with_change: proposed[i] }));
-  const differs = (x) => x.now.next_step !== x.with_change.next_step || x.now.authority !== x.with_change.authority;
-  return { found: true, job, change, as_of: fmtET(asOf), records: rows.length, changed: rows.filter(differs), unchanged: rows.filter((x) => !differs(x)).length, changes_nothing: true };
+  // Who may act is the part of the authority before its reason; a limit restated in the reason alone moves nothing.
+  const who = (a) => String(a || '').split(':')[0].trim();
+  const differs = (x) => x.now.next_step !== x.with_change.next_step || who(x.now.authority) !== who(x.with_change.authority);
+  return { found: true, job, change, as_of: fmtET(asOf), records: rows.length, changed: rows.filter(differs), unchanged: rows.filter((x) => !differs(x)).length, rows: rows.map((x) => ({ ...x, changes: differs(x) })), changes_nothing: true };
 }

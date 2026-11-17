@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P21 Admin and rules</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
+<style>
+/* VOICE: an enterprise settings workspace, one per company.
+   IDEA: the one place a rule or an agent's authority changes; every agent reads the result on its next run.
+   PICTURE: the effect of a change on open work, shown before it is saved.
+   COLOUR and TYPE: OpenText TG Retail tokens through the agent kit; Inter.
+   LAYOUT: light header, workspace switch, tabs, then a list left (380px) and the record right; one column under 960px. */
+body{margin:0;background:var(--tgk-bg);font-family:Inter,"Helvetica Neue",Arial,sans-serif;color:var(--tgk-body);overflow-x:clip}
+main{max-width:1320px;margin:0 auto;padding:18px max(16px,env(safe-area-inset-right)) 120px max(16px,env(safe-area-inset-left))}
+h1{margin:0;font-size:22px;color:var(--tgk-ink);text-wrap:balance}.lead{margin:4px 0 14px;color:var(--tgk-muted);font-size:13.5px}
+.bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.switch{display:inline-flex;border:1px solid var(--tgk-track);border-radius:10px;overflow:hidden;background:var(--tgk-card)}
+.switch button{font:600 13px Inter,Arial,sans-serif;border:0;background:none;color:var(--tgk-muted);padding:8px 14px;cursor:pointer}
+.switch button[aria-pressed=true]{background:var(--tgk-soft-action);color:var(--tgk-action-text)}
+.switch button:focus-visible,.tabs button:focus-visible,.mini:focus-visible{outline:3px solid var(--tgk-action);outline-offset:2px}
+.tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--tgk-divider);margin-bottom:16px}
+.tabs button{font:600 13.5px Inter,Arial,sans-serif;border:0;background:none;color:var(--tgk-muted);padding:10px 12px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected=true]{color:var(--tgk-brand);border-bottom-color:var(--tgk-brand)}
+.tabs .n{font-weight:400;margin-left:4px}
+.cols{display:grid;grid-template-columns:380px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:960px){.cols{grid-template-columns:1fr}}
+.list{display:flex;flex-direction:column;gap:8px}
+.record{background:var(--tgk-card);border:1px solid var(--tgk-divider);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.scroll{overflow-x:auto}
+.rid{font-weight:600;color:var(--tgk-ink);white-space:nowrap}
+.record .tgk-na td:first-child{white-space:nowrap}
+.mini{font:600 12.5px Inter,Arial,sans-serif;height:30px;padding:0 12px;border-radius:6px;border:1px solid var(--tgk-track);background:var(--tgk-card);color:var(--tgk-ink);cursor:pointer}
+.params{display:flex;flex-wrap:wrap;gap:12px 20px}.params label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--tgk-muted)}
+.params input{width:130px;font:16px Inter,Arial,sans-serif;padding:6px 8px;border:1px solid var(--tgk-track);border-radius:6px;background:var(--tgk-card);color:var(--tgk-ink)}
+.agents{display:flex;flex-direction:column;gap:14px}
+.acard{background:var(--tgk-card);border:1px solid var(--tgk-divider);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.ahead{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.ahead h2{margin:0;font-size:15px;color:var(--tgk-ink)}.ahead .sp{flex:1}
+.says{color:var(--tgk-muted);font-size:12.5px;margin:0}
+.acard select{font:13px Inter,Arial,sans-serif;padding:5px 8px;border:1px solid var(--tgk-track);border-radius:6px;background:var(--tgk-card);color:var(--tgk-ink)}
+.locked{color:var(--tgk-muted)}
+.guard{font-size:12px;color:var(--tgk-muted)}
+.scopes{display:flex;flex-wrap:wrap;gap:6px}
+.note{font-size:12.5px;color:var(--tgk-muted);margin:0}
+.exposure{display:flex;flex-wrap:wrap;gap:6px 22px;font-size:13.5px}.exposure b{color:var(--tgk-ink);font-size:18px;font-variant-numeric:tabular-nums}
+.edit{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.edit input{width:110px;font:16px Inter,Arial,sans-serif;padding:6px 8px;border:1px solid var(--tgk-track);border-radius:6px;background:var(--tgk-card);color:var(--tgk-ink)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div id="head"></div>
+<main>
+<div class="bar"><div class="switch" role="group" aria-label="Workspace"><button type="button" id="sw-a">Ashby Supplier</button><button type="button" id="sw-n">Northfield Retailer</button></div><span id="sim"></span></div>
+<h1 id="title"></h1>
+<p class="lead" id="lead"></p>
+<nav class="tabs" role="tablist" id="tabs"></nav>
+<section id="view" aria-live="polite"></section>
+<p class="sr" id="announce" aria-live="polite"></p>
+</main>
+<script src="tg-agent-kit.js"></script>
+<script>
+{
+  const K = window.TGAgentKit; K.injectCss(); const el = K.el;
+  // Recorded answers from the demo world (world at the commit named in the page source note), shown only when the viewer's
+  // connector cannot be reached; the page then carries the Simulated label and nothing can be saved.
+  const RECORDED = __P21_DATA__;
+  const SIDES = {
+    ashby: { company: 'Ashby Supplier', person: 'Priya Raman', ws: 'Ashby Supplier · Settings', title: 'Ashby’s rules and agent authority', lead: 'Agents read these rules and approval modes on their next run. Northfield’s rules are read-only here.',
+      tabs: [['rules', 'Rules'], ['agents', 'Agent authority'], ['changes', 'Change list']], agents: ['Claim Agent', 'Scout Agent', 'Shelf Agent', 'Pace Agent'] },
+    northfield: { company: 'Northfield Retailer', person: 'Jordan Ellis', ws: 'Northfield Retailer · Admin', title: 'Northfield’s rules and agent authority', lead: 'A rule reaches suppliers only after a replay against the quarter and Jordan Ellis’s approval.',
+      tabs: [['rules', 'Rules'], ['drafts', 'Draft rules'], ['agents', 'Agents'], ['assistant', 'Connected assistant'], ['changes', 'Change list']], agents: ['Review Agent', 'Match Agent', 'Chase Agent'] } };
+  const SETUP_TOOL = { 'Claim Agent': 'claim_setup', 'Scout Agent': 'scout_setup', 'Shelf Agent': 'shelf_setup', 'Pace Agent': 'pace_setup', 'Review Agent': 'review_setup', 'Match Agent': 'match_setup', 'Chase Agent': 'chase_setup' };
+  const PARAM = { max_amount: ['Limit', '$'], carton: ['Pairs per carton', ''], avg_weeks: ['Weeks averaged', ''], hours: ['Hours', ''], business_days: ['Business days', ''], min_weekly_avg: ['Minimum weekly average, pairs', ''], min_weeks_supply: ['Weeks of supply', ''], pct_of_median: ['Percent of the median store', ''], keep_weeks: ['Weeks kept at the sending store', ''] };
+  const MODE = { suggest: 'Suggest only', approve: 'Ask before acting', policy: 'Act within policy' };
+  const SCOPE = { suppliers: 'Suppliers', documents: 'Exchanged documents', errors: 'Exchange errors', rules: 'Rules', deductions: 'Deductions', payables: 'Payables', rule_drafts: 'Draft rules', orders: 'Orders', shipments: 'Shipments', invoices: 'Invoices', warehouse: 'Warehouse records', erp: 'Supplier ERP records', scorecard: 'Scorecard' };
+  const DID = { list_rules_by_source: 'Read the rules', update_supplier_rule: 'Checked or saved a rule change', set_agent_mode: 'Changed an approval mode', get_change_list: 'Read the change list', pause_agent: 'Paused an agent', resume_agent: 'Resumed an agent', get_access_log: 'Read the access log', list_draft_rules: 'Read the draft rules', replay_draft_rule: 'Replayed a draft rule', publish_rule: 'Asked to publish a rule', lookup_rules: 'Read Northfield rules', supplier_document_trail: 'Read a document trail', three_way_match: 'Read an invoice match', list_deduction_cases: 'Read deduction cases', review_deduction_case: 'Read a deduction case', decide_charge: 'Recorded a charge decision', get_document: 'Read a document', ask_aviator: 'Asked Aviator', request_change: 'Asked a supplier for a change' };
+  const did = (t) => DID[t] || (/_setup$/.test(t) ? 'Read an agent’s setup' : /_(start|state|decide)$/.test(t) ? 'Worked an agent run' : /_(baseline|replay)$/.test(t) ? 'Replayed an agent against its rule' : 'Read records');
+  const step = (s) => s ? String(s).replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()) : '—';
+  const who = (a) => String(a || '').split(':')[0].replace(/\s*\([A-Z]{2}-[\d.]+\)/g, '').trim();
+  const money = (n) => '$' + Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 });
+
+  const S = { side: 'ashby', tab: 'rules', src: 0, rules: {}, agents: {}, changes: {}, access: null, drafts: null, replay: {}, edited: {}, published: {}, draftOpen: 0, editing: null, effect: null, pending: {}, live: { ashby: null, northfield: null }, conn: {}, done: null, busy: false, aviator: null };
+
+  async function call(side, tool, input) {
+    if (!(side in S.conn)) S.conn[side] = await K.connector(side) || false;
+    const c = S.conn[side]; if (!c) { S.live[side] = false; return null; }
+    try { const r = await c.call(tool, input); S.live[side] = true; return r; }
+    catch (e) { return { error: e && e.code === 'tool_error' ? 'The connection refused the request.' : 'The connection could not be reached.' }; }
+  }
+  const say = (t) => { document.getElementById('announce').textContent = t; };
+
+  async function load(side) {
+    const rec = RECORDED[side];
+    const r = await call(side, 'list_rules_by_source', {}); S.rules[side] = r && !r.error && r.groups ? r : rec.rules;
+    const cl = await call(side, 'get_change_list', {}); S.changes[side] = cl && !cl.error && cl.entries ? cl : rec.changes;
+    S.agents[side] = {};
+    for (const a of SIDES[side].agents) { const s = await call(side, SETUP_TOOL[a], {}); S.agents[side][a] = s && !s.error && s.actions ? s : rec.setups[a]; }
+    if (side === 'northfield') { const al = await call(side, 'get_access_log', { limit: 12 }); S.access = al && !al.error && al.scopes ? al : rec.access;
+      const dr = await call(side, 'list_draft_rules', {}); S.drafts = (dr && !dr.error && dr.drafts ? dr.drafts : rec.drafts).filter((d) => d.state === 'Draft'); }
+  }
+  const modesNow = (side, agent) => { const out = {}; for (const e of [...(S.changes[side].entries || [])].reverse()) if (e.kind === 'mode' && e.agent === agent) out[e.change.action] = e.change.to; return out; };
+  const stateOf = (side, agent) => ((S.changes[side].agents || []).find((x) => x.agent === agent) || { state: 'Active' }).state;
+
+  // ---------- header, switch, tabs ----------
+  function drawFrame() {
+    const sd = SIDES[S.side];
+    document.getElementById('head').replaceChildren(K.header({ workspace: sd.ws, person: sd.person, onHistory: () => go('changes'), onAgents: () => go('agents') }));
+    document.getElementById('sw-a').setAttribute('aria-pressed', String(S.side === 'ashby')); document.getElementById('sw-n').setAttribute('aria-pressed', String(S.side === 'northfield'));
+    document.getElementById('title').textContent = sd.title; document.getElementById('lead').textContent = sd.lead;
+    const sim = document.getElementById('sim'); sim.replaceChildren(S.live[S.side] === false ? K.simulated({ note: `Recorded from the demo world; the ${sd.company} connection was not reached, so nothing is saved` }) : '');
+    const counts = { rules: S.rules[S.side].groups.reduce((t, g) => t + g.rules.length, 0), changes: (S.changes[S.side].entries || []).length, drafts: S.side === 'northfield' ? S.drafts.length : 0 };
+    document.getElementById('tabs').replaceChildren(...sd.tabs.map(([id, label]) => el('button', { type: 'button', role: 'tab', 'aria-selected': String(S.tab === id), onclick: () => go(id) }, label, counts[id] != null ? el('span', { class: 'n', text: String(counts[id]) }) : null)));
+  }
+  function go(tab) { S.tab = tab; S.editing = null; S.effect = null; S.done = null; draw(); }
+  function draw() { drawFrame(); const v = document.getElementById('view'); v.replaceChildren(({ rules: viewRules, agents: viewAgents, changes: viewChanges, drafts: viewDrafts, assistant: viewAssistant })[S.tab]()); }
+
+  // ---------- rules by source ----------
+  function groups() { const g = S.rules[S.side].groups; return S.side === 'northfield' ? g.filter((x) => /Northfield|Standards/.test(x.source)) : g; }
+  function viewRules() {
+    const gs = groups(); if (S.src >= gs.length) S.src = 0; const g = gs[S.src];
+    const list = el('div', { class: 'list', 'aria-label': 'Rule sources' }, ...gs.map((x, i) => K.queueRow({ ref: x.source, chip: `${x.rules.length}`, tone: i === S.src ? 'live' : null,
+      line: !x.rules.length ? 'None recorded' : x.read_only ? (x.source === 'Northfield guide' && S.side === 'ashby' ? 'Read-only · set by Northfield' : 'Read-only') : 'Ashby changes the values', open: i === S.src, onSelect: () => { S.src = i; S.editing = null; S.effect = null; S.done = null; draw(); } })));
+    return el('div', { class: 'cols' }, list, el('section', { class: 'record' }, ...(S.editing ? editRule() : ruleTable(g))));
+  }
+  function ruleTable(g) {
+    const head = ['Rule', 'What it says', g.source === 'Northfield guide' ? 'State' : 'Set by', ''];
+    const rows = g.rules.map((r) => el('tr', {}, el('td', { class: 'rid', text: r.id }), el('td', { text: r.rule }),
+      el('td', {}, g.source === 'Northfield guide' ? (r.state && r.state !== 'In force' ? el('span', { class: 'tgk-chip', 'data-tone': 'wait', text: 'In force next quarter' }) : 'In force') : (r.created_by || '—')),
+      el('td', {}, r.editable_here ? el('button', { class: 'mini', type: 'button', onclick: () => { S.editing = r; S.effect = null; S.done = null; draw(); }, text: 'Change' }) : null)));
+    const parts = [K.recordHeader({ title: g.source, sub: !g.rules.length ? 'None recorded' : g.read_only ? 'Read-only' : 'Priya Raman changes the values; the wording stays as written' })];
+    if (S.done) parts.push(K.sentState({ text: S.done }));
+    if (g.rules.length) parts.push(el('div', { class: 'scroll' }, el('table', { class: 'tgk tgk-na' }, el('thead', {}, el('tr', {}, ...head.map((h) => el('th', { text: h })))), el('tbody', {}, ...rows))));
+    return parts;
+  }
+  function editRule() {
+    const r = S.editing; const keys = Object.keys(r.params || {}); const vals = { ...(S.effect ? S.effect.to : {}) };
+    const inputs = keys.map((k) => { const [label, unit] = PARAM[k] || [k, '']; return el('label', {}, `${label}${unit ? ` (${unit})` : ''}`,
+      el('input', { type: 'number', min: '0', step: k === 'max_amount' ? '10' : '1', value: vals[k] ?? r.params[k], 'data-k': k, oninput: () => { if (S.effect) { S.effect = null; draw(); } } })); });
+    const parts = [K.recordHeader({ title: r.id, sub: r.rule }), el('div', { class: 'params' }, ...inputs)];
+    const read = () => Object.fromEntries([...document.querySelectorAll('.params input')].map((i) => [i.dataset.k, Number(i.value)]));
+    if (!S.effect) parts.push(K.decisionBar({ says: `Checks which open work a new value for ${r.id} changes. Nothing is saved.`, busy: S.busy,
+      decisions: [{ label: 'Check effect', primary: true, onClick: () => checkEffect(r, read()) }, { label: 'Cancel', onClick: () => { S.editing = null; draw(); } }] }));
+    else if (S.effect.error) parts.push(el('p', { class: 'note', text: S.effect.error }));
+    else {
+      const e = S.effect.effect, from = S.effect.from, to = S.effect.to; const delta = Object.keys(to).map((k) => `${(PARAM[k] || [k])[0].toLowerCase()} ${PARAM[k]?.[1] === '$' ? money(from[k]) : from[k]} to ${PARAM[k]?.[1] === '$' ? money(to[k]) : to[k]}`).join(', ');
+      parts.push(el('div', { class: 'exposure' }, el('span', {}, 'Open records checked ', el('b', { text: String(e.records || 0) })), el('span', {}, 'Change next step or authority ', el('b', { text: String((e.changed || []).length) }))));
+      if (e.rows && e.rows.length) parts.push(el('div', { class: 'scroll' }, K.compareTable({ columns: ['Record', 'Now', `With ${r.id} changed`], strong: 2,
+        rows: e.rows.map((x) => [x.record, `${step(x.now.next_step)} · ${who(x.now.authority)}`, x.changes ? `${step(x.with_change.next_step)} · ${who(x.with_change.authority)}` : 'Unchanged']) })));
+      else parts.push(el('p', { class: 'note', text: e.agent ? `${e.agent} has no open record this value decides.` : 'No agent reads this value on open work.' }));
+      parts.push(K.decisionBar({ says: `Saves ${r.id} with ${delta}, recorded on the change list under Priya Raman. ${e.agent || 'Every agent'} uses it from its next run. Nothing goes to Northfield.`, busy: S.busy,
+        decisions: [{ label: 'Save change', primary: true, onClick: () => saveRule(r, to) }, { label: 'Cancel', onClick: () => { S.editing = null; S.effect = null; draw(); } }] }));
+    }
+    return parts;
+  }
+  async function checkEffect(r, params) {
+    S.busy = true; draw();
+    let out = await call('ashby', 'update_supplier_rule', { rule: r.id, params });
+    if (!out || out.error) { const k = `${r.id}:${JSON.stringify(params)}`; out = RECORDED.ashby.effects[k] || { error: out && out.error ? out.error : 'Checking a new value needs the Ashby connection; nothing was checked.' }; }
+    else if (out.result === 'Invalid request') out = { error: out.message };
+    S.effect = out; S.busy = false; draw(); say(out.error ? out.error : `${(out.effect.changed || []).length} of ${out.effect.records || 0} open records change`);
+  }
+  async function saveRule(r, params) {
+    S.busy = true; draw();
+    const out = await call('ashby', 'update_supplier_rule', { rule: r.id, params, apply: true });
+    S.busy = false;
+    if (!out || out.error || out.result !== 'Rule changed') { S.effect = { error: out && (out.message || out.error) ? (out.message || out.error) : 'Saving needs the Ashby connection; nothing was saved.' }; draw(); return; }
+    S.done = `Saved by Priya Raman · ${r.id} now reads: ${out.statement}`; S.editing = null; S.effect = null; await load('ashby'); draw(); say(S.done);
+  }
+
+  // ---------- agent authority ----------
+  function viewAgents() {
+    const side = S.side, sd = SIDES[side];
+    return el('div', { class: 'agents' }, ...sd.agents.map((a) => {
+      const setup = S.agents[side][a]; if (!setup) return null; const standing = modesNow(side, a); const pend = S.pending[a] || {}; const state = stateOf(side, a);
+      const rows = Object.entries(setup.actions).map(([key, x]) => { const may = x.person_may_change ?? x.priya_may_change ?? x.jordan_may_change; const now = standing[key] || x.mode;
+        return el('tr', {}, el('td', { text: x.does }), el('td', { class: 'rid', text: x.rule || '—' }),
+          el('td', {}, may ? el('select', { 'aria-label': `${x.does}: approval`, onchange: (e) => { const v = e.target.value; S.pending[a] = { ...(S.pending[a] || {}) }; if (v === now) delete S.pending[a][key]; else S.pending[a][key] = v; draw(); } },
+            ...(x.modes || ['suggest', 'approve', 'policy']).map((m) => el('option', { value: m, selected: (pend[key] || now) === m || null, text: MODE[m] || m })))
+            : el('span', { class: 'locked', text: `Locked · ${MODE[now] || now}` }))); });
+      const n = Object.keys(pend).length;
+      const changeText = Object.entries(pend).map(([k, m]) => `${setup.actions[k].does.split(/[,(;]/)[0].trim()} set to ${MODE[m].toLowerCase()}`).join('; ');
+      return el('section', { class: 'acard', 'aria-label': a },
+        el('div', { class: 'ahead' }, el('h2', { text: a }), el('span', { class: 'tgk-chip', 'data-tone': state === 'Paused' ? 'wait' : 'live', text: state }), el('span', { class: 'sp' }),
+          el('button', { class: 'mini', type: 'button', disabled: S.busy || null, onclick: () => pauseResume(a, state), text: state === 'Paused' ? 'Resume' : 'Pause' })),
+        el('p', { class: 'says', text: ((S.changes[side].agents || []).find((x) => x.agent === a) || { authority: {} }).authority.says || '' }),
+        el('div', { class: 'scroll' }, el('table', { class: 'tgk tgk-na' }, el('thead', {}, el('tr', {}, ...['Action', 'Rule', `Approval for ${side === 'ashby' ? 'Northfield Retailer' : 'Northfield'}`].map((h) => el('th', { text: h })))), el('tbody', {}, ...rows))),
+        setup.guardrails && setup.guardrails.length ? el('p', { class: 'guard', text: `Locked by the administrator: ${setup.guardrails.map((g) => g.id || g.rule).join(', ')}` }) : null,
+        n ? K.decisionBar({ says: `Saves ${n} change${n > 1 ? 's' : ''} for ${a}: ${changeText}. ${a} uses ${n > 1 ? 'them' : 'it'} from its next run.`, busy: S.busy,
+          decisions: [{ label: 'Save changes', primary: true, onClick: () => saveModes(a) }, { label: 'Discard', onClick: () => { delete S.pending[a]; draw(); } }] }) : null);
+    }));
+  }
+  async function saveModes(a) {
+    S.busy = true; draw(); const fails = [];
+    for (const [action, mode] of Object.entries(S.pending[a])) { const r = await call(S.side, 'set_agent_mode', { agent: a, action, mode }); if (!r || r.error || !['Mode changed', 'Unchanged'].includes(r.result)) fails.push(r && (r.message || r.error) || 'The connection could not be reached.'); }
+    S.busy = false; if (!fails.length) delete S.pending[a];
+    await load(S.side); draw(); say(fails.length ? `Not saved: ${fails[0]}` : `${a} approval modes saved`);
+    if (fails.length) alertLine(fails[0]);
+  }
+  async function pauseResume(a, state) {
+    S.busy = true; draw();
+    const r = await call(S.side, state === 'Paused' ? 'resume_agent' : 'pause_agent', { agent: a, reason: state === 'Paused' ? undefined : `Paused by ${SIDES[S.side].person}` });
+    S.busy = false; await load(S.side); draw();
+    if (!r || r.error) alertLine(r && r.error || 'The connection could not be reached; nothing changed.'); else say(`${a} ${r.state ? r.state.toLowerCase() : ''}`);
+  }
+  function alertLine(t) { const v = document.getElementById('view'); v.prepend(el('p', { class: 'note', role: 'status', text: t })); }
+
+  // ---------- change list ----------
+  function viewChanges() {
+    const es = S.changes[S.side].entries || [];
+    const what = (e) => e.kind === 'rule_change' ? `${e.rule} changed` : e.kind === 'mode' ? `${e.agent} approval mode` : e.kind === 'pause' ? `${e.agent} paused` : e.kind === 'resume' ? `${e.agent} resumed` : e.kind === 'trial' ? `${e.agent} rule trial` : e.kind;
+    const val = (o) => o == null ? '—' : typeof o === 'object' ? Object.entries(o).map(([k, v]) => `${(PARAM[k] || [k])[0]} ${v}`).join(', ') : MODE[o] || String(o);
+    const from = (e) => e.kind === 'mode' ? val(e.change.from) : e.kind === 'rule_change' || e.kind === 'trial' ? val(e.change.from) : e.change && e.change.from ? e.change.from : '—';
+    const to = (e) => e.kind === 'mode' ? `${val(e.change.to)} · ${e.change.action.replace(/_/g, ' ')}` : e.kind === 'rule_change' || e.kind === 'trial' ? val(e.change.to) : e.change && e.change.to ? e.change.to : '—';
+    const parts = [K.recordHeader({ title: 'Change list', sub: 'Newest first. Agents read every saved change on their next run.' })];
+    parts.push(es.length ? el('div', { class: 'scroll' }, K.compareTable({ columns: ['Change', 'From', 'To', 'By'], strong: 2, rows: es.map((e) => [what(e), from(e), to(e), e.run_by || '—']) })) : el('p', { class: 'note', text: 'None recorded' }));
+    return el('section', { class: 'record' }, ...parts);
+  }
+
+  // ---------- connected assistant (Northfield) ----------
+  function viewAssistant() {
+    const a = S.access;
+    return el('section', { class: 'record' }, K.recordHeader({ title: 'Jordan Ellis’s assistant', sub: `Set up by ${a.configured_by} · ${a.writes}` }),
+      el('div', {}, el('h3', { class: 'tgk-label', text: 'Scopes allowed' }), el('div', { class: 'scopes' }, ...a.scopes.map((s) => el('span', { class: 'tgk-chip', text: SCOPE[s] || step(s) })))),
+      el('div', {}, el('h3', { class: 'tgk-label', text: 'Recent use' }), (a.calls || []).length ? el('div', { class: 'scroll' }, K.compareTable({ columns: ['By', 'What it did', 'Result'], rows: a.calls.slice(0, 12).map((c) => [c.user, did(c.tool), c.result]) })) : el('p', { class: 'note', text: 'None recorded' })));
+  }
+
+  // ---------- draft rules (Northfield): replay, then publish, revise or keep ----------
+  const unit = (d) => ({ ship_notice_minutes: 'minutes after departure', price_tolerance_pct: 'percent of the order price' })[d.check_kind] || 'value';
+  async function replay(d, value) {
+    S.busy = true; draw();
+    const tried = value != null && Number(value) !== Number(d.value);
+    const live = await call('northfield', 'replay_draft_rule', tried ? { check: d.check_kind, value: Number(value), charge: Number(d.charge) } : { draft: d.id });
+    const r = live && !live.error && live.found !== false ? live : null;
+    S.replay[d.id] = r || (tried ? { error: 'A revised value replays only through the Northfield connection.' } : RECORDED.northfield.replays[d.id]);
+    S.edited[d.id] = tried ? Number(value) : null; S.busy = false; draw();
+  }
+  function viewDrafts() {
+    const ds = S.drafts; if (!ds.length) return el('section', { class: 'record' }, el('p', { class: 'note', text: 'None recorded' }));
+    const d = ds[S.draftOpen] || ds[0]; const r = S.replay[d.id]; const edited = S.edited[d.id]; const inForce = RECORDED.northfield.in_force[d.check_kind];
+    const list = el('div', { class: 'list', 'aria-label': 'Draft rules' }, ...ds.map((x, i) => { const rx = S.replay[x.id];
+      return K.queueRow({ ref: x.id, chip: S.published[x.id] ? 'Publish requested' : rx && !rx.error ? 'Replayed' : 'Not replayed', tone: S.published[x.id] ? 'done' : rx && !rx.error ? 'live' : 'wait',
+        line: rx && !rx.error ? `${rx.failing_now} failing now, ${rx.failing_with_draft} with the draft` : x.statement, open: i === S.draftOpen, onSelect: () => { S.draftOpen = i; draw(); } }); }));
+    const parts = [K.recordHeader({ title: d.id, sub: `Drafted by ${d.author} · ${money(d.charge)} per failing document` }),
+      el('div', {}, inForce ? K.factRow({ text: inForce.statement, system: `Rule in force · ${inForce.id}`, via: 'Northfield guide' }) : null, K.factRow({ text: `${d.statement}${edited != null ? ` (trying ${edited} ${unit(d)})` : ''}`, system: `Draft ${d.id}`, via: 'Rule authoring' }))];
+    let table = null;
+    if (r && !r.error) {
+      parts.push(el('div', { class: 'exposure' }, el('span', {}, 'Failing now ', el('b', { text: String(r.failing_now) })), el('span', {}, 'With the draft ', el('b', { text: String(r.failing_with_draft) })),
+        el('span', {}, 'Added charge exposure ', el('b', { text: money(r.added_exposure) })), el('span', {}, 'Documents replayed ', el('b', { text: Number(r.documents_replayed).toLocaleString('en-US') }))));
+      table = el('div', { class: 'scroll' }, K.compareTable({ columns: ['Supplier', `Failing under ${inForce ? inForce.id : 'the rule in force'}`, `Failing under ${d.id}`], strong: 2, rows: r.by_supplier.map((x) => [x.supplier, String(x.now), String(x.with_draft)]) }));
+    } else if (r && r.error) parts.push(el('p', { class: 'note', text: r.error }));
+    const reviseRow = el('div', { class: 'edit' }, el('label', { for: 'rv', text: `Revised value (${unit(d)})` }), el('input', { id: 'rv', type: 'number', step: d.check_kind === 'ship_notice_minutes' ? '5' : '0.05', value: edited ?? d.value }),
+      el('button', { class: 'tgk-btn', type: 'button', disabled: S.busy || null, onclick: () => replay(d, document.getElementById('rv').value), text: 'Replay revised value' }));
+    if (S.published[d.id]) parts.push(K.sentState({ text: S.published[d.id] }));
+    else if (!r || r.error) parts.push(K.decisionBar({ says: `Replays ${d.id} against the quarter’s exchanged documents. Nothing is published and no supplier is charged.`, busy: S.busy, decisions: [{ label: 'Replay against the quarter', primary: true, onClick: () => replay(d) }] }));
+    else if (edited != null) parts.push(reviseRow, K.decisionBar({ says: `This replay tried ${edited} ${unit(d)}. Publishing applies the draft as written, so replay it as written first.`, busy: S.busy, decisions: [{ label: `Replay ${d.id} as written`, primary: true, onClick: () => replay(d) }] }));
+    else parts.push(K.decisionBar({ says: `Publishing sends ${d.id} to every Northfield supplier for Jordan Ellis’s approval; ${r.failing_with_draft - r.failing_now} more documents in the quarter would have failed. Nothing already exchanged is charged again.`, busy: S.busy,
+      decisions: [{ label: 'Publish to suppliers', primary: true, onClick: async () => { S.busy = true; draw(); const out = await call('northfield', 'publish_rule', { draft: d.id }); S.busy = false;
+        S.published[d.id] = out && !out.error && out.result === 'Proposal recorded' ? `Publish recorded for Jordan Ellis’s approval in Trading Grid · ${out.proposal}` : out && out.message ? out.message : 'Publishing needs the Northfield connection; nothing was sent.'; await load('northfield'); draw(); } },
+        { label: 'Revise draft', onClick: () => { S.edited[d.id] = Number(d.value); draw(); document.getElementById('rv')?.focus(); } }, { label: 'Keep as draft', onClick: () => { S.draftOpen = (S.draftOpen + 1) % ds.length; draw(); } }] }));
+    if (table) parts.push(table);
+    parts.push(el('div', {}, el('h3', { class: 'tgk-label', text: 'Review' }), K.timeline({ items: [
+      { state: 'done', text: `Draft written by ${d.author}` },
+      { state: r && !r.error && edited == null ? 'done' : 'next', text: `Replayed against the quarter’s exchanged documents${r && !r.error && edited == null ? ` · ${r.failing_with_draft} would fail` : ''}` },
+      { state: S.published[d.id] ? 'waiting' : 'next', text: 'Publish approved by Jordan Ellis in Trading Grid' },
+      { state: 'next', text: 'Suppliers see the rule; documents are judged by it' }] })));
+    return el('div', { class: 'cols' }, list, el('section', { class: 'record' }, ...parts));
+  }
+
+  // ---------- workspace switch and Aviator ----------
+  function aviator() {
+    if (S.aviator) S.aviator.element.remove();
+    S.aviator = K.aviator({ side: S.side, person: SIDES[S.side].person, context: () => S.editing ? `Rule ${S.editing.id}` : `${SIDES[S.side].company} admin, ${S.tab}`,
+      suggestions: S.side === 'ashby' ? ['Which open deductions does AP-4.1 decide?', 'What may Scout Agent do without asking?'] : ['Which suppliers would NFD-1 hit hardest?', 'What does NF-4.2 say today?'] });
+  }
+  async function switchTo(side) {
+    if (S.side === side && S.rules[side]) return; S.side = side; S.tab = 'rules'; S.src = side === 'ashby' ? 1 : 0; S.editing = null; S.effect = null; S.done = null; S.pending = {};
+    if (!S.rules[side]) await load(side); draw(); aviator();
+  }
+  document.getElementById('sw-a').onclick = () => switchTo('ashby');
+  document.getElementById('sw-n').onclick = () => switchTo('northfield');
+  (async () => { await load('ashby'); S.src = 1; draw(); aviator(); })();
+}
+</script>
+</body>
+</html>

@@ -106,6 +106,10 @@ export function rulesBySource(db, dataDb, cid) {
       created_by: src === 'Ashby manual rules' ? 'Priya Raman' : src === 'Northfield guide' ? 'Jordan Ellis' : r.owner, created: r.valid_from || null,
       editable_here: cid === AS && src === 'Ashby manual rules' && !!live.params, last_change: lastRuleChange(db, r.id) });
   }
+  // Northfield rules published from a draft (P15) join the guide; those going into force later carry the date (D72).
+  for (const d of db.prepare("SELECT * FROM draft_rules WHERE state IN ('Scheduled', 'Published') ORDER BY id").all())
+    groups['Northfield guide'].push({ id: d.id, source: 'Northfield guide', owner: 'Northfield', rule: d.statement, params: null, basis: d.basis, created_by: d.author, created: d.created_at.slice(0, 10),
+      editable_here: false, last_change: null, state: d.state === 'Scheduled' ? 'In force from a later date' : 'In force', in_force_from: d.in_force_from || null });
   return { connection: cid, groups: Object.entries(groups).map(([source, rules]) => ({ source, count: rules.length, read_only: !(cid === AS && source === 'Ashby manual rules'), rules })),
     note: cid === AS ? 'Ashby edits only its own manual rules, and only their parameters; Northfield’s guide and standards are read-only here. No rule in the catalogue is read from the Supplier ERP today.' : 'Northfield changes its guide through a draft, a replay against the quarter and publishing; nothing here edits a rule.' };
 }
@@ -126,7 +130,7 @@ export function updateSupplierRule(db, cid, { rule, params, apply, records, as_o
     if (!recs && job === 'deduction') recs = db.prepare("SELECT DISTINCT json_extract(data, '$.case') c FROM events WHERE kind = 'case.opened' AND at >= '2026-09-27' AND at <= ?").all(asOf.toISOString()).map((x) => x.c);
     if (!recs && job === 'shelf') recs = db.prepare('SELECT DISTINCT store FROM store_activity ORDER BY store').all().map((x) => String(x.store));
     const rep = replayAgentRule(db, { job, change: { rule: r.id, params }, records: recs || [], asOf });
-    effect = { touches: `${agentOfJob(job)}: ${rep.changed.length} of ${rep.records} open records change next step or authority`, agent: agentOfJob(job), changed: rep.changed, records: rep.records, as_of: rep.as_of };
+    effect = { touches: `${agentOfJob(job)}: ${rep.changed.length} of ${rep.records} open records change next step or authority`, agent: agentOfJob(job), changed: rep.changed, records: rep.records, rows: rep.rows, as_of: rep.as_of };
   }
   const from = Object.fromEntries(Object.keys(params).map((k) => [k, inForce[k]]));
   if (!apply) return { result: 'Effect shown; nothing saved', rule: r.id, from, to: params, effect, next: 'Call again with apply true to save the change.' };

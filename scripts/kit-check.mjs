@@ -9,7 +9,8 @@ import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const args = process.argv.slice(2); const RETAILER = args.includes('--retailer'); // a retailer screen: its controls are the business decision, no agent proposal
+const args = process.argv.slice(2); const RETAILER = args.includes('--retailer') || args.includes('--tool'); // a retailer screen: its controls are the business decision, no agent proposal
+const TOOL = args.includes('--tool'); // a tool or settings screen (P15, P21): no agent proposal and no decision on its opening view
 const page0 = resolve(args.find((a) => !a.startsWith('--')) || join(ROOT, 'ui', 'kit-gallery.html'));
 const browser = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
 const page = await browser.newPage({ viewport: { width: 1440, height: 860 } });
@@ -23,7 +24,7 @@ ok('no script errors', errors.length === 0, errors.join(' | '));
 const text = await page.evaluate(() => document.body.innerText);
 ok('no banned decision control', !/\b(Take over|Snooze|Handle it myself|Dismiss)\b/.test(text), text.match(/Take over|Snooze|Handle it myself|Dismiss/)?.[0]);
 const bars = await page.$$eval('.tgk-bar .btns', (bs) => bs.map((b) => [...b.querySelectorAll('button')].map((x) => x.textContent)));
-ok(RETAILER ? 'a decision bar is on screen' : 'agent decision bar has exactly Approve and Edit suggestion', RETAILER ? bars.length > 0 : bars.some((b) => JSON.stringify(b) === '["Approve","Edit suggestion"]'), JSON.stringify(bars));
+if (!TOOL) ok(RETAILER ? 'a decision bar is on screen' : 'agent decision bar has exactly Approve and Edit suggestion', RETAILER ? bars.length > 0 : bars.some((b) => JSON.stringify(b) === '["Approve","Edit suggestion"]'), JSON.stringify(bars));
 const green = await page.evaluate(() => [...document.querySelectorAll('*')].some((n) => { const c = getComputedStyle(n); return [c.color, c.backgroundColor, c.borderColor].some((v) => { const m = v.match(/rgba?\((\d+), (\d+), (\d+)/); return m && +m[2] > +m[1] + 40 && +m[2] > +m[3] + 40; }); }));
 ok('no green anywhere', !green);
 ok('no tick characters', !/[✓✔✅]/.test(text));
@@ -73,7 +74,7 @@ await page.click('.tgk-av-close'); ok('Aviator closes', !(await page.$('.tgk-av-
 // quietly; the answer lands, the status shows the work, and the records read are listed in business words, never tool names.
 {
   const p2 = await browser.newPage({ viewport: { width: 1440, height: 860 } });
-  await p2.addInitScript(() => { let n = 0; window.__calls = 0; window.claude = { use: async (k) => k !== 'mcp' ? null : { callTool: async (server, tool, input) => { window.__calls++; if (n++ === 0) { const e = new Error('consent'); e.code = 'upstream_error'; e.retryable = true; e.retryAfterMs = 20; throw e; } await new Promise((r) => setTimeout(r, 400)); return { payload: { ok: true, answer: 'Order value is on the order.', tools_called: [{ tool: 'get_order', arguments: { po: 'NR-450118' } }] } }; } } }; });
+  await p2.addInitScript(() => { let n = 0; window.__calls = 0; window.claude = { use: async (k) => k !== 'mcp' ? null : { callTool: async (server, tool, input) => { if (tool !== 'ask_aviator') return { payload: {} }; window.__calls++; if (n++ === 0) { const e = new Error('consent'); e.code = 'upstream_error'; e.retryable = true; e.retryAfterMs = 20; throw e; } await new Promise((r) => setTimeout(r, 400)); return { payload: { ok: true, answer: 'Order value is on the order.', tools_called: [{ tool: 'get_order', arguments: { po: 'NR-450118' } }] } }; } } }; });
   await p2.goto('file://' + page0); await p2.waitForTimeout(300);
   await p2.click('.tgk-av-btn'); await p2.fill('.tgk-av-form input', 'What is the order value?'); await p2.click('.tgk-av-form button'); await p2.waitForTimeout(150);
   const busy = await p2.$eval('.tgk-av-panel .tgk-av-status', (n) => n.textContent);

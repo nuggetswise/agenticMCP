@@ -39,7 +39,7 @@ CREATE TABLE proposals (id TEXT PRIMARY KEY, connection_id TEXT NOT NULL DEFAULT
 CREATE TABLE agent_changes (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, connection_id TEXT NOT NULL, agent TEXT NOT NULL, kind TEXT NOT NULL, rule_id TEXT, change TEXT NOT NULL, result TEXT NOT NULL, run_by TEXT NOT NULL, note TEXT);
 -- Northfield's own records: reviewer notes on deduction cases, draft rules and their replays. Not shared with suppliers.
 CREATE TABLE review_notes (id INTEGER PRIMARY KEY, case_id TEXT NOT NULL, charge TEXT NOT NULL, at TEXT NOT NULL, author TEXT NOT NULL, note TEXT NOT NULL);
-CREATE TABLE draft_rules (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, author TEXT NOT NULL, statement TEXT NOT NULL, check_kind TEXT NOT NULL, value REAL NOT NULL, charge REAL, state TEXT NOT NULL, charge_basis TEXT NOT NULL DEFAULT 'per document', basis TEXT NOT NULL DEFAULT 'Northfield');
+CREATE TABLE draft_rules (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, author TEXT NOT NULL, statement TEXT NOT NULL, check_kind TEXT NOT NULL, value REAL NOT NULL, charge REAL, state TEXT NOT NULL, charge_basis TEXT NOT NULL DEFAULT 'per document', basis TEXT NOT NULL DEFAULT 'Northfield', in_force_from TEXT);
 CREATE TABLE rule_replays (id INTEGER PRIMARY KEY AUTOINCREMENT, draft_id TEXT, at TEXT NOT NULL, by_connection TEXT NOT NULL, result TEXT NOT NULL);
 
 CREATE INDEX ix_docs_po ON documents(po); CREATE INDEX ix_docs_ref ON documents(reference); CREATE INDEX ix_docs_time ON documents(supplier_id, partner_id, sent_at);

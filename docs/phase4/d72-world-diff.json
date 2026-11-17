@@ -1,0 +1,846 @@
+{
+ "base": "c7f6ae1",
+ "tables": {
+  "tg.adjustments": {
+   "base_rows": 91,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.calendar": {
+   "base_rows": 14,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.carrier_events": {
+   "base_rows": 1938,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.carrier_rates": {
+   "base_rows": 4,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.cartons": {
+   "base_rows": 56949,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.credit_debit_adjustments": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.credit_debit_lines": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.deal_settlements": {
+   "base_rows": 5,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.deals": {
+   "base_rows": 5,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.deduction_repayments": {
+   "base_rows": 15,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.document_links": {
+   "base_rows": 37208,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.documents": {
+   "base_rows": 38154,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.draft_rules": {
+   "base_rows": 15,
+   "changed_or_lost": 13,
+   "added": 13
+  },
+  "tg.errors": {
+   "base_rows": 57,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.events": {
+   "base_rows": 9693,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.forecast_lines": {
+   "base_rows": 288,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.forecasts": {
+   "base_rows": 6,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.freight_invoices": {
+   "base_rows": 580,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.freight_terms": {
+   "base_rows": 5,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.invoice_lines": {
+   "base_rows": 4319,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.invoices": {
+   "base_rows": 2375,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.item_prices": {
+   "base_rows": 10,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.item_setup_messages": {
+   "base_rows": 11,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.item_versions": {
+   "base_rows": 10,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.items": {
+   "base_rows": 78,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.loads": {
+   "base_rows": 1082,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.location_versions": {
+   "base_rows": 44,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.locations": {
+   "base_rows": 71,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.order_changes": {
+   "base_rows": 13,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.order_lines": {
+   "base_rows": 4355,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.order_status": {
+   "base_rows": 40,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.orders": {
+   "base_rows": 2400,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.packaging_levels": {
+   "base_rows": 31,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.parties": {
+   "base_rows": 29,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.people": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.planning_periods": {
+   "base_rows": 6,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.receipts": {
+   "base_rows": 4305,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.receiving_discrepancies": {
+   "base_rows": 92,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.remittance_items": {
+   "base_rows": 1670,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.return_authorisations": {
+   "base_rows": 3,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.return_lines": {
+   "base_rows": 3,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.review_notes": {
+   "base_rows": 46,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.routing_requests": {
+   "base_rows": 502,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.rule_sets": {
+   "base_rows": 5,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.rule_versions": {
+   "base_rows": 127,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.rules": {
+   "base_rows": 74,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.shipment_lines": {
+   "base_rows": 4346,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.shipment_plans": {
+   "base_rows": 1893,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.shipment_status": {
+   "base_rows": 4364,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.shipments": {
+   "base_rows": 2398,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.stock_positions": {
+   "base_rows": 1106,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.stock_transfers": {
+   "base_rows": 7,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.store_activity": {
+   "base_rows": 80,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.transfer_lines": {
+   "base_rows": 21,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.transfer_stock_moves": {
+   "base_rows": 36,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.warehouse_orders": {
+   "base_rows": 1008,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.warehouse_scans": {
+   "base_rows": 3836,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.adjustments": {
+   "base_rows": 49,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.calendar": {
+   "base_rows": 14,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.carrier_events": {
+   "base_rows": 1938,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.carrier_rates": {
+   "base_rows": 4,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.cartons": {
+   "base_rows": 56949,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.credit_debit_adjustments": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.credit_debit_lines": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.deal_settlements": {
+   "base_rows": 5,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.deals": {
+   "base_rows": 4,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.deduction_repayments": {
+   "base_rows": 15,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.document_links": {
+   "base_rows": 32373,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.documents": {
+   "base_rows": 32826,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.errors": {
+   "base_rows": 55,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.events": {
+   "base_rows": 9436,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.forecast_lines": {
+   "base_rows": 288,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.forecasts": {
+   "base_rows": 6,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.freight_invoices": {
+   "base_rows": 580,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.freight_terms": {
+   "base_rows": 5,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.invoice_lines": {
+   "base_rows": 3729,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.invoices": {
+   "base_rows": 1909,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.item_prices": {
+   "base_rows": 8,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.item_setup_messages": {
+   "base_rows": 11,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.item_versions": {
+   "base_rows": 8,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.items": {
+   "base_rows": 6,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.loads": {
+   "base_rows": 1082,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.location_versions": {
+   "base_rows": 44,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.locations": {
+   "base_rows": 46,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.order_changes": {
+   "base_rows": 8,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.order_lines": {
+   "base_rows": 3725,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.order_status": {
+   "base_rows": 40,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.orders": {
+   "base_rows": 1907,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.packaging_levels": {
+   "base_rows": 24,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.parties": {
+   "base_rows": 4,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.people": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.planning_periods": {
+   "base_rows": 6,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.receipts": {
+   "base_rows": 3725,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.receiving_discrepancies": {
+   "base_rows": 92,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.remittance_items": {
+   "base_rows": 1363,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.return_authorisations": {
+   "base_rows": 3,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.return_lines": {
+   "base_rows": 3,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.routing_requests": {
+   "base_rows": 502,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.rule_sets": {
+   "base_rows": 5,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.rule_versions": {
+   "base_rows": 127,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.rules": {
+   "base_rows": 74,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.shipment_lines": {
+   "base_rows": 3725,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.shipment_plans": {
+   "base_rows": 1893,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.shipment_status": {
+   "base_rows": 4364,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.shipments": {
+   "base_rows": 1908,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.stock_positions": {
+   "base_rows": 1106,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.stock_transfers": {
+   "base_rows": 7,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.store_activity": {
+   "base_rows": 80,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.transfer_lines": {
+   "base_rows": 21,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.transfer_stock_moves": {
+   "base_rows": 36,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.warehouse_orders": {
+   "base_rows": 1008,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.warehouse_scans": {
+   "base_rows": 3836,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.adjustments": {
+   "base_rows": 91,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.calendar": {
+   "base_rows": 14,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.carrier_events": {
+   "base_rows": 63,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.carrier_rates": {
+   "base_rows": 0,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.cartons": {
+   "base_rows": 56949,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.credit_debit_adjustments": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.credit_debit_lines": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.deal_settlements": {
+   "base_rows": 5,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.deals": {
+   "base_rows": 5,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.deduction_repayments": {
+   "base_rows": 15,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.document_links": {
+   "base_rows": 26548,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.documents": {
+   "base_rows": 30086,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.draft_rules": {
+   "base_rows": 15,
+   "changed_or_lost": 13,
+   "added": 13
+  },
+  "northfield.errors": {
+   "base_rows": 57,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.events": {
+   "base_rows": 417,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.forecast_lines": {
+   "base_rows": 288,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.forecasts": {
+   "base_rows": 6,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.freight_invoices": {
+   "base_rows": 0,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.freight_terms": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.invoice_lines": {
+   "base_rows": 4319,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.invoices": {
+   "base_rows": 2375,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.item_prices": {
+   "base_rows": 10,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.item_setup_messages": {
+   "base_rows": 11,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.item_versions": {
+   "base_rows": 10,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.items": {
+   "base_rows": 78,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.loads": {
+   "base_rows": 0,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.location_versions": {
+   "base_rows": 44,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.locations": {
+   "base_rows": 71,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.order_changes": {
+   "base_rows": 13,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.order_lines": {
+   "base_rows": 4355,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.order_status": {
+   "base_rows": 40,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.orders": {
+   "base_rows": 2400,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.packaging_levels": {
+   "base_rows": 31,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.parties": {
+   "base_rows": 27,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.people": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.planning_periods": {
+   "base_rows": 6,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.receipts": {
+   "base_rows": 4305,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.receiving_discrepancies": {
+   "base_rows": 92,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.remittance_items": {
+   "base_rows": 1670,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.return_authorisations": {
+   "base_rows": 3,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.return_lines": {
+   "base_rows": 3,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.review_notes": {
+   "base_rows": 46,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.routing_requests": {
+   "base_rows": 502,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.rule_sets": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.rule_versions": {
+   "base_rows": 106,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.rules": {
+   "base_rows": 53,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.shipment_lines": {
+   "base_rows": 4346,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.shipment_plans": {
+   "base_rows": 0,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.shipment_status": {
+   "base_rows": 0,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.shipments": {
+   "base_rows": 2398,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.stock_positions": {
+   "base_rows": 0,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.stock_transfers": {
+   "base_rows": 0,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.store_activity": {
+   "base_rows": 80,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.transfer_lines": {
+   "base_rows": 0,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.transfer_stock_moves": {
+   "base_rows": 0,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.warehouse_scans": {
+   "base_rows": 14,
+   "changed_or_lost": 0,
+   "added": 0
+  }
+ },
+ "summary": "166 of 168 base tables keep every row; 2 changed without a re-baseline"
+}

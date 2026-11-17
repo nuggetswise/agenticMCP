@@ -1,4 +1,6 @@
 {
  "tg.parties": "T1.15: one column on one row. Lakeline Freight's isa changes from null to LAKELINE so it can exchange 204, 214 and 210 with Ashby; every other column and row is unchanged.",
- "ashby.parties": "T1.15: one column on one row. Lakeline Freight's isa changes from null to LAKELINE in Ashby's copy, as in the main database; every other column and row is unchanged."
+ "ashby.parties": "T1.15: one column on one row. Lakeline Freight's isa changes from null to LAKELINE in Ashby's copy, as in the main database; every other column and row is unchanged.",
+ "tg.draft_rules": "D72: NFD-3 to NFD-15 change state from Draft to Scheduled and gain in_force_from 2027-01-04 (Monday 4 January 2027, 00:00 Eastern), after the quarter's last shipment (28 December). Statement, check, value and charge are unchanged; no shipment, charge or other table moves (docs/phase4/d72-world-diff.json).",
+ "northfield.draft_rules": "D72: NFD-3 to NFD-15 change state from Draft to Scheduled and gain in_force_from 2027-01-04 (Monday 4 January 2027, 00:00 Eastern), after the quarter's last shipment (28 December). Statement, check, value and charge are unchanged; no shipment, charge or other table moves (docs/phase4/d72-world-diff.json)."
 }

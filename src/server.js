@@ -133,6 +133,7 @@ function write(cid, name, args) {
   if (cid === NF && name === 'publish_rule') {
     const id = String(args.draft || '').toUpperCase(); const d = db.prepare('SELECT * FROM draft_rules WHERE id = ?').get(id);
     if (!d) { log(cid, name, [], args, 'Invalid request', [], refusedW(cid, null, 'Invalid request')); return { result: 'Invalid request', message: `No draft rule ${args.draft}` }; }
+    if (d.state !== 'Draft') { log(cid, name, [], args, 'Invalid request', [id], refusedW(cid, null, 'Invalid request')); return { result: 'Invalid request', message: d.in_force_from ? `${id} is already published and goes into force on ${fmtET(d.in_force_from).slice(0, 10)}` : `${id} is already ${d.state.toLowerCase()}` }; }
     if (!db.prepare('SELECT 1 FROM rule_replays WHERE draft_id = ?').get(id)) { log(cid, name, [], args, 'Refused: replay first', [id], refusedW(cid, null, 'Refused: replay first')); return { result: 'Refused', message: `${id} has not been replayed against the quarter. Call replay_draft_rule with draft ${id} first; a rule is published only after a replay.` }; }
     return propose(cid, 'publish', null, `Publish ${id}: ${d.statement}`, id, { draft: id });
   }
@@ -179,7 +180,12 @@ export function call(cid, name, args = {}) {
   }
   // Governance (T2.3): pause and resume an agent, trial a changed agent rule, read the change list.
   // An assistant may pause an agent (the safe direction) but never resume one: resuming hands authority back, so only a person on the admin page does it.
-  if (name === 'resume_agent') { log(cid, name, [], args, 'Refused', [], { agent: assistantOf(cid), rule: null, mode: 'person', approver: null, outcome: 'Refused: an agent is resumed by a person on the admin page' }); return { result: 'Refused', message: 'An assistant cannot resume an agent. A person resumes it on the Trading Grid admin page.' }; }
+  if (name === 'resume_agent') {
+    // P21: a person resumes a paused agent on the admin screen. Recorded on the change list with who resumed it; the agent works new events again.
+    const r = G.setAgentState(db, cid, { agent: args.agent, state: 'active', by: side.person, reason: args.reason });
+    log(cid, name, [], args, r.result, r.change ? [r.change] : [], { agent: assistantOf(cid), rule: null, mode: 'person', approver: r.result === 'Agent resumed' ? side.person : 'None', outcome: r.result === 'Invalid request' ? r.message : `${r.agent} ${r.state.toLowerCase()}` });
+    return r;
+  }
   if (name === 'pause_agent') {
     const r = G.setAgentState(db, cid, { agent: args.agent, state: 'paused', by: assistantOf(cid), reason: args.reason });
     log(cid, name, [], args, r.result, r.change ? [r.change] : [], { agent: assistantOf(cid), rule: null, mode: 'person', approver: `${side.person} (asked in the assistant)`, outcome: r.result === 'Invalid request' ? r.message : `${r.agent} ${r.state.toLowerCase()}` });
@@ -238,6 +244,7 @@ const WRITE_NAMES = new Set(['request_change', 'submit_dispute', 'release_ship_n
 const agentNames = (cid) => Object.keys(G.AGENTS).filter((a) => G.AGENTS[a].connection === cid).join(', ');
 const GOV = (cid) => [
   { name: 'pause_agent', title: 'Pause an agent', write: true, description: `Pauses one of ${SIDE[cid].company}’s agents (${agentNames(cid)}). While paused the agent proposes nothing: each event it would work arrives as a plain task with no proposal${cid === AS ? ', Claim Agent disputes nothing without asking, and Scout gets no model turn' : ''}. Recorded on the change list with who paused it and why. Only call this when the user asks.`, input: { agent: z.string().describe(`Agent name: ${agentNames(cid)}`), reason: z.string().optional() } },
+  { name: 'resume_agent', title: 'Resume a paused agent', write: true, description: `Resumes one of ${SIDE[cid].company}’s paused agents (${agentNames(cid)}) for the person on the admin screen; it works new events again under its rules and its approval modes. Recorded on the change list with who resumed it. Only call this when the user has decided.`, input: { agent: z.string().describe(`Agent name: ${agentNames(cid)}`), reason: z.string().optional() } },
   ...(cid === AS ? [{ name: 'replay_agent_rule', title: 'Trial a changed agent rule', write: true, description: 'Replays a change to one of Ashby’s agent rules (a parameter the catalogue holds, for example AP-4.1 max_amount 50) over records beside the rule in force, lists every record whose next step or authority differs, and records the trial on the change list with who ran it, the drift measure and the rollback path. Nothing is published and the catalogue is unchanged. Deduction cases default to every case of the quarter up to as_of.',
     input: { job: z.enum(Object.keys(JOBS)).describe('Agent job, for example deduction (Claim Agent)'), rule: z.string().describe('Ashby rule id, for example AP-4.1'), params: z.record(z.number()).describe('Parameters to change, for example {"max_amount": 50}'), records: z.array(z.string()).optional().describe('Records to replay; deduction defaults to the quarter’s cases'), as_of: z.string().optional() } }] : []),
   { name: 'get_change_list', title: 'Agent change list', description: 'Each agent with its state (Active or Paused) and authority limit, and the change list newest first: every pause, resume, trial of a changed agent rule, rule change and approval-mode change, with what changed, the result, who did it and when.', input: { limit: z.number().int().min(1).max(200).optional(), kind: z.enum(['pause', 'resume', 'trial', 'rule_change', 'mode']).optional() } },
@@ -530,7 +537,7 @@ app.post('/admin/:token/agents/:agent/:action', (req, res) => {
 app.post('/admin/:token/reset', (req, res) => {
   const cid = cidOf(req, res); if (!cid) return;
   db.prepare('DELETE FROM events WHERE id > ?').run(BASELINE_EVENT); db.prepare('DELETE FROM proposals').run(); db.prepare('DELETE FROM access_log').run(); db.prepare('DELETE FROM rule_replays').run(); db.prepare('DELETE FROM agent_changes').run();
-  db.prepare("UPDATE draft_rules SET state = 'Draft'").run();
+  db.prepare("UPDATE draft_rules SET state = CASE WHEN in_force_from IS NULL THEN 'Draft' ELSE 'Scheduled' END").run();
   for (const r of BASELINE_RULES) db.prepare('UPDATE rules SET statement = ?, params = ? WHERE id = ?').run(r.statement, r.params, r.id);
   for (const v of BASELINE_VERSIONS) db.prepare('UPDATE rule_versions SET statement = ?, params = ? WHERE rule_id = ? AND valid_from = ?').run(v.statement, v.params, v.rule_id, v.valid_from);
   for (const c of [AS, NF]) db.prepare('UPDATE connections SET scopes = ? WHERE id = ?').run(JSON.stringify(SIDE[c].scopes), c);

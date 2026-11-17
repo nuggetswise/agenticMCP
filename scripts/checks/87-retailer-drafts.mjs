@@ -2,8 +2,12 @@
 // Every draft replays deterministically or says what the world lacks; none is in force; neither retailer is named.
 export default function ({ nf, ok, eq, NR }) {
   const drafts = NR.draftRules(nf).drafts;
-  eq('drafts.change_list_4_present_and_not_in_force', drafts.filter((d) => /retailer/.test(d.basis)).map((d) => `${d.id}:${d.state}`),
-    ['NFD-10:Draft', 'NFD-11:Draft', 'NFD-12:Draft', 'NFD-13:Draft', 'NFD-14:Draft', 'NFD-15:Draft', 'NFD-3:Draft', 'NFD-4:Draft', 'NFD-5:Draft', 'NFD-6:Draft', 'NFD-7:Draft', 'NFD-8:Draft', 'NFD-9:Draft']);
+  // D72: published to go into force on 4 January 2027, after the quarter's last shipment, so no shipment in the world falls under them.
+  const cl4 = drafts.filter((d) => /retailer/.test(d.basis));
+  eq('drafts.change_list_4_scheduled_from_4_january_2027', [...new Set(cl4.map((d) => `${d.state}:${d.in_force_from}`))], ['Scheduled:2027-01-04T05:00:00.000Z']);
+  eq('drafts.change_list_4_count', cl4.length, 13);
+  eq('drafts.no_shipment_on_or_after_the_in_force_date', nf.prepare('SELECT count(*) n FROM shipments WHERE shipped_at >= ?').get('2027-01-04T05:00:00.000Z').n, 0);
+  eq('drafts.nfd1_nfd2_still_drafts', drafts.filter((d) => ['NFD-1', 'NFD-2'].includes(d.id)).map((d) => d.state), ['Draft', 'Draft']);
   const bad = []; const res = {};
   for (const d of drafts) { const a = JSON.stringify(NR.replayRule(nf, { draft: d.id })); const b = JSON.stringify(NR.replayRule(nf, { draft: d.id })); if (a !== b) bad.push(`${d.id} not deterministic`); res[d.id] = JSON.parse(a); }
   eq('drafts.replay_is_deterministic', bad, []);

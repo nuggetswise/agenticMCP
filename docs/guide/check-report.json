@@ -1,14 +1,12 @@
 {
  "file": "/home/claude/agenticmcp/docs/build-guide.md",
- "ran_at_head": "08b3d00",
+ "ran_at_head": "5e2d870",
  "results": [
   {
    "name": "as_of_commit_current",
-   "ok": false,
-   "problems": [
-    "changed since 3fe508f: scripts/check.js, scripts/checks/30-planning.mjs, scripts/page-build.mjs, scripts/scout-test.mjs, scripts/smoke.js, scripts/walk-p5.mjs, src/scout.js, src/server.js, validator/report.json, world/anchors.js, world/p5-physical.js, world/stages/planning.js"
-   ],
-   "info": "3fe508f"
+   "ok": true,
+   "problems": [],
+   "info": "5e2d870"
   },
   {
    "name": "commits_exist",

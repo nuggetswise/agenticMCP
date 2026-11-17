@@ -4,7 +4,7 @@ Working copy: `docs/build-guide.md` in the repo. Reading copy: the Claude doc at
 
 ## How to use this guide
 
-This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 3fe508f.
+This is the only plan a builder reads before working on TG for Retail prototypes, the demo world or the MCP server. Status in it is as of repo commit 5e2d870.
 
 - **Start here:** follow R39. It picks your next task from the Tasks tables and says what to read first. For one prototype, run `node scripts/guide-pack.mjs P5` with its ID: it prints that prototype's job, ending, v8 section, the rules that apply, its agent, tools and anchors, and its tasks in order, so you read one page and the prototype's source.
 - **Authority, highest first:**

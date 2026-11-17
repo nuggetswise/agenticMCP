@@ -660,6 +660,40 @@
       "capability_status": "planned",
       "owner": "Unassigned",
       "ends_at": "The rule Jordan publishes carries its replay; nothing already exchanged is charged again"
+    },
+    {
+      "id": "P22",
+      "name": "P22 Finding Outcomes",
+      "status": "Not built",
+      "calendar": "P22",
+      "seen_by": "Priya Raman, then Jordan Ellis",
+      "agency": {
+        "verdict": "not applicable",
+        "agent": null,
+        "job": "Read what happened to every finding: raised, opened, decided, fixed by its owner, confirmed, money settled",
+        "reason": "A read-only view; the page sends nothing and creates no record",
+        "would_reverse": "A decision taken from the view"
+      },
+      "customer_agent": {
+        "supplier": "Finding outcomes for Ashby's findings in Priya's own assistant",
+        "retailer": "Finding outcomes for Northfield's findings in Jordan's own assistant"
+      },
+      "erp_placement": "None",
+      "decisions": [],
+      "tools": [
+        "finding_outcomes"
+      ],
+      "anchors": [
+        "order:NR-46215",
+        "document:RCV-46215"
+      ],
+      "acceptance": [],
+      "capability_status": "planned",
+      "owner": "Unassigned",
+      "tools_northfield": [
+        "finding_outcomes"
+      ],
+      "ends_at": "Both sides hold the same account of which findings were acted on, by whom, how fast and what money moved; the page writes nothing"
     }
   ],
   "other_inventory": [

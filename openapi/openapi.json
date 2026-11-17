@@ -611,6 +611,111 @@
     }
    }
   },
+  "/v1/findings": {
+   "get": {
+    "operationId": "finding_outcomes",
+    "summary": "Finding outcomes",
+    "description": "What happened to every finding Trading Grid raised for Ashby: totals per stage (raised, opened, decided, fixed by its owner, confirmed by the next record, money settled) and per use case, the leaks between stages (never opened, decided after the deadline, no confirming record), each owner’s response time measured only from records that arrived (Unknown where none arrived), agent suggestions approved as they stood, edited and taken over with what people changed, and value proven only from matched repayments and reversed charges. Findings come from replaying the rules in force over the documents and records; every total counts rows of the finding log and the same arguments always give the same figures. Ashby’s findings only: Northfield’s findings, payables and reviewer notes read \"Not available to Ashby\". Pass use_case for its findings, finding for one trail. Changes nothing.",
+    "tags": [
+     "Performance review"
+    ],
+    "x-mcp-tool": "finding_outcomes",
+    "x-required-scopes": [
+     "orders",
+     "documents"
+    ],
+    "x-optional-scopes": [
+     "errors",
+     "rules",
+     "deductions"
+    ],
+    "x-read-only": true,
+    "parameters": [
+     {
+      "name": "period",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "enum": [
+        "quarter",
+        "prior",
+        "all"
+       ],
+       "description": "quarter (default): 27 September 2026 to settlement on 9 January 2027; prior: the closed period 29 March to 7 August 2026; all: both"
+      },
+      "description": "quarter (default): 27 September 2026 to settlement on 9 January 2027; prior: the closed period 29 March to 7 August 2026; all: both"
+     },
+     {
+      "name": "use_case",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "enum": [
+        "Missing documents",
+        "Shipment checks",
+        "Deductions",
+        "Invoice holds",
+        "Store activity",
+        "Promotions",
+        "Rule changes"
+       ],
+       "description": "List the findings of one use case, each with its stages"
+      },
+      "description": "List the findings of one use case, each with its stages"
+     },
+     {
+      "name": "finding",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "One finding’s trail, by finding id, record (PO, case, document) or PO number"
+      },
+      "description": "One finding’s trail, by finding id, record (PO, case, document) or PO number"
+     },
+     {
+      "name": "list",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "description": "List every finding with its stages (at most 200)"
+      },
+      "description": "List every finding with its stages (at most 200)"
+     },
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+      },
+      "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    }
+   }
+  },
   "/v1/next-step": {
    "post": {
     "operationId": "recommend_next_step",

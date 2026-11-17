@@ -27,10 +27,11 @@ function detectors(name, s, actor) {
 
 // What the rule baseline must reach in each variation, so a regression in the baseline cannot pass silently.
 const EXPECT = {
-  canonical: { on_time: ['NR-46210 855', 'NR-46226 810', 'NR-46220 856'], late: ['NR-46215 856'], asked: ['NR-46220'], escalated: [] },
-  window_48: { on_time: ['NR-46210 855', 'NR-46226 810'], late: ['NR-46215 856'], asked: [], escalated: [] },
-  kinross_unreachable: { on_time: ['NR-46210 855', 'NR-46226 810'], late: ['NR-46215 856'], asked: ['NR-46220'], escalated: ['NR-46220'] },
-  departure_scanned_46220: { on_time: ['NR-46210 855', 'NR-46226 810'], late: ['NR-46215 856', 'NR-46220 856'], asked: ['NR-46220'], escalated: ['NR-46220'] },
+  // 17 November 2026: three more orders on the 09:00 check. NR-462411's corrected ship notice goes out on time; Kinross is asked about NR-462412 (945) and NR-462410 (held, escalated as NR-46302 is).
+  canonical: { on_time: ['NR-46210 855', 'NR-462411 856', 'NR-46226 810', 'NR-46220 856'], late: ['NR-46215 856'], asked: ['NR-46220', 'NR-462412', 'NR-462410'], escalated: ['NR-462410'] },
+  window_48: { on_time: ['NR-46210 855', 'NR-462411 856', 'NR-46226 810'], late: ['NR-46215 856'], asked: ['NR-462410'], escalated: ['NR-462410'] },
+  kinross_unreachable: { on_time: ['NR-46210 855', 'NR-462411 856', 'NR-46226 810'], late: ['NR-46215 856'], asked: ['NR-46220', 'NR-462412', 'NR-462410'], escalated: ['NR-46220', 'NR-462412', 'NR-462410'] },
+  departure_scanned_46220: { on_time: ['NR-46210 855', 'NR-462411 856', 'NR-46226 810'], late: ['NR-46215 856', 'NR-46220 856'], asked: ['NR-46220', 'NR-462412', 'NR-462410'], escalated: ['NR-46220', 'NR-462410'] },
   early_fulfilment_46302: { on_time: ['NR-46302 856'], late: [], asked: ['NR-46302'], escalated: ['NR-46302'] },
   rejected_ship_notice_46156: { on_time: ['NR-46151 856', 'NR-46142 855', 'NR-46156 856'], late: [], asked: [], escalated: [] },
 };

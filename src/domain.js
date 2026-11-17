@@ -83,7 +83,7 @@ export function attention(db, asOf = storyClock(), { warehouse = false, kinrossH
     const of = (ty) => docs.filter((d) => d.doc_type === ty);
     const good = (ty) => of(ty).some((d) => !anyErr.get(d.doc_id, t));
     const firstOpen = (ty) => { for (const d of of(ty)) { const e = openErrors(db, d.doc_id, t)[0]; if (e) return { d, e }; } return null; };
-    const add = (reason, ruleId, deadline, records, extra = {}) => out.push({ po: o.po, reason, rule: rule(db, ruleId), deadline: fmtET(deadline), time_left: timeLeft(deadline, asOf), _t: deadline.getTime(), records, link: `order/${encodeURIComponent(o.po)}`, ...extra });
+    const add = (reason, ruleId, deadline, records, extra = {}) => out.push({ po: o.po, reason, rule: rule(db, ruleId), deadline: fmtET(deadline), deadline_at: deadline.toISOString(), time_left: timeLeft(deadline, asOf), _t: deadline.getTime(), records, link: `order/${encodeURIComponent(o.po)}`, ...extra });
     if (!of('855').length && !of('865').length) { const due = new Date(Date.parse(o.received_at) + 24 * H); if (due - asOf <= 8 * H) add('Order acknowledgment not sent', 'NF-1.4', due, [o.po]); }
     const dep = evOf.all(o.po, t).pop();
     if (dep) {

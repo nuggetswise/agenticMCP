@@ -10,6 +10,7 @@ import * as ref from './ref.js';
 import { etDay } from './lib.js';
 import { STAGES, STAGE_BY_TYPE } from './stages/index.js';
 import { locationRows, otherItems, ruleRows, itemRows, typedFromEvents, documentLinks } from './typed.js';
+import { SCHEMA as FINDINGS_SCHEMA, buildFindingLog } from '../src/findings.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const BUILD = join(ROOT, 'build');
@@ -33,11 +34,12 @@ export const CALENDAR = (A) => [
   { id: 'P5', week: 11, moment: 'Five fulfilment risks before departure', seen_by: 'Priya Raman', prototype: 'P5 Scout Shipment Watch', as_of: '2026-12-08T22:12:00.000Z', anchor: 'NR-460207 to NR-460274' },
   { id: 'P14', week: 7, moment: 'An invoice that does not match its order and receipt', seen_by: 'Jordan Ellis', prototype: 'P14 Invoice Variance', as_of: '2026-11-10T14:00:00.000Z', anchor: 'INV-7731' },
   { id: 'P15', week: 14, moment: 'A draft rule replayed against the quarter before publishing', seen_by: 'Jordan Ellis', prototype: 'P15 Rule Replay', as_of: '2026-12-28T16:00:00.000Z', anchor: 'NFD-1' },
+  { id: 'P22', week: 15, moment: 'What happened to the quarter’s findings', seen_by: 'Priya Raman, then Jordan Ellis', prototype: 'P22 Finding Outcomes', as_of: '2027-01-09T22:00:00.000Z', anchor: 'NR-46215' },
   { id: 'P7', week: 14, moment: 'On-time, in-full 91.0%, calculated by Trading Grid', seen_by: 'Priya Raman, then Jordan Ellis', prototype: 'P7 Performance Improvement', as_of: '2026-12-28T14:00:00.000Z', anchor: '108 failing lines' },
 ];
 
 /** The schema: the core tables, then each stage's own. */
-export const SCHEMA = () => [readFileSync(join(ROOT, 'world', 'schema.sql'), 'utf8'), ...STAGES.map((s) => s.schema || '')].join('\n');
+export const SCHEMA = () => [readFileSync(join(ROOT, 'world', 'schema.sql'), 'utf8'), ...STAGES.map((s) => s.schema || ''), FINDINGS_SCHEMA].join('\n');
 
 function insert(db, table, rows) {
   if (!rows.length) return;
@@ -233,11 +235,13 @@ export function buildWorld({ quiet = false } = {}) {
       .map(([id, statement, check_kind, value, charge, charge_basis, src]) => ({ id, created_at: '2026-11-16T17:00:00.000Z', author: 'Jordan Ellis', statement, check_kind, value, charge, state: 'Scheduled', in_force_from: IN_FORCE_FROM, charge_basis, basis: `Adapted from ${src} (owner-supplied)` }))]);
   const fk = db.prepare('PRAGMA foreign_key_check').all();
   if (fk.length) { const by = {}; for (const r of fk) { const k = `${r.table}→${r.parent}`; by[k] = (by[k] || 0) + 1; } db.exec('ROLLBACK'); throw new Error(`Declared keys without a row to point at: ${JSON.stringify(by)}`); }
-  db.exec('COMMIT'); db.close();
+  db.exec('COMMIT');
+  // P22: the finding log, replayed from the finished world (src/findings.js), before each company's copy is cut.
+  const log = buildFindingLog(db); db.close();
   buildAshbyView(); buildNorthfieldView();
   const facts = { tuning: { nPre: g.nPre, jitter: g.jitter }, history: g.W.history, anchor: g.W.anchor, slots: g.W.slots, claimCases: g.W.claimCases, files: files.length, documents: T.documents.length, events: T.events.length };
   writeFileSync(join(BUILD, 'facts.json'), JSON.stringify(facts, null, 1));
-  if (!quiet) console.log(`World built: ${T.documents.length} transaction sets in ${files.length} X12 files, ${T.events.length} other records, ${T.orders.length} orders`);
+  if (!quiet) console.log(`World built: ${T.documents.length} transaction sets in ${files.length} X12 files, ${T.events.length} other records, ${T.orders.length} orders, ${log.findings} findings (${log.Ashby} Ashby, ${log.Northfield} Northfield)`);
   return facts;
 }
 
@@ -266,6 +270,7 @@ function buildAshbyView() {
     INSERT INTO document_links SELECT * FROM m.document_links WHERE doc_id IN (SELECT doc_id FROM documents) AND prev_doc_id IN (SELECT doc_id FROM documents);
     INSERT INTO shipment_plans SELECT * FROM m.shipment_plans WHERE event_id IN (SELECT id FROM events); INSERT INTO warehouse_scans SELECT * FROM m.warehouse_scans WHERE event_id IN (SELECT id FROM events);
     INSERT INTO carrier_events SELECT * FROM m.carrier_events WHERE event_id IN (SELECT id FROM events);
+    INSERT INTO findings SELECT * FROM m.findings WHERE side = 'Ashby'; INSERT INTO finding_actions SELECT * FROM m.finding_actions WHERE finding_id IN (SELECT finding_id FROM findings);
     ${STAGES.flatMap((st) => st.views?.ashby || []).join(';\n')}${STAGES.some((st) => st.views?.ashby?.length) ? ';' : ''}
     COMMIT;`);
   db.exec('DETACH DATABASE m'); db.exec('DROP TABLE connections; DROP TABLE access_log; DROP TABLE proposals; DROP TABLE review_notes; DROP TABLE draft_rules; DROP TABLE rule_replays; DROP TABLE agent_changes;'); db.exec('VACUUM'); db.close();
@@ -300,6 +305,7 @@ function buildNorthfieldView() {
     INSERT INTO document_links SELECT * FROM m.document_links WHERE doc_id IN (SELECT doc_id FROM documents) AND prev_doc_id IN (SELECT doc_id FROM documents);
     INSERT INTO shipment_plans SELECT * FROM m.shipment_plans WHERE event_id IN (SELECT id FROM events); INSERT INTO warehouse_scans SELECT * FROM m.warehouse_scans WHERE event_id IN (SELECT id FROM events);
     INSERT INTO carrier_events SELECT * FROM m.carrier_events WHERE event_id IN (SELECT id FROM events);
+    INSERT INTO findings SELECT * FROM m.findings WHERE side = 'Northfield'; INSERT INTO finding_actions SELECT * FROM m.finding_actions WHERE finding_id IN (SELECT finding_id FROM findings);
     ${STAGES.flatMap((st) => st.views?.northfield || []).join(';\n')}${STAGES.some((st) => st.views?.northfield?.length) ? ';' : ''}
     COMMIT;`);
   db.exec('DETACH DATABASE m'); db.exec('DROP TABLE connections; DROP TABLE access_log; DROP TABLE proposals; DROP TABLE warehouse_orders; DROP TABLE rule_replays; DROP TABLE agent_changes;'); db.exec('VACUUM'); db.close();

@@ -1,0 +1,2044 @@
+{
+ "agent": "Match Agent",
+ "prototype": "P14",
+ "recorded_at": "2026-11-17",
+ "through": "Northfield's live connector (match_start, match_decide), views read from /sessions/<id>",
+ "variation": "ashby_free_text",
+ "session": "MS-aab22b45d1",
+ "approvals": [
+  "MP-1",
+  "MP-3",
+  "MP-4"
+ ],
+ "result": "Corrected invoice INV-7731C-S matched; proof of the later delivery asked for; Ashby withdrew the claim; line 2 short-pay decided; no supplier claim open. The run ends with Match Agent waiting after two refused proposals to mark lines clear for payment.",
+ "steps": [
+  {
+   "session": "MS-aab22b45d1",
+   "label": "Jordan Ellis",
+   "clock": "2026-11-10 09:00 ET",
+   "status": "waiting_for_jordan",
+   "branch_at": "2026-11-10 09:00 ET",
+   "facts": [
+    {
+     "fact": "ashby_note",
+     "from": "",
+     "to": "The short carton on line 2 was delivered on a later truck on 9 November. Please pay all 120 cases."
+    }
+   ],
+   "queue": [
+    {
+     "invoice": "INV-7731",
+     "po": "NR-450118",
+     "supplier": "Ashby Supplier",
+     "invoice_sent": "2026-11-08 10:00 ET",
+     "holds": [
+      {
+       "rule": "NF-7.8",
+       "line": 1,
+       "finding": "Line 1 bills 300 cases; 270 shipped and 270 accepted; held value $1620.00",
+       "advice": "AA-INV-7731",
+       "advice_sent": "2026-11-08 10:20 ET",
+       "link": "document/AA-INV-7731"
+      }
+     ],
+     "state": "Held",
+     "compared": {
+      "purchase_order": {
+       "reference": "NR-450118",
+       "link": "order/NR-450118"
+      },
+      "receiving_advice": [
+       {
+        "reference": "RCV-DC2-77290",
+        "link": "document/RCV-DC2-77290"
+       },
+       {
+        "reference": "RCV-DC2-77355",
+        "link": "document/RCV-DC2-77355"
+       }
+      ],
+      "invoice": {
+       "reference": "INV-7731",
+       "link": "document/INV-7731"
+      }
+     }
+    }
+   ],
+   "awaiting": [
+    {
+     "id": "MP-1",
+     "action": "request_credit_or_corrected_invoice",
+     "does": "Ask the supplier for a credit memo or corrected invoice for the named lines (request_change)",
+     "args": {
+      "lines": [
+       1,
+       2
+      ],
+      "invoice": "INV-7731"
+     },
+     "proposed_by": "Match Agent",
+     "rationale": "Lines 1 and 2 are billed above what was received: Line 1 bills 300 cases with 270 received, and Line 2 bills 120 cases with 119 received per receiving advices RCV-DC2-77290 and RCV-DC2-77355.",
+     "alternatives": [],
+     "rules": [
+      "NF-7.8",
+      "NF-7.2"
+     ]
+    }
+   ],
+   "outcome": {
+    "invoice": "INV-7731",
+    "state": "Held",
+    "matching": "INV-7731",
+    "total_fault": false,
+    "lines": [
+     {
+      "line": 1,
+      "status": "above_shipped",
+      "billed": 300,
+      "received": 270,
+      "settling_record": "A credit memo or corrected invoice from Ashby Supplier for 30 cases (NF-7.8, NF-7.2)"
+     },
+     {
+      "line": 2,
+      "status": "above_received",
+      "billed": 120,
+      "received": 119,
+      "settling_record": "Receiving advice RCV-DC2-77355: 119 received of 120 billed. Only a revised receiving advice changes it (NF-5.5); a credit memo from the supplier would also settle it"
+     },
+     {
+      "line": 3,
+      "status": "clear",
+      "billed": 80,
+      "received": 80,
+      "settling_record": null
+     }
+    ],
+    "first_step": "request_credit_or_corrected_invoice",
+    "steps": [
+     "request_credit_or_corrected_invoice [1,2]"
+    ],
+    "proposed_clear_for_payment": [],
+    "payment_released": false,
+    "supplier_claims": [],
+    "open_supplier_claims": 0,
+    "requests": [],
+    "approvals": 0,
+    "actions_executed": 0,
+    "actions_failed": 0,
+    "actions_refused": 1,
+    "violations": [],
+    "synthetic": "Supplier answers are synthetic, from the deterministic rules in src/match.js, except a recorded corrected invoice revealed at its recorded time"
+   },
+   "ashby_sees": {
+    "invoices": [
+     {
+      "invoice": "INV-7731",
+      "po": "NR-450118",
+      "application_advice": [
+       {
+        "reference": "AA-INV-7731",
+        "sent": "2026-11-08 10:20 ET",
+        "cause": "Invoice quantity above accepted quantity",
+        "rule": "NF-7.8"
+       }
+      ]
+     }
+    ],
+    "requests_received": [],
+    "not_shown": "Northfield’s accounts payable records, match notes and proposals are Northfield’s"
+   },
+   "trace": [
+    {
+     "n": 1,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Session branched from Northfield’s recorded records",
+     "detail": {
+      "at": "2026-11-10 09:00 ET",
+      "hidden": "Every record dated after the session clock",
+      "facts": [
+       {
+        "fact": "ashby_note",
+        "from": "",
+        "to": "The short carton on line 2 was delivered on a later truck on 9 November. Please pay all 120 cases."
+       }
+      ]
+     }
+    },
+    {
+     "n": 2,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "1 invoice held at the story moment",
+     "detail": {
+      "holds": [
+       {
+        "invoice": "INV-7731",
+        "rules": [
+         "NF-7.8"
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "n": 3,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_queue",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 4,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_policy",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 5,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_invoice",
+     "detail": {
+      "args": {
+       "invoice": "INV-7731"
+      }
+     }
+    },
+    {
+     "n": 6,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_order",
+     "detail": {
+      "args": {
+       "po": "NR-450118"
+      }
+     }
+    },
+    {
+     "n": 7,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_receipts",
+     "detail": {
+      "args": {
+       "po": "NR-450118"
+      }
+     }
+    },
+    {
+     "n": 8,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_ship_notices",
+     "detail": {
+      "args": {
+       "po": "NR-450118"
+      }
+     }
+    },
+    {
+     "n": 9,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Trading Grid",
+     "type": "rule",
+     "what": "Refused request_credit_or_corrected_invoice",
+     "detail": {
+      "by": "Match Agent",
+      "reason": "Ask for every short line together: add lines 2 to this request, as the baseline does."
+     }
+    },
+    {
+     "n": 10,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Proposed: Ask the supplier for a credit memo or corrected invoice for the named lines (request_change)",
+     "detail": {
+      "proposal": "MP-1",
+      "args": {
+       "lines": [
+        1,
+        2
+       ],
+       "invoice": "INV-7731"
+      },
+      "rationale": "Lines 1 and 2 are billed above what was received: Line 1 bills 300 cases with 270 received, and Line 2 bills 120 cases with 119 received per receiving advices RCV-DC2-77290 and RCV-DC2-77355.",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 11,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Match Agent said",
+     "detail": {
+      "text": "I have proposed requesting a credit memo or corrected invoice from Ashby Supplier for lines 1 and 2 of invoice INV-7731, because line 1 bills 300 cases while only 270 were received, and line 2 bills 120 cases while only 119 were received. I am now awaiting Jordan Ellis's approval."
+     }
+    }
+   ],
+   "overhead": {
+    "model_calls": 9,
+    "tool_calls": 8,
+    "ms": 16557,
+    "model_routes": {
+     "primary · gemini-3.5-flash-lite": 9
+    }
+   }
+  },
+  {
+   "session": "MS-aab22b45d1",
+   "label": "Jordan Ellis",
+   "clock": "2026-11-10 15:30 ET",
+   "status": "waiting_for_jordan",
+   "branch_at": "2026-11-10 09:00 ET",
+   "facts": [
+    {
+     "fact": "ashby_note",
+     "from": "",
+     "to": "The short carton on line 2 was delivered on a later truck on 9 November. Please pay all 120 cases."
+    }
+   ],
+   "queue": [
+    {
+     "invoice": "INV-7731",
+     "po": "NR-450118",
+     "supplier": "Ashby Supplier",
+     "invoice_sent": "2026-11-08 10:00 ET",
+     "holds": [
+      {
+       "rule": "NF-7.8",
+       "line": 1,
+       "finding": "Line 1 bills 300 cases; 270 shipped and 270 accepted; held value $1620.00",
+       "advice": "AA-INV-7731",
+       "advice_sent": "2026-11-08 10:20 ET",
+       "link": "document/AA-INV-7731"
+      }
+     ],
+     "state": "Original replaced; matching INV-7731C-S",
+     "compared": {
+      "purchase_order": {
+       "reference": "NR-450118",
+       "link": "order/NR-450118"
+      },
+      "receiving_advice": [
+       {
+        "reference": "RCV-DC2-77290",
+        "link": "document/RCV-DC2-77290"
+       },
+       {
+        "reference": "RCV-DC2-77355",
+        "link": "document/RCV-DC2-77355"
+       }
+      ],
+      "invoice": {
+       "reference": "INV-7731",
+       "link": "document/INV-7731"
+      }
+     }
+    }
+   ],
+   "awaiting": [
+    {
+     "id": "MP-3",
+     "action": "request_proof_of_delivery",
+     "does": "Ask the supplier for the ship notice and the carrier’s proof of delivery behind a delivery its answer claims, for the named lines (request_change)",
+     "args": {
+      "invoice": "INV-7731",
+      "lines": [
+       2
+      ]
+     },
+     "proposed_by": "Match Agent",
+     "rationale": "Ashby Supplier claims the short carton on line 2 was delivered on a later truck on 9 November, so we request proof of delivery before deciding on short-paying.",
+     "alternatives": [],
+     "rules": [
+      "NF-5.5",
+      "NF-7.8"
+     ]
+    }
+   ],
+   "outcome": {
+    "invoice": "INV-7731",
+    "state": "Original replaced; matching INV-7731C-S",
+    "matching": "INV-7731C-S",
+    "total_fault": false,
+    "lines": [
+     {
+      "line": 1,
+      "status": "clear",
+      "billed": 270,
+      "received": 270,
+      "settling_record": null
+     },
+     {
+      "line": 2,
+      "status": "above_received",
+      "billed": 120,
+      "received": 119,
+      "settling_record": "Receiving advice RCV-DC2-77355: 119 received of 120 billed. Only a revised receiving advice changes it (NF-5.5); a credit memo from the supplier would also settle it"
+     },
+     {
+      "line": 3,
+      "status": "clear",
+      "billed": 80,
+      "received": 80,
+      "settling_record": null
+     }
+    ],
+    "first_step": "request_credit_or_corrected_invoice",
+    "steps": [
+     "request_credit_or_corrected_invoice [1,2]",
+     "match_corrected_invoice INV-7731C-S",
+     "request_proof_of_delivery [2]"
+    ],
+    "proposed_clear_for_payment": [],
+    "payment_released": false,
+    "supplier_claims": [
+     {
+      "line": 2,
+      "supplier_said": "The short carton on line 2 was delivered on a later truck on 9 November. Please pay all 120 cases.",
+      "state": "Open: never followed up; it returns as a payment dispute"
+     }
+    ],
+    "open_supplier_claims": 1,
+    "requests": [
+     {
+      "id": "RQ-1",
+      "kind": "correction",
+      "lines": [
+       1,
+       2
+      ],
+      "answer": "corrected_invoice INV-7731C-S (synthetic)"
+     }
+    ],
+    "approvals": 1,
+    "actions_executed": 2,
+    "actions_failed": 0,
+    "actions_refused": 1,
+    "violations": [],
+    "synthetic": "Supplier answers are synthetic, from the deterministic rules in src/match.js, except a recorded corrected invoice revealed at its recorded time"
+   },
+   "ashby_sees": {
+    "invoices": [
+     {
+      "invoice": "INV-7731",
+      "po": "NR-450118",
+      "application_advice": [
+       {
+        "reference": "AA-INV-7731",
+        "sent": "2026-11-08 10:20 ET",
+        "cause": "Invoice quantity above accepted quantity",
+        "rule": "NF-7.8"
+       }
+      ]
+     }
+    ],
+    "requests_received": [
+     {
+      "invoice": "INV-7731",
+      "kind": "correction",
+      "lines": [
+       1,
+       2
+      ],
+      "sent": "2026-11-10 09:00 ET",
+      "via": "request_change"
+     }
+    ],
+    "not_shown": "Northfield’s accounts payable records, match notes and proposals are Northfield’s"
+   },
+   "trace": [
+    {
+     "n": 1,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Session branched from Northfield’s recorded records",
+     "detail": {
+      "at": "2026-11-10 09:00 ET",
+      "hidden": "Every record dated after the session clock",
+      "facts": [
+       {
+        "fact": "ashby_note",
+        "from": "",
+        "to": "The short carton on line 2 was delivered on a later truck on 9 November. Please pay all 120 cases."
+       }
+      ]
+     }
+    },
+    {
+     "n": 2,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "1 invoice held at the story moment",
+     "detail": {
+      "holds": [
+       {
+        "invoice": "INV-7731",
+        "rules": [
+         "NF-7.8"
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "n": 3,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_queue",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 4,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_policy",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 5,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_invoice",
+     "detail": {
+      "args": {
+       "invoice": "INV-7731"
+      }
+     }
+    },
+    {
+     "n": 6,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_order",
+     "detail": {
+      "args": {
+       "po": "NR-450118"
+      }
+     }
+    },
+    {
+     "n": 7,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_receipts",
+     "detail": {
+      "args": {
+       "po": "NR-450118"
+      }
+     }
+    },
+    {
+     "n": 8,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_ship_notices",
+     "detail": {
+      "args": {
+       "po": "NR-450118"
+      }
+     }
+    },
+    {
+     "n": 9,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Trading Grid",
+     "type": "rule",
+     "what": "Refused request_credit_or_corrected_invoice",
+     "detail": {
+      "by": "Match Agent",
+      "reason": "Ask for every short line together: add lines 2 to this request, as the baseline does."
+     }
+    },
+    {
+     "n": 10,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Proposed: Ask the supplier for a credit memo or corrected invoice for the named lines (request_change)",
+     "detail": {
+      "proposal": "MP-1",
+      "args": {
+       "lines": [
+        1,
+        2
+       ],
+       "invoice": "INV-7731"
+      },
+      "rationale": "Lines 1 and 2 are billed above what was received: Line 1 bills 300 cases with 270 received, and Line 2 bills 120 cases with 119 received per receiving advices RCV-DC2-77290 and RCV-DC2-77355.",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 11,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Match Agent said",
+     "detail": {
+      "text": "I have proposed requesting a credit memo or corrected invoice from Ashby Supplier for lines 1 and 2 of invoice INV-7731, because line 1 bills 300 cases while only 270 were received, and line 2 bills 120 cases while only 119 were received. I am now awaiting Jordan Ellis's approval."
+     }
+    },
+    {
+     "n": 12,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Jordan Ellis",
+     "type": "human",
+     "what": "Approved MP-1 on INV-7731: Ask the supplier for a credit memo or corrected invoice for the named lines (request_change)",
+     "detail": {
+      "args": {
+       "lines": [
+        1,
+        2
+       ],
+       "invoice": "INV-7731"
+      },
+      "record": "INV-7731",
+      "payment": "No payment state changed: payment release stays in Northfield accounts payable"
+     }
+    },
+    {
+     "n": 13,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Correction request sent to Ashby Supplier through request_change",
+     "detail": {
+      "request": "RQ-1",
+      "lines": [
+       1,
+       2
+      ],
+      "rules": [
+       "NF-7.8",
+       "NF-7.2"
+      ]
+     }
+    },
+    {
+     "n": 14,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Ashby (synthetic)",
+     "type": "external",
+     "what": "Technical acknowledgment (997) of the request",
+     "detail": {
+      "at": "2026-11-10 09:05 ET",
+      "note": "A 997 is not acceptance"
+     }
+    },
+    {
+     "n": 15,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Ashby (synthetic)",
+     "type": "external",
+     "what": "Sends corrected invoice INV-7731C-S",
+     "detail": {
+      "at": "2026-11-10 15:30 ET",
+      "lines": [
+       {
+        "line": 1,
+        "qty": 270,
+        "price": 54
+       },
+       {
+        "line": 2,
+        "qty": 120,
+        "price": 38.4
+       },
+       {
+        "line": 3,
+        "qty": 80,
+        "price": 46.8
+       }
+      ],
+      "total": 22932,
+      "text": "Lines 2 shipped in full on Ashby Supplier's ship notices; Ashby Supplier does not credit it. The short carton on line 2 was delivered on a later truck on 9 November. Please pay all 120 cases."
+     }
+    },
+    {
+     "n": 16,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Clock moved to the supplier’s answer",
+     "detail": {
+      "to": "2026-11-10 15:30 ET"
+     }
+    },
+    {
+     "n": 17,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_requests",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 18,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_corrections",
+     "detail": {
+      "args": {
+       "invoice": "INV-7731"
+      }
+     }
+    },
+    {
+     "n": 19,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Proposed: Match the corrected invoice or credit memo on file; the original stays replaced",
+     "detail": {
+      "proposal": "MP-2",
+      "args": {
+       "invoice": "INV-7731",
+       "correction": "INV-7731C-S"
+      },
+      "rationale": "Ashby Supplier provided corrected invoice INV-7731C-S which corrects line 1 to 270 cases, matching the receiving advice.",
+      "alternatives": [],
+      "needs": "policy"
+     }
+    },
+    {
+     "n": 20,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "Matched INV-7731C-S; INV-7731 stays replaced (NF-7.2)",
+     "detail": {
+      "lines": [
+       "1: clear",
+       "2: above_received",
+       "3: clear"
+      ]
+     }
+    },
+    {
+     "n": 21,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Proposed: Ask the supplier for the ship notice and the carrier’s proof of delivery behind a delivery its answer claims, for the named lines (request_change)",
+     "detail": {
+      "proposal": "MP-3",
+      "args": {
+       "invoice": "INV-7731",
+       "lines": [
+        2
+       ]
+      },
+      "rationale": "Ashby Supplier claims the short carton on line 2 was delivered on a later truck on 9 November, so we request proof of delivery before deciding on short-paying.",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 22,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Match Agent said",
+     "detail": {
+      "text": "I have matched the corrected invoice INV-7731C-S for line 1 (adjusting it to 270 cases as received), and proposed requesting proof of delivery from Ashby Supplier for line 2 to verify their claim that the short carton was delivered on a later truck on 9 November. I am awaiting Jordan Ellis's approval for MP-3."
+     }
+    }
+   ],
+   "overhead": {
+    "model_calls": 14,
+    "tool_calls": 12,
+    "ms": 27146,
+    "model_routes": {
+     "primary · gemini-3.5-flash-lite": 14
+    }
+   }
+  },
+  {
+   "session": "MS-aab22b45d1",
+   "label": "Jordan Ellis",
+   "clock": "2026-11-10 18:30 ET",
+   "status": "waiting_for_jordan",
+   "branch_at": "2026-11-10 09:00 ET",
+   "facts": [
+    {
+     "fact": "ashby_note",
+     "from": "",
+     "to": "The short carton on line 2 was delivered on a later truck on 9 November. Please pay all 120 cases."
+    }
+   ],
+   "queue": [
+    {
+     "invoice": "INV-7731",
+     "po": "NR-450118",
+     "supplier": "Ashby Supplier",
+     "invoice_sent": "2026-11-08 10:00 ET",
+     "holds": [
+      {
+       "rule": "NF-7.8",
+       "line": 1,
+       "finding": "Line 1 bills 300 cases; 270 shipped and 270 accepted; held value $1620.00",
+       "advice": "AA-INV-7731",
+       "advice_sent": "2026-11-08 10:20 ET",
+       "link": "document/AA-INV-7731"
+      }
+     ],
+     "state": "Original replaced; matching INV-7731C-S",
+     "compared": {
+      "purchase_order": {
+       "reference": "NR-450118",
+       "link": "order/NR-450118"
+      },
+      "receiving_advice": [
+       {
+        "reference": "RCV-DC2-77290",
+        "link": "document/RCV-DC2-77290"
+       },
+       {
+        "reference": "RCV-DC2-77355",
+        "link": "document/RCV-DC2-77355"
+       }
+      ],
+      "invoice": {
+       "reference": "INV-7731",
+       "link": "document/INV-7731"
+      }
+     }
+    }
+   ],
+   "awaiting": [
+    {
+     "id": "MP-4",
+     "action": "short_pay_at_payment",
+     "does": "The supplier did not correct the named lines: Jordan Ellis decides to short-pay them at payment by the cases the receiving advice does not show",
+     "args": {
+      "lines": [
+       2
+      ],
+      "invoice": "INV-7731"
+     },
+     "proposed_by": "Match Agent",
+     "rationale": "Ashby Supplier withdrew its claim of a later delivery for line 2 and receiving advice RCV-DC2-77355 shows 119 received of 120 billed.",
+     "alternatives": [],
+     "rules": [
+      "NF-5.5",
+      "NF-7.8"
+     ]
+    }
+   ],
+   "outcome": {
+    "invoice": "INV-7731",
+    "state": "Original replaced; matching INV-7731C-S",
+    "matching": "INV-7731C-S",
+    "total_fault": false,
+    "lines": [
+     {
+      "line": 1,
+      "status": "clear",
+      "billed": 270,
+      "received": 270,
+      "settling_record": null
+     },
+     {
+      "line": 2,
+      "status": "above_received",
+      "billed": 120,
+      "received": 119,
+      "settling_record": "Receiving advice RCV-DC2-77355: 119 received of 120 billed. Only a revised receiving advice changes it (NF-5.5); a credit memo from the supplier would also settle it"
+     },
+     {
+      "line": 3,
+      "status": "clear",
+      "billed": 80,
+      "received": 80,
+      "settling_record": null
+     }
+    ],
+    "first_step": "request_credit_or_corrected_invoice",
+    "steps": [
+     "request_credit_or_corrected_invoice [1,2]",
+     "match_corrected_invoice INV-7731C-S",
+     "request_proof_of_delivery [2]",
+     "short_pay_at_payment [2]"
+    ],
+    "proposed_clear_for_payment": [],
+    "payment_released": false,
+    "supplier_claims": [
+     {
+      "line": 2,
+      "supplier_said": "The short carton on line 2 was delivered on a later truck on 9 November. Please pay all 120 cases.",
+      "state": "Closed: the supplier found no proof and withdrew it"
+     }
+    ],
+    "open_supplier_claims": 0,
+    "requests": [
+     {
+      "id": "RQ-1",
+      "kind": "correction",
+      "lines": [
+       1,
+       2
+      ],
+      "answer": "corrected_invoice INV-7731C-S (synthetic)"
+     },
+     {
+      "id": "RQ-2",
+      "kind": "proof",
+      "lines": [
+       2
+      ],
+      "answer": "withdrawn (synthetic)"
+     }
+    ],
+    "approvals": 2,
+    "actions_executed": 3,
+    "actions_failed": 0,
+    "actions_refused": 1,
+    "violations": [],
+    "synthetic": "Supplier answers are synthetic, from the deterministic rules in src/match.js, except a recorded corrected invoice revealed at its recorded time"
+   },
+   "ashby_sees": {
+    "invoices": [
+     {
+      "invoice": "INV-7731",
+      "po": "NR-450118",
+      "application_advice": [
+       {
+        "reference": "AA-INV-7731",
+        "sent": "2026-11-08 10:20 ET",
+        "cause": "Invoice quantity above accepted quantity",
+        "rule": "NF-7.8"
+       }
+      ]
+     }
+    ],
+    "requests_received": [
+     {
+      "invoice": "INV-7731",
+      "kind": "correction",
+      "lines": [
+       1,
+       2
+      ],
+      "sent": "2026-11-10 09:00 ET",
+      "via": "request_change"
+     },
+     {
+      "invoice": "INV-7731",
+      "kind": "proof",
+      "lines": [
+       2
+      ],
+      "sent": "2026-11-10 15:30 ET",
+      "via": "request_change"
+     }
+    ],
+    "not_shown": "Northfield’s accounts payable records, match notes and proposals are Northfield’s"
+   },
+   "trace": [
+    {
+     "n": 1,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Session branched from Northfield’s recorded records",
+     "detail": {
+      "at": "2026-11-10 09:00 ET",
+      "hidden": "Every record dated after the session clock",
+      "facts": [
+       {
+        "fact": "ashby_note",
+        "from": "",
+        "to": "The short carton on line 2 was delivered on a later truck on 9 November. Please pay all 120 cases."
+       }
+      ]
+     }
+    },
+    {
+     "n": 2,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "1 invoice held at the story moment",
+     "detail": {
+      "holds": [
+       {
+        "invoice": "INV-7731",
+        "rules": [
+         "NF-7.8"
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "n": 3,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_queue",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 4,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_policy",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 5,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_invoice",
+     "detail": {
+      "args": {
+       "invoice": "INV-7731"
+      }
+     }
+    },
+    {
+     "n": 6,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_order",
+     "detail": {
+      "args": {
+       "po": "NR-450118"
+      }
+     }
+    },
+    {
+     "n": 7,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_receipts",
+     "detail": {
+      "args": {
+       "po": "NR-450118"
+      }
+     }
+    },
+    {
+     "n": 8,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_ship_notices",
+     "detail": {
+      "args": {
+       "po": "NR-450118"
+      }
+     }
+    },
+    {
+     "n": 9,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Trading Grid",
+     "type": "rule",
+     "what": "Refused request_credit_or_corrected_invoice",
+     "detail": {
+      "by": "Match Agent",
+      "reason": "Ask for every short line together: add lines 2 to this request, as the baseline does."
+     }
+    },
+    {
+     "n": 10,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Proposed: Ask the supplier for a credit memo or corrected invoice for the named lines (request_change)",
+     "detail": {
+      "proposal": "MP-1",
+      "args": {
+       "lines": [
+        1,
+        2
+       ],
+       "invoice": "INV-7731"
+      },
+      "rationale": "Lines 1 and 2 are billed above what was received: Line 1 bills 300 cases with 270 received, and Line 2 bills 120 cases with 119 received per receiving advices RCV-DC2-77290 and RCV-DC2-77355.",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 11,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Match Agent said",
+     "detail": {
+      "text": "I have proposed requesting a credit memo or corrected invoice from Ashby Supplier for lines 1 and 2 of invoice INV-7731, because line 1 bills 300 cases while only 270 were received, and line 2 bills 120 cases while only 119 were received. I am now awaiting Jordan Ellis's approval."
+     }
+    },
+    {
+     "n": 12,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Jordan Ellis",
+     "type": "human",
+     "what": "Approved MP-1 on INV-7731: Ask the supplier for a credit memo or corrected invoice for the named lines (request_change)",
+     "detail": {
+      "args": {
+       "lines": [
+        1,
+        2
+       ],
+       "invoice": "INV-7731"
+      },
+      "record": "INV-7731",
+      "payment": "No payment state changed: payment release stays in Northfield accounts payable"
+     }
+    },
+    {
+     "n": 13,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Correction request sent to Ashby Supplier through request_change",
+     "detail": {
+      "request": "RQ-1",
+      "lines": [
+       1,
+       2
+      ],
+      "rules": [
+       "NF-7.8",
+       "NF-7.2"
+      ]
+     }
+    },
+    {
+     "n": 14,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Ashby (synthetic)",
+     "type": "external",
+     "what": "Technical acknowledgment (997) of the request",
+     "detail": {
+      "at": "2026-11-10 09:05 ET",
+      "note": "A 997 is not acceptance"
+     }
+    },
+    {
+     "n": 15,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Ashby (synthetic)",
+     "type": "external",
+     "what": "Sends corrected invoice INV-7731C-S",
+     "detail": {
+      "at": "2026-11-10 15:30 ET",
+      "lines": [
+       {
+        "line": 1,
+        "qty": 270,
+        "price": 54
+       },
+       {
+        "line": 2,
+        "qty": 120,
+        "price": 38.4
+       },
+       {
+        "line": 3,
+        "qty": 80,
+        "price": 46.8
+       }
+      ],
+      "total": 22932,
+      "text": "Lines 2 shipped in full on Ashby Supplier's ship notices; Ashby Supplier does not credit it. The short carton on line 2 was delivered on a later truck on 9 November. Please pay all 120 cases."
+     }
+    },
+    {
+     "n": 16,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Clock moved to the supplier’s answer",
+     "detail": {
+      "to": "2026-11-10 15:30 ET"
+     }
+    },
+    {
+     "n": 17,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_requests",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 18,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_corrections",
+     "detail": {
+      "args": {
+       "invoice": "INV-7731"
+      }
+     }
+    },
+    {
+     "n": 19,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Proposed: Match the corrected invoice or credit memo on file; the original stays replaced",
+     "detail": {
+      "proposal": "MP-2",
+      "args": {
+       "invoice": "INV-7731",
+       "correction": "INV-7731C-S"
+      },
+      "rationale": "Ashby Supplier provided corrected invoice INV-7731C-S which corrects line 1 to 270 cases, matching the receiving advice.",
+      "alternatives": [],
+      "needs": "policy"
+     }
+    },
+    {
+     "n": 20,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "Matched INV-7731C-S; INV-7731 stays replaced (NF-7.2)",
+     "detail": {
+      "lines": [
+       "1: clear",
+       "2: above_received",
+       "3: clear"
+      ]
+     }
+    },
+    {
+     "n": 21,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Proposed: Ask the supplier for the ship notice and the carrier’s proof of delivery behind a delivery its answer claims, for the named lines (request_change)",
+     "detail": {
+      "proposal": "MP-3",
+      "args": {
+       "invoice": "INV-7731",
+       "lines": [
+        2
+       ]
+      },
+      "rationale": "Ashby Supplier claims the short carton on line 2 was delivered on a later truck on 9 November, so we request proof of delivery before deciding on short-paying.",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 22,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Match Agent said",
+     "detail": {
+      "text": "I have matched the corrected invoice INV-7731C-S for line 1 (adjusting it to 270 cases as received), and proposed requesting proof of delivery from Ashby Supplier for line 2 to verify their claim that the short carton was delivered on a later truck on 9 November. I am awaiting Jordan Ellis's approval for MP-3."
+     }
+    },
+    {
+     "n": 23,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Jordan Ellis",
+     "type": "human",
+     "what": "Approved MP-3 on INV-7731: Ask the supplier for the ship notice and the carrier’s proof of delivery behind a delivery its answer claims, for the named lines (request_change)",
+     "detail": {
+      "args": {
+       "invoice": "INV-7731",
+       "lines": [
+        2
+       ]
+      },
+      "record": "INV-7731",
+      "payment": "No payment state changed: payment release stays in Northfield accounts payable"
+     }
+    },
+    {
+     "n": 24,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Request for the ship notice and proof of delivery sent to Ashby Supplier through request_change",
+     "detail": {
+      "request": "RQ-2",
+      "lines": [
+       2
+      ],
+      "rules": [
+       "NF-5.5"
+      ]
+     }
+    },
+    {
+     "n": 25,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Ashby Supplier (synthetic)",
+     "type": "external",
+     "what": "Withdraws its delivery claim",
+     "detail": {
+      "at": "2026-11-10 18:30 ET",
+      "text": "Ashby Supplier finds no ship notice or delivery receipt for a later delivery on lines 2 and withdraws the claim."
+     }
+    },
+    {
+     "n": 26,
+     "clock": "2026-11-10 18:30 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Clock moved to the supplier’s answer",
+     "detail": {
+      "to": "2026-11-10 18:30 ET"
+     }
+    },
+    {
+     "n": 27,
+     "clock": "2026-11-10 18:30 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_requests",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 28,
+     "clock": "2026-11-10 18:30 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Proposed: The supplier did not correct the named lines: Jordan Ellis decides to short-pay them at payment by the cases the receiving advice does not show",
+     "detail": {
+      "proposal": "MP-4",
+      "args": {
+       "lines": [
+        2
+       ],
+       "invoice": "INV-7731"
+      },
+      "rationale": "Ashby Supplier withdrew its claim of a later delivery for line 2 and receiving advice RCV-DC2-77355 shows 119 received of 120 billed.",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 29,
+     "clock": "2026-11-10 18:30 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Match Agent said",
+     "detail": {
+      "text": "I have proposed short-paying line 2 of invoice INV-7731 at payment for 1 case, because Ashby Supplier withdrew its claim of a later delivery and receiving advice RCV-DC2-77355 records 119 received out of 120 billed. I am now awaiting Jordan Ellis's approval."
+     }
+    }
+   ],
+   "overhead": {
+    "model_calls": 17,
+    "tool_calls": 14,
+    "ms": 30470,
+    "model_routes": {
+     "primary · gemini-3.5-flash-lite": 17
+    }
+   }
+  },
+  {
+   "session": "MS-aab22b45d1",
+   "label": "Jordan Ellis",
+   "clock": "2026-11-10 18:30 ET",
+   "status": "waiting_for_jordan",
+   "branch_at": "2026-11-10 09:00 ET",
+   "facts": [
+    {
+     "fact": "ashby_note",
+     "from": "",
+     "to": "The short carton on line 2 was delivered on a later truck on 9 November. Please pay all 120 cases."
+    }
+   ],
+   "queue": [
+    {
+     "invoice": "INV-7731",
+     "po": "NR-450118",
+     "supplier": "Ashby Supplier",
+     "invoice_sent": "2026-11-08 10:00 ET",
+     "holds": [
+      {
+       "rule": "NF-7.8",
+       "line": 1,
+       "finding": "Line 1 bills 300 cases; 270 shipped and 270 accepted; held value $1620.00",
+       "advice": "AA-INV-7731",
+       "advice_sent": "2026-11-08 10:20 ET",
+       "link": "document/AA-INV-7731"
+      }
+     ],
+     "state": "Original replaced; matching INV-7731C-S",
+     "compared": {
+      "purchase_order": {
+       "reference": "NR-450118",
+       "link": "order/NR-450118"
+      },
+      "receiving_advice": [
+       {
+        "reference": "RCV-DC2-77290",
+        "link": "document/RCV-DC2-77290"
+       },
+       {
+        "reference": "RCV-DC2-77355",
+        "link": "document/RCV-DC2-77355"
+       }
+      ],
+      "invoice": {
+       "reference": "INV-7731",
+       "link": "document/INV-7731"
+      }
+     }
+    }
+   ],
+   "awaiting": [],
+   "outcome": {
+    "invoice": "INV-7731",
+    "state": "Original replaced; matching INV-7731C-S",
+    "matching": "INV-7731C-S",
+    "total_fault": false,
+    "lines": [
+     {
+      "line": 1,
+      "status": "clear",
+      "billed": 270,
+      "received": 270,
+      "settling_record": null
+     },
+     {
+      "line": 2,
+      "status": "short_pay_decided",
+      "billed": 120,
+      "received": 119,
+      "settling_record": "Jordan Ellis decided to short-pay line 2 by 1 case at payment; the receiving advice stands (NF-5.5)"
+     },
+     {
+      "line": 3,
+      "status": "clear",
+      "billed": 80,
+      "received": 80,
+      "settling_record": null
+     }
+    ],
+    "first_step": "request_credit_or_corrected_invoice",
+    "steps": [
+     "request_credit_or_corrected_invoice [1,2]",
+     "match_corrected_invoice INV-7731C-S",
+     "request_proof_of_delivery [2]",
+     "short_pay_at_payment [2]"
+    ],
+    "proposed_clear_for_payment": [],
+    "payment_released": false,
+    "supplier_claims": [
+     {
+      "line": 2,
+      "supplier_said": "The short carton on line 2 was delivered on a later truck on 9 November. Please pay all 120 cases.",
+      "state": "Closed: the supplier found no proof and withdrew it"
+     }
+    ],
+    "open_supplier_claims": 0,
+    "requests": [
+     {
+      "id": "RQ-1",
+      "kind": "correction",
+      "lines": [
+       1,
+       2
+      ],
+      "answer": "corrected_invoice INV-7731C-S (synthetic)"
+     },
+     {
+      "id": "RQ-2",
+      "kind": "proof",
+      "lines": [
+       2
+      ],
+      "answer": "withdrawn (synthetic)"
+     }
+    ],
+    "approvals": 3,
+    "actions_executed": 4,
+    "actions_failed": 0,
+    "actions_refused": 3,
+    "violations": [],
+    "synthetic": "Supplier answers are synthetic, from the deterministic rules in src/match.js, except a recorded corrected invoice revealed at its recorded time"
+   },
+   "ashby_sees": {
+    "invoices": [
+     {
+      "invoice": "INV-7731",
+      "po": "NR-450118",
+      "application_advice": [
+       {
+        "reference": "AA-INV-7731",
+        "sent": "2026-11-08 10:20 ET",
+        "cause": "Invoice quantity above accepted quantity",
+        "rule": "NF-7.8"
+       }
+      ]
+     }
+    ],
+    "requests_received": [
+     {
+      "invoice": "INV-7731",
+      "kind": "correction",
+      "lines": [
+       1,
+       2
+      ],
+      "sent": "2026-11-10 09:00 ET",
+      "via": "request_change"
+     },
+     {
+      "invoice": "INV-7731",
+      "kind": "proof",
+      "lines": [
+       2
+      ],
+      "sent": "2026-11-10 15:30 ET",
+      "via": "request_change"
+     }
+    ],
+    "not_shown": "Northfield’s accounts payable records, match notes and proposals are Northfield’s"
+   },
+   "trace": [
+    {
+     "n": 1,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Session branched from Northfield’s recorded records",
+     "detail": {
+      "at": "2026-11-10 09:00 ET",
+      "hidden": "Every record dated after the session clock",
+      "facts": [
+       {
+        "fact": "ashby_note",
+        "from": "",
+        "to": "The short carton on line 2 was delivered on a later truck on 9 November. Please pay all 120 cases."
+       }
+      ]
+     }
+    },
+    {
+     "n": 2,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "1 invoice held at the story moment",
+     "detail": {
+      "holds": [
+       {
+        "invoice": "INV-7731",
+        "rules": [
+         "NF-7.8"
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "n": 3,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_queue",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 4,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_policy",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 5,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_invoice",
+     "detail": {
+      "args": {
+       "invoice": "INV-7731"
+      }
+     }
+    },
+    {
+     "n": 6,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_order",
+     "detail": {
+      "args": {
+       "po": "NR-450118"
+      }
+     }
+    },
+    {
+     "n": 7,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_receipts",
+     "detail": {
+      "args": {
+       "po": "NR-450118"
+      }
+     }
+    },
+    {
+     "n": 8,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_ship_notices",
+     "detail": {
+      "args": {
+       "po": "NR-450118"
+      }
+     }
+    },
+    {
+     "n": 9,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Trading Grid",
+     "type": "rule",
+     "what": "Refused request_credit_or_corrected_invoice",
+     "detail": {
+      "by": "Match Agent",
+      "reason": "Ask for every short line together: add lines 2 to this request, as the baseline does."
+     }
+    },
+    {
+     "n": 10,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Proposed: Ask the supplier for a credit memo or corrected invoice for the named lines (request_change)",
+     "detail": {
+      "proposal": "MP-1",
+      "args": {
+       "lines": [
+        1,
+        2
+       ],
+       "invoice": "INV-7731"
+      },
+      "rationale": "Lines 1 and 2 are billed above what was received: Line 1 bills 300 cases with 270 received, and Line 2 bills 120 cases with 119 received per receiving advices RCV-DC2-77290 and RCV-DC2-77355.",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 11,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Match Agent said",
+     "detail": {
+      "text": "I have proposed requesting a credit memo or corrected invoice from Ashby Supplier for lines 1 and 2 of invoice INV-7731, because line 1 bills 300 cases while only 270 were received, and line 2 bills 120 cases while only 119 were received. I am now awaiting Jordan Ellis's approval."
+     }
+    },
+    {
+     "n": 12,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Jordan Ellis",
+     "type": "human",
+     "what": "Approved MP-1 on INV-7731: Ask the supplier for a credit memo or corrected invoice for the named lines (request_change)",
+     "detail": {
+      "args": {
+       "lines": [
+        1,
+        2
+       ],
+       "invoice": "INV-7731"
+      },
+      "record": "INV-7731",
+      "payment": "No payment state changed: payment release stays in Northfield accounts payable"
+     }
+    },
+    {
+     "n": 13,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Correction request sent to Ashby Supplier through request_change",
+     "detail": {
+      "request": "RQ-1",
+      "lines": [
+       1,
+       2
+      ],
+      "rules": [
+       "NF-7.8",
+       "NF-7.2"
+      ]
+     }
+    },
+    {
+     "n": 14,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Ashby (synthetic)",
+     "type": "external",
+     "what": "Technical acknowledgment (997) of the request",
+     "detail": {
+      "at": "2026-11-10 09:05 ET",
+      "note": "A 997 is not acceptance"
+     }
+    },
+    {
+     "n": 15,
+     "clock": "2026-11-10 09:00 ET",
+     "actor": "Ashby (synthetic)",
+     "type": "external",
+     "what": "Sends corrected invoice INV-7731C-S",
+     "detail": {
+      "at": "2026-11-10 15:30 ET",
+      "lines": [
+       {
+        "line": 1,
+        "qty": 270,
+        "price": 54
+       },
+       {
+        "line": 2,
+        "qty": 120,
+        "price": 38.4
+       },
+       {
+        "line": 3,
+        "qty": 80,
+        "price": 46.8
+       }
+      ],
+      "total": 22932,
+      "text": "Lines 2 shipped in full on Ashby Supplier's ship notices; Ashby Supplier does not credit it. The short carton on line 2 was delivered on a later truck on 9 November. Please pay all 120 cases."
+     }
+    },
+    {
+     "n": 16,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Clock moved to the supplier’s answer",
+     "detail": {
+      "to": "2026-11-10 15:30 ET"
+     }
+    },
+    {
+     "n": 17,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_requests",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 18,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_corrections",
+     "detail": {
+      "args": {
+       "invoice": "INV-7731"
+      }
+     }
+    },
+    {
+     "n": 19,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Proposed: Match the corrected invoice or credit memo on file; the original stays replaced",
+     "detail": {
+      "proposal": "MP-2",
+      "args": {
+       "invoice": "INV-7731",
+       "correction": "INV-7731C-S"
+      },
+      "rationale": "Ashby Supplier provided corrected invoice INV-7731C-S which corrects line 1 to 270 cases, matching the receiving advice.",
+      "alternatives": [],
+      "needs": "policy"
+     }
+    },
+    {
+     "n": 20,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Rule engine",
+     "type": "rule",
+     "what": "Matched INV-7731C-S; INV-7731 stays replaced (NF-7.2)",
+     "detail": {
+      "lines": [
+       "1: clear",
+       "2: above_received",
+       "3: clear"
+      ]
+     }
+    },
+    {
+     "n": 21,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Proposed: Ask the supplier for the ship notice and the carrier’s proof of delivery behind a delivery its answer claims, for the named lines (request_change)",
+     "detail": {
+      "proposal": "MP-3",
+      "args": {
+       "invoice": "INV-7731",
+       "lines": [
+        2
+       ]
+      },
+      "rationale": "Ashby Supplier claims the short carton on line 2 was delivered on a later truck on 9 November, so we request proof of delivery before deciding on short-paying.",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 22,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Match Agent said",
+     "detail": {
+      "text": "I have matched the corrected invoice INV-7731C-S for line 1 (adjusting it to 270 cases as received), and proposed requesting proof of delivery from Ashby Supplier for line 2 to verify their claim that the short carton was delivered on a later truck on 9 November. I am awaiting Jordan Ellis's approval for MP-3."
+     }
+    },
+    {
+     "n": 23,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Jordan Ellis",
+     "type": "human",
+     "what": "Approved MP-3 on INV-7731: Ask the supplier for the ship notice and the carrier’s proof of delivery behind a delivery its answer claims, for the named lines (request_change)",
+     "detail": {
+      "args": {
+       "invoice": "INV-7731",
+       "lines": [
+        2
+       ]
+      },
+      "record": "INV-7731",
+      "payment": "No payment state changed: payment release stays in Northfield accounts payable"
+     }
+    },
+    {
+     "n": 24,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Request for the ship notice and proof of delivery sent to Ashby Supplier through request_change",
+     "detail": {
+      "request": "RQ-2",
+      "lines": [
+       2
+      ],
+      "rules": [
+       "NF-5.5"
+      ]
+     }
+    },
+    {
+     "n": 25,
+     "clock": "2026-11-10 15:30 ET",
+     "actor": "Ashby Supplier (synthetic)",
+     "type": "external",
+     "what": "Withdraws its delivery claim",
+     "detail": {
+      "at": "2026-11-10 18:30 ET",
+      "text": "Ashby Supplier finds no ship notice or delivery receipt for a later delivery on lines 2 and withdraws the claim."
+     }
+    },
+    {
+     "n": 26,
+     "clock": "2026-11-10 18:30 ET",
+     "actor": "Trading Grid",
+     "type": "system",
+     "what": "Clock moved to the supplier’s answer",
+     "detail": {
+      "to": "2026-11-10 18:30 ET"
+     }
+    },
+    {
+     "n": 27,
+     "clock": "2026-11-10 18:30 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_requests",
+     "detail": {
+      "args": {}
+     }
+    },
+    {
+     "n": 28,
+     "clock": "2026-11-10 18:30 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Proposed: The supplier did not correct the named lines: Jordan Ellis decides to short-pay them at payment by the cases the receiving advice does not show",
+     "detail": {
+      "proposal": "MP-4",
+      "args": {
+       "lines": [
+        2
+       ],
+       "invoice": "INV-7731"
+      },
+      "rationale": "Ashby Supplier withdrew its claim of a later delivery for line 2 and receiving advice RCV-DC2-77355 shows 119 received of 120 billed.",
+      "alternatives": [],
+      "needs": "approve"
+     }
+    },
+    {
+     "n": 29,
+     "clock": "2026-11-10 18:30 ET",
+     "actor": "Match Agent",
+     "type": "ai",
+     "what": "Match Agent said",
+     "detail": {
+      "text": "I have proposed short-paying line 2 of invoice INV-7731 at payment for 1 case, because Ashby Supplier withdrew its claim of a later delivery and receiving advice RCV-DC2-77355 records 119 received out of 120 billed. I am now awaiting Jordan Ellis's approval."
+     }
+    },
+    {
+     "n": 30,
+     "clock": "2026-11-10 18:30 ET",
+     "actor": "Jordan Ellis",
+     "type": "human",
+     "what": "Approved MP-4 on INV-7731: The supplier did not correct the named lines: Jordan Ellis decides to short-pay them at payment by the cases the receiving advice does not show",
+     "detail": {
+      "args": {
+       "lines": [
+        2
+       ],
+       "invoice": "INV-7731"
+      },
+      "record": "INV-7731",
+      "payment": "No payment state changed: payment release stays in Northfield accounts payable"
+     }
+    },
+    {
+     "n": 31,
+     "clock": "2026-11-10 18:30 ET",
+     "actor": "Northfield accounts payable",
+     "type": "system",
+     "what": "Lines 2 marked to short-pay at payment; payment release stays in accounts payable",
+     "detail": {
+      "rules": [
+       "NF-5.5"
+      ],
+      "payment": "No payment state changed: payment release stays in Northfield accounts payable"
+     }
+    },
+    {
+     "n": 32,
+     "clock": "2026-11-10 18:30 ET",
+     "actor": "Match Agent",
+     "type": "tool",
+     "what": "Read read_invoice",
+     "detail": {
+      "args": {
+       "invoice": "INV-7731"
+      }
+     }
+    },
+    {
+     "n": 33,
+     "clock": "2026-11-10 18:30 ET",
+     "actor": "Trading Grid",
+     "type": "rule",
+     "what": "Refused release_for_payment_proposal",
+     "detail": {
+      "by": "Match Agent",
+      "reason": "Lines 2 are not clear: 2 short_pay_decided (Jordan Ellis decided to short-pay line 2 by 1 case at payment; the receiving advice stands (NF-5.5))."
+     }
+    },
+    {
+     "n": 34,
+     "clock": "2026-11-10 18:30 ET",
+     "actor": "Trading Grid",
+     "type": "rule",
+     "what": "Refused release_for_payment_proposal",
+     "detail": {
+      "by": "Match Agent",
+      "reason": "release_for_payment_proposal takes only invoice, lines; refused invoice_line."
+     }
+    },
+    {
+     "n": 35,
+     "clock": "2026-11-10 18:30 ET",
+     "actor": "Match Agent",
+     "type": "system",
+     "what": "Waiting for Jordan Ellis: release_for_payment_proposal takes only invoice, lines; refused invoice_line.",
+     "detail": {
+      "refused": {
+       "request_credit_or_corrected_invoice": 1,
+       "release_for_payment_proposal": 2
+      }
+     }
+    }
+   ],
+   "overhead": {
+    "model_calls": 20,
+    "tool_calls": 17,
+    "ms": 33595,
+    "model_routes": {
+     "primary · gemini-3.5-flash-lite": 20
+    }
+   }
+  }
+ ]
+}

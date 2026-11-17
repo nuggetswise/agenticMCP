@@ -15,11 +15,10 @@ const DATA = {
     const rule = (id) => db.prepare('SELECT id, statement FROM rules WHERE id = ?').get(id);
     const drafts = NR.draftRules(db).drafts;
     return { drafts, replays: Object.fromEntries(drafts.map((d) => [d.id, NR.replayRule(db, { draft: d.id })])), rules: { 'NF-4.2': { ...rule('NF-4.2') }, 'NF-7.11': { ...rule('NF-7.11') } } }; },
-  // P13: the last recorded real run through Ashby's connector (docs/phase3/p13/recorded-run.json), never a scripted one.
-  p13: async () => { const W = await import('../src/watch.js'); const f = join(ROOT, 'docs', 'phase3', 'p13', 'recorded-run.json');
-    const rec = existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : {}; return { start: rec.start || null, final: rec.final || null, recorded_at: rec.recorded_at || null, setup: W.setup() }; },
-  // P14: the last recorded real run through Northfield's connector (docs/phase3/p14/recorded-run.json).
-  p14: async () => { const M = await import('../src/match.js'); const f = join(ROOT, 'docs', 'phase3', 'p14', 'recorded-run.json'); const db = new DatabaseSync(join(ROOT, 'build', 'northfield.db'), { readOnly: true });
+  // P13 (D75, no agent): the rules' own run on the built world, order by order; deterministic, so it is computed here.
+  p13: async () => { const W = await import('../src/watch.js'); const db = new DatabaseSync(join(ROOT, 'build', 'tg.db'), { readOnly: true }); return W.rulesRecording(db); },
+  // P14: the last recorded real run through Northfield's connector, view by view (docs/phase4/runs/match-steps.json).
+  p14: async () => { const M = await import('../src/match.js'); const f = join(ROOT, 'docs', 'phase4', 'runs', 'match-steps.json'); const db = new DatabaseSync(join(ROOT, 'build', 'northfield.db'), { readOnly: true });
     const rec = existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : {}; return { steps: rec.steps || [], recorded_at: rec.recorded_at || null, setup: M.setup(db) }; },
   // P21: what each side's connection answers at the start of the demo, for a viewer whose connector cannot be reached (Simulated).
   p21: async () => { const G = await import('../src/governance.js'); const db = new DatabaseSync(join(ROOT, 'build', 'tg.db'), { readOnly: true }); const nf = new DatabaseSync(join(ROOT, 'build', 'northfield.db'), { readOnly: true });

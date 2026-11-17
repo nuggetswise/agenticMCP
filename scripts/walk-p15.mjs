@@ -13,8 +13,11 @@ await p.click('button:has-text("Replay against the quarter")'); await p.waitForT
 const t1 = await txt(); ok('replay shows failing now, with the draft and exposure', /Failing now\s*32/.test(t1) && /With the draft\s*541/.test(t1) && /\$76,350/.test(t1), t1.slice(0, 400));
 ok('recorded replay is labelled Simulated', /Simulated/.test(t1));
 await p.screenshot({ path: join(ROOT, 'docs/phase3/p15/replayed.png'), fullPage: false });
+ok('publish, revise and keep are offered after the replay', await p.$$eval('.tgk-bar .btns button', (x) => x.map((y) => y.textContent).join('|')) === 'Publish to suppliers|Revise draft|Keep as draft');
+await p.click('button:has-text("Revise draft")'); await p.waitForTimeout(200); ok('Revise draft opens the revised value', !!(await p.$('#v')));
+ok('the draft list holds only drafts', (await p.$$eval('.tgk-qrow .ref', (r) => r.map((x) => x.textContent).join(','))) === 'NFD-1,NFD-2');
 await p.click('button:has-text("Publish to suppliers")'); await p.waitForTimeout(500);
 ok('publish without the connector sends nothing and says so', /nothing was sent/.test(await txt()));
 await p.click('button.tgk-qrow:has-text("NFD-2")'); await p.waitForTimeout(200); ok('NFD-2 opens from the queue', /0\.25%/.test(await txt()));
 ok('no script errors', errs.length === 0, errs.join('|'));
-console.log(`clicks on the main path: 3 (replay, publish, next draft)`); await b.close(); process.exit(fails ? 1 : 0);
+console.log(`clicks on the main path: 2 (replay, publish); NFD-2 opens from the list`); await b.close(); process.exit(fails ? 1 : 0);

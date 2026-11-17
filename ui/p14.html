@@ -13,7 +13,7 @@
    LAYOUT: light header, queue left (380px), record right; one column under 960px. */
 body{margin:0;background:var(--tgk-bg);font-family:Inter,"Helvetica Neue",Arial,sans-serif;color:var(--tgk-body);overflow-x:clip}
 .top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px max(16px,env(safe-area-inset-right)) 10px max(16px,env(safe-area-inset-left));background:var(--tgk-card);border-bottom:1px solid var(--tgk-divider)}
-.mark{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--tgk-from),var(--tgk-to))}
+.mark{width:26px;height:26px;border-radius:6px;background:linear-gradient(135deg,var(--tgk-from),var(--tgk-to))}
 .top b{color:var(--tgk-ink);font-size:14px}.top .ws{color:var(--tgk-muted);font-size:13px}.top .sp{flex:1}.top .who,.top .clk{font-size:13px;color:var(--tgk-ink)}.top .clk{color:var(--tgk-muted)}
 main{max-width:1320px;margin:0 auto;padding:20px max(16px,env(safe-area-inset-right)) 120px max(16px,env(safe-area-inset-left))}
 h1{margin:0;font-size:22px;color:var(--tgk-ink);text-wrap:balance}.lead{margin:4px 0 18px;color:var(--tgk-muted);font-size:13.5px;max-width:860px}
@@ -30,7 +30,7 @@ details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}.dra
 <body>
 <header class="top"><span class="mark" aria-hidden="true"></span><b>Trading Grid</b><span class="ws">Northfield workspace · Accounts payable</span><span class="sp"></span><span class="clk" id="clk"></span><button class="tgk-btn" type="button" id="hist">History</button><button class="tgk-btn" type="button" id="agents">Agents</button><span class="who">Jordan Ellis</span></header>
 <main>
-<h1>Held invoices and the record that settles each</h1>
+<h1 id="h1">Held invoices and the record that settles each</h1>
 <p class="lead">Match Agent read the purchase order, the receiving advice and the invoice. Nothing reaches the supplier until Jordan Ellis approves it, and payment release stays in Northfield accounts payable.</p>
 <div class="cols"><section class="queue" aria-label="Needs review"><div class="qh"><h2 id="qt">Needs review</h2></div><div id="q"></div></section><section class="record" id="rec" aria-live="polite"><p class="wait">Match Agent is reading the held invoices.</p></section></div>
 </main>
@@ -38,14 +38,19 @@ details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}.dra
 <script>
 {
   const K = window.TGAgentKit; K.injectCss();
-  // The last recorded real run through Northfield's connector, shown only when the viewer's connector cannot be reached;
+  // The last recorded real run through Northfield's connector (docs/phase4/runs/match-steps.json), shown only when the viewer's connector cannot be reached;
   // the record then carries the Simulated label.
   const RECORDED = __P14_DATA__;
   const KIND = { rule: 'rule', ai: 'agent', human: 'person', external: 'outside', system: 'system' };
-  const STATUS = { above_shipped: 'Billed above shipped', above_received: 'Billed above received', clear: 'Clear', price_held: 'Price above tolerance', price_cleared: 'Price set by an accepted change' };
+  const STATUS = { above_shipped: 'Billed above shipped', above_received: 'Billed above received', clear: 'Clear', price_held: 'Price above tolerance', price_cleared: 'Price set by an accepted change', short_pay_decided: 'Short-pay decided' };
+  // The decision table takes these steps too, so they carry no agent credit; asking for proof of a claimed delivery is Match Agent's own.
+  const TABLE = new Set(['request_credit_or_corrected_invoice', 'clear_line_by_accepted_change', 'match_corrected_invoice', 'reject_document_fault', 'release_for_payment_proposal', 'short_pay_at_payment']);
+  const ACT = { request_credit_or_corrected_invoice: 'Ask for a credit memo or corrected invoice', clear_line_by_accepted_change: 'Clear the price-held line', match_corrected_invoice: 'Match the corrected invoice', reject_document_fault: 'Reject as a document fault', release_for_payment_proposal: 'Propose lines clear for payment', request_proof_of_delivery: 'Ask for the later ship notice and the carrier’s delivery receipt', short_pay_at_payment: 'Short-pay at payment' };
+  const who = (t) => { const a = String(t.actor).replace(/\s*\(synthetic\)/, '').replace(/^Ashby$/, 'Ashby Supplier'); return a === 'Rule engine' ? 'Rule' : a === 'Match Agent' && t.type === 'ai' && /^Proposed:/.test(t.what) && !/proof of delivery/.test(t.what) ? 'Rule' : a; };
+  const shown = (t) => t.type !== 'tool' && !/^Refused |^Waiting for Jordan Ellis:|^Session branched|Match Agent said|^Clock moved/.test(t.what);
   const S = { step: 0, view: null, live: false, conn: null, open: 0, editing: false, rows: null, busy: false, decided: {}, sim: false };
   const time = (t) => String(t || '').replace(/\d{4}-\d{2}-\d{2} /g, '');
-  const said = (t) => time(`${t.what}${t.detail && t.detail.text ? ': ' + short(t.detail.text) : ''}`).replace(/\*\*/g, '').replace(/\s+/g, ' ');
+  const said = (t) => time(`${t.what}${t.detail && t.detail.text ? ': ' + short(t.detail.text) : ''}`).replace(/\*\*/g, '').replace(/\bMP-\d+ on [A-Z0-9-]+:?\s*/g, '').replace(/ \(request_change\)| through request_change/g, '').replace(/ on \d{1,2} (January|February|March|April|May|June|July|August|September|October|November|December)/g, '').replace(/\s+/g, ' ');
   const short = (s) => { const w = String(s || '').split(/\s+/); return w.length > 25 ? w.slice(0, 25).join(' ') + '…' : String(s || ''); };
   async function call(tool, input) {
     if (S.conn === null) S.conn = await K.connector('northfield') || false;
@@ -55,14 +60,15 @@ details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}.dra
   }
   const held = () => (S.view && S.view.queue) || [];
   const awaitingFor = (inv) => ((S.view && S.view.awaiting) || []).filter((p) => p.args && p.args.invoice === inv);
-  const traceFor = (inv) => ((S.view && S.view.trace) || []).filter((t) => t.type !== 'tool');
+  const traceFor = (inv) => ((S.view && S.view.trace) || []).filter(shown);
   const outcomeFor = (inv) => { const o = S.view && S.view.outcome; return o && (o.invoice === inv ? o : Array.isArray(o) ? o.find((x) => x.invoice === inv) : o); };
 
   function drawQueue() {
     const list = held(); document.getElementById('qt').textContent = `Needs review · ${list.filter((r) => r.state !== 'Matched').length}`;
     document.getElementById('q').replaceChildren(...list.map((r, i) => { const live = awaitingFor(r.invoice).length && !S.decided[r.invoice];
-      return K.queueRow({ ref: r.invoice, chip: live ? 'Ready for review' : r.state, tone: live ? 'live' : /Matched|Settled/.test(r.state) ? 'done' : /Held|Rejected/.test(r.state) ? 'fail' : 'wait', line: r.holds && r.holds.length ? r.holds.map((h) => h.finding.replace(/; held value .*/, '')).join('; ') : r.state, open: i === S.open, onSelect: () => { S.open = i; S.editing = false; draw(); } }); }));
+      return K.queueRow({ ref: r.invoice, chip: live ? 'Ready for review' : /^Original replaced/.test(r.state) ? 'Corrected invoice matched' : r.state, tone: live ? 'live' : /Matched|Settled/.test(r.state) ? 'done' : /Held|Rejected/.test(r.state) ? 'fail' : 'wait', line: (() => { const o = outcomeFor(r.invoice); const open = o && o.lines ? o.lines.filter((l) => !/clear/.test(l.status)) : []; return open.length ? open.map((l) => `Line ${l.line}: ${l.billed} billed, ${l.received} received${l.status === 'short_pay_decided' ? ', short-pay decided' : ''}`).join('; ') : r.state; })(), open: i === S.open, onSelect: () => { S.open = i; S.editing = false; draw(); } }); }));
     document.getElementById('clk').textContent = S.view ? time(S.view.clock) : '';
+    const o0 = S.view && outcomeFor(list[0] && list[0].invoice); if (o0 && o0.lines && !S.titled && (S.titled = true)) { const n = o0.lines.filter((l) => l.status !== 'clear').length; document.getElementById('h1').textContent = `Invoice ${o0.invoice} is held on ${n} line${n === 1 ? '' : 's'}`; }
   }
 
   function factsFor(r, o) {
@@ -72,7 +78,8 @@ details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}.dra
     if (c.purchase_order) f.push(K.factRow({ text: `Purchase order ${c.purchase_order.reference} is the commitment the invoice is matched against`, system: 'Purchase order', via: 'EDI 850', doc: { title: `Purchase order ${c.purchase_order.reference}`, fields: [['Buyer', 'Northfield Retailer'], ['Supplier', r.supplier], ['Order', c.purchase_order.reference]] } }));
     for (const ra of c.receiving_advice || []) { const lines = (o && o.lines || []).filter((l) => l.settling_record && l.settling_record.includes(ra.reference));
       f.push(K.factRow({ text: `Receiving advice ${ra.reference}${lines.length ? `: ${lines.map((l) => `line ${l.line} received ${l.received} of ${l.billed}`).join('; ')}` : ''}`, system: 'Northfield receiving', via: 'EDI 861', doc: { title: `Receiving advice ${ra.reference}`, fields: [['Order', c.purchase_order ? c.purchase_order.reference : r.po], ['Receiving advice', ra.reference], ...lines.map((l) => [`Line ${l.line}`, `${l.received} received of ${l.billed} billed`])] } })); }
-    if (c.invoice && o && o.lines) f.push(K.factRow({ text: `Invoice ${c.invoice.reference} bills ${o.lines.map((l) => `line ${l.line} ${l.billed}`).join(', ')} cases`, system: 'Invoice', via: 'EDI 810', doc: { title: `Invoice ${c.invoice.reference}`, fields: [['Supplier', r.supplier], ['Order', r.po], ...o.lines.map((l) => [`Line ${l.line}`, `${l.billed} cases billed`])] } }));
+    for (const cl of (o && o.supplier_claims) || []) f.push(K.factRow({ text: `Ashby Supplier keeps line ${cl.line} as billed: it says the short carton came on a later truck · ${/^Closed/.test(cl.state) ? 'claim withdrawn, no proof found' : 'claim open'}`, system: 'Ashby Supplier', via: 'EDI 810', doc: { title: `Corrected invoice ${o.matching}`, fields: [['Supplier', r.supplier], ['Order', r.po], ['Line', String(cl.line)], ['Claim', /^Closed/.test(cl.state) ? 'Withdrawn: no ship notice or delivery receipt found' : 'Open: delivered on a later truck']] } }));
+    if (c.invoice && o && o.lines) f.push(K.factRow({ text: `${o.matching !== c.invoice.reference ? `Corrected invoice ${o.matching} replaces ${c.invoice.reference} and` : `Invoice ${c.invoice.reference}`} bills ${o.lines.map((l) => `line ${l.line} ${l.billed}`).join(', ')} cases`, system: 'Invoice', via: 'EDI 810', doc: { title: `Invoice ${o.matching || c.invoice.reference}`, fields: [['Supplier', r.supplier], ['Order', r.po], ...o.lines.map((l) => [`Line ${l.line}`, `${l.billed} cases billed`])] } }));
     return f;
   }
   const AFTER = {
@@ -81,17 +88,20 @@ details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}.dra
     match_corrected_invoice: (a) => ['Held', `Matched to ${a.correction}`, 'Northfield match', null],
     reject_document_fault: () => ['Held', 'Rejected as a document fault', 'Ashby Supplier', 'EDI 824'],
     release_for_payment_proposal: (a) => ['Held', `Lines ${(a.lines || []).join(', ')} proposed clear`, 'Jordan Ellis', 'Accounts payable'],
+    request_proof_of_delivery: (a) => ['Claim unproved', `Proof asked for line${(a.lines || []).length === 1 ? '' : 's'} ${(a.lines || []).join(' and ')}`, 'Ashby Supplier', 'Trading Grid request'],
+    short_pay_at_payment: (a) => ['Billed above received', `Line${(a.lines || []).length === 1 ? '' : 's'} ${(a.lines || []).join(' and ')} short-paid at payment`, 'Northfield accounts payable', null],
   };
   function says(rows) {
-    if (!rows.length) return 'Approve sends nothing; this invoice stays a manual task for Jordan Ellis. No payment state changes.';
-    const toSup = rows.filter((x) => x.goesTo === 'Ashby Supplier'); const inNF = rows.filter((x) => x.goesTo !== 'Ashby Supplier');
-    return `Approve sends ${toSup.length ? toSup.map((x) => x.after.replace(/^Correction asked for /, 'a correction request for ').replace(/^Rejected as a document fault$/, 'a rejection of the invoice as a document fault')).join(' and ') + ' to Ashby Supplier' : 'nothing to the supplier'}${inNF.length ? ` and records ${inNF.map((x) => x.after.toLowerCase()).join(' and ')} in Northfield's match` : ''}. No payment state changes; payment release stays in Northfield accounts payable.`;
+    if (!rows.length) return 'Approve sends nothing; this invoice stays a manual task for Jordan Ellis. Payment stays held.';
+    const out = rows.map((x) => /^Correction asked/.test(x.after) ? `Sends 1 request to Ashby Supplier for a corrected invoice on ${x.after.replace(/^Correction asked for /, '')}.` : /^Proof asked/.test(x.after) ? `Sends 1 request to Ashby Supplier for the later ship notice and the carrier's delivery receipt on ${x.after.replace(/^Proof asked for /, '')}.`
+      : /short-paid/.test(x.after) ? `Marks ${x.after.replace(/ short-paid at payment$/, '').toLowerCase()} to short-pay at payment by the cases the receiving advice does not show.` : /^Rejected/.test(x.after) ? 'Sends 1 rejection of the invoice as a document fault to Ashby Supplier.' : `Records ${x.after.toLowerCase()} in Northfield's match.`);
+    return `${out.join(' ')} ${rows.some((x) => /short-paid/.test(x.after)) ? 'Payment release stays in accounts payable.' : 'Payment stays held.'}`;
   }
   async function approve(r, props) {
     S.busy = true; draw(); let v = null;
     if (S.live) for (const p of props) { const out = await call('match_decide', { session: S.view.session, proposal: p.id, decision: 'approve' }); if (out && out.session) v = out; else if (out) S.notice = out.failed || out.message; }
     else if (RECORDED.steps && RECORDED.steps[S.step + 1]) { S.step++; v = RECORDED.steps[S.step]; }
-    if (v) S.view = v; S.decided[r.invoice] = v && awaitingFor(r.invoice).length ? null : 'approved'; S.busy = false; S.editing = false; draw();
+    if (v) S.view = v; S.decided[r.invoice] = v && awaitingFor(r.invoice).length ? null : 'approved'; S.rows = null; S.busy = false; S.editing = false; draw();
   }
   async function takeOver(r, props, edited) {
     S.busy = true; draw();
@@ -100,11 +110,11 @@ details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}.dra
     S.decided[r.invoice] = 'edited'; S.busy = false; S.editing = false; draw();
   }
   function timelineFor(r, o) {
-    const tr = traceFor(r.invoice).filter((t) => t.actor !== 'Trading Grid' || !/branched/.test(t.what)).slice(-6).map((t) => ({ state: 'done', text: `${t.actor} · ${said(t)}` }));
-    const settled = /Matched|Settled|Clear/.test((o && o.state) || r.state);
+    const tr = traceFor(r.invoice).filter((t) => t.actor !== 'Trading Grid' || !/branched/.test(t.what)).filter((t) => !/^Proposed:/.test(t.what)).slice(-8).map((t) => ({ state: 'done', text: `${who(t)} · ${said(t)}` }));
+    const settled = !!o && /matching|Matched|Settled|Clear/.test(o.state) && o.lines.every((l) => /clear|cleared|decided/.test(l.status)) && !awaitingFor(r.invoice).length;
     return [{ state: 'done', text: `${r.invoice} held under ${(r.holds || []).map((h) => h.rule).join(' and ')} · Match Agent read the purchase order, receiving advice and invoice` }, ...tr,
       ...(S.decided[r.invoice] === 'edited' ? [{ state: 'done', text: 'Edited by Jordan Ellis · Match Agent watching for the supplier’s next document on this invoice' }] : []),
-      { state: settled ? 'settled' : 'next', text: settled ? `Matched: every line settled by its record; Northfield accounts payable releases payment` : 'The supplier’s corrected invoice or credit memo settles the held lines; Northfield accounts payable then releases payment' }];
+      { state: settled ? 'settled' : 'next', text: settled ? `${o.matching} matched; every held line settled or decided; ${o.open_supplier_claims ? `${o.open_supplier_claims} supplier claim open` : 'no supplier claim open'}` : 'The corrected invoice is matched and every held line is settled or decided' }];
   }
   function draw() {
     drawQueue(); const rec = document.getElementById('rec'); const r = held()[S.open];
@@ -113,26 +123,26 @@ details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}.dra
     const o = outcomeFor(r.invoice); const props = awaitingFor(r.invoice);
     const parts = [K.recordHeader({ title: r.invoice, sub: `${r.supplier} · order ${r.po}` }), K.el('div', { class: 'sec' }, K.el('h3', { class: 'tgk-label', text: 'What is wrong' }), ...factsFor(r, o))];
     if (props.length && !S.decided[r.invoice]) {
-      const base = props.map((p) => { const [now, after, goesTo, via] = (AFTER[p.action] || (() => ['', p.does, '', null]))(p.args || {}); return { action: p.does.replace(/ \(request_change\)/, ''), now, after, goesTo, via }; });
+      const base = props.map((p) => { const [now, after, goesTo, via] = (AFTER[p.action] || (() => ['', p.does, '', null]))(p.args || {}); return { action: ACT[p.action] || p.does, now, after, goesTo, via }; });
       if (!S.rows || S.rowsFor !== r.invoice) { S.rows = base.map((x) => ({ ...x })); S.rowsFor = r.invoice; }
       const rows = S.editing ? S.rows : base;
-      parts.push(K.nowAfter({ agent: 'Match Agent', rows, editable: S.editing, chip: S.editing ? 'Edited by you' : 'Ready for review', reason: short(props.map((p) => p.rationale).filter(Boolean)[0]), onChange: (x) => { S.rows = x; draw(); } }));
+      parts.push(K.nowAfter({ agent: props.every((p) => TABLE.has(p.action)) ? 'Trading Grid' : 'Match Agent', rows, editable: S.editing, chip: S.editing ? 'Edited by you' : 'Ready for review', reason: short(time(props.map((p) => p.rationale).filter(Boolean)[0] || '').replace(/ on \d{1,2} (January|February|March|April|May|June|July|August|September|October|November|December)/g, '')), onChange: (x) => { S.rows = x; draw(); } }));
       if (S.sim) parts.push(K.el('div', {}, K.simulated({ note: 'The Northfield connector was not reached; this is the last recorded real run' })));
       parts.push(K.decisionBar({ says: says(rows), busy: S.busy, onApprove: () => S.editing ? takeOver(r, props, rows) : approve(r, props), onEdit: () => { S.editing = true; S.rows = base.map((x) => ({ ...x })); draw(); } }));
-    } else if (S.decided[r.invoice]) parts.push(K.sentState({ text: S.decided[r.invoice] === 'edited' ? 'Taken over by Jordan Ellis · Match Agent proposes again only on a new document for this invoice' : `${(o && o.state) || r.state} · approved by Jordan Ellis · correction request sent; waiting for Ashby Supplier's answer · no payment state changed` }));
+    } else if (S.decided[r.invoice]) parts.push(K.sentState({ text: S.decided[r.invoice] === 'edited' ? 'Taken over by Jordan Ellis · Match Agent proposes again only on a new document for this invoice' : `${o && o.matching !== r.invoice ? `${o.matching} matched` : r.state} · ${o && o.lines.some((l) => l.status === 'short_pay_decided') ? 'short-pay decided by Jordan Ellis' : 'approved by Jordan Ellis'} · ${o && o.open_supplier_claims ? `${o.open_supplier_claims} supplier claim open` : 'no supplier claim open'} · payment release stays in accounts payable` }));
     if (o && o.lines) parts.push(K.el('div', { class: 'sec' }, K.el('h3', { class: 'tgk-label', text: 'Lines against the receipt' }), K.el('div', { class: 'scroll' }, K.compareTable({ columns: ['Line', 'Billed', 'Received', 'Finding', 'Record that settles it'], strong: 4, rows: o.lines.map((l) => [String(l.line), String(l.billed), String(l.received), STATUS[l.status] || l.status, l.settling_record || 'Nothing to settle']) }))));
     parts.push(K.el('div', { class: 'sec' }, K.el('h3', { class: 'tgk-label', text: 'Review' }), K.timeline({ items: timelineFor(r, o) })));
     const ash = S.view.ashby_sees; const ev = traceFor(r.invoice);
     parts.push(K.el('details', { class: 'ev' }, K.el('summary', { text: 'How Match Agent worked this invoice, and what the supplier sees' }), K.el('div', { class: 'lines' },
-      ...ev.map((t) => K.traceLine({ kind: KIND[t.type] || 'system', actor: t.actor, text: `${time(t.clock)} · ${said(t)}${t.detail && t.detail.rationale ? ': ' + short(t.detail.rationale) : ''}`, synthetic: t.type === 'external' })),
-      ash ? K.el('p', { class: 'note', text: `Ashby Supplier sees the shared documents only: ${(ash.invoices || []).flatMap((x) => x.application_advice.map((a) => `application advice ${a.reference} (${a.cause})`)).concat((ash.requests_received || []).map((q) => `a correction request for lines ${q.lines.join(' and ')}`)).join('; ') || 'nothing yet'}. ${ash.not_shown}.` }) : null)));
+      ...ev.map((t) => K.traceLine({ kind: KIND[t.type] || 'system', actor: who(t), text: `${time(t.clock)} · ${said(t)}`, synthetic: t.type === 'external' })),
+      ash ? K.el('p', { class: 'note', text: `Ashby Supplier sees the shared documents only: ${(ash.invoices || []).flatMap((x) => x.application_advice.map((a) => `application advice ${a.reference} (${a.cause})`)).concat((ash.requests_received || []).map((q) => `a ${q.kind === 'proof' ? 'proof' : 'correction'} request for line${q.lines.length === 1 ? '' : 's'} ${q.lines.join(' and ')}`)).join('; ') || 'nothing yet'}. ${ash.not_shown}.` }) : null)));
     rec.replaceChildren(...parts);
   }
-  document.getElementById('hist').onclick = () => K.drawer({ title: 'History', content: K.el('div', { class: 'drawerbody' }, ...((S.view && S.view.trace) || []).filter((t) => t.type !== 'tool').map((t) => K.traceLine({ kind: KIND[t.type] || 'system', actor: t.actor, text: `${time(t.clock)} · ${said(t)}` }))) });
+  document.getElementById('hist').onclick = () => K.drawer({ title: 'History', content: K.el('div', { class: 'drawerbody' }, ...((S.view && S.view.trace) || []).filter(shown).map((t) => K.traceLine({ kind: KIND[t.type] || 'system', actor: who(t), text: `${time(t.clock)} · ${said(t)}` }))) });
   document.getElementById('agents').onclick = async () => {
     const setup = S.live ? await call('match_setup', {}) : RECORDED.setup; const body = K.el('div', { class: 'drawerbody' });
     if (setup && setup.facts) body.append(K.setupView({ title: 'Match Agent setup', lead: 'Supplier answers and changed records are synthetic; approval modes Jordan Ellis may change are open; guardrails are locked.', setup, startLabel: 'Run Match Agent with these values',
-      onStart: async ({ facts, policy }) => { if (!S.live) return; S.view = null; S.decided = {}; draw(); const v = await call('match_start', { facts, policy, label: 'Jordan Ellis' }); if (v && v.session) S.view = v; draw(); } }));
+      onStart: async ({ facts, policy }) => { if (!S.live) return; S.view = null; S.decided = {}; draw(); const v = await call('match_start', { variation: 'ashby_free_text', facts, policy, label: 'Jordan Ellis' }); if (v && v.session) S.view = v; draw(); } }));
     const gov = K.el('div'); body.append(K.el('button', { class: 'tgk-btn', type: 'button', text: 'Compare with the rule baseline', onclick: async () => {
       gov.replaceChildren(K.el('p', { class: 'note', text: S.live ? 'Running the rule baseline and Match Agent on the same facts.' : 'The comparison needs the Northfield connector.' })); if (!S.live) return;
       const rp = await call('match_replay', { detail: 'brief' }); const a = rp && rp.automation;
@@ -143,7 +153,7 @@ details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}.dra
   };
   // It starts on the business event: an invoice held in Northfield accounts payable. No start button.
   (async () => {
-    const v = await call('match_start', { label: 'Jordan Ellis' });
+    const v = await call('match_start', { variation: 'ashby_free_text', label: 'Jordan Ellis' });
     if (v && v.session && !v.blocked) { S.view = v; S.live = true; }
     else if (RECORDED && RECORDED.steps && RECORDED.steps[0]) { S.view = RECORDED.steps[0]; S.sim = true; }
     else S.notice = (v && (v.blocked || v.failed)) || 'Match Agent needs the Northfield connector, and no recorded run is in this page.';

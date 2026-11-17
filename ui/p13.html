@@ -8,12 +8,12 @@
 <style>
 /* VOICE: an enterprise workspace for Ashby's operations lead, Priya Raman.
    IDEA: a review queue of orders missing a document Northfield requires, beside one record (Direction A).
-   PICTURE: the record itself: what Watch Agent found, its suggestion, and the decision.
+   PICTURE: the record itself: what the check found, the proposed actions, and the decision.
    COLOUR and TYPE: OpenText TG Retail tokens through the agent kit; Inter.
    LAYOUT: light header, queue left (380px), record right; one column under 960px. */
 body{margin:0;background:var(--tgk-bg);font-family:Inter,"Helvetica Neue",Arial,sans-serif;color:var(--tgk-body);overflow-x:clip}
 .top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px max(16px,env(safe-area-inset-right)) 10px max(16px,env(safe-area-inset-left));background:var(--tgk-card);border-bottom:1px solid var(--tgk-divider)}
-.mark{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--tgk-from),var(--tgk-to))}
+.mark{width:26px;height:26px;border-radius:6px;background:linear-gradient(135deg,var(--tgk-from),var(--tgk-to))}
 .top b{color:var(--tgk-ink);font-size:14px}.top .ws{color:var(--tgk-muted);font-size:13px}.top .sp{flex:1}.top .who,.top .clk{font-size:13px;color:var(--tgk-ink)}
 .top .clk{font-variant-numeric:tabular-nums;color:var(--tgk-muted)}
 main{max-width:1320px;margin:0 auto;padding:20px max(16px,env(safe-area-inset-right)) 120px max(16px,env(safe-area-inset-left))}
@@ -30,24 +30,26 @@ details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}
 </style>
 </head>
 <body>
-<header class="top"><span class="mark" aria-hidden="true"></span><b>Trading Grid</b><span class="ws">Ashby workspace · Operations</span><span class="sp"></span><span class="clk" id="clk"></span><button class="tgk-btn" type="button" id="hist">History</button><button class="tgk-btn" type="button" id="agents">Agents</button><span class="who">Priya Raman</span></header>
+<header class="top"><span class="mark" aria-hidden="true"></span><b>Trading Grid</b><span class="ws">Ashby workspace · Operations</span><span class="sp"></span><span class="clk" id="clk"></span><button class="tgk-btn" type="button" id="hist">History</button><span class="who">Priya Raman</span></header>
 <main>
-<h1>Orders missing a document Northfield requires</h1>
-<p class="lead">Watch Agent read Ashby's Supplier ERP, Kinross's warehouse records and the Trading Grid document trail. Nothing reaches Northfield or Kinross until Priya Raman approves it or her standing policy allows it.</p>
-<div class="cols"><section class="queue" aria-label="Needs review"><div class="qh"><h2 id="qt">Needs review</h2><button class="tgk-btn" type="button" id="prev">Previous</button><button class="tgk-btn" type="button" id="next">Next</button></div><div id="q"></div></section><section class="record" id="rec" aria-live="polite"><p class="wait">Watch Agent is reading the open orders.</p></section></div>
+<h1 id="h1">Northfield orders missing a required document</h1>
+<p class="lead">The morning check compared every open Northfield order with Ashby's Supplier ERP, Kinross's warehouse records and the document trail. Nothing reaches Northfield or Kinross until Priya Raman approves it or her standing policy allows it.</p>
+<div class="cols"><section class="queue" aria-label="Needs review"><div class="qh"><h2 id="qt">Needs review</h2><button class="tgk-btn" type="button" id="prev">Previous</button><button class="tgk-btn" type="button" id="next">Next</button></div><div id="q"></div></section><section class="record" id="rec" aria-live="polite"><p class="wait">Checking the open orders.</p></section></div>
 </main>
 <script src="tg-agent-kit.js"></script>
 <script>
 {
   const K = window.TGAgentKit; K.injectCss();
-  // The last recorded real run through Ashby's connector (start view and the view after every proposal was decided),
-  // shown only when the viewer's connector cannot be reached; the record then carries the Simulated label.
+  // The rules' own run on the built world (start view, then each order's state after each approval), computed at build.
+  // Shown only when the viewer's connector cannot be reached; the record then carries the Simulated label.
   const RECORDED = __P13_DATA__;
   const TRADE = { '855': 'Order acknowledgment', '856': 'Ship notice', '810': 'Invoice', '945': 'Warehouse shipping advice', '997': 'Technical acknowledgment', '861': 'Receiving advice', '824': 'Application advice', '865': 'Change acknowledgment', '940': 'Warehouse order' };
   const KIND = { rule: 'rule', ai: 'agent', human: 'person', external: 'outside', system: 'system' };
-  const S = { used: new Set(), view: null, live: false, conn: null, open: 0, editing: false, rows: null, busy: false, decided: {}, sim: false };
+  const S = { step: {}, view: null, live: false, conn: null, open: 0, editing: false, rows: null, busy: false, decided: {}, sim: false };
   const time = (t) => String(t || '').replace(/\d{4}-\d{2}-\d{2} /g, '');
-  const said = (t) => time(`${t.what}${t.detail && t.detail.text ? ': ' + short(t.detail.text) : ''}`).replace(/\*\*/g, '').replace(/\s+/g, ' ');
+  const said = (t) => time(`${t.what}${t.detail && t.detail.text ? ': ' + short(t.detail.text) : ''}`).replace(/\*\*/g, '').replace(/\bWP-\d+:?\s*/g, '').replace('Send a drafted 855, 856 or 810 to Northfield', 'Send the drafted document to Northfield').replace(/\s+/g, ' ');
+  const who = (a) => a === 'Rule engine' ? 'Rule' : String(a).replace(/\s*\(synthetic\)/, '');
+  const ACT = { draft_acknowledgment: () => 'Draft the order acknowledgment', draft_ship_notice: () => 'Draft the ship notice', draft_invoice_in_erp: () => 'Create the invoice', release_document: (a) => `Send the ${(TRADE[a.document] || 'document').toLowerCase()}`, ask_kinross_status: () => 'Ask Kinross for status', flag_erp_record: () => 'Flag the early fulfilment', escalate_to_priya: () => 'Escalate to Priya Raman' };
   const mins = (a, b) => { const p = (x) => Date.parse(String(x).replace(' ET', '').replace(' ', 'T') + ':00Z'); return Math.round((p(a) - p(b)) / 60000); };
 
   async function call(tool, input) {
@@ -77,6 +79,7 @@ details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}
     const list = queueList(); const q = document.getElementById('q');
     const live = list.filter((r) => !r.closed).length;
     document.getElementById('qt').textContent = `Needs review · ${live}`;
+    const miss = new Set(list.filter((r) => !r.nothing).map((r) => r.po)).size; if (S.view && !S.titled && (S.titled = true)) document.getElementById('h1').textContent = `${miss} Northfield order${miss === 1 ? ' is' : 's are'} missing a required document`;
     const soonest = list.find((r) => r.time_left && !/^Overdue/.test(r.time_left) && !r.closed);
     q.replaceChildren(...list.map((r, i) => { const [chip, tone] = chipOf(r);
       return K.queueRow({ ref: r.ref, chip, tone, line: lineOf(r), clock: r === soonest ? r.time_left : null, open: i === S.open, onSelect: () => { S.open = i; S.editing = false; draw(); } }); }));
@@ -92,7 +95,7 @@ details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}
     if (r.warehouse_order) out.push(K.factRow({ text: `Warehouse order ${r.warehouse_order} went to Kinross at ${time(r.warehouse_order_sent)}; no shipping advice since`, system: 'Kinross', via: 'EDI 940', doc: doc(`Warehouse order ${r.warehouse_order}`, [['Order', r.po], ['Sent to', 'Kinross Logistics'], ['Sent', time(r.warehouse_order_sent)], ['Shipping advice', 'Not received']]) }));
     if (r.shipped) out.push(K.factRow({ text: `Shipped at ${time(r.shipped)}; no invoice sent`, system: 'Kinross scan', via: 'API', doc: doc(`Shipment for ${r.po}`, [['Order', r.po], ['Shipped', time(r.shipped)]]) }));
     if (r.rejection) out.push(K.factRow({ text: `Northfield rejected it: ${r.rejection.cause}`, system: 'Northfield', via: 'EDI 824', doc: doc(`Application advice for ${r.po}`, [['Order', r.po], ['Cause', r.rejection.cause], ['Rule', r.rejection.rule_id || r.rule || '']]) }));
-    if (r.confirmation) out.push(K.factRow({ text: r.confirmation, system: r.document === '945' ? 'Kinross' : 'Northfield', via: r.document === '945' ? 'EDI 945' : r.document === '856' ? 'EDI 861' : 'EDI 997', doc: doc(`Confirmation for ${r.po}`, [['Order', r.po], ['Record', r.confirmation]]) }));
+    if (r.confirmation) out.push(K.factRow({ text: time(r.confirmation), system: r.document === '945' ? 'Kinross' : 'Northfield', via: r.document === '945' ? 'EDI 945' : r.document === '856' ? 'EDI 861' : 'EDI 997', doc: doc(`Confirmation for ${r.po}`, [['Order', r.po], ['Record', time(r.confirmation)]]) }));
     return out;
   }
 
@@ -115,17 +118,13 @@ details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}
 
   async function approve(r, props) {
     S.busy = true; draw(); let v = null;
-    if (S.live) { for (const p of props) { const out = await call('watch_decide', { session: S.view.session, proposal: p.id, decision: 'approve' }); if (out && out.session) v = out; else if (out) { S.notice = out.failed || out.message || 'The decision was refused.'; } } }
-    else if (RECORDED.final) { // the recorded run, one order at a time: this order takes its recorded state after approval,
-      // and any later proposal the agent made on the same order in that run comes back as the next decision
-      const f = RECORDED.final, cur = S.view, mine = (x) => x.po === r.po; props.forEach((p) => S.used.add(p.id));
-      S.unrec = !props.some((p) => f.trace.some((t) => String(t.what).startsWith(`Approved ${p.id}:`)));
-      const seen = new Set(cur.trace.map((t) => t.n)); const next = (f.awaiting || []).filter((p) => p.args.po === r.po && !S.used.has(p.id));
-      v = { ...cur, clock: f.clock, queue: { ...cur.queue, rows: [...cur.queue.rows.filter((x) => !mine(x)), ...f.queue.rows.filter(mine)] },
-        awaiting: [...(cur.awaiting || []).filter((p) => p.args.po !== r.po), ...next],
-        trace: [...cur.trace, ...f.trace.filter((t) => !seen.has(t.n) && (String(t.what).includes(r.po) || JSON.stringify(t.detail || {}).includes(r.po)))].sort((x, y) => x.n - y.n),
-        confirmations_pending: (cur.confirmations_pending || []).filter((c) => c.po !== r.po) }; }
-    if (v) S.view = v; S.decided[r.po] = awaitingFor(S.view, r.po).length ? null : (!S.live && S.unrec) ? 'unrecorded' : 'approved'; S.busy = false; S.editing = false; draw(); setTimeout(() => comeBack(r.po), 2500);
+    if (S.live) { for (const p of props.filter((x) => x.id)) { const out = await call('watch_decide', { session: S.view.session, proposal: p.id, decision: 'approve' }); if (out && out.session) v = out; else if (out) { S.notice = out.failed || out.message || 'The decision was refused.'; } } }
+    else { // no connection: this order takes its recorded state after this approval; the other orders stay as they are
+      const k = S.step[r.po] || 0; const sl = (RECORDED.steps[r.po] || [])[k]; const cur = S.view; const mine = (x) => x.po === r.po;
+      if (sl) { S.step[r.po] = k + 1; const at = cur.queue.rows.findIndex(mine); const rows = cur.queue.rows.filter((x) => !mine(x)); rows.splice(at < 0 ? rows.length : at, 0, ...sl.rows);
+        v = { ...cur, queue: { ...cur.queue, rows }, awaiting: [...cur.awaiting.filter((p) => p.args.po !== r.po), ...sl.awaiting], confirmations_pending: [...cur.confirmations_pending.filter((c) => c.po !== r.po), ...sl.confirmations_pending],
+          trace: [...cur.trace.filter((t) => !(String(t.what).includes(r.po) || JSON.stringify(t.detail || {}).includes(r.po))), ...sl.trace] }; } }
+    if (v) S.view = v; S.decided[r.po] = awaitingFor(S.view, r.po).length ? null : 'approved'; S.busy = false; S.editing = false; draw(); setTimeout(() => comeBack(r.po), 2500);
   }
   async function takeOver(r, props, edited) {
     S.busy = true; draw();
@@ -133,78 +132,66 @@ details.ev .lines{display:flex;flex-direction:column;gap:6px;margin-top:6px}
     if (S.live) for (const p of props) { const out = await call('watch_decide', { session: S.view.session, proposal: p.id, decision: 'edit', note }); if (out && out.session) S.view = out; }
     S.decided[r.po] = 'edited'; S.editNote = note; S.busy = false; S.editing = false; draw();
   }
-  // It comes back: the next record due for this order arrives at UI pace, and Watch Agent continues from it.
+  // The records answer: those due for this order this morning arrive at UI pace, and the rules run again on what arrived.
+  // Once nothing waits for Priya, the morning's remaining records arrive too, so each timeline reaches its confirming record.
   async function comeBack(po) {
     if (!S.live || !S.view) { nextOpen(); return; }
-    const due = (S.view.confirmations_pending || []).filter((c) => c.po === po).map((c) => mins(c.at, S.view.clock)).filter((m) => m > 0);
-    if (due.length) { const out = await call('watch_state', { session: S.view.session, advance_minutes: Math.min(Math.min(...due), 2880) }); if (out && out.session) S.view = out; }
+    const within = (c) => mins(c.at, S.view.branch_at) <= 300; const dueIn = (f) => (S.view.confirmations_pending || []).filter((c) => f(c) && within(c)).map((c) => mins(c.at, S.view.clock)).filter((m) => m > 0);
+    let due = dueIn((c) => c.po === po);
+    for (let i = 0; i < 4 && due.length; i++) { const out = await call('watch_state', { session: S.view.session, advance_minutes: Math.min(...due) }); if (!(out && out.session)) break; S.view = out; draw();
+      due = awaitingFor(S.view, po).length ? [] : dueIn((c) => c.po === po); if (!due.length && !(S.view.awaiting || []).length) { const rest = dueIn(() => true); due = rest.length ? [Math.max(...rest)] : []; } }
     nextOpen();
   }
   function nextOpen() { const list = queueList(); const i = list.findIndex((r) => awaitingFor(S.view, r.po).length); if (i >= 0) S.open = i; draw(); }
 
   function timelineFor(r) {
-    const tr = traceFor(S.view, r.po).filter((t) => t.what !== 'Watch Agent said').slice(-5).map((t) => ({ state: 'done', text: `${t.actor} · ${said(t)}` }));
-    const pend = ((S.view && S.view.confirmations_pending) || []).filter((c) => c.po === r.po).map((c) => ({ state: 'waiting', text: `${c.what} due` }));
+    const tr = traceFor(S.view, r.po).filter((t) => !/^Proposed:/.test(t.what)).slice(-5).map((t) => ({ state: 'done', text: `${who(t.actor)} · ${said(t)}` }));
+    const pend = r.closed ? [] : ((S.view && S.view.confirmations_pending) || []).filter((c) => c.po === r.po).map((c) => ({ state: 'waiting', text: `${c.what} due` }));
     const end = r.nothing ? { state: 'settled', text: 'Left alone: Northfield sends no business acceptance, so nothing is chased' }
-      : r.closed ? { state: 'settled', text: r.confirmation || `${TRADE[r.document]} confirmed` }
+      : r.closed ? { state: 'settled', text: time(r.confirmation) || `${TRADE[r.document]} confirmed` }
       : { state: 'next', text: r.document === '856' ? 'Northfield receives the load as the ship notice describes' : r.document === '945' ? 'Kinross sends the warehouse shipping advice' : r.document === '810' ? 'Northfield pays the invoice on its remittance' : `${TRADE[r.document]} reaches Northfield before its deadline` };
-    const first = { state: 'done', text: 'Open orders checked against the documents Northfield requires · Watch Agent read the Supplier ERP, Kinross records and the document trail' };
-    const edit = S.decided[r.po] === 'edited' ? [{ state: 'done', text: 'Edited by Priya Raman · Watch Agent watching for the next record on this order' }] : [];
+    const first = { state: 'done', text: 'Open orders checked against the documents Northfield requires · Supplier ERP, Kinross records and the document trail read' };
+    const edit = S.decided[r.po] === 'edited' ? [{ state: 'done', text: 'Edited by Priya Raman · checked again when the next record arrives on this order' }] : [];
     return [first, ...tr, ...edit, ...pend, end];
   }
 
   function draw() {
     drawQueue();
     const rec = document.getElementById('rec'); const list = queueList(); const r = list[S.open];
-    if (!S.view) { rec.replaceChildren(K.el('p', { class: 'wait', text: S.notice || 'Watch Agent is reading the open orders.' })); return; }
+    if (!S.view) { rec.replaceChildren(K.el('p', { class: 'wait', text: S.notice || 'Checking the open orders.' })); return; }
     if (!r) { rec.replaceChildren(K.el('p', { class: 'wait', text: 'No order is missing a document Northfield requires.' })); return; }
     const props = awaitingFor(S.view, r.po);
     const parts = [K.recordHeader({ title: r.po, deadline: !r.closed && r.time_left ? r.time_left : null, sub: `${TRADE[r.document] || r.document} · ${r.rule || ''}` }),
       K.el('div', { class: 'sec' }, K.el('h3', { class: 'tgk-label', text: 'What is wrong' }), ...factsFor(r))];
     if (S.view.queue && S.view.queue.watching_not_flagged && S.open === 0) { const w = S.view.queue.watching_not_flagged; if (w.length) parts.push(K.el('p', { class: 'note', text: `Inside Priya's ${S.view.queue.kinross_window_hours}-hour Kinross window and not flagged: ${w.map((x) => x.po).join(', ')}` })); }
     if (props.length && !S.decided[r.po]) {
-      const base = props.map((p) => { const a = p.args || {}; const [now, after, goesTo, via] = (AFTER[p.action] || (() => ['', p.does, '', null]))(r, a); return { action: p.does.replace(/ \(\d{3}\)/, ''), now, after, goesTo, via, id: p.id }; });
+      const base = props.flatMap((p) => [p, ...(p.then ? [{ ...p.then, id: null }] : [])]).map((p) => { const a = p.args || {}; const [now, after, goesTo, via] = (AFTER[p.action] || (() => ['', p.does, '', null]))(r, a); return { action: ACT[p.action] ? ACT[p.action](a) : p.does, now, after, goesTo, via, id: p.id }; });
       if (!S.rows || S.rowsFor !== r.po) { S.rows = base.map((x) => ({ ...x })); S.rowsFor = r.po; }
-      const reason = props.map((p) => p.rationale).filter(Boolean)[0];
-      parts.push(K.nowAfter({ agent: 'Watch Agent', rows: S.editing ? S.rows : base, editable: S.editing, reason: short(reason), chip: S.editing ? 'Edited by you' : 'Ready for review', onChange: (rows) => { S.rows = rows; draw(); } }));
-      if (S.sim) parts.push(K.el('div', {}, K.simulated({ note: 'The Ashby connector was not reached; this is the last recorded real run' })));
+      const reason = `${r.rule} requires the ${(TRADE[r.document] || 'document').toLowerCase()}${r.time_left ? `; ${r.time_left.replace(/^Overdue/, 'overdue')}` : ''}. Each send needs Priya Raman's approval.`;
+      parts.push(K.nowAfter({ agent: 'Trading Grid', rows: S.editing ? S.rows : base, editable: S.editing, reason: short(reason), chip: S.editing ? 'Edited by you' : 'Ready for review', onChange: (rows) => { S.rows = rows; draw(); } }));
+      if (S.sim) parts.push(K.el('div', {}, K.simulated({ note: 'The Ashby connection was not reached; these are the records of the demo world as the rules work them' })));
       const rows = S.editing ? S.rows : base;
       parts.push(K.decisionBar({ says: says(rows), busy: S.busy,
         noDecision: r.time_left && !/^Overdue/.test(r.time_left) ? `No decision with ${r.time_left.replace(/ left$/, '')} to go: the ${(TRADE[r.document] || 'document').toLowerCase()} misses ${r.rule}.` : null,
         onApprove: () => S.editing ? takeOver(r, props, rows) : approve(r, props), onEdit: () => { S.editing = true; S.rows = base.map((x) => ({ ...x })); draw(); } }));
     } else if (S.decided[r.po]) {
-      parts.push(K.sentState({ text: S.decided[r.po] === 'edited' ? 'Taken over by Priya Raman · Watch Agent proposes again only on a new record for this order' : S.decided[r.po] === 'unrecorded' ? 'Approved · the recorded run ends before this send; with the Ashby connector it is sent live' : `${r.state}${r.technical_ack && !/^Awaiting/.test(r.technical_ack) ? ' · technical acknowledgment received' : ''}${(S.view.confirmations_pending || []).some((c) => c.po === r.po) ? ' · waiting for its confirmation' : ''}` }));
+      parts.push(K.sentState({ text: S.decided[r.po] === 'edited' ? 'Taken over by Priya Raman · checked again only when a new record arrives on this order' : `${r.state}${r.technical_ack && !/^Awaiting/.test(r.technical_ack) ? ' · technical acknowledgment received' : ''}${!r.closed && (S.view.confirmations_pending || []).some((c) => c.po === r.po) ? ' · waiting for its confirmation' : ''}` }));
     } else if (!r.nothing && !r.closed) parts.push(K.sentState({ text: `${r.state} · no proposal waiting on this order` }));
     parts.push(K.el('div', { class: 'sec' }, K.el('h3', { class: 'tgk-label', text: 'Review' }), K.timeline({ items: timelineFor(r) })));
     const ev = traceFor(S.view, r.po);
-    if (ev.length) { const d = K.el('details', { class: 'ev' }, K.el('summary', { text: 'How Watch Agent worked this order' }), K.el('div', { class: 'lines' }, ...ev.map((t) => K.traceLine({ kind: KIND[t.type] || 'system', actor: t.actor, text: `${time(t.clock)} · ${said(t)}${t.detail && t.detail.rationale ? ': ' + short(t.detail.rationale) : ''}`, synthetic: /Kinross|Northfield/.test(t.actor) && t.type === 'external' }))));
+    if (ev.length) { const d = K.el('details', { class: 'ev' }, K.el('summary', { text: 'Steps on this order' }), K.el('div', { class: 'lines' }, ...ev.map((t) => K.traceLine({ kind: KIND[t.type] || 'system', actor: who(t.actor), text: `${time(t.clock)} · ${said(t)}`, synthetic: /Kinross|Northfield/.test(t.actor) && t.type === 'external' }))));
       parts.push(d); }
     rec.replaceChildren(...parts);
   }
 
   document.getElementById('prev').onclick = () => { const n = queueList().length; S.open = (S.open - 1 + n) % n; S.editing = false; draw(); };
   document.getElementById('next').onclick = () => { const n = queueList().length; S.open = (S.open + 1) % n; S.editing = false; draw(); };
-  document.getElementById('hist').onclick = () => K.drawer({ title: 'History', content: K.el('div', { class: 'drawerbody' }, ...((S.view && S.view.trace) || []).filter((t) => t.type !== 'tool').map((t) => K.traceLine({ kind: KIND[t.type] || 'system', actor: t.actor, text: `${time(t.clock)} · ${said(t)}` }))) });
-  document.getElementById('agents').onclick = async () => {
-    const setup = S.live ? await call('watch_setup', {}) : RECORDED.setup;
-    const body = K.el('div', { class: 'drawerbody' });
-    if (setup && setup.facts) body.append(K.setupView({ title: 'Watch Agent setup', lead: 'Kinross facts and the story moment are synthetic; the Kinross window and approval modes are Priya Raman\'s; guardrails are locked.', setup, startLabel: 'Run Watch Agent with these values',
-      onStart: async ({ facts, policy }) => { if (!S.live) return; S.view = null; S.decided = {}; S.open = 0; draw(); const v = await call('watch_start', { facts, policy, label: 'Priya Raman' }); if (v && v.session) S.view = v; nextOpen(); } }));
-    const gov = K.el('div'); body.append(K.el('button', { class: 'tgk-btn', type: 'button', text: 'Compare with the rule baseline', onclick: async () => {
-      gov.replaceChildren(K.el('p', { class: 'note', text: S.live ? 'Running the rule baseline and Watch Agent on the same facts.' : 'The comparison needs the Ashby connector.' }));
-      if (!S.live) return; const rp = await call('watch_replay', { detail: 'brief' });
-      if (rp && rp.baseline && rp.watch) gov.replaceChildren(K.governanceView({ title: 'Rule baseline and Watch Agent', rows: [...(rp.automation?.same_steps || []).slice(0, 6).map((x) => ({ step: x, baseline: 'Same', agent: 'Same' })), ...(rp.automation?.agent_only || []).slice(0, 4).map((x) => ({ step: x, baseline: 'Not done', agent: 'Done' })), ...(rp.automation?.baseline_only || []).slice(0, 4).map((x) => ({ step: x, baseline: 'Done', agent: 'Not done' }))],
-        baseline: { outcome: `${(rp.baseline.outcome?.sent_on_time || []).length} sent on time, ${(rp.baseline.outcome?.sent_late || []).length} late` }, agent: { name: 'Watch Agent', outcome: `${(rp.watch.outcome?.sent_on_time || []).length} sent on time, ${(rp.watch.outcome?.sent_late || []).length} late` } }));
-      else gov.replaceChildren(K.el('p', { class: 'note', text: (rp && (rp.failed || rp.blocked)) || 'The comparison did not return.' })); } }), gov);
-    K.drawer({ title: 'Agents · Watch Agent', content: body });
-  };
-
-  // It starts on the business event: the morning check of open orders. No start button.
+  document.getElementById('hist').onclick = () => K.drawer({ title: 'History', content: K.el('div', { class: 'drawerbody' }, ...((S.view && S.view.trace) || []).filter((t) => t.type !== 'tool').map((t) => K.traceLine({ kind: KIND[t.type] || 'system', actor: who(t.actor), text: `${time(t.clock)} · ${said(t)}` }))) });
+  // It starts on the business event: the morning check of open orders, run by the rules. No start button.
   (async () => {
-    const v = await call('watch_start', { label: 'Priya Raman' });
-    if (v && v.session && !v.blocked) { S.view = v; S.live = true; }
-    else if (RECORDED && RECORDED.start) { S.view = RECORDED.start; S.sim = true; S.notice = v && (v.blocked || v.failed); }
-    else S.notice = (v && (v.blocked || v.failed)) || 'Watch Agent needs the Ashby connector, and no recorded run is in this page.';
+    const v = await call('watch_start', { label: 'Priya Raman', run_by: 'rules' });
+    if (v && v.session && v.status === 'rules') { S.view = v; S.live = true; }
+    else { S.view = RECORDED.start; S.sim = true; }
     nextOpen();
   })();
   K.aviator({ side: 'ashby', person: 'Priya Raman', context: () => { const r = queueList()[S.open]; return r ? `Order ${r.po}, ${TRADE[r.document] || r.document}` : 'Open Northfield orders'; }, suggestions: ['Which orders are missing a document Northfield requires?', 'Has Kinross sent the shipping advice for NR-46220?'] });

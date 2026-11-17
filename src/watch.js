@@ -517,6 +517,66 @@ export async function runWatch(db, s, { callModel, maxSteps = 14, maxToolCalls =
   ag.ms += Date.now() - t0;
   return { ok: true, status: ag.status, awaiting: s.proposals.filter((p) => p.state === 'Awaiting approval').map((p) => ({ id: p.id, action: p.action, args: p.args, rationale: p.rationale, alternatives: p.alternatives })) };
 }
+// ---------- Run by the rules, with no agent (D75): the decision table proposes, Priya approves, the records answer ----------
+// The same queue, reads, actions, approval modes and simulators as an agent session. No model is called and nothing is
+// credited to an agent. The Kinross window is Priya's rule in the catalogue (KX-945), so a change in admin flags different rows.
+const RULES = 'Rule engine';
+/** One pass of the decision table. An action that needs Priya waits; a second action on the same order in the same pass
+ *  (send the invoice once it is created) rides on the first as its next step, approved with it. */
+export function rulesPass(db, s) {
+  const waiting = new Map(s.proposals.filter((p) => p.state === 'Awaiting approval').map((p) => [p.args.po, null]));
+  const act = (action, args) => {
+    if (s.set_aside.has(args.po)) return null;
+    if (waiting.has(args.po)) { const first = waiting.get(args.po); if (first && !first.then) first.then = { action, args }; return null; }
+    const r = propose(db, s, RULES, action, args, { rationale: null });
+    if (r.state === 'Awaiting approval') waiting.set(args.po, s.proposals.find((p) => p.id === r.proposal));
+    return r;
+  };
+  return baselinePass(db, s, act);
+}
+export function startRules(db, { variation = {}, policy = {}, label } = {}) {
+  const hours = D.param(db, 'KX-945', 'hours');
+  const s = startSession(db, { variation: { ...(FACTS.kinross_window_hours.values.includes(hours) ? { kinross_window_hours: hours } : {}), ...variation }, policy, label });
+  s.by_rules = true; s.set_aside = new Set(); s.agent.status = 'rules'; rulesPass(db, s); return s;
+}
+export function decideRules(db, s, proposalId, decision, by = 'Priya Raman', note) {
+  const p = s.proposals.find((x) => x.id === proposalId); let r = decide(db, s, proposalId, decision, by, note);
+  if (r.state === 'Refused') return r;
+  if (r.state === 'Taken over') { s.set_aside.add(p.args.po); s.handed_over = null; s.agent.status = 'rules'; return r; }
+  // The next step shown with this approval (the 810 once its invoice exists) goes under the same approval.
+  if (decision === 'approve' && p.then && p.state === 'Executed') { const n = propose(db, s, RULES, p.then.action, p.then.args); if (n.state === 'Awaiting approval') r = decide(db, s, n.proposal, 'approve', by); }
+  rulesPass(db, s); return r;
+}
+export function advanceRules(db, s, { minutes, to } = {}) {
+  const target = to != null ? to : minutes != null ? s.clock + minutes * MIN : Math.min(...s.pending.map((p) => Date.parse(p.at)), s.horizon);
+  const arrived = advance(db, s, { to: target });
+  // A new record on an order Priya took over brings the rules back to it.
+  for (const a of arrived) if (a.po) s.set_aside.delete(a.po);
+  rulesPass(db, s); return arrived.map((a) => a.what);
+}
+/** What a page needs of a rules session: clock, queue, proposals waiting for Priya, records still due, and the trace. */
+export const rulesView = (db, s) => ({ session: s.id, clock: fmtET(iso(s.clock)), branch_at: fmtET(iso(s.branch)), status: 'rules', facts: s.facts, queue: queue(db, s),
+  awaiting: s.proposals.filter((p) => p.state === 'Awaiting approval').map((p) => ({ id: p.id, action: p.action, does: ACTIONS[p.action].label, args: p.args, ...(p.then ? { then: { action: p.then.action, does: ACTIONS[p.then.action].label, args: p.then.args } } : {}), proposed_by: p.by, rule: ACTIONS[p.action].rule })),
+  confirmations_pending: s.pending.map((p) => ({ at: fmtET(p.at), what: p.doc_type === '997' ? 'Technical acknowledgment (997)' : p.doc_type === '861' ? 'Northfield receiving advice (861)' : p.doc_type === '945' ? 'Kinross shipping advice (945)' : 'Kinross scan', po: p.po })), trace: s.trace });
+/** One order worked alone by the rules with every proposal approved: its state after each approval, once the records due for it
+ *  have arrived. A page with no connection plays these, order by order, under the Simulated label. */
+export function rulesRecording(db, opts = {}) {
+  const start = rulesView(db, startRules(db, opts)); const steps = {};
+  const cut = (v, po) => ({ rows: v.queue.rows.filter((r) => r.po === po), awaiting: v.awaiting.filter((p) => p.args.po === po), confirmations_pending: v.confirmations_pending.filter((c) => c.po === po),
+    trace: v.trace.filter((t) => t.type !== 'tool' && (String(t.what).includes(po) || JSON.stringify(t.detail || {}).includes(po))) });
+  for (const po of [...new Set(start.queue.rows.map((r) => r.po))]) {
+    const s = startRules(db, opts); steps[po] = [];
+    for (let i = 0; i < 6; i++) {
+      const mine = s.proposals.filter((p) => p.state === 'Awaiting approval' && p.args.po === po); if (!mine.length) break;
+      for (const p of mine) decideRules(db, s, p.id, 'approve');
+      const due = () => s.pending.filter((p) => p.po === po && Date.parse(p.at) <= s.horizon);
+      for (let k = 0; k < 8 && due().length && !s.proposals.some((p) => p.state === 'Awaiting approval' && p.args.po === po); k++) advanceRules(db, s, { to: Math.min(...due().map((p) => Date.parse(p.at))) });
+      steps[po].push(cut(rulesView(db, s), po));
+    }
+  }
+  return { start, steps };
+}
+
 export async function decideAndResume(db, s, proposalId, decision, by, opts = {}) {
   const r = decide(db, s, proposalId, decision, by, opts.note);
   if (r.state === 'Refused') return r;

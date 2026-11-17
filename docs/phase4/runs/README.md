@@ -15,6 +15,7 @@ An agent passes when its outcome is better than the baseline's on the business r
 | Match Agent | P14 | `ashby_free_text` | Decision table: request lines 1 and 2, match INV-7731C-S, short-pay line 2, propose lines 1 and 3 clear; Ashby's claim that line 2 came on a later truck left open | The same four steps (automation), plus a request for the later ship notice and the carrier's delivery receipt; Ashby withdraws the claim; no claim open | MS-c769ecc254 · MS-65a2e4860c | `match.json`, `match-tie-1.json` | Beats the decision table (the earlier run tied it) |
 | Chase Agent | P19 | `mixed_trails` | Ship notices chased for six loads that never left (six violations) | Readiness failures recorded for the six; Lakeline asked about NR-46609; a correction asked for NR-46616; NR-46602 chased; no violation | CH-478a380690 · CH-3759ec0ba5 | `chase.json` | Beats, after a fix (first run: `chase-failed-1.json`) |
 | Claim Agent | P20 | moment 6 January 2027 (promotions) | All five promotion deductions accepted, $3,452.70 | Two matched deductions accepted; three disputed for what the deal does not support; $677.20 recovered and matched | CL-160ecbe78a · CL-914ac4eb2c | `claim-promotions.json` | Beats, after a fix (first run: `claim-promotions-failed-1.json`) |
+| Match Agent | P14, view by view | `ashby_free_text`, 17 November | — | Three approvals: correction request; proof of the later delivery asked; Ashby withdrew; line 2 short-pay decided; no claim open. The run ends with the agent waiting after two refused proposals to mark lines clear | MS-aab22b45d1 | `match-steps.json` (the P14 page plays these views when its connection cannot be reached) | Beats, as `match.json` |
 
 ## What the failed runs found, and the fix
 
@@ -26,7 +27,7 @@ An agent passes when its outcome is better than the baseline's on the business r
 
 ## Open
 
-- Watch Agent: an email note from Kinross is not standard practice (D68). A 3PL reports in the 945 and carriers and 3PLs in the 214; a note by email while a feed is down is a workaround. The note preset, the note fact and the escalate-on-note instruction are removed. P13's steps are automation until Watch has a step the rules cannot take on a standard record.
+- Watch Agent: P13 is rebuilt with no agent and runs on the decision table (D75, `watch_start` with `run_by` rules; gate checks `watch_rules.*`). An email note from Kinross is not standard practice (D68). A 3PL reports in the 945 and carriers and 3PLs in the 214; a note by email while a feed is down is a workaround. The note preset, the note fact and the escalate-on-note instruction are removed. P13's steps are automation until Watch has a step the rules cannot take on a standard record.
 
 - Match Agent (D69): asks Ashby to prove a delivery its answer claims before Jordan short-pays; it beats the decision table on the supplier's free-text claim. Its other four steps are automation.
 - Pace Agent (D71): the queue marks a split week as waiting for Priya's answer, and an agent that stops with that row open is told once; it now asks first and beats the baseline.

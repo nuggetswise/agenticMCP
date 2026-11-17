@@ -521,11 +521,11 @@
       "calendar": "P13",
       "seen_by": "Priya Raman",
       "agency": {
-        "verdict": "agent",
-        "agent": "Watch Agent",
+        "verdict": "rule",
+        "agent": null,
         "job": "missing_document",
-        "reason": "A missing ship notice has four different explanations in the source records, each with its own next step",
-        "would_reverse": "Missing documents that always mean the same thing"
+        "reason": "On standard records the decision table takes every step Watch Agent took (D68), so the page runs on the rules with Priya's approvals (D75)",
+        "would_reverse": "A standard record that gives Watch a step the rules cannot take"
       },
       "customer_agent": {
         "supplier": "Which required documents never arrived, and why",
@@ -627,7 +627,7 @@
     {
       "id": "P15",
       "name": "P15 Rule Replay",
-      "status": "Planned",
+      "status": "Built",
       "calendar": "P15",
       "seen_by": "Jordan Ellis",
       "agency": {
@@ -658,7 +658,8 @@
         "nf.publish_needs_replay"
       ],
       "capability_status": "planned",
-      "owner": "Unassigned"
+      "owner": "Unassigned",
+      "ends_at": "The rule Jordan publishes carries its replay; nothing already exchanged is charged again"
     }
   ],
   "other_inventory": [

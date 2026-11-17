@@ -710,11 +710,12 @@
     {
       "id": "P21",
       "name": "P21 Admin and rules",
-      "status": "Planned",
+      "status": "Built",
       "agent": null,
-      "tools": "list_rules_by_source, update_supplier_rule, set_agent_mode",
+      "tools": "list_rules_by_source, update_supplier_rule, set_agent_mode, get_change_list, pause_agent, resume_agent; Northfield adds get_access_log, list_draft_rules, replay_draft_rule, publish_rule",
       "spec": "Build prompts doc, P21",
-      "note": "A tool, not an agent; moves to prototypes when built (T3.5)"
+      "note": "A tool, not an agent, with no story-calendar moment; built 17 November (T3.5, CALLS 107)",
+      "link": "https://claude.ai/artifact/XvERP9L3d3QAMyUZvgvMZB"
     }
   ]
 }

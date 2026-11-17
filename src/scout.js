@@ -26,20 +26,21 @@ export const ACTIONS = {
   kinross_overpack:   { label: 'Ask Kinross to overpack a carton into a new carton with a new SSCC', actor: 'Kinross', rule: 'AP-3.2', mode: 'approve', editable: true },
   kinross_replace:    { label: 'Ask Kinross to load a replacement case from free stock', actor: 'Kinross', rule: 'AP-3.2', mode: 'approve', editable: true },
   kinross_replace_reserved: { label: 'Ask Kinross to load a replacement case from stock reserved for other orders', actor: 'Kinross', rule: 'AP-5.1', mode: 'approve', editable: false },
-  erp_align_order:    { label: 'Align the Supplier ERP sales order to Northfield’s current order (ship-to and line numbers)', actor: 'Supplier ERP', rule: 'AP-3.2', mode: 'approve', editable: true },
+  erp_align_order:    { label: 'Ask the Ashby order desk to correct the Supplier ERP sales order to Northfield’s current order (ship-to and line numbers)', actor: 'Ashby order desk', rule: 'AP-3.2', mode: 'approve', editable: true },
   build_ship_notice:  { label: 'Build the ship notice from the confirmed load scan', actor: 'Trading Grid', rule: 'AP-1.4', mode: 'policy', editable: false },
   release_ship_notice:{ label: 'Release the ship notice to Northfield', actor: 'Trading Grid', rule: 'AP-1.3', mode: 'approve', editable: false },
   request_carrier_hold:{ label: 'Ask Northfield routing to hold the trailer past the seal', actor: 'Northfield routing', rule: 'AP-3.2', mode: 'approve', editable: true },
   notify_buyer_short: { label: 'Tell the buyer a line ships short and the remainder is cancelled under NF-2.1', actor: 'Jordan Ellis (email)', rule: 'AP-3.2', mode: 'approve', editable: true },
-  // The other shipments in the 17:12 queue. The first four are fixed-rule fixes; the last is Scout's allocation plan.
-  erp_correct_invoice: { label: 'Correct an invoice draft line in the Supplier ERP to the shipped quantity', actor: 'Supplier ERP', rule: 'AP-3.2', mode: 'approve', editable: true },
+  // The other shipments in the 17:12 queue: each is a request a fixed rule drafts to the owner of the record. Nothing writes to a system of record;
+  // the owner makes the change in its own system and confirms.
+  erp_correct_invoice: { label: 'Ask the Ashby billing desk to correct an invoice draft line to the shipped quantity', actor: 'Ashby billing desk', rule: 'AP-3.2', mode: 'approve', editable: true },
   send_routing_request: { label: 'Send the routing request for a collect load to Northfield', actor: 'Northfield transportation', rule: 'AP-3.2', mode: 'approve', editable: true },
   kinross_relabel_cartons: { label: 'Ask Kinross to relabel cartons that carry SSCCs already used', actor: 'Kinross', rule: 'AP-3.2', mode: 'approve', editable: true },
   ask_buyer_order_change: { label: 'Ask the buyer for the order change behind a quantity agreed by phone', actor: 'Jordan Ellis', rule: 'AP-3.2', mode: 'approve', editable: true },
-  request_order_change: { label: 'Ask Northfield to change one order to the cases the stock covers, and set the Supplier ERP sales order to match', actor: 'Jordan Ellis', rule: 'AP-5.1', mode: 'approve', editable: false },
+  ask_order_desk_shortage: { label: 'Ask the Ashby order desk which order ships short when stock does not cover the orders that share it', actor: 'Ashby order desk', rule: 'AP-5.1', mode: 'approve', editable: true },
 };
 const HERO_ACTIONS = ['kinross_load', 'kinross_relabel', 'kinross_overpack', 'kinross_replace', 'kinross_replace_reserved'];
-const QUEUE_ACTIONS = ['erp_correct_invoice', 'send_routing_request', 'kinross_relabel_cartons', 'ask_buyer_order_change', 'request_order_change'];
+const QUEUE_ACTIONS = ['erp_correct_invoice', 'send_routing_request', 'kinross_relabel_cartons', 'ask_buyer_order_change', 'ask_order_desk_shortage'];
 export const GUARDRAILS = [
   { id: 'AP-1.4', owner: 'Administrator', text: 'Never edit a ship notice to match the order; a ship notice is built only from the confirmed load scan.' },
   { id: 'AP-7.1', owner: 'Administrator', text: 'Never change a Kinross record without Kinross accepting the change; Scout sends tasks, Kinross confirms.' },
@@ -113,15 +114,15 @@ function ruleQueue(db, s) {
   const row = (po, r, action, args) => { s.queue.push({ po, ...r }); if (action) propose(db, s, 'Rule engine', action, args, { rationale: r.problem }); };
   if (inv) row(inv.po, { kind: 'invoice', problem: `Invoice draft ${inv.d.invoice} line ${inv.d.line} bills ${inv.d.billed} cases; ${inv.d.shipped} shipped; $${inv.d.over_value.toFixed(2)} over`, consequence: `the invoice batch sends ${inv.d.billed} cases billed against ${inv.d.shipped} shipped`, cutoff_minutes: inv.d.batch_sends_in_minutes, cutoff: 'Invoice batch', source: 'Supplier ERP · API', now: `${inv.d.billed} cases`, after: `${inv.d.shipped} cases`, what: `Invoice ${inv.d.invoice} line ${inv.d.line}`, goes_to: 'Supplier ERP · API' }, 'erp_correct_invoice', { po: inv.po, invoice: inv.d.invoice, line: inv.d.line, qty: inv.d.shipped });
   if (route) row(route.po, { kind: 'routing', problem: `Collect freight, ${route.d.cases} cases from Kinross Joliet; no routing request sent`, consequence: `Northfield books no pickup for the ${route.d.cases} cases`, cutoff_minutes: route.d.due_in_minutes, cutoff: 'Routing request due', source: 'EDI 753', now: 'Not sent', after: `Sent for ${route.d.cases} cases`, what: 'Routing request', goes_to: 'Northfield transportation · EDI 753' }, 'send_routing_request', { po: route.po, cases: route.d.cases });
-  if (stock) { s.grove = { po: stock.po, sku: stock.d.sku, ordered: stock.d.ordered_across_orders, orders: stock.d.order_list || [], cutoff_minutes: stock.d.change_cutoff_in_minutes, plan: null };
-    row(stock.po, { kind: 'stock', cutoff_minutes: stock.d.change_cutoff_in_minutes, cutoff: 'Order-change cutoff', source: 'Kinross inventory · API' }); }
+  if (stock) { s.grove = { po: stock.po, sku: stock.d.sku, ordered: stock.d.ordered_across_orders, orders: stock.d.order_list || [], cutoff_minutes: stock.d.change_cutoff_in_minutes, };
+    row(stock.po, { kind: 'stock', cutoff_minutes: stock.d.change_cutoff_in_minutes, cutoff: 'Order-change cutoff', source: 'Kinross inventory · API', what: 'Which order ships short', goes_to: 'Ashby order desk · Task' }, 'ask_order_desk_shortage', { po: stock.po, sku: stock.d.sku }); }
   if (label) row(label.po, { kind: 'label', problem: `${label.d.reused_sscc} of ${label.d.cartons} honey cartons carry SSCCs already used`, consequence: `${label.d.reused_sscc} cartons load with SSCCs Northfield has already received`, cutoff_minutes: label.d.loading_starts_in_minutes, cutoff: 'Loading starts', source: 'Kinross scan · API', now: 'SSCCs already used', after: 'New SSCCs', what: `Relabel ${label.d.reused_sscc} cartons`, goes_to: 'Kinross Logistics · API' }, 'kinross_relabel_cartons', { po: label.po, cartons: label.d.reused_sscc });
   if (phone && !phone.d.order_change_received) { const agreed = parseInt(phone.d.scope, 10); const reads = +(/reads (\d+)/.exec(phone.d.scope) || [])[1];
     row(phone.po, { kind: 'phone', problem: `${phone.d.confirmed_by} agreed ${agreed} cases by phone; the PO still reads ${reads}; no order change received`, consequence: `Kinross picks ${reads} cases against the ${agreed} agreed`, cutoff_minutes: phone.d.loading_starts_in_minutes, cutoff: 'Loading starts', source: 'Phone note', now: `PO reads ${reads}`, after: `Order change to ${agreed}`, what: 'Order change request', goes_to: `${phone.d.confirmed_by} · Email` }, 'ask_buyer_order_change', { po: phone.po, cases: agreed }); }
   s.checked = db.prepare("SELECT count(*) n FROM orders o WHERE supplier_id = 'ASHBY' AND received_at <= ? AND NOT EXISTS (SELECT 1 FROM shipments x WHERE x.po = o.po AND x.shipped_at <= ?)").get(cut, cut).n;
 }
 const groveShort = (s) => s.grove ? Math.max(0, s.grove.ordered - s.world.stock[0].on_hand) : 0;
-const SENT = { erp_align_order: 'Ship-to corrected', kinross_replace: 'Replacement case loaded', kinross_replace_reserved: 'Replacement case loaded', kinross_load: 'Carton loaded', build_ship_notice: 'Ship notice built, not sent', notify_buyer_short: 'Buyer told of short line', erp_correct_invoice: 'Corrected in Supplier ERP', send_routing_request: 'Routing request sent', kinross_relabel_cartons: 'Relabel task sent to Kinross', ask_buyer_order_change: 'Awaiting Jordan Ellis', request_order_change: 'Awaiting Northfield' };
+const SENT = { erp_align_order: 'Ship-to corrected by Ashby order desk', ask_order_desk_shortage: 'Awaiting Ashby order desk', kinross_replace: 'Replacement case loaded', kinross_replace_reserved: 'Replacement case loaded', kinross_load: 'Carton loaded', build_ship_notice: 'Ship notice built, not sent', notify_buyer_short: 'Buyer told of short line', erp_correct_invoice: 'Corrected by Ashby billing desk', send_routing_request: 'Routing request sent', kinross_relabel_cartons: 'Relabel task sent to Kinross', ask_buyer_order_change: 'Awaiting Jordan Ellis', request_order_change: 'Awaiting Northfield' };
 /** The queue as the screen shows it: every row states its own problem in values, soonest cutoff first. */
 export function queueView(s) {
   const elapsed = Math.round((s.clock - Date.parse(s.world.branch_at)) / MIN);
@@ -135,7 +136,7 @@ export function queueView(s) {
   const rows = (s.queue || []).map((r) => { const x = { ...r, cutoff_minutes: Math.max(0, r.cutoff_minutes - elapsed), state: state(r.po) || 'Open' };
     if (r.kind === 'stock') { const st = s.world.stock[0]; const short = groveShort(s); x.on_hand = st.on_hand; x.ordered = s.grove.ordered; x.short = short;
       x.problem = `Kinross Groveport: ${st.on_hand} cases ${s.grove.sku} against ${s.grove.ordered} ordered on ${s.grove.orders.length} orders; ${short} short`; x.consequence = `the ${s.grove.orders.length} orders pick ${short} cases short`;
-      if (!s.proposals.some((p) => p.po === r.po)) x.state = 'Choice needed'; }
+      x.now = `${short} cases short`; x.after = 'Order desk names the order'; }
     return x; });
   return { checked: s.checked, rows: [hero, ...rows].sort((a, b) => a.cutoff_minutes - b.cutoff_minutes) };
 }
@@ -162,12 +163,6 @@ export const READS = {
     run: (db, s) => ({ actions: Object.fromEntries(Object.entries(ACTIONS).map(([k, a]) => [k, { does: a.label, done_by: a.actor, rule: a.rule, needs: s.modes[k] === 'policy' ? 'Runs under Priya’s standing policy' : s.modes[k] === 'approve' ? 'Priya approves' : 'Scout may only suggest; Priya does it by hand' }])), guardrails: GUARDRAILS }) },
   read_findings: { description: 'Rule risks the rule engine currently reports on NR-460207 (Northfield and Ashby rules), with the minutes left before the trailer seal.', input: {},
     run: (db, s) => ({ findings: ruleDetect(db, s, true), minutes_to_seal: Math.max(0, Math.round((Date.parse(s.world.seal_at) - s.clock) / MIN)) }) },
-  read_site_orders: { description: 'Open orders for one item at Kinross Groveport that load after NR-460207: stock on hand, cases released to Kinross on each order, the shortage across them, and the minutes left to change an order.', input: { sku: z.string().describe('Item, for example ASH-MUG-12') },
-    run: (db, s, a) => { if (!s.grove || a.sku !== s.grove.sku) return { sku: a.sku, found: false, message: 'No open orders share this item at Kinross Groveport' };
-      const elapsed = Math.round((s.clock - Date.parse(s.world.branch_at)) / MIN);
-      return { sku: s.grove.sku, site: 'Kinross Groveport', on_hand: s.world.stock[0].on_hand, ordered: s.grove.ordered, short: groveShort(s), minutes_to_order_change_cutoff: s.grove.cutoff_minutes - elapsed,
-        orders: s.grove.orders.map((o) => { const r = db.prepare('SELECT received_at, requested_delivery FROM orders WHERE po = ?').get(o.po); return { po: o.po, cases: o.cases, share_of_order_if_cut: `${Math.round(100 * groveShort(s) / o.cases)}%`, received: fmtET(r.received_at), requested_delivery: r.requested_delivery, ...(o.po_reads ? { already_reduced: `From ${o.po_reads} to the ${o.cases} agreed with the buyer by phone; the order change has not arrived` } : {}) }; }),
-        plan: s.grove.plan, rule: D.rule(db, 'AP-5.1'), source: 'Kinross warehouse system · API; Trading Grid orders' }; } },
   read_proposals: { description: 'Every action proposed in this session, with its state (awaiting approval, approved, rejected, executed, failed, refused) and its result.', input: {},
     run: (db, s) => ({ proposals: s.proposals.map((p) => ({ id: p.id, action: p.action, args: p.args, state: p.state, result: p.result || null })) }) },
 };
@@ -177,8 +172,6 @@ export function read(db, s, name, args = {}) { const r = READS[name]; if (!r) re
 const keyOf = (action, args) => createHash('sha1').update(JSON.stringify([action, args])).digest('hex').slice(0, 16);
 export function propose(db, s, by, action, args = {}, why = {}) {
   const def = ACTIONS[action]; if (!def) return { state: 'Refused', message: `No action ${action}` };
-  // An order change covers exactly the shortage: the server works out the cases from the order chosen, so the agent names only the order.
-  if (action === 'request_order_change') { const { sku, cases, ...rest } = args; const o = s.grove?.orders.find((x) => x.po === rest.po); args = o && groveShort(s) ? { ...rest, cases: o.cases - groveShort(s) } : { ...rest, ...(cases != null ? { cases } : {}) }; }
   const key = keyOf(action, action === 'build_ship_notice' ? { load: cartonsLoaded(s) } : args);
   const open = s.proposals.find((p) => p.key === key && ['Awaiting approval', 'Executed', 'Approved'].includes(p.state));
   if (open) return { state: 'Duplicate', proposal: open.id, message: `The same action is already ${open.state.toLowerCase()} (${open.id}).` };
@@ -196,7 +189,7 @@ function validate(s, action, a) {
   if (s.load.sealed && HERO_ACTIONS.includes(action)) return 'The trailer is sealed; Kinross cannot load anything more onto it.';
   if (['kinross_load', 'kinross_relabel', 'kinross_overpack'].includes(action) && a.sscc !== c.sscc && !s.load.staged.includes(a.sscc)) return `Carton ${a.sscc || '(none)'} is not staged for this shipment.`;
   if (action === 'kinross_replace' || action === 'kinross_replace_reserved') { if (!a.sku || !(a.cases > 0)) return 'Name the item and the number of cases.'; }
-  const allowed = { kinross_load: ['sscc'], kinross_relabel: ['sscc'], kinross_overpack: ['sscc'], kinross_replace: ['sku', 'cases'], kinross_replace_reserved: ['sku', 'cases'], erp_align_order: [], build_ship_notice: [], release_ship_notice: [], request_carrier_hold: [], notify_buyer_short: ['line', 'shipped'], erp_correct_invoice: ['po', 'invoice', 'line', 'qty'], send_routing_request: ['po', 'cases'], kinross_relabel_cartons: ['po', 'cartons'], ask_buyer_order_change: ['po', 'cases'], request_order_change: ['po', 'cases'] }[action];
+  const allowed = { kinross_load: ['sscc'], kinross_relabel: ['sscc'], kinross_overpack: ['sscc'], kinross_replace: ['sku', 'cases'], kinross_replace_reserved: ['sku', 'cases'], erp_align_order: [], build_ship_notice: [], release_ship_notice: [], request_carrier_hold: [], notify_buyer_short: ['line', 'shipped'], erp_correct_invoice: ['po', 'invoice', 'line', 'qty'], ask_order_desk_shortage: ['po', 'sku'], send_routing_request: ['po', 'cases'], kinross_relabel_cartons: ['po', 'cartons'], ask_buyer_order_change: ['po', 'cases'] }[action];
   const extra = Object.keys(a).filter((k) => !allowed.includes(k));
   if (extra.length) return action === 'build_ship_notice' ? `AP-1.4: a ship notice is built only from the confirmed load scan; ${extra.join(', ')} cannot be supplied.` : `${action} takes only ${allowed.join(', ') || 'no arguments'}; refused ${extra.join(', ')}.`;
   if ((action === 'kinross_replace' || action === 'kinross_replace_reserved') && a.sku !== c.sku) return `No carton needing replacement holds ${a.sku}; the staged carton holds ${c.sku}.`;
@@ -206,10 +199,6 @@ function validate(s, action, a) {
   if (action === 'build_ship_notice' && s.asn?.released) return 'The ship notice is already released; it cannot be rebuilt.';
   if (action === 'notify_buyer_short' && !(a.line && a.shipped >= 0)) return 'Name the line and the quantity that ships.';
   if (QUEUE_ACTIONS.includes(action) && !(s.queue || []).some((r) => r.po === a.po)) return `${a.po || 'No order'} is not in the queue.`;
-  if (action === 'request_order_change') { const o = s.grove?.orders.find((x) => x.po === a.po); const short = groveShort(s);
-    if (!o) return `${a.po} is not one of the orders sharing this stock: ${s.grove?.orders.map((x) => x.po).join(', ')}.`;
-    if (!short) return 'The stock covers every order; no order needs to change.';
-    if (o.cases - short < 0) return `The stock is ${short} cases short; ${a.po} would change from ${o.cases} to ${o.cases - short} cases.`; }
   if (left < -60 && action !== 'release_ship_notice' && !QUEUE_ACTIONS.includes(action)) return 'The shipment has left.';
   return null;
 }
@@ -223,9 +212,6 @@ export function decide(db, s, proposalId, decision, by = 'Priya Raman', note, ch
   if (decision === 'edit') { p.state = 'Taken over'; p.taken_over_by = by; p.note = note || null; s.handed_over = { by, proposal: p.id, note: p.note, at: fmtET(iso(s.clock)) }; s.agent.status = 'handed_to_person';
     trace(s, by, 'human', `Edit suggestion: ${by} set ${p.id} aside and does the case by hand`, { action: p.action, note: p.note }); audit(s, p, `Taken over by ${by}; done by hand${p.note ? `: ${p.note}` : ''}`); return { state: 'Taken over', proposal: p.id, by }; }
   if (decision !== 'approve') { p.state = 'Rejected'; p.rejected_by = by; trace(s, by, 'human', `Rejected ${p.id}`, { action: p.action }); audit(s, p, 'Rejected'); return { state: 'Rejected', proposal: p.id }; }
-  // The allocation choice is Priya's (AP-5.1): she may pick a different order from the one Scout recommended.
-  if (p.action === 'request_order_change' && choice && choice !== p.args.po) { const o = s.grove.orders.find((x) => x.po === choice); if (!o) return { state: 'Refused', message: `${choice} is not one of the orders sharing this stock.` };
-    trace(s, by, 'human', `${by} chose ${choice} to ship short; Scout Agent recommended ${p.args.po}`, { proposal: p.id }); p.recommended = p.args.po; p.args = { po: choice, cases: o.cases - groveShort(s) }; p.chosen_by = by; }
   p.state = 'Approved'; p.approved_by = by; trace(s, by, 'human', `Approved ${p.id}: ${ACTIONS[p.action].label}`, { po: p.po, args: p.args });
   return execute(db, s, p, by);
 }
@@ -260,7 +246,8 @@ function execute(db, s, p, by) {
       r = task('replacement', { state: 'Completed', response: `Replacement case loaded as ${n}${reserved ? `; ${a.cases} case(s) taken from stock reserved for ${st.reserved_for}` : ''}`, new_sscc: n, loaded: cartonsLoaded(s) });
       if (s.grove) s.notices.push(`Kinross Groveport now holds ${st.on_hand} cases of ${st.sku} against ${s.grove.ordered} ordered on ${s.grove.orders.length} later orders: ${groveShort(s)} short`);
       break; }
-    case 'erp_align_order': { s.erp = { ship_to: 'DC 2', lines: 'Current' }; s.clock += 2 * MIN; trace(s, 'Supplier ERP', 'external', 'Sales order updated: ship-to DC 2, current line numbers', { proposal: p.id }); r = { state: 'Completed', response: 'Applied in Supplier ERP' }; break; }
+    case 'erp_align_order': { trace(s, 'Trading Grid', 'system', 'Correction request delivered to the Ashby order desk', { proposal: p.id, po: p.po }); s.erp = { ship_to: 'DC 2', lines: 'Current' }; s.clock += 2 * MIN;
+      trace(s, 'Ashby order desk', 'external', 'Corrected the sales order in the Supplier ERP: ship-to DC 2, current line numbers', { proposal: p.id, po: p.po }); r = { state: 'Completed', response: 'Corrected by the Ashby order desk in the Supplier ERP' }; break; }
     case 'request_carrier_hold': { trace(s, 'Northfield routing (synthetic)', 'external', 'Hold request received; no answer before the seal', { rule: 'Northfield routes collect freight; a hold is Northfield’s decision' }); r = { state: 'Sent', response: 'Request delivered; Northfield routing has not answered. The hold is not confirmed.' }; break; }
     case 'notify_buyer_short': { s.notices.push(`Email to Jordan Ellis: line ${a.line} ships ${a.shipped}; remainder cancelled under NF-2.1`); trace(s, 'Trading Grid', 'system', 'Email delivered to Jordan Ellis', { line: a.line, shipped: a.shipped }); r = { state: 'Delivered', response: 'Email delivered to Jordan Ellis. Northfield decides the cancellation on its order.' }; break; }
     case 'build_ship_notice': {
@@ -279,13 +266,11 @@ function execute(db, s, p, by) {
       s.receipt = { reference: `RCV-DC2-S${s.id.slice(3, 7)}`, at: fmtET(w.receipt_at), received, matches_ship_notice: match, synthetic: true, by_rule: 'Northfield DC 2 receives what was physically loaded and compares it carton for carton (NF-4.5)' };
       trace(s, 'Northfield (synthetic)', 'external', `Receiving advice (861): ${received} cartons received; ${match ? 'matches' : 'does not match'} the ship notice`, s.receipt);
       r = { state: 'Completed', response: `Released and sent. Synthetic receiving advice: ${received} cartons, ${match ? 'matching' : 'not matching'} the ship notice.`, receipt: s.receipt }; break; }
-    case 'erp_correct_invoice': { trace(s, 'Supplier ERP', 'external', `Invoice ${a.invoice} line ${a.line} corrected to ${a.qty} cases`, { proposal: p.id, po: p.po }); r = { state: 'Completed', response: 'Applied in Supplier ERP' }; break; }
+    case 'erp_correct_invoice': { trace(s, 'Trading Grid', 'system', 'Correction request delivered to the Ashby billing desk', { proposal: p.id, po: p.po }); trace(s, 'Ashby billing desk', 'external', `Corrected invoice ${a.invoice} line ${a.line} to ${a.qty} cases in the Supplier ERP`, { proposal: p.id, po: p.po }); r = { state: 'Completed', response: 'Corrected by the Ashby billing desk in the Supplier ERP' }; break; }
+    case 'ask_order_desk_shortage': { const short = groveShort(s); trace(s, 'Trading Grid', 'system', `Request delivered to the Ashby order desk: ${short} cases of ${a.sku} short across ${s.grove.orders.length} orders at Groveport; which order ships short`, { proposal: p.id, po: p.po }); r = { state: 'Delivered', response: 'Request delivered to the Ashby order desk. The order desk has not answered.' }; break; }
     case 'send_routing_request': { trace(s, 'Trading Grid', 'system', `Routing request for ${a.cases} cases sent to Northfield transportation`, { po: p.po }); trace(s, 'Northfield (synthetic)', 'external', 'Technical acknowledgment (997) received', { po: p.po, note: 'A 997 is not a pickup confirmation' }); r = { state: 'Sent', response: 'Routing request delivered. Northfield has not answered with a pickup.' }; break; }
     case 'kinross_relabel_cartons': { r = task('relabel', { state: 'Accepted', response: `${a.cartons} cartons queued for new SSCC labels before loading` }); break; }
     case 'ask_buyer_order_change': { s.notices.push(`Request to Jordan Ellis: order change for ${a.po} at ${a.cases} cases`); trace(s, 'Trading Grid', 'system', `Request for the order change on ${a.po} delivered to Jordan Ellis`, { po: p.po, cases: a.cases }); r = { state: 'Delivered', response: 'Request delivered to Jordan Ellis. The order change has not arrived.' }; break; }
-    case 'request_order_change': { s.grove.plan = { po: a.po, cases: a.cases, approved_by: by, recommended_by_scout: p.recommended || a.po };
-      trace(s, 'Supplier ERP', 'external', `Sales order ${a.po} set to ${a.cases} cases`, { proposal: p.id, po: p.po }); trace(s, 'Trading Grid', 'system', `Order-change request for ${a.po} at ${a.cases} cases delivered to Jordan Ellis`, { po: p.po });
-      r = { state: 'Sent', response: `Request delivered to Jordan Ellis; Supplier ERP sales order set to ${a.cases} cases. Kinross picks ${a.cases} only after Northfield’s order change arrives.` }; break; }
     default: r = { state: 'Refused', response: 'Unknown action' };
   }
   p.state = ['Completed', 'Delivered', 'Sent', 'Accepted'].includes(r.state) ? 'Executed' : 'Failed'; p.result = r; p.executed_under = by;
@@ -304,7 +289,7 @@ export function outcome(s) {
   return { cartons_loaded: loaded, of: s.load.expected, in_full: loaded === s.load.expected, ship_notice: s.asn ? { reference: s.asn.reference, cartons: s.asn.cartons, released: s.asn.released, on_time: s.asn.on_time ?? null } : null,
     receipt_matches_ship_notice: v ? v.matches_ship_notice : null, ship_to_correct: s.erp.ship_to === 'DC 2', reserved_stock_taken: props.some((p) => p.action === 'kinross_replace_reserved' && p.state === 'Executed'),
     buyer_told_of_short_line: s.notices.some((n) => n.startsWith('Email to Jordan')), approvals, actions_executed: props.filter((p) => p.state === 'Executed').length, actions_failed: props.filter((p) => p.state === 'Failed').length, actions_refused: s.trace.filter((t) => t.what.startsWith('Refused')).length, violations,
-    groveport: s.grove ? { on_hand: s.world.stock[0].on_hand, ordered: s.grove.ordered, short: groveShort(s), plan: s.grove.plan, shortage_planned_before_cutoff: !groveShort(s) || !!s.grove.plan } : null, synthetic: 'Kinross and Northfield answers are synthetic, produced by the deterministic rules in src/scout.js' };
+    groveport: s.grove ? { on_hand: s.world.stock[0].on_hand, ordered: s.grove.ordered, short: groveShort(s), asked: s.proposals.some((p) => p.action === 'ask_order_desk_shortage' && p.state === 'Executed') } : null, synthetic: 'Kinross and Northfield answers are synthetic, produced by the deterministic rules in src/scout.js' };
 }
 
 // ---------- Rule-based baseline: the same reads and actions, fixed logic, structured fields only ----------
@@ -314,10 +299,8 @@ export function runBaseline(db, s, approve = (p) => decide(db, s, p, 'approve', 
   if (ord.supplier_erp_sales_order.ship_to !== 'DC 2' || ord.supplier_erp_sales_order.line_numbers !== 'Current') act('erp_align_order', {});
   for (const { sscc } of ld.staged_not_loaded) {
     const r = act('kinross_load', { sscc }); if (r.state === 'Executed') continue;
-    const reason = r.result?.response || '';
-    if (/label/i.test(reason)) { if (act('kinross_relabel', { sscc }).state === 'Executed') continue; }
-    if (/crushed|damaged/i.test(reason)) { const inv = read(db, s, 'read_inventory', { sku: s.world.carton.sku }); if (inv.free >= 1 && inv.staging_minutes <= read(db, s, 'read_load').minutes_to_seal) { if (act('kinross_replace', { sku: s.world.carton.sku, cases: 1 }).state === 'Executed') continue; } }
-    act('notify_buyer_short', { line: 1, shipped: 400 - 1 });
+    // A fixed rule has one fix per finding. When Kinross rejects it, the rule has no next step: it flags the breach for Priya Raman.
+    trace(s, 'Rule engine', 'rule', 'Flagged for Priya Raman: the fixed fix was rejected and the rule has no next step', { sscc, response: r.result?.response || r.state });
   }
   act('build_ship_notice', {}); act('release_ship_notice', {});
   return outcome(s);
@@ -326,15 +309,15 @@ export function runBaseline(db, s, approve = (p) => decide(db, s, p, 'approve', 
 // ---------- Scout: a model choosing reads and proposing actions ----------
 const AGENT_TOOLS = [
   ...Object.entries(READS).map(([name, r]) => ({ name, description: r.description, input: r.input })),
-  { name: 'propose_action', description: `Propose one action. The server decides whether it runs under policy or waits for Priya Raman, and refuses anything a rule or guardrail forbids. Actions: ${Object.entries(ACTIONS).map(([k, a]) => `${k} (${a.label})`).join('; ')}. Give the arguments the action needs (sscc for carton tasks; sku and cases for replacements; line and shipped for notify_buyer_short; po only for request_order_change), a short rationale grounded in records you read, and the alternatives you considered with why you did not choose them.`,
-    input: { action: z.enum(Object.keys(ACTIONS)), po: z.string().optional().describe('Order, for request_order_change'), sscc: z.string().optional(), sku: z.string().optional(), cases: z.number().int().optional(), line: z.number().int().optional(), shipped: z.number().int().optional(), rationale: z.string().describe('One or two sentences citing the records read'), alternatives: z.array(z.string()).optional().describe('Options considered and why not chosen') } },
+  { name: 'propose_action', description: `Propose one action. The server decides whether it runs under policy or waits for Priya Raman, and refuses anything a rule or guardrail forbids. Actions: ${Object.entries(ACTIONS).map(([k, a]) => `${k} (${a.label})`).join('; ')}. Give the arguments the action needs (sscc for carton tasks; sku and cases for replacements; line and shipped for notify_buyer_short), a short rationale grounded in records you read, and the alternatives you considered with why you did not choose them.`,
+    input: { action: z.enum(Object.keys(ACTIONS).filter((k) => !QUEUE_ACTIONS.includes(k))), sscc: z.string().optional(), sku: z.string().optional(), cases: z.number().int().optional(), line: z.number().int().optional(), shipped: z.number().int().optional(), rationale: z.string().describe('One or two sentences citing the records read'), alternatives: z.array(z.string()).optional().describe('Options considered and why not chosen') } },
 ];
 const INSTRUCTION = (s) => `You are Scout Agent, working for Priya Raman at Ashby Supplier on Trading Grid. All data is fictional.
 Goal: ${s.goal}
 You are working on PO NR-460207, shipping from Kinross Groveport to Northfield Retailer. Find out what threatens this shipment, decide what should happen, and propose actions with propose_action.
 Use only facts returned by your tools. Never state a record, quantity or confirmation the tools did not return. Read the policy before proposing. A proposal that waits for approval is not done; a Kinross task is done only when Kinross reports it completed; a ship notice is accepted by Northfield only on its receiving advice, not on a technical acknowledgment.
-The rule engine has already proposed fixed-rule fixes on other shipments (read_proposals shows them, proposed by Rule engine); leave those to Priya.
-You also watch what your own actions do to other orders. If stock you used leaves later orders short, read them with read_site_orders and propose which one order ships short with request_order_change (po only; the server sets the cases to cover the shortage), giving your reason from the records and the orders you did not choose as alternatives. Priya Raman chooses; she may pick a different order.
+The rule engine has already drafted requests on other shipments (read_proposals shows them, proposed by Rule engine); leave those to Priya.
+You change no system yourself. Each action is a request to the owner of the record (Kinross, the Ashby order desk, the buyer); the owner makes the change in its own system and confirms.
 Never retry an action the server refused; read the refusal and change course, or stop and say what waits for Priya.
 When you are waiting for Priya or for Kinross, stop and say in one or two sentences what you proposed and why. When new evidence arrives, re-read what changed and reconsider your plan; do not repeat an action a party has already rejected for the same reason.`;
 
@@ -392,9 +375,7 @@ export async function decideAndResume(db, s, proposalId, decision, by, opts = {}
   if (r.state === 'Refused') return r;
   if (r.state === 'Taken over' || p0?.queue) return { decision: r, run: { ok: true, status: s.agent.status } };
   const ev = r.result ? `${proposalId} ${decision === 'approve' ? 'approved by ' + by : 'rejected'}; result: ${JSON.stringify(r.result)}` : `${proposalId} rejected by ${by}`;
-  // Once NR-460207 has no staged carton left, Scout is told what the load did to the stock the later orders share.
-  let more = ''; if (s.grove && !s.grove.plan && !s.grove.told && !s.load.staged.length && groveShort(s)) { s.grove.told = true; more = ` Kinross Groveport now holds ${s.world.stock[0].on_hand} cases of ${s.grove.sku} against ${s.grove.ordered} ordered on ${s.grove.orders.length} orders that load later: ${groveShort(s)} short. read_site_orders lists them.`; }
-  const run = await runScout(db, s, { ...opts, event: ev + more });
+  const run = await runScout(db, s, { ...opts, event: ev });
   return { decision: r, run };
 }
 
@@ -426,8 +407,7 @@ export function scriptedCaller() {
     if (/^Business event/.test(ev)) return out(fc('propose_action', { action: 'erp_align_order', rationale: 'Order change 1 moved the ship-to to DC 2; the Supplier ERP still shows DC 4.' }), fc('propose_action', { action: 'kinross_load', sscc: P5.carton.sscc, rationale: 'The carton is staged and loading takes 5 minutes against 40 to the seal.' }));
     if (/crushed/.test(ev)) return out(fc('read_inventory', { sku: P5.carton.sku }));
     if (res.some((r) => r.name === 'read_inventory')) { const inv = res.find((r) => r.name === 'read_inventory').response.result; return inv.free >= 1 ? out(fc('propose_action', { action: 'kinross_replace', sku: inv.sku, cases: 1, rationale: `Kinross reports the carton crushed. Groveport has ${inv.free} free cases and staging takes ${inv.staging_minutes} minutes.` })) : out(fc('propose_action', { action: 'notify_buyer_short', line: 1, shipped: 399, rationale: 'The carton is crushed and no free stock can replace it before the seal.' })); }
-    if (/Replacement case loaded|Email delivered|loaded"/.test(ev) && !h.some((c) => JSON.stringify(c).includes('build_ship_notice'))) return out(fc('propose_action', { action: 'build_ship_notice', rationale: 'The load is confirmed.' }), ...(/read_site_orders/.test(ev) ? [fc('read_site_orders', { sku: P5.carton.sku })] : []));
-    if (res.some((r) => r.name === 'read_site_orders')) { const o = res.find((r) => r.name === 'read_site_orders').response.result; return out(fc('propose_action', { action: 'release_ship_notice', rationale: 'The ship notice is built from the confirmed load.' }), fc('propose_action', { action: 'request_order_change', po: 'NR-460262', cases: 300 - o.short, rationale: `The replacement case left Groveport ${o.short} short. NR-460274 is already reduced by phone and NR-46581 is 49 cases; NR-460262 absorbs ${o.short} of 300.`, alternatives: ['NR-460274: already reduced from 300 to 270', 'NR-46581: 30 of 49 cases'] })); }
+    if (/Replacement case loaded|Email delivered|loaded"/.test(ev) && !h.some((c) => JSON.stringify(c).includes('build_ship_notice'))) return out(fc('propose_action', { action: 'build_ship_notice', rationale: 'The load is confirmed.' }));
     if (res.some((r) => r.name === 'propose_action' && r.response.result.state === 'Executed') && !h.some((c) => JSON.stringify(c).includes('release_ship_notice'))) return out(fc('propose_action', { action: 'release_ship_notice', rationale: 'The ship notice is built from the confirmed load.' }));
     return say('Waiting for Priya Raman.'); };
 }

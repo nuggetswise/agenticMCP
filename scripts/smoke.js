@@ -29,7 +29,7 @@ await withServer({ WRITES: 'off' }, 3971, async ({ base, client, tool, rest }) =
     ok('Aviator reached through the connector: answers or says it has no key, and logs the call', (av.ok === true || /no model key/.test(av.message || '')) && JSON.stringify(lg).includes('ask_aviator'), JSON.stringify(av).slice(0, 160)); }
   const before = JSON.stringify(await tool('get_access_log', { limit: 1 })).length >= 0 && (await tool('run_readonly_sql', { sql: "SELECT count(*) n FROM events WHERE po = 'NR-460207'" })).rows?.[0]?.n;
   const sb = await tool('scout_baseline', {}); const after = (await tool('run_readonly_sql', { sql: "SELECT count(*) n FROM events WHERE po = 'NR-460207'" })).rows?.[0]?.n;
-  ok('Scout session leaves the recorded world unchanged', sb.outcome?.cartons_loaded === 660 && sb.queue?.rows.length === 6 && before === after, `${before} -> ${after}`);
+  ok('Scout session leaves the recorded world unchanged', sb.outcome?.cartons_loaded === 659 && sb.queue?.rows.length === 6 && before === after, `${before} -> ${after}`);
   // Watch Agent (P13): a baseline, a start (no model key here) and an explicit clock advance leave every recorded record of the five orders unchanged.
   { const P13 = ['NR-46210', 'NR-46215', 'NR-46220', 'NR-46226', 'NR-46231']; const snap = async () => JSON.stringify(await Promise.all(P13.map(async (po) => { const o = await tool('get_order', { po, as_of: '2026-12-31' }); delete o.read_at; return o; })));
     const w0 = await snap(); const su = await tool('watch_setup', {}); const wb = await tool('watch_baseline', {}); const ws = await tool('watch_start', {}); const wa = await tool('watch_state', { session: wb.session, advance_minutes: 2000 }); const w1 = await snap();

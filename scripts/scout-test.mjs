@@ -53,10 +53,10 @@ function detectors(name, sess, actor) {
   let threw = false; try { S.startSession(db, { variation: { 'erp.ship_to': 'DC 2' } }); } catch { threw = true; } check(threw, 'guard: a replay may only change declared physical fields'); }
 
 // What the rule baseline must reach in each case, so a regression in the baseline cannot pass silently.
-const EXPECT = { canonical: 660, no_free_stock: 659, no_time: 659, bad_label: 660 };
+const EXPECT = { canonical: 659, no_free_stock: 659, no_time: 659, bad_label: 659 };
 // Facts set by hand before a run: checked, and the rule baseline's outcome follows the facts, not a preset name.
 { const run = (facts, policy) => { const s = S.startSession(db, { variation: S.factsToVariation(facts), policy }); return [S.runBaseline(db, s), s]; };
-  check(run({ free_cases: 3 })[0].cartons_loaded === 660, 'facts: 3 free cases, baseline loads 660');
+  check(run({ free_cases: 3 })[0].cartons_loaded === 659, 'facts: free cases do not change the baseline; re-planning after a rejection is Scout’s');
   check(run({ free_cases: 3, staging_minutes: 60 })[0].cartons_loaded === 659, 'facts: free cases but 60 minutes to stage, baseline loads 659');
   check(run({ carton_condition: 'good', carton_contents: 'intact' })[0].cartons_loaded === 660, 'facts: carton in good condition, baseline loads 660');
   const bad = (f) => { try { S.factsToVariation(f); return false; } catch { return true; } };
@@ -64,19 +64,17 @@ const EXPECT = { canonical: 660, no_free_stock: 659, no_time: 659, bad_label: 66
   const [, s2] = run({}, { kinross_load: 'policy', release_ship_notice: 'policy' });
   check(s2.proposals.find((p) => p.action === 'kinross_load')?.executed_under === 'Standing policy' && s2.proposals.find((p) => p.action === 'release_ship_notice')?.approved_by, 'policy: a Kinross load set to standing policy runs without asking; release still needs a person (AP-1.3)');
   const su = S.setup(); check(su.facts.free_cases.recorded === 590 && !('kinross_note' in su.facts) && su.actions.release_ship_notice.priya_may_change === false && su.guardrails.length === 3, 'setup: recorded facts, locked actions and guardrails are listed'); }
-// The queue (P5 rebuild): six rows from world records, four fixed-rule fixes waiting for Priya, and the Groveport plan.
+// The queue (P5 rebuild, proven scope): six rows from world records; every fix is a request to the owner of the record, none a write.
 { const s = S.startSession(db); const q = S.queueView(s); const g = q.rows.find((r) => r.kind === 'stock');
   check(q.rows.length === 6 && q.rows[0].po === 'NR-460207' && q.rows.every((r, i) => !i || r.cutoff_minutes >= q.rows[i - 1].cutoff_minutes) && q.checked > 6, `queue: six rows, soonest cutoff first, NR-460207 on top (${q.checked} open shipments checked)`);
-  check(g.on_hand === 590 && g.ordered === 619 && g.short === 29 && g.state === 'Choice needed', 'queue: Groveport reads 590 against 619 ordered, 29 short, before the load takes a case');
+  check(g.on_hand === 590 && g.ordered === 619 && g.short === 29, 'queue: Groveport reads 590 against 619 ordered, 29 short, before the load takes a case');
   const world = s.grove.orders.map((o) => db.prepare("SELECT l.qty_original q, x.ship_from f, x.shipped_at t FROM order_lines l JOIN shipments x ON x.po = l.po WHERE l.po = ? AND l.sku = 'ASH-MUG-12'").get(o.po));
   check(world.every((w, i) => w && w.f === 'KIN-GRV' && w.t > s.world.branch_at && (w.q === s.grove.orders[i].cases || w.q === s.grove.orders[i].po_reads)) && s.grove.orders.reduce((a, o) => a + o.cases, 0) === 619, 'queue: the three Groveport orders are world orders shipping from Groveport after 17:12, and their cases add to 619');
-  const rule = s.proposals.filter((p) => p.by === 'Rule engine'); check(rule.length === 4 && rule.every((p) => p.state === 'Awaiting approval' && p.po !== 'NR-460207'), 'queue: four fixed-rule fixes wait for Priya, none sent');
-  const o = S.runBaseline(db, s); check(o.cartons_loaded === 660 && o.groveport.short === 30 && o.groveport.plan === null && o.groveport.shortage_planned_before_cutoff === false, 'baseline: replaces the crushed carton from free stock and leaves Groveport 30 short with no plan');
-  check(S.propose(db, s, 'Scout', 'request_order_change', { po: 'NR-460207' }).state === 'Refused', 'guard: an order change must be on an order that shares the stock');
-  const p = S.propose(db, s, 'Scout', 'request_order_change', { po: 'NR-460262', sku: 'ASH-MUG-12', cases: 280 }); check(s.proposals.find((x) => x.id === p.proposal)?.args.cases === 270, 'guard: the server sets the cases to cover exactly the shortage'); const d = S.decide(db, s, p.proposal, 'approve', 'Priya Raman', null, 'NR-46581');
-  check(d.state === 'Executed' && s.grove.plan.po === 'NR-46581' && s.grove.plan.cases === 19 && s.grove.plan.recommended_by_scout === 'NR-460262' && S.outcome(s).groveport.shortage_planned_before_cutoff, 'choice: Priya may pick a different order; the plan records her choice and Scout’s recommendation');
+  const rule = s.proposals.filter((p) => p.by === 'Rule engine'); check(rule.length === 5 && rule.every((p) => p.state === 'Awaiting approval' && p.po !== 'NR-460207'), 'queue: five rule-drafted requests wait for Priya, none sent');
+  check(Object.values(S.ACTIONS).every((a) => a.actor !== 'Supplier ERP') && !('request_order_change' in S.ACTIONS), 'scope: no action writes to the Supplier ERP; the order and billing desks make their own corrections');
+  const o = S.runBaseline(db, s); check(o.cartons_loaded === 659 && o.ship_to_correct && s.trace.some((t) => /^Flagged for Priya Raman/.test(t.what)), 'baseline: one fix per finding; when Kinross rejects the carton it flags Priya and ships 659');
   const q2 = S.startSession(db); const ip = q2.proposals.find((x) => x.action === 'erp_correct_invoice'); S.decide(db, q2, ip.id, 'edit', 'Priya Raman');
-  check(!q2.handed_over && S.queueView(q2).rows.find((r) => r.kind === 'invoice').state === 'Edited by Priya Raman', 'edit: taking over a queue fix does not stop Scout on the other shipments'); }
+  check(!q2.handed_over && S.queueView(q2).rows.find((r) => r.kind === 'invoice').state === 'Edited by Priya Raman', 'edit: taking over a queue request does not stop Scout on the other shipments'); }
 const rows = [];
 for (const [name, v] of Object.entries(S.VARIATIONS)) {
   const s = S.startSession(db, { variation: v, label: `test ${name}` }); const o = S.runBaseline(db, s); detectors(name, s, 'baseline');

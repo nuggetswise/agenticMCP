@@ -36,11 +36,10 @@ export const ACTIONS = {
   erp_correct_invoice: { label: 'Ask the Ashby billing desk to correct an invoice draft line to the shipped quantity', actor: 'Ashby billing desk', rule: 'AP-3.2', mode: 'approve', editable: true },
   send_routing_request: { label: 'Send the routing request for a collect load to Northfield', actor: 'Northfield transportation', rule: 'AP-3.2', mode: 'approve', editable: true },
   kinross_relabel_cartons: { label: 'Ask Kinross to relabel cartons that carry SSCCs already used', actor: 'Kinross', rule: 'AP-3.2', mode: 'approve', editable: true },
-  ask_buyer_order_change: { label: 'Ask the buyer for the order change behind a quantity agreed by phone', actor: 'Jordan Ellis', rule: 'AP-3.2', mode: 'approve', editable: true },
   ask_order_desk_shortage: { label: 'Ask the Ashby order desk which order ships short when stock does not cover the orders that share it', actor: 'Ashby order desk', rule: 'AP-5.1', mode: 'approve', editable: true },
 };
 const HERO_ACTIONS = ['kinross_load', 'kinross_relabel', 'kinross_overpack', 'kinross_replace', 'kinross_replace_reserved'];
-const QUEUE_ACTIONS = ['erp_correct_invoice', 'send_routing_request', 'kinross_relabel_cartons', 'ask_buyer_order_change', 'ask_order_desk_shortage'];
+const QUEUE_ACTIONS = ['erp_correct_invoice', 'send_routing_request', 'kinross_relabel_cartons', 'ask_order_desk_shortage'];
 export const GUARDRAILS = [
   { id: 'AP-1.4', owner: 'Administrator', text: 'Never edit a ship notice to match the order; a ship notice is built only from the confirmed load scan.' },
   { id: 'AP-7.1', owner: 'Administrator', text: 'Never change a Kinross record without Kinross accepting the change; Scout sends tasks, Kinross confirms.' },
@@ -109,7 +108,7 @@ function ruleCheckAsn(s) {
 function ruleQueue(db, s) {
   const cut = s.world.branch_at;
   const one = (kind) => { const r = db.prepare('SELECT po, data FROM events WHERE kind = ? AND at <= ? AND po <> ? ORDER BY at DESC').get(kind, cut, s.world.po); return r ? { po: r.po, d: JSON.parse(r.data) } : null; };
-  const inv = one('erp.invoice_draft'), route = one('routing.request'), stock = one('wms.inventory'), label = one('wms.label_scan'), phone = one('outside_confirmation');
+  const inv = one('erp.invoice_draft'), route = one('routing.request'), stock = one('wms.inventory'), label = one('wms.label_scan');
   s.queue = [];
   const row = (po, r, action, args) => { s.queue.push({ po, ...r }); if (action) propose(db, s, 'Rule engine', action, args, { rationale: r.problem }); };
   if (inv) row(inv.po, { kind: 'invoice', problem: `Invoice draft ${inv.d.invoice} line ${inv.d.line} bills ${inv.d.billed} cases; ${inv.d.shipped} shipped; $${inv.d.over_value.toFixed(2)} over`, consequence: `the invoice batch sends ${inv.d.billed} cases billed against ${inv.d.shipped} shipped`, cutoff_minutes: inv.d.batch_sends_in_minutes, cutoff: 'Invoice batch', source: 'Supplier ERP · API', now: `${inv.d.billed} cases`, after: `${inv.d.shipped} cases`, what: `Invoice ${inv.d.invoice} line ${inv.d.line}`, goes_to: 'Supplier ERP · API' }, 'erp_correct_invoice', { po: inv.po, invoice: inv.d.invoice, line: inv.d.line, qty: inv.d.shipped });
@@ -117,8 +116,6 @@ function ruleQueue(db, s) {
   if (stock) { s.grove = { po: stock.po, sku: stock.d.sku, ordered: stock.d.ordered_across_orders, orders: stock.d.order_list || [], cutoff_minutes: stock.d.change_cutoff_in_minutes, };
     row(stock.po, { kind: 'stock', cutoff_minutes: stock.d.change_cutoff_in_minutes, cutoff: 'Order-change cutoff', source: 'Kinross inventory · API', what: 'Which order ships short', goes_to: 'Ashby order desk · Task' }, 'ask_order_desk_shortage', { po: stock.po, sku: stock.d.sku }); }
   if (label) row(label.po, { kind: 'label', problem: `${label.d.reused_sscc} of ${label.d.cartons} honey cartons carry SSCCs already used`, consequence: `${label.d.reused_sscc} cartons load with SSCCs Northfield has already received`, cutoff_minutes: label.d.loading_starts_in_minutes, cutoff: 'Loading starts', source: 'Kinross scan · API', now: 'SSCCs already used', after: 'New SSCCs', what: `Relabel ${label.d.reused_sscc} cartons`, goes_to: 'Kinross Logistics · API' }, 'kinross_relabel_cartons', { po: label.po, cartons: label.d.reused_sscc });
-  if (phone && !phone.d.order_change_received) { const agreed = parseInt(phone.d.scope, 10); const reads = +(/reads (\d+)/.exec(phone.d.scope) || [])[1];
-    row(phone.po, { kind: 'phone', problem: `${phone.d.confirmed_by} agreed ${agreed} cases by phone; the PO still reads ${reads}; no order change received`, consequence: `Kinross picks ${reads} cases against the ${agreed} agreed`, cutoff_minutes: phone.d.loading_starts_in_minutes, cutoff: 'Loading starts', source: 'Phone note', now: `PO reads ${reads}`, after: `Order change to ${agreed}`, what: 'Order change request', goes_to: `${phone.d.confirmed_by} · Email` }, 'ask_buyer_order_change', { po: phone.po, cases: agreed }); }
   s.checked = db.prepare("SELECT count(*) n FROM orders o WHERE supplier_id = 'ASHBY' AND received_at <= ? AND NOT EXISTS (SELECT 1 FROM shipments x WHERE x.po = o.po AND x.shipped_at <= ?)").get(cut, cut).n;
 }
 const groveShort = (s) => s.grove ? Math.max(0, s.grove.ordered - s.world.stock[0].on_hand) : 0;
@@ -241,7 +238,8 @@ function execute(db, s, p, by) {
       const reserved = p.action === 'kinross_replace_reserved';
       if (!st || (reserved ? st.on_hand : free) < a.cases) { r = task('replacement', { state: 'Rejected', response: reserved ? 'Not enough stock on hand' : `Only ${free} free cases; the rest are reserved for other orders` }); break; }
       if (left() < st.staging_minutes) { r = task('replacement', { state: 'Rejected', response: `Staging takes ${st.staging_minutes} minutes; the seal is in ${Math.max(0, Math.round(left()))}` }); break; }
-      st.on_hand -= a.cases; if (reserved) st.reserved -= a.cases;
+      // A replacement for a carton damaged at Kinross comes from the cases Kinross holds back for damage while it has them, so the free figure does not move.
+      if (!reserved && (st.held_for_damage || 0) >= a.cases) st.held_for_damage -= a.cases; else { st.on_hand -= a.cases; if (reserved) st.reserved -= a.cases; }
       const n = nextSscc(s); s.load.removed.push(c.sscc); s.load.staged = s.load.staged.filter((x) => x !== c.sscc); s.load.staged.push(n); load(n, st.staging_minutes);
       r = task('replacement', { state: 'Completed', response: `Replacement case loaded as ${n}${reserved ? `; ${a.cases} case(s) taken from stock reserved for ${st.reserved_for}` : ''}`, new_sscc: n, loaded: cartonsLoaded(s) });
       if (s.grove) s.notices.push(`Kinross Groveport now holds ${st.on_hand} cases of ${st.sku} against ${s.grove.ordered} ordered on ${s.grove.orders.length} later orders: ${groveShort(s)} short`);
@@ -270,7 +268,6 @@ function execute(db, s, p, by) {
     case 'ask_order_desk_shortage': { const short = groveShort(s); trace(s, 'Trading Grid', 'system', `Request delivered to the Ashby order desk: ${short} cases of ${a.sku} short across ${s.grove.orders.length} orders at Groveport; which order ships short`, { proposal: p.id, po: p.po }); r = { state: 'Delivered', response: 'Request delivered to the Ashby order desk. The order desk has not answered.' }; break; }
     case 'send_routing_request': { trace(s, 'Trading Grid', 'system', `Routing request for ${a.cases} cases sent to Northfield transportation`, { po: p.po }); trace(s, 'Northfield (synthetic)', 'external', 'Technical acknowledgment (997) received', { po: p.po, note: 'A 997 is not a pickup confirmation' }); r = { state: 'Sent', response: 'Routing request delivered. Northfield has not answered with a pickup.' }; break; }
     case 'kinross_relabel_cartons': { r = task('relabel', { state: 'Accepted', response: `${a.cartons} cartons queued for new SSCC labels before loading` }); break; }
-    case 'ask_buyer_order_change': { s.notices.push(`Request to Jordan Ellis: order change for ${a.po} at ${a.cases} cases`); trace(s, 'Trading Grid', 'system', `Request for the order change on ${a.po} delivered to Jordan Ellis`, { po: p.po, cases: a.cases }); r = { state: 'Delivered', response: 'Request delivered to Jordan Ellis. The order change has not arrived.' }; break; }
     default: r = { state: 'Refused', response: 'Unknown action' };
   }
   p.state = ['Completed', 'Delivered', 'Sent', 'Accepted'].includes(r.state) ? 'Executed' : 'Failed'; p.result = r; p.executed_under = by;
@@ -434,7 +431,7 @@ export const FACTS = {
   carton_condition: { field: 'carton.condition', values: ['crushed', 'good'], says: 'Condition of the staged carton' },
   carton_contents: { field: 'carton.contents', values: ['damaged', 'intact'], says: 'Contents of the staged carton' },
   carton_label: { field: 'carton.label', values: ['readable', 'unreadable'], says: 'Label on the staged carton' },
-  free_cases: { min: 0, max: 590, says: 'Cases of the item at Kinross Groveport not reserved for other orders' },
+  free_cases: { min: 0, max: P5.stock[0].on_hand, says: 'Cases of the item at Kinross Groveport not reserved for other orders' },
   staging_minutes: { field: 'stock.0.staging_minutes', min: 1, max: 240, says: 'Minutes Kinross needs to stage a replacement case' },
 };
 export function factsToVariation(facts = {}) {
@@ -456,7 +453,7 @@ export const setup = () => ({ branch_at: fmtET(P5.branch_at), po: P5.po,
   guardrails: GUARDRAILS, owner_note: 'Facts are Kinross’s and synthetic; approval modes are Ashby’s (Priya Raman); guardrails are the administrator’s and cannot be changed here.' });
 export const VARIATIONS = {
   canonical: {},
-  no_free_stock: { 'stock.0.reserved': 590 },
+  no_free_stock: { 'stock.0.reserved': P5.stock[0].on_hand },
   no_time: { 'stock.0.staging_minutes': 45 },
   bad_label: { 'carton.condition': 'good', 'carton.contents': 'intact', 'carton.label': 'unreadable' },
 };

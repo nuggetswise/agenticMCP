@@ -3,6 +3,7 @@
 import { et, addH, addD, etDay } from './lib.js';
 import { D, iso } from './log.js';
 import { ITEM, BUYER_FX } from './ref.js';
+import { P5 } from './p5-physical.js';
 
 const day = (d, hm) => et(d, hm);
 const ev = (L, at, kind, po, system, party, channel, data) => L.event({ at, kind, po, system, party, channel, data });
@@ -85,7 +86,11 @@ export function anchors(L, W) {
     ev(L, day('2026-11-02', '15:52'), 'erp.inventory_read', po, 'Supplier ERP', 'ASHBY', 'API', { sku: 'ASH-HNY-340', on_hand: 96, meaning: 'On hand', note: 'Earlier reading was 31 hours old and stale' });
     ev(L, day('2026-11-02', '16:10'), 'approval', po, 'Trading Grid', 'ASHBY', 'API', { approved_by: 'Priya Raman', what: 'Change response: line 1 270 cases, line 2 120 cases on 9 Nov, line 3 80 cases' });
     D.changeAck(L, O, day('2026-11-02', '16:12'), 3, 'CHA-450118', [{ line: 1, code: 'IQ', qty: 270 }, { line: 2, code: 'IA', qty: 120, date: '2026-11-09' }, { line: 3, code: 'IA', qty: 80 }]);
-    ev(L, day('2026-11-02', '16:40'), 'outside_confirmation', po, 'Trading Grid', 'NORTHFIELD', 'Phone', { confirmed_by: 'Jordan Ellis', recorded_by: 'Priya Raman', scope: 'Business acceptance of the change response: line 1 270, line 2 120 on 9 Nov, line 3 80', accepted_value: 22932 });
+    // 17 November 2026: no quantity rests on a phone agreement. Northfield answers the change response with order change 4
+    // (line 1 at 270, 16:40) and Ashby acknowledges it (865, 16:54); both documents and their 997s are written by the
+    // `records` stage (world/stages/records.js), so no existing interchange is renumbered. Priya's approval takes the place
+    // of the withdrawn record, which keeps every later record's id.
+    ev(L, day('2026-11-02', '16:52'), 'approval', po, 'Trading Grid', 'ASHBY', 'API', { approved_by: 'Priya Raman', what: 'Change acknowledgment to order change 4: line 1 270 cases accepted' });
     // Shipment 1: lines 1 and 3, 350 cartons. The first ship notice draft carried line 1 at 300 and was held.
     const c1 = [...cartonsFor(W, 1, [[1, 270]]), ...cartonsFor(W, 391, [[3, 80]])];
     ev(L, day('2026-11-06', '11:00'), 'tg.hold', po, 'Trading Grid', 'ASHBY', 'API', { document: 'ASN-450118-1 draft', rule: 'NF-4.5', finding: 'Line 1 ship notice 300 against 270 accepted', exposure_estimate: 150, corrected_by: 'Priya Raman', approved_by: 'Jordan Ellis', approved_at: iso(day('2026-11-06', '11:20')), released_at: iso(day('2026-11-06', '11:25')) });
@@ -198,15 +203,16 @@ export function anchors(L, W) {
     ev(L, addH(t0, -2), 'erp.invoice_draft', inv.po, 'Supplier ERP', 'ASHBY', 'API', { invoice: 'INV-8012', line: 2, billed: 180, shipped: 176, over_value: 153.6, batch_sends_in_minutes: 168 });
     const route = A.riskRoute = risk('NR-460241', [['ASH-MUG-12', 220]], { recv: day('2026-12-07', '11:00'), site: 'KIN-JOL', ackH: 20.5, requested: '2026-12-11' });
     ev(L, addH(t0, -1), 'routing.request', route.po, 'Northfield transportation', 'ASHBY', 'EDI', { state: 'Missing', freight: 'Collect', cases: 220, due_in_minutes: 1068, rule: 'NF-3.2' });
-    // Groveport stock (P5 rebuild, D80): 590 cases free against 619 released to Kinross on three orders that load together
-    // (NR-460262 300, NR-460274 at the 270 agreed by phone, NR-46581 49). One case replaces NR-460207's crushed carton, which
-    // leaves 589 against 619: the 30 cases Northfield later cuts from NR-460262.
+    // Groveport stock (17 November 2026): 610 cases free against 640 ordered on three orders (NR-460262 300, NR-460274 300
+    // as its purchase order says, NR-46620 40), 30 short: the 30 cases Northfield later cuts from NR-460262. The case that
+    // replaces NR-460207's crushed carton comes from the stock Kinross holds back for damage, which the free figure leaves out.
     const alloc = A.riskAlloc = risk('NR-460262', [['ASH-MUG-12', 300]], { recv: day('2026-12-07', '15:00'), site: 'KIN-GRV', ackH: 23.0, requested: '2026-12-11' });
-    ev(L, addH(t0, -0.5), 'wms.inventory', alloc.po, 'Kinross warehouse system', 'KINROSS', 'API', { sku: 'ASH-MUG-12', site: 'Kinross Groveport', available: 590, ordered_across_orders: 619, orders: 3, order_list: [{ po: 'NR-460262', cases: 300 }, { po: 'NR-460274', cases: 270, po_reads: 300 }, { po: 'NR-46581', cases: 49 }], change_cutoff_in_minutes: 1248 });
+    ev(L, addH(t0, -0.5), 'wms.inventory', alloc.po, 'Kinross warehouse system', 'KINROSS', 'API', { sku: 'ASH-MUG-12', site: 'Kinross Groveport', available: 610, ordered_across_orders: 640, short: 30, orders: 3, order_list: [{ po: 'NR-460262', cases: 300 }, { po: 'NR-460274', cases: 300 }, { po: 'NR-46620', cases: 40 }], meaning: 'Cases free to release to orders; the 2 cases Kinross holds back for damage replacement are not counted', held_for_damage_replacement: 2, change_cutoff_in_minutes: 1248 });
     const lab = A.riskLab = risk('NR-460233', [['ASH-HNY-340', 96]], { recv: day('2026-12-06', '09:00'), site: 'KIN-JOL', ackH: 19.75, requested: '2026-12-10' });
     ev(L, addH(t0, -0.7), 'wms.label_scan', lab.po, 'Kinross warehouse system', 'KINROSS', 'API', { cartons: 96, reused_sscc: 12, first_used_on: W.anchor.p1, rule: 'NF-4.1', loading_starts_in_minutes: 1368 });
     const off = A.riskOff = risk('NR-460274', [['ASH-MUG-12', 300]], { recv: day('2026-12-08', '09:30'), site: 'KIN-GRV', ackH: 3.25, requested: '2026-12-11' });
-    ev(L, day('2026-12-08', '13:10'), 'outside_confirmation', off.po, 'Trading Grid', 'NORTHFIELD', 'Phone', { confirmed_by: 'Jordan Ellis', recorded_by: 'Priya Raman', scope: '270 cases agreed by phone; the PO still reads 300', order_change_received: false, loading_starts_in_minutes: 1488 });
+    // 17 November 2026: the outside confirmation that stood here (270 cases agreed by phone) is withdrawn. NR-460274 reads as its purchase order says.
+    L.retireEvent(day('2026-12-08', '13:10'));
     // Scout Agent's conflict record: the Supplier ERP says shipped and Kinross has not departed.
     const conf = A.riskConflict = risk('NR-460288', [['ASH-NAP-4', 140]], { recv: day('2026-12-08', '10:00'), site: 'KIN-JOL', requested: '2026-12-11' });
     ev(L, day('2026-12-10', '14:05'), 'erp.fulfilment_posted', conf.po, 'Supplier ERP', 'ASHBY', 'API', { shipment: 'SHP-460288', cartons: 140 });
@@ -222,6 +228,9 @@ export function anchors(L, W) {
   ];
 }
 
+/** The case Kinross loads in place of NR-460207's crushed carton 006141410006005172 (serial from world/p5-physical.js). */
+export const REPLACEMENT_SSCC = (W) => W.sscc(P5.next_serial);
+
 /** Finishes the risk orders after the moment: the ideal state, each fixed with Priya's approval. */
 export function finishRisks(L, W) {
   let serial = 601000;
@@ -229,10 +238,12 @@ export function finishRisks(L, W) {
     if (O.po === 'NR-460207') O.shipTo = 'DC2';
     const n = O.po.slice(3); const dep = O.po === 'NR-460207' ? et('2026-12-08', '18:00') : et(O.po === 'NR-460219' ? '2026-12-09' : '2026-12-10', O.po === 'NR-460288' ? '18:00' : '15:00');
     const ship = Object.fromEntries(O.lines.map((l) => [l.line, l.qty]));
-    if (O.po === 'NR-460262') ship[1] = 270; if (O.po === 'NR-460274') ship[1] = 270; if (O.po === 'NR-460219') ship[2] = 176;
-    if (O.po === 'NR-460274') { D.change(L, O, et('2026-12-08', '18:20'), 1, [{ line: 1, code: 'QD', qty: 270, qty_left: 270 }]); D.changeAck(L, O, et('2026-12-08', '18:50'), 1, 'CHA-460274', [{ line: 1, code: 'IA', qty: 270 }]); O.lines[0].qty = 270; }
+    if (O.po === 'NR-460262') ship[1] = 270; if (O.po === 'NR-460219') ship[2] = 176;
+    // NR-460274 ships the 300 cases its purchase order says. The order change and change acknowledgment that carried the
+    // 270 agreed by phone are withdrawn; their places in the numbering stay unused.
+    if (O.po === 'NR-460274') { L.retire({ from: 'NORTHFIELD', to: O.supplier, at: et('2026-12-08', '18:20') }); L.retire({ from: O.supplier, to: 'NORTHFIELD', at: et('2026-12-08', '18:50') }); }
     if (O.po === 'NR-460262') { D.change(L, O, et('2026-12-09', '09:20'), 1, [{ line: 1, code: 'QD', qty: 270, qty_left: 270 }]); D.changeAck(L, O, et('2026-12-09', '09:50'), 1, 'CHA-460262', [{ line: 1, code: 'IA', qty: 270 }]); O.lines[0].qty = 270; }
-    const cartons = []; for (const l of O.lines) for (let k = 0; k < ship[l.line]; k++) cartons.push({ sscc: O.po === 'NR-460207' && l.line === 1 && k === 172 ? '006141410006005172' : W.sscc(serial++), line: l.line, qty: 1 });
+    const cartons = []; for (const l of O.lines) for (let k = 0; k < ship[l.line]; k++) cartons.push({ sscc: O.po === 'NR-460207' && l.line === 1 && k === 172 ? REPLACEMENT_SSCC(W) : W.sscc(serial++), line: l.line, qty: 1 });
     D.whOrder(L, O, addH(dep, -20), `WSO-${n}`, { shipDate: etDay(dep), qty: ship });
     L.event({ at: dep, kind: 'wms.departure_scan', po: O.po, system: 'Kinross warehouse system', party: 'KINROSS', channel: 'API', data: { shipment: `SHP-${n}`, carrier: 'Lakeline Freight' } });
     D.whAdvice(L, O, addH(dep, 0.2), `WSA-${n}`, { shipmentId: `SHP-${n}`, shippedAt: dep, ordered: ship, shipped: ship });

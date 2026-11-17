@@ -810,6 +810,21 @@
    "links": []
   },
   {
+   "id": "AP-3.4",
+   "owner": "Ashby",
+   "statement": "A required document still missing when 2 hours are left before its deadline is flagged to Priya Raman",
+   "implements": [
+    "NF-1.4",
+    "NF-4.2",
+    "NF-7.9",
+    "KX-945"
+   ],
+   "charge": "",
+   "basis": "Invented",
+   "source": "Silent order watch prototype. No published source found; the 2 hours is Ashby’s own setting.",
+   "links": []
+  },
+  {
    "id": "AP-4.1",
    "owner": "Ashby",
    "statement": "Dispute a deduction without asking only when the NF-7.4 evidence is already on hand and the amount is under $250; otherwise Priya Raman decides between dispute and write-off",
@@ -942,9 +957,21 @@
    "links": []
   },
   {
+   "id": "AP-7.2",
+   "owner": "Ashby",
+   "statement": "A Kinross order is flagged when the warehouse shipping advice (945) is not back within 24 hours of the warehouse shipping order (940); Ashby’s own window, tighter than the 48 hours agreed with Kinross",
+   "implements": [
+    "KX-945"
+   ],
+   "charge": "",
+   "basis": "Invented",
+   "source": "Silent order watch prototype. No published source found; the 24 hours is Ashby’s own setting.",
+   "links": []
+  },
+  {
    "id": "KX-945",
    "owner": "Ashby agreement",
-   "statement": "Kinross returns the warehouse shipping advice (945) within 24 hours of Ashby’s warehouse shipping order (940). Agreement between Ashby and its warehouse, Kinross",
+   "statement": "Kinross returns the warehouse shipping advice (945) within 48 hours of Ashby’s warehouse shipping order (940). Agreement between Ashby and its warehouse, Kinross",
    "implements": [],
    "charge": "",
    "basis": "Invented",

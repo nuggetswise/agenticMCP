@@ -67,8 +67,12 @@ const dockOpen = (o) => et(o.requested_delivery, o.ship_to === 'DC4' ? '07:00' :
  * Northfield documents only unless warehouse is true, which adds the Kinross shipping advice, due kinrossHours after the 940
  * (KX-945's 24 by default; P13's Watch Agent passes Priya's window).
  */
-export function attention(db, asOf = storyClock(), { warehouse = false, kinrossHours = 24 } = {}) {
-  const t = asOf.toISOString(); const out = []; const checked = [];
+export function attention(db, asOf = storyClock(), { warehouse = false, kinrossHours = null } = {}) {
+  const t = asOf.toISOString(); const out = []; const checked = []; const watching = [];
+  // The Kinross window: the agreement (KX-945, 48 hours) and Ashby's own tighter rule (AP-7.2, 24 hours), which applies
+  // unless the caller asks for another window. A missing warehouse advice is flagged when AP-3.4's hours are left.
+  const agreed = param(db, 'KX-945', 'hours'); const own = param(db, 'AP-7.2', 'hours'); const win = kinrossHours ?? own; const flagH = param(db, 'AP-3.4', 'hours_left');
+  const winRule = win === own ? 'AP-7.2' : 'KX-945';
   const since = new Date(asOf.getTime() - 12 * 24 * H).toISOString();
   const orders = db.prepare("SELECT * FROM orders WHERE supplier_id = ? AND stream <> 'store' AND received_at <= ? AND received_at >= ? ORDER BY po").all(COMPANY, t, since);
   const docsOf = db.prepare('SELECT doc_id, reference, doc_type, sent_at FROM documents WHERE po = ? AND sent_at <= ? AND test = 0 ORDER BY sent_at');
@@ -86,7 +90,9 @@ export function attention(db, asOf = storyClock(), { warehouse = false, kinrossH
       const departed = new Date(dep.at);
       if (!good('856')) {
         const rej = firstOpen('856');
-        if (rej) add(`Ship notice rejected: ${rej.e.cause}`, rej.e.rule_id || 'NF-4.2', dockOpen(o), [rej.d.reference], { rejected: rej.d.reference, corrected_ship_notice_due: 'Before the shipment reaches the DC', truck_left: fmtET(departed) });
+        if (rej) { const adv = db.prepare('SELECT doc_id, reference, sent_at FROM documents WHERE doc_id = ?').get(rej.e.reported_by); const fa = adv && db.prepare("SELECT reference, sent_at FROM documents WHERE doc_type = '997' AND answers_doc_id = ? AND sent_at <= ?").get(adv.doc_id, t);
+          add(`Ship notice rejected: ${rej.e.cause}`, rej.e.rule_id || 'NF-4.2', dockOpen(o), [rej.d.reference], { rejected: rej.d.reference, corrected_ship_notice_due: 'Before the shipment reaches the DC', truck_left: fmtET(departed),
+            ...(adv && rej.e.channel === 'Application advice (824)' ? { rejected_on: `Application advice (824) ${adv.reference}, ${fmtET(adv.sent_at)}`, acknowledged_by_ashby: fa ? `Technical acknowledgment (997) ${fa.reference}, ${fmtET(fa.sent_at)}` : 'Not yet', correction: 'Due: the corrected ship notice (856) is not sent', sent_value: rej.e.sent_value, allowed: rej.e.allowed } : {}) }); }
         else if (!of('856').length) add('Ship notice not sent; the truck has left', 'NF-4.2', new Date(departed.getTime() + H), [o.po], { truck_left: fmtET(departed), ...(asOf - departed > H ? { state: 'Late' } : {}) });
       }
       if (!good('810')) {
@@ -95,15 +101,28 @@ export function attention(db, asOf = storyClock(), { warehouse = false, kinrossH
         else if (!of('810').length && due - asOf <= 24 * H) add('Invoice not sent', 'NF-7.9', due, [o.po], { shipped: fmtET(departed) });
       }
     }
+    // A ship notice Trading Grid holds: the Supplier ERP shows the shipment fulfilled and the warehouse has not scanned the departure.
+    if (!dep && !of('856').length) {
+      const hold = db.prepare("SELECT at, data FROM events WHERE po = ? AND kind = 'tg.hold' AND at <= ? AND json_extract(data, '$.state') = 'Held' ORDER BY at DESC").get(o.po, t);
+      if (hold && !db.prepare("SELECT 1 x FROM events WHERE po = ? AND kind = 'tg.release' AND at >= ? AND at <= ?").get(o.po, hold.at, t)) { const h = J(hold.data);
+        const plan = db.prepare("SELECT data FROM events WHERE po = ? AND kind = 'erp.shipment_planned' AND at <= ? ORDER BY at DESC").get(o.po, t); const planned = plan ? J(plan.data).planned_departure : null;
+        add('Ship notice held: the Supplier ERP shows the shipment fulfilled and Kinross has not scanned the departure', h.rule || 'NF-4.2', new Date(Date.parse(planned || hold.at) + H), [h.document],
+          { state: 'Held', finding: h.finding, owner: h.owner, fix_in: h.fix_in, closes_on: h.closes_on, held_since: fmtET(hold.at), ...(planned ? { planned_departure: fmtET(planned), deadline_basis: 'One hour after the planned departure (NF-4.2)' } : {}), sent_to_northfield: 'Nothing' }); }
+    }
     if (warehouse) {
       const w = db.prepare('SELECT * FROM warehouse_orders WHERE po = ? AND sent_at <= ?').get(o.po, t);
-      if (w && !(w.advice_at && w.advice_at <= t)) { const due = new Date(Date.parse(w.sent_at) + kinrossHours * H); if (due - asOf <= 8 * H) add('Warehouse shipping advice (945) not received from Kinross', 'KX-945', due, [w.ref], { warehouse_status: 'Unknown', warehouse_order_sent: fmtET(w.sent_at) }); }
+      if (w && !(w.advice_at && w.advice_at <= t)) { const due = new Date(Date.parse(w.sent_at) + win * H); const left = due - asOf;
+        const read = db.prepare("SELECT at, data FROM events WHERE po = ? AND kind = 'tg.status_read' AND at <= ? ORDER BY at DESC").get(o.po, t);
+        const facts = { warehouse_status: 'Unknown', warehouse_order_sent: fmtET(w.sent_at), window: `${win} hours after the warehouse shipping order`, ...(read ? { status_read: `${fmtET(read.at)}: ${J(read.data).response} from the ${J(read.data).target}` } : {}) };
+        if (left <= flagH * H) add('Warehouse shipping advice (945) not received from Kinross', winRule, due, [w.ref], { state: left < 0 ? 'Overdue' : 'Missing', ...facts, owner: 'Kinross Logistics', closes_on: 'Kinross warehouse shipping advice (945)', drafted: 'Nothing', flagged_under: rule(db, 'AP-3.4') });
+        else watching.push({ po: o.po, document: 'Warehouse shipping advice (945)', warehouse_order: w.ref, due: fmtET(due), time_left: timeLeft(due, asOf), ...facts, why_not_flagged: `More than ${flagH} hours left in the ${win}-hour window (${winRule})` }); }
     }
     const cha = of('865').pop();
     if (cha && asOf - new Date(cha.sent_at) <= 48 * H) checked.push({ po: o.po, item: 'Business acceptance of the change acknowledgment', state: 'Not expected', rule: rule(db, 'NF-1.5'), evidence: 'Technical acknowledgment (997) received', link: `order/${encodeURIComponent(o.po)}` });
   }
   out.sort((a, b) => a._t - b._t); out.forEach((x) => delete x._t);
-  return { as_of: fmtET(asOf), retailer: 'Northfield Retailer', scope: warehouse ? 'Northfield documents and the Kinross shipping advice' : 'Northfield documents', orders_needing_attention: out.length, items: out, checked_nothing_to_chase: checked };
+  return { as_of: fmtET(asOf), retailer: 'Northfield Retailer', scope: warehouse ? 'Northfield documents and the Kinross shipping advice' : 'Northfield documents', orders_needing_attention: out.length, items: out, checked_nothing_to_chase: checked,
+    ...(warehouse ? { kinross_window: { hours: win, rule: rule(db, winRule), agreement_with_kinross_hours: agreed, ashby_rule_hours: own, flag_when_hours_left: flagH }, watching_not_flagged: watching } : {}) };
 }
 
 /** Why a document was rejected, its rule, its correction, and later documents that failed for the same cause. */
@@ -229,6 +248,15 @@ export function rules(db, { topic, document: doc, id, viewer = 'ASHBY' } = {}) {
     rules: rows.map((r) => ({ id: r.id, owner: r.owner, implements: r.implements ? r.implements.split(',') : [], topic: r.topic, document: r.doc_type, rule: r.statement, window_hours: r.window_hours, limit: r.limit_value, charge_code: r.charge_code, charge: r.charge, basis: r.basis, source: r.source })) };
 }
 
+/** One promotion deduction against its deal, from the settlement Trading Grid recomputes (deal 889, 852, 856, 810). */
+export function promotionOf(db, deduction) {
+  const r = db.prepare('SELECT * FROM deal_settlements WHERE deduction_ref = ?').get(deduction); if (!r) return null;
+  const deal = r.deal_id ? db.prepare('SELECT deal_id, kind, sku, rate, rate_uom, period_start, period_end, order_start, order_end, terms FROM deals WHERE deal_id = ?').get(r.deal_id) : null;
+  return { deal: r.claimed_deal, deal_terms: deal ? { ...deal } : null, claimed: { from: r.claim_from, to: r.claim_to, qty: r.claimed_qty, uom: r.claimed_uom, rate: r.claimed_rate, amount: r.claimed_amount }, agreed_rate: r.agreed_rate, recomputed_qty: r.recomputed_qty,
+    supported_amount: r.authorised_amount, unsupported_amount: r.unauthorised_amount, finding: r.decision === 'Matched' ? 'Supported by the deal' : 'Not supported by the deal', reason: r.reason,
+    records: [...(r.deal_doc_id ? [`Promotion announcement (889) ${r.claimed_deal}`] : []), ...(J(r.records) || []).slice(0, 8), ...((J(r.records) || []).length > 8 ? [`and ${(J(r.records) || []).length - 8} more`] : [])] };
+}
+
 export function deductionCase(db, ref, asOf = storyClock()) {
   const key = ref.trim().toUpperCase();
   const opened = db.prepare("SELECT * FROM events WHERE kind = 'case.opened'").all().map((e) => ({ ...e, d: J(e.data) })).find((e) => e.d.case === key || e.d.deduction === key || e.po === normPo(key));
@@ -243,6 +271,13 @@ export function deductionCase(db, ref, asOf = storyClock()) {
   const kinds = { 'carrier.bill_of_lading': 'Bill of lading with seal', 'carrier.delivery_receipt': 'Proof of delivery', 'wms.load_scan': 'Load scan by SSCC', 'wms.load_tally': 'Load tally by SSCC' };
   const evidence = Object.entries(kinds).map(([kind, name]) => { const e = evs.filter((x) => x.kind === kind).pop(); return { evidence: name, kind, state: !e ? 'Not found' : e.d.in_case === c.case ? 'In the case' : `Held by ${e.system}`, holder: e ? e.system : null, at: e ? fmtET(e.at) : null }; });
   const due = taken ? new Date(Date.parse(taken.paid_at) + 60 * 24 * H) : null;
+  // A promotion deduction (P20): the evidence is the deal Northfield announced and the records the claimed amount is recomputed from.
+  const promo = c.charge === 'PROMO' ? promotionOf(db, c.deduction) : null;
+  if (promo) return { found: true, case: c.case, po, charge: c.charge, kind: 'Promotion deduction', amount: c.amount, deduction: c.deduction, deal: promo.deal, promotion: promo, dispute_amount: promo.unsupported_amount, evidence_rule: rule(db, 'NF-7.3'),
+    withheld_on: taken ? { payment: taken.payment, at: fmtET(taken.paid_at), invoice: taken.invoice } : null, dispute_deadline: due ? fmtET(due) : null, dispute_window: due && asOf >= new Date(taken.paid_at) ? timeLeft(due, asOf) : null,
+    evidence: promo.records.map((r) => ({ evidence: r, kind: 'document', state: 'On record in Trading Grid', holder: 'Trading Grid', at: null })),
+    history: evs.filter((e) => (e.kind.startsWith('case.') || e.kind === 'erp.receivables_match') && (e.d.case === c.case || e.d.matched_to === c.deduction)).map((e) => ({ at: fmtET(e.at), record: e.kind, ...e.d })),
+    repaid_on: repaid ? { payment: repaid.payment, at: fmtET(repaid.paid_at), amount: repaid.amount } : null, as_of: fmtET(asOf), other_charges_on_this_order: [], link: `order/${encodeURIComponent(po)}` };
   return { found: true, case: c.case, po, charge: c.charge, amount: c.amount, line: c.line, cartons: c.cartons, deduction: c.deduction, rule: rule(db, 'SH01'), evidence_rule: rule(db, 'NF-7.4'),
     withheld_on: taken ? { payment: taken.payment, at: fmtET(taken.paid_at) } : null, dispute_deadline: due ? fmtET(due) : null, dispute_window: due && asOf >= new Date(taken.paid_at) ? timeLeft(due, asOf) : null,
     evidence, history: evs.filter((e) => e.kind.startsWith('case.') || e.kind === 'erp.receivables_match' || e.kind === 'carrier.claim_filed').map((e) => ({ at: fmtET(e.at), record: e.kind, ...e.d })),

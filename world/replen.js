@@ -36,7 +36,8 @@ export function replen(L, W, { nPre, jitter = 0 }) {
   S(46210, { r: day(0, '13:00'), ackAt: day(1, '09:20'), site: 'ASH-WH1', lines: [['ASH-MUG-12', 12], ['ASH-NAP-4', 4]] });
   S(46215, { r: day(-2, '10:00'), dep: day(0, '18:00'), asnAt: day(1, '09:30'), invAt: day(0, '18:30'), rcvAt: day(1, '11:30'), site: 'ASH-WH1', shipTo: 'DC2', lines: [['ASH-HNY-340', 6]] });
   // Change list 2 point 1 (CALLS 79): Northfield receives NR-46215 at 11:30, after the late ship notice, so the receipt matches it. The receiving advice keeps its control number (`numAt`).
-  S(46220, { r: day(-2, '15:00'), site: 'KIN-GRV', whAt: day(-1, '21:00'), dep: day(0, '18:00'), late: 17, whAdviceAt: day(1, '11:40'), shipTo: 'DC2', lines: [['ASH-MUG-12', 20]] });
+  // 17 November 2026: the ship notice follows Kinross's shipping advice (11:40) at 11:46, still inside NF-4.2's hour after the 11:00 departure. It keeps its control number (`numAt`).
+  S(46220, { r: day(-2, '15:00'), site: 'KIN-GRV', whAt: day(-1, '21:00'), dep: day(0, '18:00'), late: 17, whAdviceAt: day(1, '11:40'), asnAfter: day(1, '11:46'), shipTo: 'DC2', lines: [['ASH-MUG-12', 20]] });
   S(46226, { r: day(-3, '09:00'), dep: day(0, '09:00'), asnAt: day(0, '09:20'), invAt: day(1, '09:45'), site: 'ASH-WH1', shipTo: 'DC2', lines: [['ASH-NAP-4', 8], ['ASH-HNY-340', 4]] });
   S(46231, { r: day(-1, '09:00'), site: 'ASH-WH1', change: { at: day(0, '11:30'), ackAt: day(0, '15:00') }, lines: [['ASH-MUG-12', 15]] });
   // Watch Agent's conflict record: Supplier ERP says shipped, Kinross has not departed (19 Nov).
@@ -135,7 +136,8 @@ export function replenDocs(L, W, G) {
     if (isKin && !s.whAdviceAt) D.whAdvice(L, O, addH(O.departed, U(0.1, 0.5)), `WSA-${id}`, { shipmentId: shipId, shippedAt: O.departed });
 
     // Ship notice: within 1 hour of departure (NF-4.2).
-    const asnAt = s.asnAt || addH(O.departed, U(0.05, 0.7));
+    // The planned time is drawn for every order without a set time, so a moved ship notice (`s.asnAfter`) leaves the random stream as it was.
+    const asnDrawn = s.asnAt || addH(O.departed, U(0.05, 0.7)); const asnAt = s.asnAfter || asnDrawn;
     const base = { ref: asnRef, shippedAt: O.departed, deliveryDate: O.requested, cartons, qty: ship };
     let asn;
     const asnFail = fail && fail[0] === 'asn' ? fail[1] : null;
@@ -161,7 +163,7 @@ export function replenDocs(L, W, G) {
       if (asnFail === 'DTE') reject824(asn, 'DTE', { seg: 'DTM', elem: 2, bad: bad.deliveryDate, allowed: 'Delivery date on or after the ship date' }, addH(asnAt, 0.25));
       if (s.poref === 'asn') L.event({ at: asnAt, kind: 'erp.setting', po: O.po, system: 'Supplier ERP', party: 'ASHBY', channel: 'API', data: { setting: 'Release suffix on re-released orders', value: '-ASHBY-WHSL-REL-02', note: 'Supplier ERP adds the release suffix to the PO number on orders released a second time. Each document was corrected and resent by hand; the setting is unchanged.' } });
       D.asn(L, O, addH(asnAt, U(0.6, 1.3)), { ...base, resend: true });
-    } else asn = D.asn(L, O, asnAt, base);
+    } else { asn = D.asn(L, O, asnAt, base); if (s.asnAfter) asn.numAt = iso(asnDrawn); }
     if (asnAt > addH(O.departed, 1)) L.event({ at: asnAt, kind: 'tg.late_document', po: O.po, system: 'Trading Grid', party: 'ASHBY', channel: 'API', data: { document: asnRef, rule: 'NF-4.2', state: 'Late' } });
 
     // Invoice: Supplier ERP sends it after departure.

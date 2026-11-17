@@ -60,13 +60,25 @@ const act = (rt, d, s, by = 'Test agent') => (action, args) => { const r = rt.pr
   const s2 = Review.startSession(nf, { variation: Review.branchWith('as02') }); Review.runBaseline(nf, s2); ok(Review.outcome(nf, s2).charges[0].state === 'Upheld by Jordan Ellis', 'review: AS02 upheld (NF-5.5)'); }
 
 // ---------- Pace ----------
-{ const b = Pace.startSession(db, {}); const o = Pace.runBaseline(db, b); ok(o.violations.some((v) => /split cause/.test(v)), 'pace baseline drafts the split week without asking');
+{ const b = Pace.startSession(db, {}); const o = Pace.runBaseline(db, b);
+  ok(o.rate === '91.0%' && o.formula === '43,680 ÷ 48,000 = 91.0%' && o.failing_lines === 108 && o.unattributed.length === 6 && o.sent === 'Nothing' && !o.plan_or_task_drafted, `pace baseline groups by reason code only: nothing attributed, drafted or sent (${o.rate}, ${o.unattributed.length} open)`);
   const a = Pace.startSession(db, {}); const go = act(Pace, db, a);
+  ok(Object.keys(Pace.ACTIONS).join() === 'record_attribution' && Pace.ACTIONS.record_attribution.mode === 'policy', 'pace: one action, an attribution on Ashby’s own view; no task, plan or message');
+  ok(Pace.propose(db, a, 'x', 'record_attribution', { record: 'short_shipped', attributed_to: 'Kinross', first_record: 'Kinross short pick', basis: 'x' }).state === 'Refused', 'pace: no attribution before the records are read');
+  const g = Pace.read(db, a, 'read_failing_lines', { record: 'short_shipped' }); ok(g.lines === 31 && g.cases === 1794 && g.records_on_these_lines.kinross_short_pick === 31, `pace: 31 short-shipped lines, 1,794 cases, each with a Kinross short pick (${g.lines}, ${g.cases}, ${g.records_on_these_lines.kinross_short_pick})`);
+  const rb = Pace.read(db, a, 'read_failing_lines', { record: 'received_below' }); ok(rb.lines === 44 && rb.cases === 66 && rb.records_on_these_lines.kinross_short_pick === 0, 'pace: 44 lines received below the ship notice, none with a short pick');
   ok(Pace.read(db, a, 'read_short_shipments', { record: 'quarter' }).one_cause === true && Pace.read(db, a, 'read_short_shipments', { record: 'week_nov22' }).one_cause === false, 'pace: quarter has one cause, the week splits');
-  go('draft_corrective_task', { record: 'quarter', cause: 'ASH-MUG-12 at Kinross Joliet: stock below the available-to-promise figure', owner: 'Kinross Joliet' });
-  go('ask_priya', { record: 'week_nov22', question: 'Joliet or Groveport first?' }); Pace.advance(db, a, { minutes: 30 });
-  go('draft_corrective_task', { record: 'week_nov22', cause: 'ASH-NAP-4 count at Kinross Groveport', owner: 'Kinross Groveport' }); go('share_explanation', { record: 'explanation' }); Pace.advance(db, a, { minutes: 60 * 25 });
-  const o2 = Pace.outcome(db, a); ok(!o2.violations.length && o2.explanation.northfield === 'yes' && !o2.official_score_changed, 'pace agent path: asked first, shared, accepted'); }
+  const one = Pace.propose(db, a, 'x', 'record_attribution', { record: 'week_nov22', attributed_to: 'Kinross', first_record: 'Kinross short pick', basis: 'One cause' });
+  ok(one.state === 'Refused' && /split across Kinross/.test(one.message), 'pace: one cause for the split week is refused; each warehouse is shown');
+  for (const k of ['collect_not_ready', 'allocation_cut', 'outside_window']) Pace.read(db, a, 'read_failing_lines', { record: k });
+  go('record_attribution', { record: 'short_shipped', attributed_to: 'Kinross', first_record: 'Kinross short pick before the ship notice', basis: 'Every line carries a Kinross short pick below the order quantity' });
+  go('record_attribution', { record: 'collect_not_ready', attributed_to: 'Ashby', first_record: 'Carrier pickup record', basis: 'The carrier found the collect load not ready at the assigned pickup' });
+  go('record_attribution', { record: 'allocation_cut', attributed_to: 'Ashby', first_record: 'Supplier ERP allocation', basis: 'The Supplier ERP allocated less than ordered' });
+  go('record_attribution', { record: 'outside_window', attributed_to: 'Ashby', first_record: 'Receiving advice', basis: 'Received in full after the delivery window' });
+  go('record_attribution', { record: 'received_below', attributed_to: 'Northfield receiving', first_record: 'Receiving advice', basis: 'Ship notice, load scan and delivery receipt agree; the receiving advice counts less' });
+  go('record_attribution', { record: 'week_nov22', causes: [{ warehouse: 'Kinross Joliet', cause: 'Short picks' }, { warehouse: 'Kinross Groveport', cause: 'Short picks' }] });
+  const o2 = Pace.outcome(db, a); ok(!o2.violations.length && !o2.unattributed.length && o2.attributions.week_nov22.causes.length === 2 && o2.sent === 'Nothing' && !o2.improvement_claimed && a.proposals.every((p) => p.needs === 'policy'), `pace agent path: six groups attributed across systems, the split week as two causes, nothing sent (${JSON.stringify(o2.violations)})`);
+  const m = Pace.startSession(db, { variation: Pace.branchWith('end_november') }); const om = Pace.outcome(db, m); ok(om.rate !== '91.0%' && om.failing_lines < 108 && om.failing_lines > 0, `pace: at 30 November the rate to date differs from the quarter (${om.rate}, ${om.failing_lines} lines)`); }
 
 // ---------- Shelf ----------
 { const b = Shelf.startSession(db, { variation: Shelf.branchWith('in_transit') }); Shelf.runBaseline(db, b); ok(Shelf.outcome(db, b).violations.length > 0, 'shelf baseline orders while goods are in transit');

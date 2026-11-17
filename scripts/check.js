@@ -72,7 +72,8 @@ none('time.997_two_to_nine_minutes_after', `SELECT f.doc_id, (julianday(f.sent_a
   // Change list point F1 (CALLS 68): P5's six lead acknowledgments were numbered when Ashby's ERP generated them and sent late from its outbound queue, so they and their 997s keep their place in the numbering.
   // Change list 2 point 1 (CALLS 79): RCV-46215 was moved after its ship notice and keeps its number, as does its 997.
   const moved = (type, po) => { const d = db.prepare('SELECT doc_id FROM documents WHERE doc_type = ? AND po = ?').get(type, po).doc_id; return [d, db.prepare("SELECT doc_id FROM documents WHERE doc_type = '997' AND answers_doc_id = ?").get(d).doc_id]; };
-  const late = [...['460207', '460219', '460233', '460241', '460262', '460274'].flatMap((n) => moved('855', `NR-${n}`)), ...moved('861', 'NR-46215')].sort();
+  // 17 November 2026: ASN-46220 was moved after Kinross's shipping advice and keeps its number, as does its 997.
+  const late = [...['460207', '460219', '460233', '460241', '460262', '460274'].flatMap((n) => moved('855', `NR-${n}`)), ...moved('861', 'NR-46215'), ...moved('856', 'NR-46220')].sort();
   eq('time.control_numbers_unique', dup, 0); eq('time.control_numbers_rise_with_time_except_p5_lead_acks_and_rcv_46215', bad.sort(), late); }
 none('time.envelope_matches_body_control_numbers', "SELECT doc_id FROM documents WHERE json_extract(body, '$.isa_ctl') <> isa_ctl OR json_extract(body, '$.se_count') <> json_extract(body, '$.segments') AND status = 'Delivered' AND doc_id NOT IN (SELECT doc_id FROM errors)");
 // NF-4.2: in the current period a ship notice goes within 1 hour of departure; the only late ones are the records the story names. History before it carries late ship notices on purpose.
@@ -87,7 +88,7 @@ none('money.invoice_price_is_order_price', "SELECT il.invoice FROM invoice_lines
 // The price variance records for P14 are the only delivered invoice lines priced off the order, and each stays inside NF-7.11's tolerance.
 none('money.price_variance_delivered_is_within_tolerance', "SELECT il.invoice FROM invoice_lines il JOIN invoices i ON i.invoice = il.invoice JOIN order_lines o ON o.po = il.po AND o.line = il.line WHERE i.status = 'Delivered' AND il.invoice LIKE 'INV-V47%' AND abs(il.price - o.price) / o.price > 0.005");
 none('money.paid_is_invoice_plus_adjustments', `SELECT r.payment, r.invoice, r.paid, r.invoice_amount, (SELECT coalesce(sum(a.amount), 0) FROM adjustments a WHERE a.payment = r.payment AND a.invoice = r.invoice) adj FROM remittance_items r WHERE abs(r.paid - r.invoice_amount - adj) > 0.005`);
-none('money.remitted_amount_is_invoice_total', "SELECT r.payment, r.invoice FROM remittance_items r JOIN invoices i ON i.invoice = r.invoice WHERE abs(r.invoice_amount - i.total) > 0.005");
+none('money.remitted_amount_is_invoice_total', "SELECT r.payment, r.invoice FROM remittance_items r JOIN invoices i ON i.invoice = r.invoice WHERE r.invoice_amount <> 0 AND abs(r.invoice_amount - i.total) > 0.005"); // a reversal-only line (P20's PMT-991307) pays no invoice amount
 none('money.invoice_paid_once', 'SELECT invoice FROM remittance_items WHERE invoice_amount > 0 GROUP BY invoice HAVING count(*) > 1');
 { let bad = 0; for (const d of db.prepare("SELECT reference, body FROM documents WHERE doc_type = '820'").all()) { const b = JSON.parse(d.body); const sum = (b.items || []).reduce((s, i) => s + (i.paid ?? 0), 0); if (b.total != null && Math.abs(sum - b.total) > 0.005) bad++; } eq('money.remittance_header_is_item_sum', bad, 0); }
 
@@ -123,14 +124,14 @@ ok('isolation.main_db_holds_others', n("SELECT count(*) n FROM orders WHERE supp
 const a10 = D.attention(ash, D.storyClock(), {});
 eq('p10.attention', a10.items.map((i) => [i.po, i.time_left]), [['NR-46151', '40 minutes left'], ['NR-46142', '5 hours left'], ['NR-46156', '19 hours left'], ['NR-46133', '1 day left']]);
 const h = D.health(ash, 30, D.storyClock());
-eq('p10.health', [h.documents, h.failures, h.top_causes.map((c) => c.failures), h.rejected_by], [3412, 41, [11, 6, 4], { application_advice_824: 31, technical_acknowledgment_997: 10 }]);
+eq('p10.health', [h.documents, h.failures, h.top_causes.map((c) => c.failures), h.rejected_by], [3420, 41, [11, 6, 4], { application_advice_824: 31, technical_acknowledgment_997: 10 }]);
 const rj = D.explainRejection(ash, 'ASN-46118').rejections[0];
 eq('p10.rejection', [rj.sent_value, rj.sent_length, rj.allowed.slice(0, 13), rj.rule.id, rj.same_cause_later.map((x) => x.reference)], ['NR-46118-ASHBY-WHSL-REL-02', '26 characters', '22 characters', 'NF-4.10', ['ASN-46124', 'ASN-46129', 'INV-46133']]);
 const dl = D.deliveries(ash, ['NR-46101', 'NR-46102', 'NR-46103', 'NR-46104', 'NR-46105', 'NR-46108']);
 eq('p10.escalation', [dl.checked, dl.on_time, dl.late, dl.orders.filter((o) => o.result !== 'On time').map((o) => [o.po, o.result])], [6, 5, 1, [['NR-46108', 'Late by 1 day']]]);
 // P13
 const a13 = D.attention(ash, T('2026-11-18T09:00:00-05:00'), { warehouse: true });
-eq('p13.queue', a13.items.map((i) => i.po), ['NR-46215', 'NR-46220', 'NR-46210', 'NR-46226']);
+eq('p13.queue', a13.items.map((i) => i.po), ['NR-46215', 'NR-46220', 'NR-462412', 'NR-46210', 'NR-462410', 'NR-462411', 'NR-46226']);
 eq('p13.nothing_to_chase', a13.checked_nothing_to_chase.map((i) => i.po), ['NR-46231']);
 // P7 scorecard
 const sc = scorecard(ash);

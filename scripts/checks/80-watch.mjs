@@ -16,7 +16,8 @@ export default function ({ db, ok, eq }) {
   // ---------- 1. The queue at the branch: five orders from the records ----------
   const s0 = W.startSession(db, { variation: W.VARIATIONS.canonical }); const q0 = W.read(db, s0, 'read_queue');
   eq('watch.queue_at_branch_is_the_four_missing_documents', q0.rows.map((r) => `${r.po} ${r.document} ${r.state} ${r.time_left}`),
-    ['NR-46215 856 Late Overdue by 14 hours', 'NR-46220 945 Overdue Overdue by 12 hours', 'NR-46210 855 Missing 4 hours left', 'NR-46226 810 Missing 1 day left']);
+    // 17 November 2026: three more orders on the morning check (held ship notice, rejected ship notice, Kinross not answering at 2 hours left).
+    ['NR-46215 856 Late Overdue by 14 hours', 'NR-46220 945 Overdue Overdue by 12 hours', 'NR-462412 945 Missing 2 hours left', 'NR-46210 855 Missing 4 hours left', 'NR-462410 856 Held: the trailer has not departed 7 hours left', 'NR-462411 856 Rejected 21 hours left', 'NR-46226 810 Missing 1 day left']);
   eq('watch.nr46231_checked_nothing_to_chase', q0.nothing_to_chase.map((r) => `${r.po} ${r.state} ${r.rule}`), ['NR-46231 Not expected NF-1.5']);
   const att = D.attention(db, branch, { warehouse: true });
   eq('watch.queue_matches_domain_attention', q0.rows.map((r) => r.po), att.items.map((i) => i.po));
@@ -33,7 +34,7 @@ export default function ({ db, ok, eq }) {
   const first46220 = canon.s.proposals.filter((p) => p.args.po === 'NR-46220'); const k945 = canon.s.revealed.find((r) => r.po === 'NR-46220' && r.doc_type === '945');
   ok('watch.baseline_nr46220_sends_nothing_and_asks_kinross_first', first46220[0]?.action === 'ask_kinross_status' && !canon.s.docs.some((d) => d.po === 'NR-46220' && d.state === 'Sent' && Date.parse(d.sent_at) < Date.parse(k945.at)), JSON.stringify(first46220.map((p) => p.action)));
   eq('watch.baseline_canonical_end_state', { on_time: canon.o.sent_on_time, late: canon.o.sent_late, confirmed: canon.o.kinross_confirmed, left_alone: canon.o.nothing_to_chase },
-    { on_time: ['NR-46210 855', 'NR-46226 810', 'NR-46220 856'], late: ['NR-46215 856'], confirmed: ['NR-46220'], left_alone: ['NR-46231'] });
+    { on_time: ['NR-46210 855', 'NR-462411 856', 'NR-46226 810', 'NR-46220 856'], late: ['NR-46215 856'], confirmed: ['NR-46220'], left_alone: ['NR-46231'] });
   const f302 = base('early_fulfilment_46302'); const p302 = f302.s.proposals.filter((p) => p.args.po === 'NR-46302'); const dep302 = f302.s.revealed.find((r) => r.kind === 'wms.departure_scan');
   ok('watch.baseline_nr46302_holds_asks_flags_then_drafts_after_departure', JSON.stringify(steps(f302.s, 'NR-46302')) === JSON.stringify(['flag_erp_record', 'ask_kinross_status', 'escalate_to_priya', 'draft_ship_notice', 'release_document 856'])
     && !!p302.length && f302.s.docs.find((d) => d.doc_type === '856').sent_at >= dep302.at && f302.s.docs.find((d) => d.doc_type === '856').built_from.startsWith('Load scan'), JSON.stringify(steps(f302.s, 'NR-46302')));

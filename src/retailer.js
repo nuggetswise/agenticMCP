@@ -3,8 +3,8 @@
 // warehouse, ERP, carrier and agent records stay Ashby's; Northfield's payables, draft rules and reviewer notes stay
 // Northfield's. Every answer is read as of a time; nothing here sends or changes anything.
 import { fmtET } from '../world/lib.js';
-import { normPo, rule, param, paramAt, chargeOf, storyClock, timeLeft, notYet } from './domain.js';
-import { scorecard, scorecardAsOf, QUARTER } from './score.js';
+import { normPo, rule, param, paramAt, chargeOf, storyClock, timeLeft, notYet, promotionOf } from './domain.js';
+import { otif, scorecardAsOf, supplierRanking, QUARTER } from './score.js';
 import { et } from '../world/lib.js';
 
 /** The current period starts here. Lists and replays cover it by default; `from` reaches the history before it. */
@@ -56,11 +56,15 @@ export function documentNF(db, reference) {
   return { found: true, document: d.name, set: d.doc_type, reference: d.reference, from: supplierName(db, d.sender_id), to: supplierName(db, d.receiver_id), sent: fmtET(d.sent_at), status: d.status, po: d.po, x12: d.raw.length > 6000 ? `${d.raw.slice(0, 6000)}\n... (${d.raw.length} characters in the file)` : d.raw, link: `document/${encodeURIComponent(d.reference)}` };
 }
 
-/** The supplier scorecard Northfield publishes. Only Ashby has a published scorecard file in this world. */
-export function scorecardNF(db, supplier, asOf = storyClock()) {
-  const s = findSupplier(db, supplier || 'ASHBY'); if (!s) return { found: false, message: `No supplier ${supplier}` };
-  if (s.id !== 'ASHBY') return { found: false, message: `No scorecard file is published for ${s.name} in this quarter` };
-  return { found: true, supplier: s.name, ...scorecardAsOf(db, asOf) };
+/** On-time, in-full as Trading Grid calculates it (P7). With a supplier: that supplier's rate, reasons and, on request, its
+ * failing lines with the documents behind each. Without one: every supplier with a rate, ranked. A supplier's ERP, warehouse
+ * and carrier records play no part: each reason is read from documents Northfield exchanged with the supplier. */
+export function scorecardNF(db, supplier, asOf = storyClock(), { lines = false } = {}) {
+  if (!supplier) return { found: true, ...supplierRanking(db, asOf) };
+  const s = findSupplier(db, supplier); if (!s) return { found: false, message: `No supplier ${supplier}` };
+  const r = scorecardAsOf(db, asOf, s.id); if (r.calculated && !r.cases) return { found: false, message: `${s.name} has no order line with a delivery date in the quarter` };
+  if (r.calculated && lines) r.lines = otif(db, { supplier: s.id, asOf }).lines.map((l) => ({ ...l, order: `order/${encodeURIComponent(l.po)}` }));
+  return { found: true, supplier: s.name, ...r };
 }
 
 const caseOpened = (db, key) => db.prepare("SELECT * FROM events WHERE kind = 'case.opened'").all().map((e) => ({ ...e, d: J(e.data) })).find((e) => e.d.case === key || e.d.deduction === key || e.po === normPo(key));
@@ -85,7 +89,12 @@ export function caseNF(db, ref, asOf = storyClock()) {
   const notes = db.prepare('SELECT at, charge, author, note FROM review_notes WHERE case_id = ? AND at <= ? ORDER BY at').all(c.case, T).map((n) => ({ ...n, at: fmtET(n.at) }));
   const decided = caseEv.filter((e) => e.kind === 'case.decision').map((e) => ({ at: fmtET(e.at), charge: e.d.charge, decision: e.d.decision, decided_by: e.d.decided_by, recommended_by: e.d.recommended_by || null, reason: e.d.reason }));
   const disputes = caseEv.filter((e) => e.kind === 'case.dispute').map((e) => ({ at: fmtET(e.at), charge: e.d.charge, amount: e.d.amount, evidence: e.d.evidence, drafted_by: e.d.drafted_by || null, approved_by: e.d.approved_by }));
-  const review = reviewRecommendation(db, { charge: c.charge, shared: [...shared], disputes, decided });
+  const promo = c.charge === 'PROMO' ? promotionOf(db, c.deduction) : null;
+  const review = reviewRecommendation(db, { charge: c.charge, shared: [...shared], disputes, decided, promo });
+  if (promo) return { found: true, case: c.case, supplier: supplierName(db, db.prepare('SELECT supplier_id FROM orders WHERE po = ?').get(po)?.supplier_id), po, as_of: fmtET(asOf), charge: c.charge, kind: 'Promotion deduction', amount: c.amount, deduction: c.deduction, deal: promo.deal, promotion: promo,
+    withheld: adj.filter((a) => a.amount < 0).map((a) => ({ payment: a.payment, at: fmtET(a.paid_at), amount: a.amount, reference: a.reference, invoice: a.invoice })), repaid: repaidOn(db, decided, { ...c, po }, T),
+    evidence_required: 'The deal Northfield announced (889) and the record the claimed amount rests on: store activity (852), ship notices (856) or the invoice (810)', evidence_in_case: [...shared], disputes, decisions: decided, reviewer_notes: notes, review_agent: review,
+    authority: 'Jordan Ellis decides each charge in the case (NF-7.7). Review Agent checks the evidence and recommends; it decides nothing.', link: `order/${encodeURIComponent(po)}` };
   return { found: true, case: c.case, supplier: supplierName(db, db.prepare('SELECT supplier_id FROM orders WHERE po = ?').get(po)?.supplier_id), po, as_of: fmtET(asOf), charge: c.charge, amount: c.amount, deduction: c.deduction, cartons: c.cartons,
     withheld: adj.filter((a) => a.amount < 0).map((a) => ({ payment: a.payment, at: fmtET(a.paid_at), amount: a.amount, reference: a.reference })), repaid: repaidOn(db, decided, { ...c, po }, T),
     evidence_required: rule(db, 'NF-7.4'), evidence_in_case: [...shared], disputes, decisions: decided, reviewer_notes: notes, review_agent: review,
@@ -95,6 +104,8 @@ export function caseNF(db, ref, asOf = storyClock()) {
 /** Repayment of a reversed charge, read from Northfield's own remittance: a later payment line that pays more than its invoice by the reversed amount. */
 function repaidOn(db, decided, c, T) {
   const rev = decided.filter((d) => d.decision === 'Reversed' && d.charge === c.charge); if (!rev.length) return [];
+  // A repayment that names the deduction it reverses (NF-7.6) is read from the remittance itself.
+  if (c.charge === 'PROMO') return db.prepare('SELECT * FROM deduction_repayments WHERE reference = ? AND repaid_at <= ? ORDER BY repaid_at').all(c.deduction, T).map((r) => ({ payment: r.repayment_payment, at: fmtET(r.repaid_at), amount: r.repaid_amount, carried_on: r.repayment_invoice, reference: r.reference }));
   const sid = db.prepare('SELECT supplier_id FROM orders WHERE po = ?').get(c.po)?.supplier_id;
   const rows = db.prepare('SELECT payment, paid_at, invoice, po, paid, invoice_amount FROM remittance_items WHERE payee_id = ? AND paid_at <= ? AND paid > invoice_amount ORDER BY paid_at').all(sid, T);
   const hit = rows.find((r) => Math.abs(r.paid - r.invoice_amount - c.amount) < 0.005);
@@ -102,10 +113,14 @@ function repaidOn(db, decided, c, T) {
 }
 
 /** Review Agent: is the evidence the guide requires in the case, and what does it support? */
-export function reviewRecommendation(db, { charge, shared, disputes, decided }) {
+export function reviewRecommendation(db, { charge, shared, disputes, decided, promo = null }) {
   const pending = disputes.filter((d) => !decided.some((x) => x.charge === d.charge));
   if (!pending.length) return { next_step: decided.length ? 'nothing_to_do' : 'wait_for_dispute', reason: decided.length ? 'Every disputed charge is decided' : 'The supplier has not disputed' };
   const d = pending[0]; const has = (s) => d.evidence.concat(shared).some((x) => new RegExp(s, 'i').test(x));
+  // A promotion deduction is checked against the deal Northfield announced and the records the claim rests on.
+  if (d.charge === 'PROMO' && promo) return promo.unsupported_amount > 0 && Math.abs(promo.unsupported_amount - d.amount) < 0.005
+    ? { charge: d.charge, next_step: 'recommend_reverse', amount: promo.unsupported_amount, stands: promo.supported_amount, reason: promo.reason, records: promo.records, rule: rule(db, 'NF-7.6') }
+    : { charge: d.charge, next_step: 'recommend_uphold', reason: promo.unsupported_amount > 0 ? `The dispute asks for $${d.amount.toFixed(2)}; the records leave $${promo.unsupported_amount.toFixed(2)} unsupported` : 'The deduction matches its deal', records: promo.records };
   if (d.charge === 'SH01') {
     const seal = has('bill of lading'), pod = has('deliver'), proof = has('load scan|load tally');
     if (!(seal && pod && proof)) return { charge: d.charge, next_step: 'recommend_not_reviewed', missing: [!seal && 'Bill of lading with seal', !pod && 'Proof of delivery', !proof && 'Load scan or load tally by SSCC'].filter(Boolean), rule: rule(db, 'NF-7.5'), charge_if_not_reviewed: `ID01 $${chargeOf(db, 'ID01')}` };

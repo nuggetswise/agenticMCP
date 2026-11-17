@@ -5,10 +5,10 @@ export default function ({ db, ok, eq }) {
   const rec = W.rulesRecording(db); const again = W.rulesRecording(db);
   const strip = (x) => JSON.stringify(x).replace(/WS-[0-9a-f]{10}/g, '').replace(/W[0-9A-F]{4,6}\b/g, '');
   ok('watch_rules.run_is_deterministic', strip(rec) === strip(again));
-  eq('watch_rules.queue_at_the_morning_check', rec.start.queue.rows.map((r) => `${r.po} ${r.document}`), ['NR-46215 856', 'NR-46220 945', 'NR-46210 855', 'NR-46226 810']);
+  eq('watch_rules.queue_at_the_morning_check', rec.start.queue.rows.map((r) => `${r.po} ${r.document}`), ['NR-46215 856', 'NR-46220 945', 'NR-462412 945', 'NR-46210 855', 'NR-462410 856', 'NR-462411 856', 'NR-46226 810']);
   eq('watch_rules.nothing_to_chase', rec.start.queue.nothing_to_chase.map((r) => r.po), ['NR-46231']);
   eq('watch_rules.one_proposal_per_order_waits_for_priya', rec.start.awaiting.map((p) => `${p.args.po} ${p.action}${p.then ? ' then ' + p.then.action : ''}`),
-    ['NR-46215 release_document', 'NR-46220 ask_kinross_status', 'NR-46210 release_document', 'NR-46226 draft_invoice_in_erp then release_document']);
+    ['NR-46215 release_document', 'NR-46220 ask_kinross_status', 'NR-462412 ask_kinross_status', 'NR-46210 release_document', 'NR-462410 flag_erp_record then ask_kinross_status', 'NR-462411 release_document', 'NR-46226 draft_invoice_in_erp then release_document']);
   ok('watch_rules.no_step_is_an_agents', rec.start.trace.every((t) => t.type !== 'ai' && t.actor !== 'Watch Agent') && Object.values(rec.steps).flat().every((s) => s.trace.every((t) => t.type !== 'ai' && t.actor !== 'Watch Agent')));
   const last = (po) => rec.steps[po].at(-1).rows.map((r) => `${r.document} ${r.state}`);
   eq('watch_rules.five_approvals_reach_the_ending', [rec.steps['NR-46215'].length + rec.steps['NR-46220'].length + rec.steps['NR-46210'].length + rec.steps['NR-46226'].length, last('NR-46215'), last('NR-46220'), last('NR-46210'), last('NR-46226')],

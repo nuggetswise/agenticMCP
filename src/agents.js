@@ -33,6 +33,11 @@ export function watchDecision(db, poIn, asOf = storyClock()) {
 /** Claim Agent: a charge was withheld. Is the proof in the case, held elsewhere, replaceable, or absent? */
 export function claimDecision(db, ref, asOf = storyClock()) {
   const c = deductionCase(db, ref, asOf); if (!c.found) return c;
+  // A promotion deduction (P20): dispute only what the deal does not support, with the record that contradicts it.
+  if (c.promotion) { const u = c.promotion.unsupported_amount;
+    return out('deduction', 'Claim Agent', c.case, asOf, { authority: 'Priya Raman approves each dispute (AP-4.1)', policy: rule(db, 'AP-4.1'), po: c.po, charge: c.charge, amount: c.amount, dispute_window: c.dispute_window, evidence: c.promotion.records,
+      decision_row: u > 0 ? 'The deal does not support the whole deduction' : 'The deduction matches its deal', next_step: u > 0 ? 'dispute_unsupported_amount' : 'accept', dispute_amount: u, stands: c.promotion.supported_amount, reason: c.promotion.reason,
+      rule_baseline: 'Accept every deduction carrying a promotion reason code', dollars_the_rule_gives_up: u, confirmed_by: 'The repayment matched in Ashby’s receivables' }); }
   const st = Object.fromEntries(c.evidence.map((v) => [v.kind, v.state]));
   const scan = st['wms.load_scan'], tally = st['wms.load_tally']; const pod = db.prepare("SELECT data FROM events WHERE po = ? AND kind = 'carrier.delivery_receipt' ORDER BY at DESC").get(c.po);
   const exception = pod ? J(pod.data).exceptions : null;
@@ -92,7 +97,7 @@ export function scoutDecision(db, poIn, asOf = storyClock()) {
   const po = normPo(poIn); const t = asOf.toISOString();
   const o = db.prepare('SELECT * FROM orders WHERE po = ?').get(po); if (!o) return { found: false, message: `No order ${po}` };
   const e = evs(db, po, t); const last = (k) => e.filter((x) => x.kind === k).pop();
-  const load = last('wms.load_scan'), fulfil = last('erp.fulfilment_posted'), dep = last('wms.departure_scan'), phone = last('outside_confirmation'), inv = last('erp.invoice_draft'), route = last('routing.request'), stock = last('wms.inventory'), label = last('wms.label_scan');
+  const load = last('wms.load_scan'), fulfil = last('erp.fulfilment_posted'), dep = last('wms.departure_scan'), inv = last('erp.invoice_draft'), route = last('routing.request'), stock = last('wms.inventory'), label = last('wms.label_scan');
   const change = db.prepare('SELECT count(*) n FROM order_changes WHERE po = ? AND sent_at <= ?').get(po, t).n;
   const evidence = { load_scan: load ? `${load.d.cartons_loaded} of ${load.d.cartons_expected}${load.d.trailer_state ? `; ${load.d.trailer_state}` : ''}${load.d.missing_state ? `; one carton ${load.d.missing_state.toLowerCase()}` : ''}` : 'None', supplier_erp_fulfilment: fulfil ? `Posted ${fmtET(fulfil.at)}` : 'Not posted', departure_scan: dep ? fmtET(dep.at) : 'None', order_changes: change };
   let row, next, detail = {};
@@ -102,7 +107,6 @@ export function scoutDecision(db, poIn, asOf = storyClock()) {
   else if (route && route.d.state === 'Missing') { row = 'No routing request for collect freight'; next = 'draft_routing_request'; detail = { exposure_estimate: chargeOf(db, 'RT01'), rule: rule(db, 'NF-3.2') }; }
   else if (stock && stock.d.available < stock.d.ordered_across_orders) { row = 'The warehouse has less stock than the orders need'; next = 'ask_priya_which_order_ships_short'; detail = { available: stock.d.available, ordered: stock.d.ordered_across_orders, rule: rule(db, 'NF-2.1') }; }
   else if (label && label.d.reused_sscc) { row = 'Cartons carry SSCCs already used'; next = 'send_relabel_task_to_kinross'; detail = { cartons: label.d.reused_sscc, exposure_estimate: chargeOf(db, 'LB01', Array.isArray(label.d.reused_sscc) ? label.d.reused_sscc.length : label.d.reused_sscc), rule: rule(db, 'NF-4.1') }; }
-  else if (phone && !change) { row = 'A quantity agreed by phone is not on an order change'; next = 'ask_buyer_for_order_change'; detail = { to: 'Jordan Ellis', rule: rule(db, 'NF-1.1') }; }
   else { row = 'Records agree'; next = 'nothing_to_do'; }
   return out('shipment_risk', 'Scout Agent', po, asOf, { evidence, decision_row: row, next_step: next, ...detail, rule_baseline: 'Flags the rule that would break; Priya works out which record is wrong and who must act', confirmed_by: 'Northfield receiving advice (861) matching the ship notice' });
 }
@@ -114,9 +118,11 @@ export function paceDecision(db, { from = '2026-09-27', to = '2026-12-26' } = {}
   const g = {}; for (const r of rows) { const k = `${r.sku} at ${r.site === 'KIN-JOL' ? 'Kinross Joliet' : 'Kinross Groveport'}`; (g[k] ||= { key: k, lines: 0, cases: 0 }); g[k].lines++; g[k].cases += r.ordered - r.picked; }
   const ranked = Object.values(g).sort((a, b) => b.lines - a.lines); const share = ranked[0].lines / rows.length;
   let row, next, detail = {};
-  if (rows.length >= 4 && share >= 0.7) { row = 'One item at one warehouse carries most of the short shipments'; next = 'draft_corrective_task'; detail = { cause: `${ranked[0].key}: stock below the available-to-promise figure`, task: 'Correct the available-to-promise feed; Kinross checks stock before picking' }; }
-  else { row = 'Short shipments are split across warehouses or too few to tell'; next = 'ask_priya_before_drafting'; detail = { cause: 'Uncertain', deciding_record: 'Pick records by day at both warehouses' }; }
-  return out('scorecard', 'Pace Agent', `${from} to ${to}`, asOf, { evidence: { short_shipped_lines: rows.length, by_item_and_warehouse: ranked, largest_share: `${Math.round(share * 100)}%` }, decision_row: row, next_step: next, ...detail, rule_baseline: 'Lists failing lines by reason code; Priya looks for the pattern', confirmed_by: 'Northfield’s next published scorecard on the same definition' });
+  // P7 (17 November 2026): Pace Agent explains; it drafts no corrective plan and no task. One cause is named as one; a split is shown as its causes.
+  const sites = [...new Set(ranked.map((x) => x.key.split(' at ')[1]))];
+  if (rows.length >= 4 && share >= 0.7) { row = 'One item at one warehouse carries most of the short shipments'; next = 'show_one_cause'; detail = { cause: `${ranked[0].key}: stock below the available-to-promise figure`, attributed_to: 'Kinross' }; }
+  else { row = 'Short shipments are split across warehouses or too few to tell'; next = 'show_each_cause'; detail = { causes: ranked.map((x) => ({ cause: x.key, lines: x.lines, cases: x.cases })), warehouses: sites }; }
+  return out('scorecard', 'Pace Agent', `${from} to ${to}`, asOf, { evidence: { short_shipped_lines: rows.length, by_item_and_warehouse: ranked, largest_share: `${Math.round(share * 100)}%` }, decision_row: row, next_step: next, ...detail, rule_baseline: 'Groups failing lines by reason code only, with no attribution to the record where each first went wrong', confirmed_by: 'The ship notice and receiving advice each line names; nothing is sent and no later rate is claimed' });
 }
 
 export const JOBS = { missing_document: (db, r, t) => watchDecision(db, r, t), deduction: (db, r, t) => claimDecision(db, r, t), trade_test: (db, r, t) => testDecision(db, r, t), shelf: (db, r, t) => shelfDecision(db, r, t), shipment_risk: (db, r, t) => scoutDecision(db, r, t), scorecard: (db, r, t) => { const [from, to] = String(r || '').split(/\s+to\s+/); return paceDecision(db, from && to ? { from, to } : {}, t); } };

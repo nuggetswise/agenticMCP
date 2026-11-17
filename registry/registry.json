@@ -169,7 +169,7 @@
         {
           "record": "NR-460274",
           "as_of": "2026-12-08T17:12:00-05:00",
-          "next_step": "ask_buyer_for_order_change"
+          "next_step": "nothing_to_do"
         }
       ],
       "tools": [
@@ -285,7 +285,7 @@
         "verdict": "agent",
         "agent": "Pace Agent",
         "job": "scorecard",
-        "reason": "Short shipments either share one cause or split across warehouses; the second needs a question before any task",
+        "reason": "Each failing line is traced to the first record where it went wrong, across Kinross, Supplier ERP, carrier and receiving records; a split across warehouses is shown as each cause",
         "would_reverse": "A scorecard whose reason codes already name the cause"
       },
       "customer_agent": {
@@ -297,12 +297,12 @@
         {
           "record": "2026-09-27 to 2026-12-26",
           "as_of": "2026-12-28T09:00:00-05:00",
-          "next_step": "draft_corrective_task"
+          "next_step": "show_one_cause"
         },
         {
           "record": "2026-11-22 to 2026-11-28",
           "as_of": "2026-12-28T09:00:00-05:00",
-          "next_step": "ask_priya_before_drafting"
+          "next_step": "show_each_cause"
         }
       ],
       "tools": [

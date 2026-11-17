@@ -28,8 +28,15 @@ export class Log {
   /** Adds a business document. `from` and `to` are party ids; the rest is what the X12 writer needs. */
   doc(d) { const x = { ...d, at: iso(d.at), _n: this.seq++ }; x.ackDelay = 2 + (x._n % 8); this.docs.push(x); return x; }
 
-  /** Adds a record that does not travel as EDI: a Supplier ERP posting, a warehouse scan, a phone call, a case entry. */
+  /** Keeps the place of a document withdrawn from the world. Its order number and the control numbers it and its
+   * acknowledgment held stay unused, so no other interchange is renumbered; nothing is written for it. */
+  retire(d) { return this.doc({ ...d, type: 'retired', retired: true }); }
+
+  /** Adds a record that does not travel as EDI: a Supplier ERP posting, a warehouse scan, a case entry. */
   event(e) { const x = { ...e, at: iso(e.at), data: e.data || {} }; this.events.push(x); return x; }
+
+  /** Keeps the place of a record withdrawn from the world, so the records after it keep their ids. Never stored. */
+  retireEvent(at) { const x = { at: iso(at), kind: 'retired', retired: true, data: {} }; this.events.push(x); return x; }
 
   /** Renders the log. Returns interchanges in send order: { text, from, to, at, doc }. */
   emit() {
@@ -42,13 +49,16 @@ export class Log {
     // Documents added by a world-coverage stage are sent by the system that owns that stage (planning, transport,
     // catalogue…) and take interchange numbers from that system's own range, so adding one never renumbers an existing
     // interchange. Their acknowledgments likewise. Ranges: business 700,000,000 up, acknowledgments 600,000,000 up.
-    const nextCtl = (d, k, base) => (d.stage ? next(`${k}:S`, k.endsWith(':FA') ? 600000000 : 700000000) : d.hist ? next(`${k}:H`, base - histN.get(k)) : next(k, base));
+    // Records added on 17 November 2026 (stage `records`) take a range of their own (800,000,000 up; acknowledgments
+    // 900,000,000 up), so they renumber no earlier stage's interchanges either.
+    const nextCtl = (d, k, base) => (d.stage === 'records' ? next(`${k}:R`, /:FA/.test(k) ? 900000000 : 800000000) : d.stage ? next(`${k}:S`, k.endsWith(':FA') ? 600000000 : 700000000) : d.hist ? next(`${k}:H`, base - histN.get(k)) : next(k, base));
     const out = []; const acks = [];
     for (const d of docs) {
       const from = PARTY[d.from], to = PARTY[d.to];
       // A stage document (D60) takes control numbers from its own range on the pair, so adding it renumbers no existing
       // document: 700,000,000 up, and 600,000,000 up for its 997s (the same ranges as main after dfef3cd).
       d.ctl = nextCtl(d, `${d.from}>${d.to}${d.stage ? ':S' : ''}`, d.stage ? 700000000 : 1000);
+      if (d.retired) { if (!d.no_ack) acks.push({ d, numAt: iso(new Date(Date.parse(d.numAt || d.at) + d.ackDelay * 60000)), fa: { from: d.to, to: d.from } }); continue; }
       if (typeof d.answers_gs === 'function') d.answers_gs = d.answers_gs();
       let text = writeInterchange(d, { isaSender: from.isa, isaReceiver: to.isa, ctl: d.ctl });
       if (d.test) text = text.replace(/\*0\*P\*>~/, '*0*T*>~');
@@ -65,6 +75,7 @@ export class Log {
     acks.sort((x, y) => (x.numAt < y.numAt ? -1 : x.numAt > y.numAt ? 1 : x.d._n - y.d._n));
     for (const { d, fa } of acks) {
       fa.ctl = nextCtl(d, `${fa.from}>${fa.to}:FA${d.stage ? ':S' : ''}`, d.stage ? 600000000 : 500000000);
+      if (d.retired) continue;
       let faText = writeInterchange(fa, { isaSender: PARTY[fa.from].isa, isaReceiver: PARTY[fa.to].isa, ctl: fa.ctl });
       if (d.test) faText = faText.replace(/\*0\*P\*>~/, '*0*T*>~');
       out.push({ text: faText, from: fa.from, to: fa.to, at: fa.at, type: '997' });

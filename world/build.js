@@ -24,16 +24,16 @@ export const CALENDAR = (A) => [
   { id: 'P1', week: 1, moment: 'An emailed PDF order becomes EDI', seen_by: 'Priya Raman', prototype: 'P1 Long-tail', as_of: '2026-09-28T13:12:00.000Z', anchor: A.p1 },
   { id: 'P2', week: 3, moment: 'Drop-ship and warehouse readiness', seen_by: 'Priya Raman', prototype: 'P2 Programme Readiness', as_of: '2026-10-12T13:00:00.000Z', anchor: 'Drop-ship programme' },
   { id: 'P9', week: 5, moment: 'Store activity becomes a refill order', seen_by: 'Priya Raman', prototype: 'P9 Shelf Recovery', as_of: '2026-10-26T12:07:00.000Z', anchor: 'NR-451207' },
-  { id: 'STORY', week: 6, moment: 'Order changed; 270 agreed by phone', seen_by: 'Priya Raman', prototype: 'Order story (no screen)', as_of: '2026-11-02T21:40:00.000Z', anchor: 'NR-450118' },
+  { id: 'STORY', week: 6, moment: 'Order changed; line 1 set to 270 on an order change', seen_by: 'Priya Raman', prototype: 'Order story (no screen)', as_of: '2026-11-02T21:40:00.000Z', anchor: 'NR-450118' },
   { id: 'P8', week: 7, moment: 'Open-order value from purchase order to payment', seen_by: 'Jordan Ellis', prototype: 'P8 Money in Motion', as_of: '2026-11-09T04:59:00.000Z', anchor: '340 open orders' },
   { id: 'P10', week: 8, moment: 'Four questions and the six-PO email', seen_by: 'Priya Raman', prototype: 'P10 Trading Grid in the customer’s AI', as_of: '2026-11-17T16:00:00.000Z', anchor: 'NR-46101 to NR-46156' },
   { id: 'P13', week: 8, moment: 'Silent order watch', seen_by: 'Priya Raman', prototype: 'P13 Silent order watch', as_of: '2026-11-18T14:00:00.000Z', anchor: 'NR-46210 to NR-46231' },
   { id: 'P11', week: 10, moment: 'A live ship notice held in NetSuite and corrected before it leaves', seen_by: 'Priya Raman', prototype: 'P11 NetSuite Chargeback Avoidance', as_of: '2026-11-30T15:25:00.000Z', anchor: 'ASN-78260' },
   { id: 'P6', week: 10, moment: 'Deductions and an invoice exception', seen_by: 'Priya Raman, then Jordan Ellis', prototype: 'P6 Charge Resolution', as_of: '2026-12-01T14:00:00.000Z', anchor: 'NR-450118, NR-450390, NR-450415' },
-  { id: 'P5', week: 11, moment: 'Six fulfilment risks before departure', seen_by: 'Priya Raman', prototype: 'P5 Scout Shipment Watch', as_of: '2026-12-08T22:12:00.000Z', anchor: 'NR-460207 to NR-460274' },
+  { id: 'P5', week: 11, moment: 'Five fulfilment risks before departure', seen_by: 'Priya Raman', prototype: 'P5 Scout Shipment Watch', as_of: '2026-12-08T22:12:00.000Z', anchor: 'NR-460207 to NR-460274' },
   { id: 'P14', week: 7, moment: 'An invoice that does not match its order and receipt', seen_by: 'Jordan Ellis', prototype: 'P14 Invoice Variance', as_of: '2026-11-10T14:00:00.000Z', anchor: 'INV-7731' },
   { id: 'P15', week: 14, moment: 'A draft rule replayed against the quarter before publishing', seen_by: 'Jordan Ellis', prototype: 'P15 Rule Replay', as_of: '2026-12-28T16:00:00.000Z', anchor: 'NFD-1' },
-  { id: 'P7', week: 14, moment: 'Scorecard 91.0% and the corrective plan', seen_by: 'Priya Raman, then Jordan Ellis', prototype: 'P7 Performance Improvement', as_of: '2026-12-28T14:00:00.000Z', anchor: '108 failing lines' },
+  { id: 'P7', week: 14, moment: 'On-time, in-full 91.0%, calculated by Trading Grid', seen_by: 'Priya Raman, then Jordan Ellis', prototype: 'P7 Performance Improvement', as_of: '2026-12-28T14:00:00.000Z', anchor: '108 failing lines' },
 ];
 
 /** The schema: the core tables, then each stage's own. */
@@ -186,7 +186,10 @@ export function buildWorld({ quiet = false } = {}) {
   const files = writeX12(g.out);
   const sorted = [...g.L.events].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
   // Event ids: existing records keep the ids they always had; records added by a stage take ids from a separate range.
-  const events = [...sorted.filter((e) => !e.stage).map((e, i) => ({ ...e, id: i + 1 })), ...sorted.filter((e) => e.stage).map((e, i) => ({ ...e, id: 1000001 + i }))];
+  // Records added on 17 November 2026 (stage `records`) take a third range, so no earlier stage record is renumbered either.
+  // A withdrawn record keeps its place in the numbering and is not stored.
+  const events = [...sorted.filter((e) => !e.stage).map((e, i) => ({ ...e, id: i + 1 })), ...sorted.filter((e) => e.stage && e.stage !== 'records').map((e, i) => ({ ...e, id: 1000001 + i })),
+    ...sorted.filter((e) => e.stage === 'records').map((e, i) => ({ ...e, id: 2000001 + i }))].filter((e) => !e.retired);
   const T = derive(files, events);
   const db = new DatabaseSync(MAIN_DB);
   db.exec(SCHEMA());
@@ -205,7 +208,7 @@ export function buildWorld({ quiet = false } = {}) {
   // Northfield's private records: the claims reviewer's notes on decided charges, and two draft rules not yet published.
   const dec = T.events.filter((e) => e.kind === 'case.decision');
   insert(db, 'review_notes', dec.map((e) => { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; return { case_id: d.case, charge: d.charge, at: new Date(Date.parse(e.at) - 3600000).toISOString(), author: 'Jordan Ellis',
-    note: d.decision === 'Reversed' ? 'Load scan time is before the seal time on the bill of lading; seal intact at DC 2. Reverse the shortage. Receipt stays as recorded until receiving revises it.' : 'Ship notice still differs from the receiving advice on record. No revised receiving advice. Uphold.' }; }));
+    note: d.reviewer_note ? d.reviewer_note : d.decision === 'Reversed' ? 'Load scan time is before the seal time on the bill of lading; seal intact at DC 2. Reverse the shortage. Receipt stays as recorded until receiving revises it.' : 'Ship notice still differs from the receiving advice on record. No revised receiving advice. Uphold.' }; }));
   const IN_FORCE_FROM = '2027-01-04T05:00:00.000Z'; // Monday 4 January 2027, 00:00 Eastern (D72)
   insert(db, 'draft_rules', [
     { id: 'NFD-1', in_force_from: null, created_at: '2026-11-10T15:00:00.000Z', author: 'Jordan Ellis', statement: 'Send the ship notice within 30 minutes of departure', check_kind: 'ship_notice_minutes', value: 30, charge: 150, state: 'Draft', charge_basis: 'per document', basis: 'Northfield' },

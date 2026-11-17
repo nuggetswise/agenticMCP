@@ -29,20 +29,20 @@ await withServer({ WRITES: 'off' }, 3971, async ({ base, client, tool, rest }) =
     ok('Aviator reached through the connector: answers or says it has no key, and logs the call', (av.ok === true || /no model key/.test(av.message || '')) && JSON.stringify(lg).includes('ask_aviator'), JSON.stringify(av).slice(0, 160)); }
   const before = JSON.stringify(await tool('get_access_log', { limit: 1 })).length >= 0 && (await tool('run_readonly_sql', { sql: "SELECT count(*) n FROM events WHERE po = 'NR-460207'" })).rows?.[0]?.n;
   const sb = await tool('scout_baseline', {}); const after = (await tool('run_readonly_sql', { sql: "SELECT count(*) n FROM events WHERE po = 'NR-460207'" })).rows?.[0]?.n;
-  ok('Scout session leaves the recorded world unchanged', sb.outcome?.cartons_loaded === 659 && sb.queue?.rows.length === 6 && before === after, `${before} -> ${after}`);
+  ok('Scout session leaves the recorded world unchanged', sb.outcome?.cartons_loaded === 659 && sb.queue?.rows.length === 5 && before === after, `${before} -> ${after}`);
   // Watch Agent (P13): a baseline, a start (no model key here) and an explicit clock advance leave every recorded record of the five orders unchanged.
   { const P13 = ['NR-46210', 'NR-46215', 'NR-46220', 'NR-46226', 'NR-46231']; const snap = async () => JSON.stringify(await Promise.all(P13.map(async (po) => { const o = await tool('get_order', { po, as_of: '2026-12-31' }); delete o.read_at; return o; })));
     const w0 = await snap(); const su = await tool('watch_setup', {}); const wb = await tool('watch_baseline', {}); const ws = await tool('watch_start', {}); const wa = await tool('watch_state', { session: wb.session, advance_minutes: 2000 }); const w1 = await snap();
     ok('watch_setup lists facts, Priya’s window and guardrails', su.facts?.kinross_window_hours?.recorded === 48 && su.guardrails?.length === 3 && su.actions?.release_document?.priya_may_change === false, JSON.stringify(su).slice(0, 160));
-    ok('watch baseline reaches the P13 end state', JSON.stringify(wb.outcome?.sent_on_time) === JSON.stringify(['NR-46210 855', 'NR-46226 810', 'NR-46220 856']) && JSON.stringify(wb.outcome?.sent_late) === '["NR-46215 856"]' && wb.outcome?.nothing_to_chase?.join() === 'NR-46231' && wb.outcome?.violations?.length === 0, JSON.stringify(wb.outcome).slice(0, 200));
+    ok('watch baseline reaches the P13 end state', JSON.stringify(wb.outcome?.sent_on_time) === JSON.stringify(['NR-46210 855', 'NR-462411 856', 'NR-46226 810', 'NR-46220 856']) && JSON.stringify(wb.outcome?.sent_late) === '["NR-46215 856"]' && wb.outcome?.nothing_to_chase?.join() === 'NR-46231' && wb.outcome?.violations?.length === 0, JSON.stringify(wb.outcome).slice(0, 200));
     { const sv = await (await fetch(`${base}/sessions/${wb.session}`)).json(); const nx = await fetch(`${base}/sessions/WS-nosuch`);
       ok('a session view is readable by its id for recording, and an unknown id is not found', sv.session === wb.session && Array.isArray(sv.trace) && nx.status === 404); }
-    ok('watch_start without a model key says so and simulates nothing', !!ws.blocked && ws.awaiting.length === 0 && ws.queue.rows.length === 4, JSON.stringify(ws.blocked));
+    ok('watch_start without a model key says so and simulates nothing', !!ws.blocked && ws.awaiting.length === 0 && ws.queue.rows.length === 7, JSON.stringify(ws.blocked));
     ok('watch_state advances the clock and reveals the confirming 861', /RCV-46220/.test(JSON.stringify(wa.arrived || [])) && wa.queue.rows.find((r) => r.po === 'NR-46220' && r.document === '856')?.closed === true, JSON.stringify(wa.arrived).slice(0, 200));
     ok('Watch session leaves the recorded world unchanged', w0 === w1 && w0.length > 1000, `${w0.length} vs ${w1.length}`); }
   const a = await tool('orders_needing_attention'); ok('attention via MCP', a.items?.map((i) => i.po).join() === 'NR-46151,NR-46142,NR-46156,NR-46133', JSON.stringify(a).slice(0, 200));
   const r = await rest('/v1/orders/attention'); ok('REST twin equals MCP', JSON.stringify(r.items) === JSON.stringify(a.items));
-  const h = await rest('/v1/health?days=30'); ok('health via REST', h.documents === 3412 && h.failures === 41);
+  const h = await rest('/v1/health?days=30'); ok('health via REST', h.documents === 3420 && h.failures === 41);
   const later = await tool('orders_needing_attention', { as_of: '2026-11-18T09:00:00-05:00', include_warehouse: true }); ok('as_of moves the answer', later.items?.[0]?.po === 'NR-46215');
   const o = await tool('get_order', { po: 'NR-450118' }); ok('order by number', o.found && o.shipments.length === 2);
   const d = await tool('get_document', { reference: 'ASN-450118-2' }); ok('document carries X12', /ISA\*/.test(JSON.stringify(d)));
@@ -78,7 +78,7 @@ await withServer({}, 3973, async ({ base, nfClient, tool, nf }) => {
   const x = (await tool('get_document', { reference: 'ASN-450118-2' })).x12, y = (await nf('get_document', { reference: 'ASN-450118-2' })).x12; ok('shared X12 is the same on both sides', !!x && x === y);
   { const pre = await nf('supplier_document_trail', { po: 'NR-460207' }), post = await nf('supplier_document_trail', { po: 'NR-460207', as_of: '2026-12-04T10:00:00-05:00' });
     ok('Northfield trail: no such order before it is sent', pre.found === false && /^No such order as of/.test(pre.message) && !('order_value' in pre) && !('requested_delivery' in pre) && post.found === true && post.documents.length >= 1, JSON.stringify(pre).slice(0, 120)); }
-  const t = await nf('supplier_document_trail', { supplier: 'Ashby Supplier' }); ok('Northfield trail equals Ashby health', t.documents === 3412 && t.failures === 41, JSON.stringify(t).slice(0, 120));
+  const t = await nf('supplier_document_trail', { supplier: 'Ashby Supplier' }); ok('Northfield trail equals Ashby health', t.documents === 3420 && t.failures === 41, JSON.stringify(t).slice(0, 120));
   const refusalsNf = [await nf('get_document', { reference: 'WSA-45620' }), await nf('read_supplier_records', { question: 'Kinross load scans' }), await nf('run_readonly_sql', { sql: 'SELECT * FROM warehouse_orders' }), await nf('lookup_rules', { rule_id: 'AP-4.1' })];
   ok('Northfield refuses the 945', /Not available to Northfield/.test(JSON.stringify(refusalsNf[0]))); ok('Northfield refuses supplier records', /Not available to Northfield/.test(JSON.stringify(refusalsNf[1])));
   ok('Northfield SQL refuses the warehouse', /Not available to Northfield/.test(JSON.stringify(refusalsNf[2]))); ok('Northfield does not see Ashby policies', refusalsNf[3].count === 0);
@@ -159,7 +159,7 @@ await withServer({}, 3974, async ({ base, tool, nf }) => {
   ok('Scout replay of a changed policy recorded as a trial', se?.agent === 'Scout Agent' && se?.rule === 'AP-3.2' && se?.result.authority_differs.some((d) => d.action === 'kinross_load') && !!se?.result.drift_measure, String(JSON.stringify(se)).slice(0, 300));
   // Watch Agent paused: the queue arrives as plain tasks and the model gets no turn; resumed, it reaches the model step again.
   await tool('pause_agent', { agent: 'Watch Agent' }); const wp = await tool('watch_start', {});
-  ok('paused Watch Agent: plain tasks, no proposal, no model call', wp.status === 'paused' && wp.plain_task?.proposal === null && wp.plain_task?.queue?.length === 4 && wp.awaiting.length === 0 && wp.overhead.model_calls === 0, JSON.stringify(wp).slice(0, 200));
+  ok('paused Watch Agent: plain tasks, no proposal, no model call', wp.status === 'paused' && wp.plain_task?.proposal === null && wp.plain_task?.queue?.length === 7 && wp.awaiting.length === 0 && wp.overhead.model_calls === 0, JSON.stringify(wp).slice(0, 200));
   await fetch(`${base}/admin/smoke/agents/Watch%20Agent/resume`, { method: 'POST', redirect: 'manual' }); ok('resumed Watch Agent reaches the model step again', !!(await tool('watch_start', {})).blocked);
   const wr = await tool('watch_replay', { variation: 'kinross_unreachable' }); const wt = (await tool('get_change_list', { kind: 'trial' })).entries.find((e) => e.id === wr.trial);
   ok('Watch replay recorded as a trial with the baseline outcome', wt?.agent === 'Watch Agent' && wt?.result.baseline.escalated.includes('NR-46220') && !!wt?.result.drift_measure && !!wr.watch?.blocked, String(JSON.stringify(wt)).slice(0, 200));
@@ -203,7 +203,7 @@ await withServer({}, 3975, async ({ base, client, nfClient, tool, nf }) => {
 // mode set in admin reaches the next run; Northfield cannot edit Ashby's rules and Ashby cannot edit Northfield's; reset restores.
 await withServer({}, 3975, async ({ base, tool, nf }) => {
   const src = await tool('list_rules_by_source'); const g = Object.fromEntries(src.groups.map((x) => [x.source, x]));
-  ok('rules by source: Ashby manual rules editable, Northfield guide read-only', g['Ashby manual rules'].count === 21 && !g['Ashby manual rules'].read_only && g['Northfield guide'].read_only && g['Northfield guide'].count === 64 && g['Northfield guide'].rules.filter((r) => r.state === 'In force from a later date').length === 13 && g['Ashby manual rules'].rules.find((r) => r.id === 'AP-4.1').created_by === 'Priya Raman', JSON.stringify(src.groups.map((x) => [x.source, x.count])));
+  ok('rules by source: Ashby manual rules editable, Northfield guide read-only', g['Ashby manual rules'].count === 23 && !g['Ashby manual rules'].read_only && g['Northfield guide'].read_only && g['Northfield guide'].count === 64 && g['Northfield guide'].rules.filter((r) => r.state === 'In force from a later date').length === 13 && g['Ashby manual rules'].rules.find((r) => r.id === 'AP-4.1').created_by === 'Priya Raman', JSON.stringify(src.groups.map((x) => [x.source, x.count])));
   ok('Northfield sees no Ashby rule', (await nf('list_rules_by_source')).groups.find((x) => x.source === 'Ashby manual rules').count === 0);
   const preview = await tool('update_supplier_rule', { rule: 'AP-4.1', params: { max_amount: 50 } });
   ok('a rule change shows its effect first and saves nothing', preview.result === 'Effect shown; nothing saved' && preview.effect.changed.some((c) => c.record === 'DC-40877') && (await tool('list_rules_by_source')).groups.find((x) => x.source === 'Ashby manual rules').rules.find((r) => r.id === 'AP-4.1').params.max_amount === 250, JSON.stringify(preview.effect).slice(0, 200));

@@ -21,7 +21,7 @@
    "get": {
     "operationId": "orders_needing_attention",
     "summary": "Orders needing attention",
-    "description": "Ashby orders with Northfield that need action at a point in time: rejected documents, and required documents not sent as their deadline nears. Each item carries the reason, the Northfield rule and its source, the deadline, the time left and a link to the order record. Set include_warehouse to add the Kinross shipping advice (945). Also lists items checked that need nothing.",
+    "description": "Ashby orders with Northfield that need action at a point in time: rejected documents, required documents not sent as their deadline nears, and ship notices Trading Grid holds because the warehouse has not scanned the departure. Each item carries the reason, the rule and its source, the deadline, the time left, the owner where the fix is someone else’s, and a link to the order record. Set include_warehouse to add the Kinross shipping advice (945): it is flagged when 2 hours are left (Ashby’s rule AP-3.4) in the window, 24 hours after the warehouse shipping order under Ashby’s rule AP-7.2 unless kinross_window_hours asks for the 48 hours agreed with Kinross (KX-945); orders still inside the window are listed as watched. Also lists items checked that need nothing.",
     "tags": [
      "Start-of-day triage"
     ],
@@ -55,6 +55,29 @@
        "description": "Also check the warehouse shipping advice from Kinross"
       },
       "description": "Also check the warehouse shipping advice from Kinross"
+     },
+     {
+      "name": "kinross_window_hours",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "number",
+         "enum": [
+          24
+         ]
+        },
+        {
+         "type": "number",
+         "enum": [
+          48
+         ]
+        }
+       ],
+       "description": "Hours after the warehouse shipping order by which Kinross’s shipping advice is due: 24 (Ashby’s rule AP-7.2, the default) or 48 (the agreement with Kinross, KX-945)"
+      },
+      "description": "Hours after the warehouse shipping order by which Kinross’s shipping advice is due: 24 (Ashby’s rule AP-7.2, the default) or 48 (the agreement with Kinross, KX-945)"
      }
     ],
     "responses": {
@@ -534,8 +557,8 @@
   "/v1/scorecard": {
    "get": {
     "operationId": "get_scorecard",
-    "summary": "Northfield scorecard",
-    "description": "Northfield’s on-time, in-full scorecard for Ashby over the 13-week quarter, recomputed from orders and receiving advice: cases, failing cases, failing lines by reason, and the figures Northfield published. Northfield publishes it on 28 Dec 2026; before then it answers that the quarter is not published and lists the files published so far.",
+    "summary": "On-time, in-full rate, calculated by Trading Grid",
+    "description": "Ashby’s on-time, in-full rate for Northfield over the 13-week quarter, calculated by Trading Grid from the documents it carries (purchase orders, order changes, ship notices, receiving advice): compliant cases ÷ all cases per order line, on Northfield’s definition, with the formula, the cases, the failing lines by reason and, on request, every failing line with the record where it first went wrong. The Trading Grid calculation only: Northfield’s own published scorecard is Northfield’s record and is not returned. Calculated when the quarter’s last receiving advice arrives; before then it answers that the rate is not calculated.",
     "tags": [
      "Performance review"
     ],

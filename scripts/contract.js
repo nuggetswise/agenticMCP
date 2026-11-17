@@ -19,7 +19,8 @@ const known = {
   pay: (v) => has('SELECT 1 FROM remittance_items WHERE payment = ?', v),
   misc: (v) => has("SELECT 1 FROM events WHERE data LIKE ?", `%${v}%`) || has('SELECT 1 FROM adjustments WHERE reference = ? OR note LIKE ?', v) || has('SELECT 1 FROM documents WHERE raw LIKE ?', `%${v}%`),
   rule: (v) => has('SELECT 1 FROM rules WHERE id = ? OR charge_code = ?', v),
-  sscc: (v) => has('SELECT 1 FROM cartons WHERE sscc = ?', v),
+  // A carton on a ship notice, or one a warehouse scan names (NR-460207's crushed carton never shipped, so no ship notice lists it).
+  sscc: (v) => has('SELECT 1 FROM cartons WHERE sscc = ?', v) || has("SELECT 1 FROM events WHERE kind LIKE 'wms.%' AND data LIKE ?", `%${v}%`),
 };
 known.misc = (v) => has("SELECT 1 FROM events WHERE data LIKE ?", `%${v}%`) || !!db.prepare('SELECT 1 FROM adjustments WHERE reference = ? OR note LIKE ?').get(v, `%${v}%`);
 known.rule = (v) => !!db.prepare('SELECT 1 FROM rules WHERE id = ? OR charge_code = ?').get(v, v);

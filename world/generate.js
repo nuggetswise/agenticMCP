@@ -88,6 +88,11 @@ export function build(nPre, jitter) {
   for (const O of flex) for (const l of O.lines) l.qty = Math.max(1, Math.round(l.qty * f));
   let diff = target - sum(flex);
   for (let i = 0; diff !== 0; i = (i + 1) % flex.length) { const l = flex[i].lines[0]; if (diff > 0) { l.qty++; diff--; } else if (l.qty > 1) { l.qty--; diff++; } }
+  // P5 (17 November 2026): the third order on Kinross's Groveport inventory read. NR-46620 keeps its 48 cases and moves
+  // 13 of them from napkins to mugs (40 and 8), so the three orders on the read ask for 640 mugs and the scorecard total stands.
+  { const O = G.life.find((x) => x.n === 46620); const q = O && !special(O) && !O.pattern && O.lines.length === 2 && O.lines[0].sku === 'ASH-MUG-12' && O.lines[1].sku === 'ASH-NAP-4' ? O.lines.map((l) => l.qty) : null;
+    if (!q || q[0] + q[1] !== 48 || O.site !== 'KIN-GRV') throw new Error(`NR-46620 is not the 48-case Groveport mug and napkin order the P5 inventory read names (${JSON.stringify(O && { site: O.site, lines: O.lines })})`);
+    O.lines[0].qty = 40; O.lines[1].qty = 8; }
   W.scorecard = { ordered: 48000, failing: W.slots.reduce((a, s) => a + s.cases, 0), lines: W.slots.length };
 
   // ---------- Claim Agent evidence states: three one-carton receipt shortages on Kinross shipments ----------
@@ -116,7 +121,7 @@ export function build(nPre, jitter) {
     L.aside(() => st.generate(L, { W, G, P10_WINDOW }));
     for (const x of L.docs.slice(d0)) x.stage = st.id; for (const x of L.events.slice(e0)) x.stage = st.id;
   }
-  const inWindow = L.docs.filter((d) => d.stage && !d.test && P10_PAIR(d) && Date.parse(d.at) > P10_WINDOW.start && Date.parse(d.at) <= P10_WINDOW.end);
+  const inWindow = L.docs.filter((d) => d.stage && d.stage !== 'records' && !d.test && P10_PAIR(d) && Date.parse(d.at) > P10_WINDOW.start && Date.parse(d.at) <= P10_WINDOW.end);
   if (inWindow.length) throw new Error(`Stage documents between Ashby and Northfield fall in P10's 30-day window, which would move its document count: ${inWindow.slice(0, 3).map((d) => `${d.stage} ${d.type} ${d.at}`).join(', ')}`);
   return { L, W, G };
 }
@@ -154,7 +159,8 @@ function windowCount(L) {
   const start = addD(CLOCK10, -30).getTime(), end = CLOCK10.getTime(); let n = 0;
   const pair = (d) => (d.from === 'ASHBY' && d.to === 'NORTHFIELD') || (d.from === 'NORTHFIELD' && d.to === 'ASHBY');
   for (const d of L.docs) {
-    if (!pair(d) || d.test) continue; const t = Date.parse(d.at);
+    // Records added on 17 November 2026 (stage `records`) are left out of the tuning count, so the replenishment volume, and with it every existing record, stays as it was.
+    if (!pair(d) || d.test || d.stage === 'records') continue; const t = Date.parse(d.at);
     if (t > start && t <= end) n++;
     const fa = t + d.ackDelay * 60000; if (!d.no_ack && fa > start && fa <= end) n++;
   }

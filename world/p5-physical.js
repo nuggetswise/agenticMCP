@@ -13,9 +13,9 @@ export const P5 = {
   carton: { sscc: '006141410006005172', line: 1, sku: 'ASH-MUG-12', condition: 'crushed', contents: 'damaged', label: 'readable', staged: true },
   load_minutes: 5,                            // Kinross moves a staged carton onto the trailer
   relabel_minutes: 10, overpack_minutes: 15,
-  // Groveport stock of the carton's item: 590 cases free, none reserved, against 619 released to Kinross on the three
-  // ASH-MUG-12 orders the 16:42 inventory record names (29 short before anything is taken for this shipment).
-  stock: [{ sku: 'ASH-MUG-12', site: 'KIN-GRV', on_hand: 590, reserved: 0, reserved_for: 'No order', staging_minutes: 25 }],
+  // Groveport stock of the carton's item: 610 cases free, none reserved, against 640 ordered on the three ASH-MUG-12
+  // orders the 16:42 inventory record names (30 short).
+  stock: [{ sku: 'ASH-MUG-12', site: 'KIN-GRV', on_hand: 610, reserved: 0, reserved_for: 'No order', held_for_damage: 2, staging_minutes: 25 }],
   // Carrier hold: Northfield routes collect freight with Lakeline; a hold request gets no answer before the seal.
   hold_answer: null,
   // SSCC serials Ashby may issue for a replacement or overpacked carton (GS1 prefix 0614141, AP-2.2, NF-4.1).

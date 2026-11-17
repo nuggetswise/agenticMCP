@@ -27,7 +27,7 @@ const KINROSS = 'Kinross warehouse system';
 // Prepared statements are cached per database: the queue is recomputed after every step.
 const STMTS = new WeakMap();
 const q1 = (db, sql) => { let m = STMTS.get(db); if (!m) STMTS.set(db, (m = new Map())); let st = m.get(sql); if (!st) m.set(sql, (st = db.prepare(sql))); return st; };
-const ESCALATE_HOURS = 2; // Priya's rule: escalate to her when 2 hours are left.
+const ESCALATE_HOURS = 2; // Priya's rule (AP-3.4 in the catalogue): flag to her when 2 hours are left.
 const HORIZON_HOURS = 5; // A baseline or replay run covers Priya's morning: 09:00 to 14:00 ET at the P13 moment.
 const MAX_ADVANCE_HOURS = 48; // An explicit advance may run on to two days after the branch, to show later confirmations.
 
@@ -172,7 +172,8 @@ export function queue(db, s) {
       else if (!of('810').length && (due - clock <= 24 * H || s.rows.has(`${o.po} 810`))) add('810', 'missing', 'Invoice not sent', 'NF-7.9', due, { shipped: fmtET(dep.at) }); }
     const w = warehouseOrder(db, s, o.po);
     if (w && !w.advice_at) { const due = new Date(Date.parse(w.sent_at) + s.facts.kinross_window_hours * H);
-      if (clock >= due || s.rows.has(`${o.po} 945`)) add('945', 'missing', 'Warehouse shipping advice (945) not received from Kinross', 'KX-945', due, { warehouse_order: w.ref, warehouse_order_sent: fmtET(w.sent_at) });
+      // Flagged when AP-3.4's hours are left in the window (2), or once flagged.
+      if (clock >= due - ESCALATE_HOURS * H || s.rows.has(`${o.po} 945`)) add('945', 'missing', 'Warehouse shipping advice (945) not received from Kinross', s.facts.kinross_window_hours === D.param(db, 'KX-945', 'hours') ? 'KX-945' : 'AP-7.2', due, { warehouse_order: w.ref, warehouse_order_sent: fmtET(w.sent_at) });
       else watching.push({ po: o.po, document: '945', warehouse_order: w.ref, sent: fmtET(w.sent_at), due: fmtET(due), time_left: D.timeLeft(due, new Date(clock)), why_not_flagged: `Inside Priya’s ${s.facts.kinross_window_hours}-hour Kinross window` }); }
     const cha = of('865').pop();
     if (cha && clock - Date.parse(cha.sent_at) <= 48 * H) nothing.push({ po: o.po, document: 'Business acceptance of the change acknowledgment (865)', state: 'Not expected', rule: 'NF-1.5', evidence: of('997').some((d) => d.sent_at >= cha.sent_at) ? 'Technical acknowledgment (997) received; Northfield sends no business acceptance' : 'Northfield sends no business acceptance', nothing_to_chase: true });
@@ -241,7 +242,7 @@ export const READS = {
         load_scan: load ? { at: fmtET(load.at), shipment: load.d.shipment, cartons_loaded: load.d.cartons_loaded, cartons_expected: load.d.cartons_expected, by_sscc: !!load.d.by_sscc, system: load.system, ...(load.d.trailer_state ? { trailer_state: load.d.trailer_state } : {}) } : 'None',
         departure_scan: dep ? { at: fmtET(dep.at), shipment: dep.d.shipment, carrier: dep.d.carrier, system: dep.system } : 'None',
         kinross_replies: s.tasks.filter((t) => t.po === po), warehouse_status: w && !w.advice_at ? 'Unknown until the 945 arrives' : dep ? 'Shipped' : 'Not shipped' }; } },
-  read_rules: { description: 'Rules from the catalogue by id (for example NF-1.4, NF-4.2, NF-7.9, NF-1.5, KX-945, AP-1.4, AP-3.3) or by topic words.', input: { ids: z.array(z.string()).optional(), topic: z.string().optional() },
+  read_rules: { description: 'Rules from the catalogue by id (for example NF-1.4, NF-4.2, NF-7.9, NF-1.5, KX-945, AP-7.2, AP-3.4, AP-1.4, AP-3.3) or by topic words.', input: { ids: z.array(z.string()).optional(), topic: z.string().optional() },
     run: (db, s, a) => a.ids?.length ? { rules: a.ids.map((id) => D.rule(db, id)).filter(Boolean) } : D.rules(db, { topic: a.topic || '' }) },
   read_policy: { description: 'What each action needs (Watch Agent may only suggest, Priya approves, or it runs under her standing policy), Priya’s editable rules (the Kinross 945 window, escalation at 2 hours left), and the administrator guardrails no one may change.', input: {},
     run: (db, s) => ({ actions: Object.fromEntries(Object.entries(ACTIONS).map(([k, a]) => [k, { does: a.label, done_by: a.actor, rule: a.rule, takes: a.args, needs: s.modes[k] === 'policy' ? 'Runs under Priya’s standing policy' : s.modes[k] === 'approve' ? 'Priya approves' : 'Watch Agent may only suggest; Priya does it by hand' }])),
@@ -519,7 +520,7 @@ export async function runWatch(db, s, { callModel, maxSteps = 14, maxToolCalls =
 }
 // ---------- Run by the rules, with no agent (D75): the decision table proposes, Priya approves, the records answer ----------
 // The same queue, reads, actions, approval modes and simulators as an agent session. No model is called and nothing is
-// credited to an agent. The Kinross window is Priya's rule in the catalogue (KX-945), so a change in admin flags different rows.
+// credited to an agent. The Kinross window is Priya's rule in the catalogue (AP-7.2, 24 hours; the agreement with Kinross, KX-945, allows 48), so a change in admin flags different rows.
 const RULES = 'Rule engine';
 /** One pass of the decision table. An action that needs Priya waits; a second action on the same order in the same pass
  *  (send the invoice once it is created) rides on the first as its next step, approved with it. */
@@ -535,7 +536,7 @@ export function rulesPass(db, s) {
   return baselinePass(db, s, act);
 }
 export function startRules(db, { variation = {}, policy = {}, label } = {}) {
-  const hours = D.param(db, 'KX-945', 'hours');
+  const hours = D.param(db, 'AP-7.2', 'hours'); // Ashby's own window (24 hours); the agreement with Kinross, KX-945, allows 48
   const s = startSession(db, { variation: { ...(FACTS.kinross_window_hours.values.includes(hours) ? { kinross_window_hours: hours } : {}), ...variation }, policy, label });
   s.by_rules = true; s.set_aside = new Set(); s.agent.status = 'rules'; rulesPass(db, s); return s;
 }

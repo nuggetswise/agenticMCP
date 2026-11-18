@@ -114,7 +114,7 @@ export default function ({ ash, nf, ok, eq }) {
       ash.prepare("SELECT count(*) n FROM sqlite_master WHERE name IN ('review_notes','draft_rules','rule_replays','proposals')").get().n], [['AA-INV-7731', 'AA-INV-7731'], ['correction'], false, 1, 0]); }
 
   // Story 4: Ashby's scope refuses Northfield's accounts payable records and notes with its own refusal text (the server reads the same values).
-  { const s = M.startSession(nf); const p = M.propose(nf, s, 'Match Agent', 'reject_held_lines', { invoice: 'INV-7731', lines: [1, 2] }); M.decide(nf, s, p.proposal, 'edit', 'Jordan Ellis', 'Private AP note: call the buyer first');
+  { const s = M.startSession(nf); const p = M.propose(nf, s, 'Match Agent', 'reject_held_lines', { invoice: 'INV-7731', lines: [1, 2] }); M.decide(nf, s, p.proposal, 'take_over', 'Jordan Ellis', 'Private AP note: call the buyer first');
     const v = JSON.stringify(M.supplierView(s));
     eq('match.story4_ashby_refuses_ap_records_and_notes_with_its_own_text', [refusalText(NOT_AVAILABLE, ASHBY_PRIVATE.what, 'Northfield Retailer'), ['SELECT * FROM review_notes', 'SELECT * FROM draft_rules'].map((q) => ASHBY_PRIVATE.tables.test(q)),
       /accounts payable/.test(ASHBY_REFUSALS.find((t) => t.name === 'read_retailer_records').description), ash.prepare("SELECT count(*) n FROM sqlite_master WHERE name IN ('review_notes','draft_rules')").get().n, /Private AP note|MP-\d|Jordan Ellis|Taken over/.test(v)],

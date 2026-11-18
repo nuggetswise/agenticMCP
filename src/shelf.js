@@ -42,7 +42,7 @@ const spec = {
     recommend_order: { label: 'Recommend a new order, shown to Priya Raman and highlighted for Jordan Ellis on Northfield’s side of Trading Grid; Jordan orders in Northfield’s own system. Nothing is sent', actor: 'Jordan Ellis (orders in Northfield’s own system)', rule: 'AP-6.4', mode: 'policy', editable: true, args: ['record', 'pairs'] },
     recommend_transfer: { label: 'Recommend a store-to-store transfer, shown to Priya Raman and highlighted for Jordan Ellis on Northfield’s side of Trading Grid; Jordan moves the stock in Northfield’s own system. Nothing is sent', actor: 'Jordan Ellis (in Northfield’s own system)', rule: 'AP-6.3', mode: 'policy', editable: true, args: ['record', 'pairs', 'to_store'] },
     wait_for_transit: { label: 'Record that the store waits for goods already in transit; nothing is sent', actor: 'Trading Grid', rule: 'AP-6.1', mode: 'policy', editable: false, args: ['record'] },
-    create_sales_order: { label: 'Create the sales order in the Supplier ERP from Northfield’s purchase order', actor: 'Supplier ERP', rule: 'AP-3.2', mode: 'approve', editable: true, args: ['record'] },
+    ashby_creates_sales_order: { label: 'Show that Ashby creates the sales order in the Supplier ERP from Northfield’s purchase order; the Supplier ERP record confirms it. Nothing is written there', actor: 'Ashby (in the Supplier ERP)', rule: 'AP-3.2', mode: 'policy', editable: false, args: ['record'] },
   },
   argTypes: { pairs: z.number().int() },
   guardrails: [
@@ -61,7 +61,7 @@ const spec = {
       case 'recommend_order': if (ev.on_hand > 0) return `Store ${store} has ${ev.on_hand} on hand; an order is for an empty shelf (AP-6.1).`; { const carton = D.param(db, 'AP-6.4', 'carton'); if (!a.pairs || a.pairs % carton) return `AP-6.4: whole cartons of ${carton} pairs.`; } if (k.recs[store]) return 'Already recommended.'; if (a.pairs > ev.ashby_available) return `Ashby has ${ev.ashby_available} pairs available.`; return null;
       case 'recommend_transfer': if (!a.to_store || !a.pairs) return 'Give pairs and to_store.'; if (a.pairs > ev.on_hand) return `Store ${store} has ${ev.on_hand} on hand.`; if (k.recs[store]) return 'Already recommended.'; return null;
       case 'wait_for_transit': if (ev.ship_notice_in_transit === 'None') return `Nothing is in transit to store ${store}.`; if (k.waits[store]) return 'Already waiting.'; return null;
-      case 'create_sales_order': if (!k.orders[store]?.po) return `No purchase order from Northfield for store ${store} yet; nothing is created before it arrives.`; if (k.orders[store].sales_order) return 'The sales order exists.'; return null; }
+      case 'ashby_creates_sales_order': if (!k.orders[store]?.po) return `No purchase order from Northfield for store ${store} yet; nothing is created before it arrives.`; if (k.orders[store].sales_order) return 'The sales order exists.'; return null; }
     return null; },
   execute: (db, s, p, by, ctx) => { const a = p.args; const k = st(s); const store = String(a.record); s.clock += 2 * MIN;
     switch (p.action) {
@@ -71,15 +71,15 @@ const spec = {
         return { state: 'Shown', response: `Recommendation shown on both sides of Trading Grid: ${a.pairs} pairs for store ${store}; Jordan Ellis orders in Northfield’s own system. Nothing is sent and no order or reservation is created` }; }
       case 'recommend_transfer': k.recs[store] = { kind: 'transfer', what: `${a.pairs} pairs to store ${a.to_store}`, at: fmtET(iso(s.clock)) }; return { state: 'Shown', response: `Transfer recommendation shown on both sides of Trading Grid: ${a.pairs} pairs from store ${store} to store ${a.to_store}. Nothing is sent` };
       case 'wait_for_transit': k.waits[store] = { at: fmtET(iso(s.clock)) }; return { state: 'Completed', response: `Store ${store} waits for the goods in transit; nothing sent` };
-      case 'create_sales_order': { const o = k.orders[store]; o.sales_order = o.po === PO_114.po ? 'SO-451207' : `SO-S${s.id.slice(3, 7)}`;
+      case 'ashby_creates_sales_order': { const o = k.orders[store]; o.sales_order = o.po === PO_114.po ? 'SO-451207' : `SO-S${s.id.slice(3, 7)}`;
         if (o.po === PO_114.po) { ctx.schedule(s, { key: `asn:${store}`, at: '2026-10-26T20:05:00.000Z', record: store, reference: 'ASN-451207-1', actor: 'Trading Grid (recorded)', what: 'Ship notice ASN-451207-1 sent: 40 pairs to store 114' });
           ctx.schedule(s, { key: `rcv:${store}`, at: '2026-10-27T13:10:00.000Z', record: store, reference: 'RCV-S114-51207', actor: 'Northfield receiving (recorded)', what: 'Store 114 received 40 pairs (RCV-S114-51207)' });
           ctx.schedule(s, { key: `852:${store}`, at: '2026-11-01T11:10:00.000Z', record: store, actor: 'Northfield store activity (recorded)', what: 'Next store activity report: store 114 sold 31, 9 on hand', on: () => { o.refilled = '31 sold, 9 on hand in the next report'; } }); }
-        return { state: 'Completed', response: `Sales order ${o.sales_order} created in the Supplier ERP from ${o.po}` }; } }
+        return { state: 'Shown', response: `Shown to Priya Raman: Ashby creates the sales order in the Supplier ERP from ${o.po}; its record ${o.sales_order} arrives from the Supplier ERP. Trading Grid writes nothing there` }; } }
     return { state: 'Refused', response: 'Unknown action' }; },
   baseline: (db, s, act) => { const k = st(s);
     for (const r of rows(db, s)) { const d = decision(db, s, r.record);
-      if (k.orders[r.record]?.po && !k.orders[r.record].sales_order) act('create_sales_order', { record: r.record });
+      if (k.orders[r.record]?.po && !k.orders[r.record].sales_order) act('ashby_creates_sales_order', { record: r.record });
       else if (d.evidence.on_hand === 0 && !k.recs[r.record]) act('recommend_order', { record: r.record, pairs: Math.max(40, Math.round(d.evidence.weekly_average / 40) * 40) }); } },
   outcome: (db, s) => { const k = st(s); const violations = [];
     for (const [store, r] of Object.entries(k.recs)) { const d = decision(db, s, store); if (r.kind === 'order' && d.evidence.ship_notice_in_transit !== 'None') violations.push(`Store ${store}: order recommended while ${d.evidence.ship_notice_in_transit} was in transit (duplicate stock)`); }

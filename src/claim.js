@@ -45,9 +45,9 @@ function rowOf(db, s, c) {
 // settlement (deals, 852, 856, 810), and labelled the partner's answer. Claim Agent disputes only what the deal does not support.
 const PROMO_MOMENT = '2027-01-06 09:00 ET';
 const PROMO_INSTRUCTION = `Northfield's remittance PMT-990168 took five promotion deductions. Vividly, the partner that owns the promotion terms, matches each one to the deal Ashby agreed. For every deduction in the queue: read_promotion_deduction, then vividly_match. Then exactly one of:
-- Vividly matched it to its deal: propose accept_charge.
+- Vividly matched it to its deal: propose ashby_accepts_charge.
 - Vividly found it not supported (a rate above the deal, no store activity report for the claimed period, or outside the deal's order window): propose submit_dispute. It disputes only the unsupported amount, with the record that contradicts it; the supported part stands. Never accept a deduction Vividly found unsupported, and never dispute one it matched.
-Never decide a deduction; Northfield's reviewer does. A reversal is not money until the repayment arrives: when it does, propose match_repayment.`;
+Never decide a deduction; Northfield's reviewer does. A reversal is not money until the repayment arrives: when it does, propose ashby_matches_repayment.`;
 const isPromo = (s) => s.moment === PROMO_MOMENT;
 const promoRows = (db) => db.prepare("SELECT * FROM deal_settlements WHERE supplier_id = 'ASHBY' ORDER BY deduction_ref").all();
 function promoView(db, s, ref) {
@@ -85,9 +85,9 @@ const spec = {
   actions: {
     holder_shares_evidence: { label: 'Show that Kinross or Lakeline holds a record the case needs (load scan, load tally or proof of delivery) and where it sits; the record attached to the case confirms it. Nothing is sent', actor: 'Kinross or Lakeline Freight (shares it into the case)', rule: 'AP-3.2', mode: 'policy', editable: false, args: ['record', 'evidence'] },
     submit_dispute: { label: 'Dispute the charge in Northfield’s deduction case with the evidence that contradicts it (the NF-7.4 pack for a shortage; the deal, store activity or invoice for the unsupported amount of a promotion deduction)', actor: 'Northfield deduction case', rule: 'AP-4.1', mode: 'approve', editable: false, args: ['record'] },
-    accept_charge: { label: 'Accept the charge (no dispute)', actor: 'Supplier ERP (deduction item)', rule: 'AP-4.1', mode: 'approve', editable: false, args: ['record'] },
+    ashby_accepts_charge: { label: 'Show that the charge is accepted, with no dispute: Ashby clears the deduction item in the Supplier ERP. Nothing is written there or sent', actor: 'Ashby (in the Supplier ERP)', rule: 'AP-4.1', mode: 'policy', editable: false, args: ['record'] },
     ashby_files_carrier_claim: { label: 'Show that damage in transit is a carrier matter (NF-10.2): Ashby files the loss or damage claim for the goods cost in Lakeline’s claims process. Nothing is sent from Trading Grid', actor: 'Ashby (in Lakeline’s claims process)', rule: 'NF-10.2', mode: 'policy', editable: false, args: ['record'] },
-    match_repayment: { label: 'Match a repayment on Northfield’s remittance to the deduction in receivables and close the case', actor: 'Supplier ERP (receivables)', rule: 'NF-7.6', mode: 'policy', editable: false, args: ['record'] },
+    ashby_matches_repayment: { label: 'Show that a repayment on Northfield’s remittance matches the deduction: Ashby matches it in receivables in the Supplier ERP, and its record closes the case. Nothing is written there', actor: 'Ashby (in the Supplier ERP)', rule: 'NF-7.6', mode: 'policy', editable: false, args: ['record'] },
   },
   argTypes: { evidence: z.enum(['load_scan', 'load_tally', 'proof_of_delivery']) },
   guardrails: [
@@ -115,11 +115,11 @@ const spec = {
     if (isPromo(s)) {
       const v = promoView(db, s, a.record); if (!v.found) return v.message; const st = v.session; const r = v._settlement;
       switch (action) {
-        case 'accept_charge': if (st.disputed) return `${v.case} is disputed; Northfield decides it.`; if (st.accepted) return `${v.case} is already accepted.`; return null;
+        case 'ashby_accepts_charge': if (st.disputed) return `${v.case} is disputed; Northfield decides it.`; if (st.accepted) return `${v.case} is already accepted.`; return null;
         case 'submit_dispute': if (st.disputed) return `NF-7.3: ${v.case} was already disputed once.`; if (st.accepted) return `${v.case} was accepted.`;
           if (!st.vividly) return `Read Vividly’s match for ${v.case} first: a promotion deduction is disputed only with the record that contradicts it.`;
           if (r.decision === 'Matched') return `Vividly matched ${v.case} to deal ${r.deal_id}; a matched deduction is not disputed.`; return null;
-        case 'match_repayment': if (!st.repaid) return `No repayment for ${v.case} has arrived; a reversal is not money until it is repaid (NF-7.6).`; if (st.matched) return 'Already matched.'; return null;
+        case 'ashby_matches_repayment': if (!st.repaid) return `No repayment for ${v.case} has arrived; a reversal is not money until it is repaid (NF-7.6).`; if (st.matched) return 'Already matched.'; return null;
         default: return `${action} does not apply to a promotion deduction.`;
       }
     }
@@ -133,16 +133,16 @@ const spec = {
       case 'submit_dispute': if (st.disputed) return `NF-7.3: ${v.case} was already disputed once.`; if (st.accepted) return `${v.case} was accepted.`;
         if (!v.nf_7_4_complete) return `NF-7.4: the evidence pack is not complete in the case (${Object.entries(Object.fromEntries(v.evidence.map((e) => [e.evidence, e.state]))).filter(([, x]) => x !== 'In the case').map(([k, x]) => `${k}: ${x}`).join('; ')}).`;
         if (v.delivery_exception && v.delivery_exception !== 'None') return `The delivery receipt notes "${v.delivery_exception}": damage in transit is a carrier matter (NF-10.2), not a dispute.`; return null;
-      case 'accept_charge': if (st.disputed) return `${v.case} is disputed; Northfield decides it.`; if (st.accepted) return `${v.case} is already accepted.`; return null;
+      case 'ashby_accepts_charge': if (st.disputed) return `${v.case} is disputed; Northfield decides it.`; if (st.accepted) return `${v.case} is already accepted.`; return null;
       case 'ashby_files_carrier_claim': if (!v.delivery_exception || v.delivery_exception === 'None') return `No damage is noted on the delivery receipt for ${v.case}.`; if (!/prepaid/i.test(v.freight_terms || '')) return 'On collect freight Northfield files with its own carrier; Ashby files only on prepaid freight (NF-10.2).'; if (st.carrier_claim) return 'A carrier claim is already filed.'; return null;
-      case 'match_repayment': if (!st.repaid) return `No repayment for ${v.case} has arrived; a reversal is not money until it is repaid (NF-7.6).`; if (st.matched) return 'Already matched.'; return null;
+      case 'ashby_matches_repayment': if (!st.repaid) return `No repayment for ${v.case} has arrived; a reversal is not money until it is repaid (NF-7.6).`; if (st.matched) return 'Already matched.'; return null;
     }
     return null;
   },
   execute: (db, s, p, by, ctx) => {
     if (isPromo(s)) {
       const v = promoView(db, s, p.args.record); const st = v.session; const r = v._settlement;
-      if (p.action === 'accept_charge') { s.clock += MIN; st.accepted = { at: fmtET(iso(s.clock)), by, amount: v.amount }; return { state: 'Completed', response: `${v.charge} $${v.amount.toFixed(2)} on ${v.case} accepted in the Supplier ERP` }; }
+      if (p.action === 'ashby_accepts_charge') { s.clock += MIN; st.accepted = { at: fmtET(iso(s.clock)), by, amount: v.amount }; return { state: 'Shown', response: `Shown to Priya Raman: ${v.charge} $${v.amount.toFixed(2)} on ${v.case} is not disputed; Ashby clears it in the Supplier ERP. Nothing is written there` }; }
       if (p.action === 'submit_dispute') {
         s.clock += 3 * MIN; const amt = r.unauthorised_amount; const evidence = [`889 ${r.claimed_deal}`, ...(r.reason.match(/852/) ? ['852 history: no report for the claimed week'] : []), ...(r.reason.match(/order window/) ? [`810 ${r.invoice}`] : []), ...(r.reason.match(/Rate/) ? ['856 ship notices in the promoted period'] : []), 'Vividly match'];
         st.disputed = { at: fmtET(iso(s.clock)), by, amount: amt, evidence };
@@ -151,7 +151,7 @@ const spec = {
           on: (ss) => { st.decision = { decision, at: fmtET(at), by: 'Jordan Ellis', amount: amt };
             if (decision === 'Reversed') { const ref = `PMT-S${ss.id.slice(3, 7).toUpperCase()}`; ctx.schedule(ss, { key: `pay:${v.case}`, at: iso(Date.parse(at) + 10 * 24 * H), record: v.case, actor: 'Northfield remittance (synthetic)', synthetic: true, reference: ref, what: `Remittance ${ref} repays $${amt.toFixed(2)} referencing ${v.case}`, on: () => { st.repaid = { payment: ref, at: fmtET(iso(Date.parse(at) + 10 * 24 * H)), amount: amt }; } }); } } });
         return { state: 'Completed', response: `Dispute of $${amt.toFixed(2)} of ${v.case} submitted to Northfield with ${evidence.join(', ')}; $${r.authorised_amount.toFixed(2)} stands` }; }
-      if (p.action === 'match_repayment') { s.clock += MIN; st.matched = { at: fmtET(iso(s.clock)), payment: st.repaid.payment, amount: st.repaid.amount }; return { state: 'Completed', response: `${st.repaid.payment} matched to ${v.case} in receivables; ${v.case} closed` }; }
+      if (p.action === 'ashby_matches_repayment') { s.clock += MIN; st.matched = { at: fmtET(iso(s.clock)), payment: st.repaid.payment, amount: st.repaid.amount }; return { state: 'Completed', response: `${st.repaid.payment} matched to ${v.case} in receivables; ${v.case} closed` }; }
       return { state: 'Refused', response: 'Unknown action' };
     }
     const a = p.args; const v = view(db, s, a.record); const st = v.session;
@@ -174,18 +174,18 @@ const spec = {
             if (decision === 'Reversed') { const pay = v.case === 'DC-40877' ? { ref: 'PMT-991204', at: '2027-01-05T13:00:00.000Z', recorded: true } : { ref: `PMT-S${ss.id.slice(3, 7).toUpperCase()}`, at: iso(Date.parse(at) + 10 * 24 * H), recorded: false };
               ctx.schedule(ss, { key: `pay:${v.case}`, at: pay.at, record: v.case, actor: pay.recorded ? 'Northfield remittance (recorded)' : 'Northfield remittance (synthetic)', synthetic: !pay.recorded, reference: pay.ref, what: `Remittance ${pay.ref} repays $${v.amount.toFixed(2)} referencing ${v.deduction}`, on: () => { st.repaid = { payment: pay.ref, at: fmtET(pay.at), amount: v.amount }; } }); } } });
         return { state: 'Completed', response: `Dispute of ${v.charge} $${v.amount.toFixed(2)} submitted to ${v.case} with ${st.disputed.evidence.join(', ')}` }; }
-      case 'accept_charge': s.clock += MIN; st.accepted = { at: fmtET(iso(s.clock)), by, amount: v.amount }; return { state: 'Completed', response: `${v.charge} $${v.amount.toFixed(2)} on ${v.case} accepted in the Supplier ERP` };
+      case 'ashby_accepts_charge': s.clock += MIN; st.accepted = { at: fmtET(iso(s.clock)), by, amount: v.amount }; return { state: 'Shown', response: `Shown to Priya Raman: ${v.charge} $${v.amount.toFixed(2)} on ${v.case} is not disputed; Ashby clears it in the Supplier ERP. Nothing is written there` };
       case 'ashby_files_carrier_claim': { s.clock += 5 * MIN; const cost = Math.round(v.cartons * 54 * 100) / 100; st.carrier_claim = { claim: v.case === 'DC-40931' ? 'CR-2026-031' : `CR-S${s.id.slice(3, 7)}`, amount: v.case === 'DC-40931' ? 108 : cost, at: fmtET(iso(s.clock)) };
         return { state: 'Shown', response: `Shown to Priya Raman: a carrier claim for $${st.carrier_claim.amount.toFixed(2)}, goods cost of ${v.cartons} cartons, is Ashby’s to file in Lakeline’s claims process${v.case === 'DC-40931' ? `; claim ${st.carrier_claim.claim} is on record` : ''}. Nothing is sent` }; }
-      case 'match_repayment': s.clock += MIN; st.matched = { at: fmtET(iso(s.clock)), payment: st.repaid.payment, amount: st.repaid.amount }; return { state: 'Completed', response: `${st.repaid.payment} matched to ${v.deduction} in receivables; ${v.case} closed` };
+      case 'ashby_matches_repayment': s.clock += MIN; st.matched = { at: fmtET(iso(s.clock)), payment: st.repaid.payment, amount: st.repaid.amount }; return { state: 'Shown', response: `Shown to Priya Raman: ${st.repaid.payment} repays ${v.deduction}; Ashby matches it in receivables in the Supplier ERP, and that record closes ${v.case}` };
     }
     return { state: 'Refused', response: 'Unknown action' };
   },
   baseline: (db, s, act) => {
-    if (isPromo(s)) { for (const r of promoRows(db)) { const st = caseState(s, r.deduction_ref); if (st.repaid && !st.matched) act('match_repayment', { record: r.deduction_ref }); else if (!st.disputed && !st.accepted) act('accept_charge', { record: r.deduction_ref }); } return; }
+    if (isPromo(s)) { for (const r of promoRows(db)) { const st = caseState(s, r.deduction_ref); if (st.repaid && !st.matched) act('ashby_matches_repayment', { record: r.deduction_ref }); else if (!st.disputed && !st.accepted) act('ashby_accepts_charge', { record: r.deduction_ref }); } return; }
     for (const c of openCases(db, s)) { const v = view(db, s, c.case); const st = v.session;
-      if (st.repaid && !st.matched) act('match_repayment', { record: c.case });
-      else if (!st.disputed && !st.accepted) { if (v.nf_7_4_complete && (!v.delivery_exception || v.delivery_exception === 'None')) act('submit_dispute', { record: c.case }); else act('accept_charge', { record: c.case }); } }
+      if (st.repaid && !st.matched) act('ashby_matches_repayment', { record: c.case });
+      else if (!st.disputed && !st.accepted) { if (v.nf_7_4_complete && (!v.delivery_exception || v.delivery_exception === 'None')) act('submit_dispute', { record: c.case }); else act('ashby_accepts_charge', { record: c.case }); } }
   },
   outcome: (db, s) => {
     if (isPromo(s)) {

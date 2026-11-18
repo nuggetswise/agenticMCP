@@ -377,8 +377,8 @@ export function decide(db, s, proposalId, decision, by = 'Jordan Ellis', note) {
   const p = s.proposals.find((x) => x.id === proposalId);
   if (!p) return { state: 'Refused', message: `No proposal ${proposalId}` };
   if (p.state !== 'Awaiting approval') return { state: 'Refused', message: `${proposalId} is ${p.state.toLowerCase()}; an approval cannot be replayed.` };
-  if (decision === 'edit') { p.state = 'Taken over'; p.taken_over_by = by; p.note = note || null; s.handed_over = { by, proposal: p.id, note: p.note, at: fmtET(iso(s.clock)) }; s.agent.status = 'handed_to_person';
-    trace(s, by, 'human', `Edit suggestion: ${by} set ${p.id} aside and works ${p.args.invoice} by hand`, { action: p.action, note: p.note }); audit(s, p, `Taken over by ${by}; done by hand${p.note ? `: ${p.note}` : ''}`); return { state: 'Taken over', proposal: p.id, by }; }
+  if (decision === 'take_over') { p.state = 'Taken over'; p.taken_over_by = by; p.note = note || null; s.handed_over = { by, proposal: p.id, note: p.note, at: fmtET(iso(s.clock)) }; s.agent.status = 'handed_to_person';
+    trace(s, by, 'human', `Take over: ${by} set ${p.id} aside and works ${p.args.invoice} by hand`, { action: p.action, note: p.note }); audit(s, p, `Taken over by ${by}; done by hand${p.note ? `: ${p.note}` : ''}`); return { state: 'Taken over', proposal: p.id, by }; }
   if (decision !== 'approve') { p.state = 'Rejected'; p.rejected_by = by; trace(s, by, 'human', `Rejected ${p.id}`, { action: p.action, record: p.args.invoice }); audit(s, p, `Rejected by ${by}`); return { state: 'Rejected', proposal: p.id }; }
   p.state = 'Approved'; p.approved_by = by; trace(s, by, 'human', `Approved ${p.id} on ${p.args.invoice}: ${ACTIONS[p.action].label}`, { args: p.args, record: p.args.invoice, payment: PAYMENT_UNCHANGED });
   const r = execute(db, s, p, by);

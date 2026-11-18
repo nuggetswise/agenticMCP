@@ -149,30 +149,35 @@ export function modesOf(db, agent) {
   const out = {}; for (const r of db.prepare("SELECT change FROM agent_changes WHERE kind = 'mode' AND agent = ? ORDER BY id").all(agent)) { const c = J(r.change); out[c.action] = c.to; }
   return out;
 }
-// ---------- Aviator's permissions, per action (P21, 18 November 2026) ----------
-// What Aviator may do when asked about an action: answer only, or propose an action card the person approves. The record
-// is the change list: an editable action starts at Answer only and takes the latest change. Locked actions never change.
-// Aviator never acts unasked, never releases a held ship notice without Priya Raman's Approve, never decides a Northfield charge.
+// ---------- Aviator's permissions, per action (P21, 18 November 2026; widened 18 November) ----------
+// What Aviator may do when a person asks it to act: answer only, or raise an action card the person approves. Every action a
+// card can carry starts at the card and can be set to answer only on the change list. Two are locked to the card: a held ship
+// notice is released only when Priya Raman presses Approve, and a Northfield charge is decided only when Jordan Ellis does.
+// Aviator never acts unasked, never presses Approve and never sends anything outside a business document.
 export const AVIATOR_PERMISSIONS = ['answer_only', 'propose_action_card'];
 export const AVIATOR_ACTIONS = {
   [AS]: {
-    open_dispute: { label: 'Open a dispute', editable: true, starts: 'answer_only', approver: 'Priya Raman', rule: 'AP-4.1' },
-    answer_order_change: { label: 'Answer an order change with a change acknowledgment (EDI 865)', editable: true, starts: 'answer_only', approver: 'Priya Raman', rule: null },
-    release_held_ship_notice: { label: 'Release a held ship notice', editable: false, starts: 'propose_action_card', approver: 'Priya Raman', rule: 'AP-1.3', locked: 'Locked: a held ship notice is released only on Priya Raman’s Approve' },
+    open_dispute: { label: 'Open a dispute in Northfield’s deduction case', editable: true, starts: 'propose_action_card', approver: 'Priya Raman', rule: 'AP-4.1' },
+    release_held_ship_notice: { label: 'Release a held ship notice', editable: false, starts: 'propose_action_card', approver: 'Priya Raman', rule: 'AP-1.3', locked: 'Locked to the card: a held ship notice is released only when Priya Raman presses Approve' },
+    send_acknowledgment: { label: 'Send the order acknowledgment (855)', editable: true, starts: 'propose_action_card', approver: 'Priya Raman', rule: 'NF-1.4' },
+    answer_order_change: { label: 'Answer an order change with a change acknowledgment (865)', editable: true, starts: 'propose_action_card', approver: 'Priya Raman', rule: 'NF-1.6' },
+    send_ship_notice: { label: 'Send the ship notice (856) built from the load scan', editable: true, starts: 'propose_action_card', approver: 'Priya Raman', rule: 'NF-4.2' },
+    send_invoice: { label: 'Send the invoice (810) for the shipped quantity', editable: true, starts: 'propose_action_card', approver: 'Priya Raman', rule: 'NF-7.8' },
+    answer_application_advice: { label: 'Answer an application advice with the 997 and the corrected document', editable: true, starts: 'propose_action_card', approver: 'Priya Raman', rule: 'NF-7.2' },
   },
   [NF]: {
-    reject_invoice_lines: { label: 'Reject invoice lines with an application advice (EDI 824)', editable: true, starts: 'answer_only', approver: 'Jordan Ellis', rule: 'NF-7.8' },
-    send_order_change: { label: 'Send an order change to a supplier (EDI 860)', editable: true, starts: 'answer_only', approver: 'Jordan Ellis', rule: null },
-    decide_charge: { label: 'Decide a charge', editable: false, starts: 'answer_only', approver: 'Jordan Ellis', rule: 'NF-7.7', locked: 'Locked to answer only: Jordan Ellis decides every charge' },
-    publish_rule: { label: 'Publish a rule', editable: false, starts: 'answer_only', approver: 'Jordan Ellis', rule: null, locked: 'Locked to answer only: Jordan Ellis publishes a rule after its replay' },
+    send_application_advice: { label: 'Reject a document with an application advice (EDI 824)', editable: true, starts: 'propose_action_card', approver: 'Jordan Ellis', rule: 'NF-7.8' },
+    decide_charge: { label: 'Reverse or uphold a disputed deduction', editable: false, starts: 'propose_action_card', approver: 'Jordan Ellis', rule: 'NF-7.7', locked: 'Locked to the card: Jordan Ellis decides every charge by pressing Approve' },
+    decide_chargeback: { label: 'Apply or waive a readiness chargeback', editable: true, starts: 'propose_action_card', approver: 'Jordan Ellis', rule: 'NF-3.6' },
+    publish_rule: { label: 'Publish a rule after its replay', editable: true, starts: 'propose_action_card', approver: 'Jordan Ellis', rule: null },
   },
 };
-const AVIATOR_LOCKS = ['Aviator never acts unasked', 'Aviator never releases a held ship notice without Priya Raman’s Approve', 'Aviator never decides a Northfield charge'];
+const AVIATOR_LOCKS = ['Aviator never acts unasked', 'Aviator never releases a held ship notice: Priya Raman presses Approve on the card', 'Aviator never decides a Northfield charge: Jordan Ellis presses Approve on the card', 'Aviator sends nothing outside a business document and changes no other company’s system'];
 /** Aviator's permission for each action on this connection, as recorded now. */
 export function aviatorPermissions(db, cid) {
   const last = {}; for (const r of db.prepare("SELECT * FROM agent_changes WHERE connection_id = ? AND kind = 'aviator_permission' ORDER BY id").all(cid)) { const c = J(r.change); last[c.action] = { permission: c.to, set_by: r.run_by, set_at: fmtET(r.at) }; }
   return { for: PERSON_OF[cid], values: AVIATOR_PERMISSIONS, actions: Object.entries(AVIATOR_ACTIONS[cid]).map(([action, a]) => ({ action, label: a.label, permission: a.editable && last[action] ? last[action].permission : a.starts, editable: a.editable, approver: a.approver, rule: a.rule,
-    ...(a.locked ? { locked: a.locked } : {}), ...(a.editable && last[action] ? { set_by: last[action].set_by, set_at: last[action].set_at } : { set_by: null, note: a.editable ? 'Starts at answer only; no change recorded' : undefined }) })), locked: AVIATOR_LOCKS };
+    ...(a.locked ? { locked: a.locked } : {}), ...(a.editable && last[action] ? { set_by: last[action].set_by, set_at: last[action].set_at } : { set_by: null, note: a.editable ? 'Starts at the action card; no change recorded' : undefined }) })), locked: AVIATOR_LOCKS };
 }
 /** Sets Aviator's permission for one action; recorded on the change list with who set it. */
 export function setAviatorPermission(db, cid, { action, mode }, by) {

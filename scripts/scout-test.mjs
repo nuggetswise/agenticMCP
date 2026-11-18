@@ -46,11 +46,11 @@ function detectors(name, sess, actor) {
     ok1(S.propose(db, g, 'Test', 'order_desk_corrects_sales_order')); S.propose(db, g, 'Test', 'build_ship_notice'); ok1(S.propose(db, g, 'Test', 'kinross_overpacks_carton', { sscc: g.world.carton.sscc }));
     check(S.propose(db, g, 'Test', 'release_ship_notice').state === 'Refused', 'guard: AP-1.4 refuses releasing a ship notice built for an earlier load');
     check(S.propose(db, g, 'Test', 'build_ship_notice').state === 'Executed' && g.asn.cartons === 660, 'guard: the ship notice can be rebuilt from the new load'); }
-  // T2.3: a paused Scout gets no model turn; a proposal a person takes over (Edit suggestion) stops Scout in that session; every state change is attributed.
+  // T2.3: a paused Scout gets no model turn; a proposal a person takes over (Take over) stops Scout in that session; every state change is attributed.
   { const never = async () => { throw new Error('model called'); }; const ps = S.startSession(db); const r = await S.runScout(db, ps, { callModel: never, paused: () => true });
     check(r.status === 'paused' && ps.agent.calls === 0 && !ps.proposals.some((p) => p.by === 'Model'), 'guard: a paused Scout gets no model turn and proposes nothing');
-    const es = S.startSession(db); S.propose(db, es, 'Model', 'order_desk_corrects_sales_order'); S.propose(db, es, 'Model', 'build_ship_notice'); const ep = S.propose(db, es, 'Model', 'release_ship_notice'); S.decide(db, es, ep.proposal, 'edit', 'Priya Raman');
-    check((await S.runScout(db, es, { callModel: never })).status === 'handed_to_person' && es.audit.at(-1).approver === 'Priya Raman', 'guard: Edit suggestion hands the case to Priya and Scout stops'); }
+    const es = S.startSession(db); S.propose(db, es, 'Model', 'order_desk_corrects_sales_order'); S.propose(db, es, 'Model', 'build_ship_notice'); const ep = S.propose(db, es, 'Model', 'release_ship_notice'); S.decide(db, es, ep.proposal, 'take_over', 'Priya Raman');
+    check((await S.runScout(db, es, { callModel: never })).status === 'handed_to_person' && es.audit.at(-1).approver === 'Priya Raman', 'guard: Take over hands the case to Priya and Scout stops'); }
   let threw = false; try { S.startSession(db, { variation: { 'erp.ship_to': 'DC 2' } }); } catch { threw = true; } check(threw, 'guard: a replay may only change declared physical fields'); }
 
 // What the rule baseline must reach in each case, so a regression in the baseline cannot pass silently.
@@ -74,7 +74,7 @@ const EXPECT = { canonical: 659, no_free_stock: 659, no_time: 659, bad_label: 65
   const rule = s.proposals.filter((p) => p.by === 'Rule engine'); check(rule.length === 4 && rule.every((p) => p.po !== 'NR-460207') && rule.filter((p) => p.state === 'Awaiting approval').map((p) => p.action).join() === 'send_routing_request' && rule.filter((p) => p.action !== 'send_routing_request').every((p) => p.state === 'Executed' && ['Shown', 'Completed'].includes(p.result?.state)), 'queue: four rule-built rows; only the routing request (EDI 753) waits for Priya, the owner fixes are shown and nothing else is sent');
   check(Object.values(S.ACTIONS).every((a) => a.actor !== 'Supplier ERP') && !('request_order_change' in S.ACTIONS) && Object.values(S.ACTIONS).every((a) => a.mode !== 'approve' || ['release_ship_notice', 'send_routing_request'].includes(Object.keys(S.ACTIONS).find((k) => S.ACTIONS[k] === a))), 'scope: no action writes to the Supplier ERP, and only the routing request and the ship notice release wait for approval');
   const o = S.runBaseline(db, s); check(o.cartons_loaded === 659 && o.ship_to_correct && s.trace.some((t) => /^Flagged for Priya Raman/.test(t.what)), 'baseline: one fix per finding; when Kinross rejects the carton it flags Priya and ships 659');
-  const q2 = S.startSession(db); const ip = q2.proposals.find((x) => x.action === 'send_routing_request'); S.decide(db, q2, ip.id, 'edit', 'Priya Raman');
+  const q2 = S.startSession(db); const ip = q2.proposals.find((x) => x.action === 'send_routing_request'); S.decide(db, q2, ip.id, 'take_over', 'Priya Raman');
   check(!q2.handed_over && S.queueView(q2).rows.find((r) => r.kind === 'routing').state === 'Edited by Priya Raman', 'edit: taking over the routing request does not stop Scout on the other shipments'); }
 const rows = [];
 for (const [name, v] of Object.entries(S.VARIATIONS)) {

@@ -1,9 +1,8 @@
 {
- "note": "Prototype pages hosted at /p/<id>. Each token answers Aviator only at /aviator/<token> and is bound here to its prototype, the sides the page shows and its opening moment (the calendar moment of `calendar`), the default when as_of is missing. `through` is the window end: the latest source time of any record the page shows, set from the build chat's result for that page. Until it is set the window end is open. The server refuses a side outside the binding, an as_of before the opening moment, and an as_of after `through` when set. Tokens sit in the pages, so they are public by design. artifact is the claude.ai build copy; sync only when Mandip says a page is ready: npm run sync -- <id> <file> <sha256 of the published artifact>. _test is the route's own test page, linked nowhere.",
+ "note": "Prototype pages hosted at /p/<id>, served from pages/<id>.html, which the build chat owns. Each token answers Aviator only at /aviator/<token> (questions, and the Approve or Cancel of its own action cards) and is bound here to its prototype, the sides the page shows and its opening moment (the calendar moment of `calendar`), the default when as_of is missing. `through` is the window end: the latest source time of any record the page shows, set from the build chat's result for that page. Until it is set the window end is open. The server refuses a side outside the binding, an as_of before the opening moment, and an as_of after `through` when set. Tokens sit in the pages, so they are public by design. _test is the route's own test page, linked nowhere; its window runs to the end of the story so every card can be proved on it.",
  "pages": {
   "p5": {
    "calendar": "P5",
-   "artifact": "https://claude.ai/artifact/2Erv5An571ZHnR3WoUY5sf",
    "sides": [
     "ashby"
    ],
@@ -11,7 +10,6 @@
   },
   "p9": {
    "calendar": "P9",
-   "artifact": "https://claude.ai/artifact/3D2tsVjwvnmMtPEoRKSpVe",
    "sides": [
     "ashby",
     "northfield"
@@ -20,7 +18,6 @@
   },
   "p13": {
    "calendar": "P13",
-   "artifact": "https://claude.ai/artifact/MGDhE28iCZ1bdb4he73uup",
    "sides": [
     "ashby"
    ],
@@ -28,7 +25,6 @@
   },
   "p14": {
    "calendar": "P14",
-   "artifact": "https://claude.ai/artifact/2xeimvMs5c3aYV6aw1Zz9W",
    "sides": [
     "northfield"
    ],
@@ -36,7 +32,6 @@
   },
   "p15": {
    "calendar": "P15",
-   "artifact": "https://claude.ai/artifact/6ytUrUPw3susuHkoDmA7Xr",
    "sides": [
     "northfield"
    ],
@@ -44,7 +39,6 @@
   },
   "p20": {
    "calendar": "P20",
-   "artifact": "https://claude.ai/artifact/MErufiHTVVVgeobiZPctXB",
    "sides": [
     "ashby",
     "northfield"
@@ -53,7 +47,6 @@
   },
   "p21": {
    "calendar": "P21",
-   "artifact": "https://claude.ai/artifact/XvERP9L3d3QAMyUZvgvMZB",
    "sides": [
     "ashby",
     "northfield"
@@ -62,7 +55,6 @@
   },
   "p7": {
    "calendar": "P7",
-   "artifact": "https://claude.ai/artifact/9F1PiXsrUJ54AJq1dSJMbu",
    "sides": [
     "ashby",
     "northfield"
@@ -71,7 +63,6 @@
   },
   "p8": {
    "calendar": "P8",
-   "artifact": "https://claude.ai/artifact/RB5p54UuQ9GFGDPxhGzU3a",
    "sides": [
     "northfield"
    ],
@@ -79,7 +70,6 @@
   },
   "p6": {
    "calendar": "P6",
-   "artifact": null,
    "sides": [
     "ashby",
     "northfield"
@@ -88,13 +78,12 @@
   },
   "_test": {
    "calendar": "P9",
-   "artifact": null,
    "sides": [
     "ashby",
     "northfield"
    ],
    "token": "test-C3PPJLhbsFo1",
-   "through": "2026-11-02T23:59:00-05:00"
+   "through": "2027-01-09T23:59:00-05:00"
   }
  }
 }

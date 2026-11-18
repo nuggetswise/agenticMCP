@@ -29,8 +29,8 @@ function detectors(name, s, actor) {
   const never = async () => { throw new Error('model called'); };
   const ps = M.startSession(db); const r = await M.runMatch(db, ps, { callModel: never, paused: () => true });
   check(r.status === 'paused' && ps.agent.calls === 0 && !ps.proposals.length, 'guard: a paused Match Agent gets no model turn and proposes nothing');
-  const es = M.startSession(db); const ep = M.propose(db, es, 'Match Agent', 'reject_held_lines', { invoice: 'INV-7731', lines: [1, 2] }); M.decide(db, es, ep.proposal, 'edit', 'Jordan Ellis', 'Jordan calls Ashby');
-  check((await M.runMatch(db, es, { callModel: never })).status === 'handed_to_person' && es.audit.at(-1).approver === 'Jordan Ellis', 'guard: Edit suggestion hands the invoice to Jordan and the agent stops');
+  const es = M.startSession(db); const ep = M.propose(db, es, 'Match Agent', 'reject_held_lines', { invoice: 'INV-7731', lines: [1, 2] }); M.decide(db, es, ep.proposal, 'take_over', 'Jordan Ellis', 'Jordan calls Ashby');
+  check((await M.runMatch(db, es, { callModel: never })).status === 'handed_to_person' && es.audit.at(-1).approver === 'Jordan Ellis', 'guard: Take over hands the invoice to Jordan and the agent stops');
   check((await M.runMatch(db, M.startSession(db), {})).blocked?.startsWith('No model'), 'guard: no model configured, nothing simulated in its place'); }
 
 // Phase 3 step 4: every short line in one request; a refused credit goes to Jordan; refusals and the limit end in a report of what waits.

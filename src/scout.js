@@ -206,11 +206,11 @@ export function decide(db, s, proposalId, decision, by = 'Priya Raman', note, ch
   const p = s.proposals.find((x) => x.id === proposalId);
   if (!p) return { state: 'Refused', message: `No proposal ${proposalId}` };
   if (p.state !== 'Awaiting approval') return { state: 'Refused', message: `${proposalId} is ${p.state.toLowerCase()}; an approval cannot be replayed.` };
-  // Edit suggestion (R15): the person sets this proposal aside and does the case by hand. The model stops proposing in this session.
-  if (decision === 'edit' && p.po !== s.world.po) { p.state = 'Taken over'; p.taken_over_by = by; p.note = note || null;
-    trace(s, by, 'human', `Edit suggestion: ${by} set ${p.id} aside and does ${p.po} by hand`, { action: p.action, po: p.po, note: p.note }); audit(s, p, `Taken over by ${by}; done by hand${p.note ? `: ${p.note}` : ''}`); return { state: 'Taken over', proposal: p.id, by }; }
-  if (decision === 'edit') { p.state = 'Taken over'; p.taken_over_by = by; p.note = note || null; s.handed_over = { by, proposal: p.id, note: p.note, at: fmtET(iso(s.clock)) }; s.agent.status = 'handed_to_person';
-    trace(s, by, 'human', `Edit suggestion: ${by} set ${p.id} aside and does the case by hand`, { action: p.action, note: p.note }); audit(s, p, `Taken over by ${by}; done by hand${p.note ? `: ${p.note}` : ''}`); return { state: 'Taken over', proposal: p.id, by }; }
+  // Take over (R15): the person sets this proposal aside and does the case by hand. The model stops proposing in this session.
+  if (decision === 'take_over' && p.po !== s.world.po) { p.state = 'Taken over'; p.taken_over_by = by; p.note = note || null;
+    trace(s, by, 'human', `Take over: ${by} set ${p.id} aside and does ${p.po} by hand`, { action: p.action, po: p.po, note: p.note }); audit(s, p, `Taken over by ${by}; done by hand${p.note ? `: ${p.note}` : ''}`); return { state: 'Taken over', proposal: p.id, by }; }
+  if (decision === 'take_over') { p.state = 'Taken over'; p.taken_over_by = by; p.note = note || null; s.handed_over = { by, proposal: p.id, note: p.note, at: fmtET(iso(s.clock)) }; s.agent.status = 'handed_to_person';
+    trace(s, by, 'human', `Take over: ${by} set ${p.id} aside and does the case by hand`, { action: p.action, note: p.note }); audit(s, p, `Taken over by ${by}; done by hand${p.note ? `: ${p.note}` : ''}`); return { state: 'Taken over', proposal: p.id, by }; }
   if (decision !== 'approve') { p.state = 'Rejected'; p.rejected_by = by; trace(s, by, 'human', `Rejected ${p.id}`, { action: p.action }); audit(s, p, 'Rejected'); return { state: 'Rejected', proposal: p.id }; }
   p.state = 'Approved'; p.approved_by = by; trace(s, by, 'human', `Approved ${p.id}: ${ACTIONS[p.action].label}`, { po: p.po, args: p.args });
   return execute(db, s, p, by);

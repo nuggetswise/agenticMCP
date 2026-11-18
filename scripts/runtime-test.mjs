@@ -22,15 +22,15 @@ const act = (rt, d, s, by = 'Test agent') => (action, args) => { const r = rt.pr
   go('holder_shares_evidence', { record: 'DC-41102', evidence: 'load_scan' }); go('holder_shares_evidence', { record: 'DC-41102', evidence: 'proof_of_delivery' });
   go('holder_shares_evidence', { record: 'DC-41118', evidence: 'load_tally' }); go('holder_shares_evidence', { record: 'DC-41118', evidence: 'proof_of_delivery' });
   ok(Claim.propose(db, a, 'x', 'holder_shares_evidence', { record: 'DC-41131', evidence: 'load_scan' }).state === 'Refused', 'claim: nobody holds a scan for DC-41131');
-  go('accept_charge', { record: 'DC-41131' }); Claim.advance(db, a, { minutes: 120 });
+  go('ashby_accepts_charge', { record: 'DC-41131' }); Claim.advance(db, a, { minutes: 120 });
   go('submit_dispute', { record: 'DC-41102' }); go('submit_dispute', { record: 'DC-41118' });
-  ok(Claim.propose(db, a, 'x', 'match_repayment', { record: 'DC-41102' }).state === 'Refused', 'claim: nothing matched before repayment');
-  Claim.advance(db, a, { minutes: 60 * 24 * 13 }); go('match_repayment', { record: 'DC-41102' }); go('match_repayment', { record: 'DC-41118' });
+  ok(Claim.propose(db, a, 'x', 'ashby_matches_repayment', { record: 'DC-41102' }).state === 'Refused', 'claim: nothing matched before repayment');
+  Claim.advance(db, a, { minutes: 60 * 24 * 13 }); go('ashby_matches_repayment', { record: 'DC-41102' }); go('ashby_matches_repayment', { record: 'DC-41118' });
   const o2 = Claim.outcome(db, a); ok(o2.recovered_and_matched === 193.6 && o2.accepted_amount === 96.8 && !o2.violations.length, `claim agent path recovers $193.60 the baseline gives up (${o2.recovered_and_matched})`);
   const c = Claim.startSession(db, {}); const r = Claim.propose(db, c, 'x', 'submit_dispute', { record: 'DC-40877' }); ok(r.state === 'Awaiting approval' && Claim.ACTIONS.submit_dispute.mode === 'approve' && Claim.ACTIONS.submit_dispute.editable === false && Claim.startSession(db, { policy: { submit_dispute: 'policy' } }).modes.submit_dispute === 'approve', 'claim: AP-4.1, every dispute waits for Priya Raman, proof on hand or not, and the mode is locked');
   const u = Claim.startSession(db, { variation: Claim.branchWith('kinross_unreachable') }); act(Claim, db, u)('holder_shares_evidence', { record: 'DC-41118', evidence: 'load_tally' }); Claim.advance(db, u, { minutes: 120 });
   ok(Claim.queue(db, u).rows.find((x) => x.record === 'DC-41118').evidence['Load tally by SSCC'].startsWith('Held by'), 'claim: Kinross unreachable leaves the tally held');
-  const dc = Claim.startSession(db, {}); const go2 = act(Claim, db, dc); go2('accept_charge', { record: 'DC-40931' }); go2('ashby_files_carrier_claim', { record: 'DC-40931' });
+  const dc = Claim.startSession(db, {}); const go2 = act(Claim, db, dc); go2('ashby_accepts_charge', { record: 'DC-40931' }); go2('ashby_files_carrier_claim', { record: 'DC-40931' });
   ok(Claim.outcome(db, dc).carrier_claims[0]?.claim === 'CR-2026-031', 'claim: carrier claim filed on prepaid damage'); }
 
 // ---------- Claim, promotion deductions (P20) ----------
@@ -43,9 +43,9 @@ const act = (rt, d, s, by = 'Test agent') => (action, args) => { const r = rt.pr
   ok(m['PD-2701-04'].match === 'Rate above the deal' && m['PD-2701-04'].unsupported_amount === 266.7 && m['PD-2701-04'].synthetic === true, 'vividly_match: rate above the deal, $266.70, labelled synthetic');
   ok(m['PD-2701-02'].match === 'No store activity report for the claimed period' && m['PD-2701-05'].match === "Outside the deal's order window", 'vividly_match: no 852 week; outside the order window');
   ok(Claim.propose(db, a, 'x', 'submit_dispute', { record: 'PD-2701-01' }).state === 'Refused', 'claim promotions: a matched deduction is never disputed');
-  go('accept_charge', { record: 'PD-2701-01' }); go('accept_charge', { record: 'PD-2701-03' });
+  go('ashby_accepts_charge', { record: 'PD-2701-01' }); go('ashby_accepts_charge', { record: 'PD-2701-03' });
   for (const r of ['PD-2701-04', 'PD-2701-02', 'PD-2701-05']) go('submit_dispute', { record: r });
-  Claim.advance(db, a, { minutes: 60 * 24 * 13 }); for (const r of ['PD-2701-04', 'PD-2701-02', 'PD-2701-05']) go('match_repayment', { record: r });
+  Claim.advance(db, a, { minutes: 60 * 24 * 13 }); for (const r of ['PD-2701-04', 'PD-2701-02', 'PD-2701-05']) go('ashby_matches_repayment', { record: r });
   const o = Claim.outcome(db, a); ok(o.recovered_and_matched === 677.2 && o.accepted_amount === 1442 && !o.violations.length, `claim promotions agent path recovers $677.20 and accepts the two matched (${o.recovered_and_matched}, ${o.accepted_amount})`);
   ok(Claim.read(db, a, 'read_promotion_deduction', { record: 'PD-2701-04' }).deal_on_the_889.rate === 0.5, 'claim promotions: the deal on the 889 pays 0.50 a case'); }
 
@@ -84,9 +84,9 @@ const act = (rt, d, s, by = 'Test agent') => (action, args) => { const r = rt.pr
 { const b = Shelf.startSession(db, { variation: Shelf.branchWith('in_transit') }); Shelf.runBaseline(db, b); ok(Shelf.outcome(db, b).violations.length > 0, 'shelf baseline orders while goods are in transit');
   const w = Shelf.startSession(db, { variation: Shelf.branchWith('in_transit') }); act(Shelf, db, w)('wait_for_transit', { record: '114' }); ok(!Shelf.outcome(db, w).violations.length, 'shelf agent path waits at 17:30');
   const a = Shelf.startSession(db, {}); const go = act(Shelf, db, a);
-  ok(Shelf.propose(db, a, 'x', 'create_sales_order', { record: '114' }).state === 'Refused', 'shelf: no sales order before the purchase order');
+  ok(Shelf.propose(db, a, 'x', 'ashby_creates_sales_order', { record: '114' }).state === 'Refused', 'shelf: no sales order before the purchase order');
   go('recommend_order', { record: '114', pairs: 40 }); ok(Shelf.queue(db, a).rows.some((r) => r.record === '207'), 'shelf: store 207 is in the queue');
-  go('recommend_transfer', { record: '207', pairs: 24, to_store: '118' }); Shelf.advance(db, a, { minutes: 60 * 3 }); go('create_sales_order', { record: '114' }); Shelf.advance(db, a, { minutes: 60 * 24 * 7 });
+  go('recommend_transfer', { record: '207', pairs: 24, to_store: '118' }); Shelf.advance(db, a, { minutes: 60 * 3 }); go('ashby_creates_sales_order', { record: '114' }); Shelf.advance(db, a, { minutes: 60 * 24 * 7 });
   ok(Shelf.outcome(db, a).refilled.length === 1, 'shelf: the next store activity report shows store 114 refilled'); }
 
 // ---------- Chase ----------
@@ -102,7 +102,7 @@ const act = (rt, d, s, by = 'Test agent') => (action, args) => { const r = rt.pr
   // Only a Trading Grid record waits for approval (a dispute in the deduction case); an owner's fix is shown and nothing waits.
   const shown = Claim.propose(db, s, 'Claim Agent', 'holder_shares_evidence', { record: 'DC-41102', evidence: 'load_scan' }); ok(shown.state !== 'Awaiting approval' && s.proposals.find((x) => x.id === shown.proposal)?.result?.state === 'Shown', 'engine: an owner fix is shown, not approved');
   const sc = Claim.startSession(db, {}); const p = Claim.propose(db, sc, 'Claim Agent', 'submit_dispute', { record: 'DC-40877' }); ok(p.state === 'Awaiting approval', 'engine: approve mode waits for a dispute');
-  ok(Claim.decide(db, sc, p.proposal, 'edit', 'Priya Raman', 'I dispute it myself').state === 'Taken over', 'engine: edit takes over');
+  ok(Claim.decide(db, sc, p.proposal, 'take_over', 'Priya Raman', 'I dispute it myself').state === 'Taken over', 'engine: edit takes over');
   let n = 0; const stub = async () => { n++; return { candidates: [{ content: { role: 'model', parts: [{ functionCall: { name: 'propose_action', args: { action: 'submit_dispute', record: 'DC-41131', rationale: 'test' } } }] } }] }; };
   const s2 = Claim.startSession(db, { variation: Claim.branchWith('december_28') }); const r = await Claim.runAgent(db, s2, { callModel: stub });
   ok(r.status === 'waiting_for_person' && n === 2 && s2.trace.some((t) => /Waiting for Priya Raman/.test(t.what)), 'engine: two refusals stop the agent and report waiting for Priya Raman');

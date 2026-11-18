@@ -70,6 +70,7 @@ await side('AS', process.env.TOK_AS || 'a', async (call) => {
   for (const r of ['ASN-450118-1', 'ASN-450118-2', 'ASN-46118', 'INV-7731', 'ASN-78260', 'PMT-990168', 'RCV-DC2-77355', 'ASN-78214']) { await call('get_document', { reference: r }); await call('explain_rejection', { reference: r }); }
   await call('check_deliveries', { pos: ['NR-450118', 'NR-46101', 'NR-46156'] });
   await call('compare_with_other_suppliers', { question: 'rank' }); await call('read_retailer_records', { question: 'payables' });
+  for (const [document, po, as_of] of [['855', 'NR-46210', '2026-11-18T09:00:00-05:00'], ['856', 'NR-46215', '2026-11-18T09:00:00-05:00'], ['810', 'NR-46226', '2026-11-18T09:00:00-05:00'], ['865', 'NR-450118', '2026-11-02T13:10:00-05:00'], ['997', 'NR-450118', '2026-11-10T09:05:00-05:00']]) await call('send_document', { document, po, as_of });
   await call('release_ship_notice', { document: 'ASN-78260' }); await call('release_ship_notice', { document: 'ASN-450118-1', po: 'NR-450118' });
   for (const cs of ['DC-40877', 'DC-40931', 'DC-41102']) await call('submit_dispute', { case: cs, as_of: '2026-12-28T09:00:00-05:00' });
   await call('run_readonly_sql', { sql: "SELECT * FROM events WHERE data LIKE '%Agent%' LIMIT 200" });
@@ -101,6 +102,8 @@ await side('NF', process.env.TOK_NF || 'b', async (call) => {
   for (const r of ['ASN-450118-1', 'INV-7731', 'RCV-DC2-77355', 'PMT-990168']) await call('get_document', { reference: r });
   await call('replay_draft_rule', { draft: 'NFD-1' }); await call('replay_draft_rule', { draft: 'NFD-2' }); await call('publish_rule', { draft: 'NFD-1' });
   await call('decide_charge', { case: 'DC-40877', charge: 'SH01', decision: 'Reversed', reason: 'sweep', as_of: '2026-12-02T09:00:00-05:00' });
+  await call('open_order_value', { period: 'this_week', as_of: '2026-11-08T23:59:00-05:00' });
+  await call('send_application_advice', { document: 'INV-7731', as_of: '2026-11-10T09:00:00-05:00' }); await call('decide_chargeback', { po: 'NR-46602', decision: 'Apply', as_of: '2026-12-09T17:30:00-05:00' });
   await call('read_supplier_records', { question: 'warehouse' });
   await call('run_readonly_sql', { sql: "SELECT * FROM events WHERE data LIKE '%Agent%' LIMIT 200" }); await call('run_readonly_sql', { sql: "SELECT * FROM review_notes LIMIT 50" });
   await call('ask_aviator', { question: 'Why is INV-7731 held?' });

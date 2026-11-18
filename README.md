@@ -38,7 +38,7 @@ The rule catalogue (`world/ref.js`) marks each rule public, adapted or invented 
 
 ## Hosted pages, Aviator for pages and the public read route (0.4.0)
 
-- `/p/<id>` serves `pages/<id>.html` (noindex; `robots.txt` disallows `/p/`). A claude.ai artifact cannot call this server, so the hosted copy is the link shared with viewers. Sync one page with `npm run sync -- <id> <file> <sha256>` after reading its published artifact; the routine refuses a file whose hash is not the artifact's (see `scripts/pages.mjs`).
+- `/p/<id>` serves `pages/<id>.html` (noindex; `robots.txt` disallows `/p/`). These pages are the prototypes; the build chat owns `pages/<id>.html` on its own branch. `npm run pages` checks every page in `pages/` against `pages/pages.json` (see `scripts/pages.mjs`).
 - `POST /aviator/<page token>` takes `question`, `side`, `as_of`, `context`, `history`. `pages/pages.json` binds each token to its prototype, sides and story window; anything outside is refused. With no `as_of` the page's calendar moment is used, never the story clock. Replies carry the answer in plain words and the records read by business name. A page token opens nothing else.
 - Limits (`src/limits.js`, env `AVIATOR_PER_MINUTE` 6, `AVIATOR_PER_ADDRESS_DAY` 60, `PUBLIC_PER_MINUTE` 120, `MODEL_DAILY_CAP` 600): per-address rate limits and one daily cap on every model call, each with a plain message. Questions are capped at 500 characters and history at 10 turns.
 - `/public/<side>/tools/<name>`: read tools only, with that side's scopes and refusals, logged as `public-<side>`. Writes, governance, sessions, SQL and the access log are refused.
@@ -57,3 +57,11 @@ The rule catalogue (`world/ref.js`) marks each rule public, adapted or invented 
 - The per-address limits key on the viewer: `CF-Connecting-IP` behind Render's Cloudflare edge, the socket address otherwise. X-Forwarded-For is never read for a limit.
 - `three_way_match` reads the remittance that paid an invoice or the invoice that replaced it, as of the moment, and names the settlement; a missing reference is refused in plain words.
 - Aviator answers name a rule set without its code ("Northfield's matching rule"), and the records read list only records.
+
+### 0.4.3
+
+- Claude artifacts are retired: the prototypes are the pages at `/p/<id>`. `pages.json` holds no artifact field, `npm run pages` checks whatever is in `pages/`, and `npm run contract` reads `pages/<id>.html` (a prototype with no page is Not assessed).
+- Aviator is a chatbot with action cards (`src/actions.js`). Asked to act, it returns a card the server builds from the side's rules and records, inside the side's P21 permissions; nothing happens until the person presses Approve (`POST /aviator/<token>/cards/<card>`, `decision` approve or cancel). The card id is the idempotency key. Cards cover a dispute, a held ship notice release, the 855, 865, 856 and 810, the 997 with the corrected invoice that answers an 824, Northfield's 824 (each error coded, TED02 at most 60 characters, NTE as the guide allows), a charge decision, a readiness chargeback and a rule publish. A request to email, call or instruct anyone, or to change another company's system, is answered as done outside Trading Grid, with the owner and the place, and no card.
+- Viewer sessions (`src/session.js`): each viewer gets a private branch of the world for 30 minutes idle, shared across both sides of a switcher page. Card writes are tagged to the session; other viewers and the recorded world never change. `/public/...` reads take `session`.
+- Trading Grid writes into no system of record: accepting a charge, matching a repayment, creating a sales order and creating an invoice are Ashby's own steps in the Supplier ERP, shown as owner fixes; their records arrive from the Supplier ERP.
+- New write tools on the connections: `send_document` (Ashby), `send_application_advice` and `decide_chargeback` (Northfield). Each company's access log includes its public-route and hosted-page calls. "Edit suggestion" is renamed Take over (decision `take_over`).

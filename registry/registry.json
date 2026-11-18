@@ -323,7 +323,8 @@
    "capability_status": "planned",
    "owner": "Unassigned",
    "tools_northfield": [
-    "supplier_scorecard"
+    "supplier_scorecard",
+    "decide_chargeback"
    ],
    "ends_at": "Supplier and retailer hold the same account of the score and what drives it"
   },
@@ -559,7 +560,8 @@
    "tools": [
     "orders_needing_attention",
     "recommend_next_step",
-    "get_order"
+    "get_order",
+    "send_document"
    ],
    "anchors": [
     "order:NR-46210",
@@ -617,7 +619,8 @@
    "tools_northfield": [
     "three_way_match",
     "supplier_document_trail",
-    "get_document"
+    "get_document",
+    "send_application_advice"
    ],
    "anchors": [
     "document:INV-7731"

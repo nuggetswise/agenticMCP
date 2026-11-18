@@ -28,6 +28,7 @@ const model = createServer((req, res) => { let raw = ''; req.on('data', (c) => (
   const callT = (name, args) => res.end(JSON.stringify({ candidates: [{ content: { role: 'model', parts: [{ functionCall: { name, args } }] } }] }));
   res.setHeader('content-type', 'application/json');
   if (fr.length) { const name = fr[0].functionResponse.name; const r = fr[0].functionResponse.response.result; const txt = JSON.stringify(r);
+    if (name === 'propose_action') return say(r.result === 'Card ready' ? `The card is ready: ${r.card.says} Nothing happens until you press Approve.` : r.message);
     if (/Not available to/.test(r.result || '')) return say(`${r.result}. ${r.message || ''}`);
     const pc = r.period_covered || r['period covered'];
     if (name === 'get_scorecard' && r.warehouse) return say(`${r.warehouse_failing_lines} order lines failed at ${r.warehouse}, ${r.warehouse_failing_cases} cases, from ${pc.from} to ${pc.to}. Orders: ${r.lines.map((l) => l.po).join(', ')}.`);
@@ -36,6 +37,8 @@ const model = createServer((req, res) => { let raw = ''; req.on('data', (c) => (
     const refs = [...new Set(txt.match(REFS) || [])].slice(0, 3); const asOf = r.as_of || r.as_of_eastern || '';
     return say(`From ${refs.join(', ') || 'the records'}: line 1 shipped 270 CA under NF-7.8 (wms.load_scan); the order total is ${r.order_value ?? 'shown'}. As of ${asOf}.`); }
   const q = last.map((p) => p.text || '').join(' '); const po = (q.match(/NR-\d{5,6}/) || [])[0];
+  // The person asked for an action: the stand-in names it and its record, as the model does, and the server builds the card.
+  const cardAsk = q.match(/\[card (\w+) (\{.*\})\]/); if (cardAsk) return callT('propose_action', { action: cardAsk[1], ...JSON.parse(cardAsk[2]) });
   const hint = q.match(/pass from (\d{4}-\d\d-\d\d) and to (\d{4}-\d\d-\d\d)/); const per = hint && !(lazy && which === 'primary') ? { from: hint[1], to: hint[2] } : {};
   if (/f[ae]ll(s)? due|open orders/i.test(q) && !ashby) return lazy && which === 'primary' ? callT('supplier_document_trail', { po: 'NR-450118' }) : callT('open_order_value', per);
   if (/Groveport/i.test(q) && ashby) return callT('get_scorecard', { warehouse: 'Kinross Groveport', ...per });
@@ -86,10 +89,10 @@ try {
   ok('no as_of: answered at the page moment, never the story clock', a1.ok && a1.as_of === MOMENT && /2026-10-26/.test(a1.answer), JSON.stringify(a1));
   ok('answer has no rule codes, unit codes or field names; quantities in cases', a1.ok && !/\bNF-\d|\bAP-\d|\bCA\b|\bEA\b|wms\.|load_scan|_/.test(a1.answer) && /270 cases/.test(a1.answer) && /Northfield’s rule/.test(a1.answer), a1.answer);
   ok('records read are listed by business name', a1.ok && a1.read.some((r) => r.name === 'Purchase order NR-451207'), JSON.stringify(a1.read));
-  ok('answers only: no action card in the reply', a1.ok && Object.keys(a1).sort().join() === 'answer,as_of,as_of_eastern,ok,read,side', Object.keys(a1).join());
+  ok('a question that asks for no action gets an answer and no card, in its own session', a1.ok && Object.keys(a1).sort().join() === 'answer,as_of,as_of_eastern,cards,ok,read,session,side' && a1.cards.length === 0 && /^VS-/.test(a1.session), Object.keys(a1).join());
   const a2 = await (await av({ question: 'Where does NR-451207 stand?', side: 'ashby', as_of: '2026-10-27T15:00:00Z' })).json();
   ok('as_of inside the page window is used', a2.ok && a2.as_of === '2026-10-27T15:00:00.000Z', JSON.stringify(a2).slice(0, 300));
-  for (const [n, v] of [['after the window', '2026-12-28T14:00:00Z'], ['before the moment', '2026-10-01T14:00:00Z'], ['not a date', 'tomorrow']]) { const r = await av({ question: 'Where does NR-450118 stand?', side: 'ashby', as_of: v }); const j = await r.json();
+  for (const [n, v] of [['after the window', '2027-02-01T14:00:00Z'], ['before the moment', '2026-10-01T14:00:00Z'], ['not a date', 'tomorrow']]) { const r = await av({ question: 'Where does NR-450118 stand?', side: 'ashby', as_of: v }); const j = await r.json();
     ok(`token with a moment outside its binding is refused (${n})`, r.status === 403 && j.ok === false && /own moment/.test(j.message), JSON.stringify(j)); }
   { const r = await av({ question: 'Where does NR-450118 stand?', side: 'northfield', as_of: '2026-10-01T14:00:00Z' }, PORT, REG.p14.token); ok('a page with an open window end still refuses a moment before its opening', r.status === 403);
     const r2 = await (await av({ question: 'Where does NR-450118 stand?', side: 'northfield' }, PORT, REG.p14.token)).json(); ok('a page with an open window end defaults to its opening moment', r2.ok && r2.as_of === '2026-11-10T14:00:00.000Z', JSON.stringify(r2).slice(0, 200)); }
@@ -163,6 +166,54 @@ try {
     const a = []; for (let i = 0; i < 45; i++) a.push(await at({ 'cf-connecting-ip': '203.0.113.7' }));
     const other = await at({ 'cf-connecting-ip': '203.0.113.8' });
     ok('the per-address limit follows the viewer, not a header the client adds', spoof.every((c) => c === 429) && a.includes(429) && other === 200, `spoofed ${spoof.join(',')} · viewer A ${a.slice(-3).join(',')} · viewer B ${other}`); }
+
+  // ---- Action cards on _test: every write tool, the 824 with a message, Ashby's 824 request, an email refused, a double press, a second viewer ----
+  { const V1 = { 'cf-connecting-ip': '203.0.113.50' }, V2 = { 'cf-connecting-ip': '203.0.113.51' };
+    const ask = async (h, body) => (await post(`/aviator/${T}`, body, PORT, h)).json();
+    const press = async (h, card, session, decision = 'approve') => { const r = await post(`/aviator/${T}/cards/${card}`, { session, decision }, PORT, h); return { status: r.status, ...(await r.json()) }; };
+    const pub = async (side, tool, q, session) => (await fetch(`${B}/public/${side}/tools/${tool}?${new URLSearchParams({ ...q, ...(session ? { session } : {}) })}`, { headers: V2 })).json();
+    let session = null; const card = async (side, question, as_of) => { const r = await ask(V1, { question, side, as_of, ...(session ? { session } : {}) }); session = r.session || session; return r; };
+    const main0 = ldb.prepare('SELECT count(*) n FROM events').get().n, docs0 = ldb.prepare('SELECT count(*) n FROM documents').get().n;
+    const steps = [
+      ['submit_dispute', 'ashby', 'Open a dispute on DC-40877 [card open_dispute {"case":"DC-40877"}]', '2026-12-01T09:00:00-05:00', (r) => r.record?.history?.some((h) => h.record === 'case.dispute' && h.charge === 'SH01' && h.approved_by === 'Priya Raman' && h.via === 'action card')],
+      ['release_ship_notice', 'ashby', 'Release the held ship notice ASN-462410 [card release_held_ship_notice {"document":"ASN-462410"}]', '2026-11-18T15:10:00-05:00', (r) => /Released/.test(JSON.stringify(r.record)) && /action card/.test(JSON.stringify(r.record))],
+      ['send_document (855)', 'ashby', 'Send the acknowledgment for NR-46210 [card send_acknowledgment {"po":"NR-46210"}]', '2026-11-18T09:00:00-05:00', (r) => r.record?.found && r.record.reference === 'ACK-46210-S' && /BAK\*00\*AD\*NR-46210/.test(r.record.x12)],
+      ['send_application_advice (824 with message)', 'northfield', 'Reject INV-7731 with an application advice [card send_application_advice {"document":"INV-7731","messages":[{"code":"QTY","message":"Billed more cases than shipped or received"}]}]', '2026-11-10T09:00:00-05:00',
+        (r) => r.record?.found && /TED\*QTY\*Billed more cases than shipped or received\*IT1\*\*2\*\*300~/.test(r.record.x12) && /NTE\*GEN\*270 shipped on line 1/.test(r.record.x12)],
+      ['decide_charge', 'northfield', 'Reverse the shortage charge on DC-40877 [card decide_charge {"case":"DC-40877","charge":"SH01","decision":"Reversed"}]', '2026-12-03T09:00:00-05:00', (r) => r.record?.decisions?.some((d) => d.charge === 'SH01' && d.decision === 'Reversed' && d.decided_by === 'Jordan Ellis')],
+      ['decide_chargeback', 'northfield', 'Apply the readiness chargeback on NR-46602 [card decide_chargeback {"po":"NR-46602","decision":"Apply"}]', '2026-12-09T17:30:00-05:00', (r) => r.record?.found && r.record.case === 'DC-R46602' && r.record.charge === 'RT01'],
+      ['publish_rule', 'northfield', 'Publish NFD-1 [card publish_rule {"draft":"NFD-1"}]', '2026-12-28T11:00:00-05:00', (r) => !JSON.stringify(r.record).match(/"id":\s*"NFD-1"[^}]*"state":\s*"Draft"/)],
+    ];
+    const pressed = {};
+    for (const [tool, side, q, as_of, check] of steps) {
+      const r = await card(side, q, as_of); const c = r.cards?.[0];
+      ok(`card raised for ${tool}: says what happens, to whom, under which rule, with Approve and Cancel`, c && c.state === 'Open' && c.says && c.to && c.buttons.join() === 'Approve,Cancel' && !/\b[A-Z]{2}-\d+\.\d+\b/.test(c.says), JSON.stringify(r).slice(0, 400));
+      if (!c) continue; const p = await press(V1, c.id, session); pressed[tool] = { card: c.id, p };
+      ok(`Approve on ${tool} writes once and returns the record re-read`, p.ok && p.card.state === 'Approved' && check(p), JSON.stringify(p).slice(0, 500)); }
+    const tooLong = await ask(V1, { side: 'northfield', as_of: '2026-11-10T09:00:00-05:00', question: 'Reject INV-7731 [card send_application_advice {"document":"INV-7731","messages":[{"code":"QTY","message":"This message is far longer than the sixty characters the guide allows"}]}]' }); // a fresh session
+    ok('an 824 message over 60 characters is refused and raises no card', !tooLong.cards?.length && /60/.test(tooLong.answer || ''), JSON.stringify(tooLong).slice(0, 300));
+    const a824 = await card('ashby', 'Send an 824 to Northfield for AA-INV-7731', '2026-11-10T09:05:00-05:00'); const ac = a824.cards?.[0];
+    ok('Ashby asked to send an 824 gets the 997 and the corrected resend instead', ac && /997/.test(ac.says) && /corrected invoice INV-7731C-S/.test(ac.says) && /does not send an application advice/.test(a824.answer), JSON.stringify(a824).slice(0, 400));
+    if (ac) { const p = await press(V1, ac.id, session); ok('its Approve sends the 997 and the corrected invoice', p.ok && p.result.acknowledgment === 'FA-AA-INV-7731' && p.result.document === 'INV-7731C-S' && /REF\*OI\*INV-7731/.test(p.record?.x12 || ''), JSON.stringify(p).slice(0, 400)); }
+    const mail = await card('ashby', 'Can you email Kinross and ask them for the load scan?', '2026-12-01T09:00:00-05:00');
+    ok('"send an email" is refused: done outside Trading Grid, owner and place named, no card', !mail.cards?.length && /outside Trading Grid/.test(mail.answer) && mail.outside_trading_grid?.owner === 'Kinross', JSON.stringify(mail).slice(0, 300));
+    const unasked = await card('ashby', 'What is the state of DC-40877? [card open_dispute {"case":"DC-40877"}]', '2026-12-01T09:00:00-05:00');
+    ok('Aviator never acts unasked: a question raises no card', !unasked.cards?.length, JSON.stringify(unasked).slice(0, 300));
+    const again = await press(V1, pressed.submit_dispute.card, session); const disputes = ((await pub('ashby', 'get_deduction_case', { case: 'DC-40877', as_of: '2026-12-01T12:00:00-05:00' }, session)).history || []).filter((h) => h.record === 'case.dispute');
+    ok('a double press records once', again.ok && again.already_recorded === true && disputes.filter((d) => d.charge === 'SH01').length === 1, `${JSON.stringify(again).slice(0, 200)} · ${disputes.length}`);
+    const cx = await card('ashby', 'Send the ship notice for NR-46215 [card send_ship_notice {"po":"NR-46215"}]', '2026-11-18T09:00:00-05:00'); const cxc = cx.cards?.[0];
+    const cancelled = cxc ? await press(V1, cxc.id, session, 'cancel') : null; const nodoc = await pub('ashby', 'get_document', { reference: 'ASN-46215-S' }, session);
+    ok('Cancel records nothing', cancelled?.card?.state === 'Cancelled' && nodoc.found === false, JSON.stringify(cancelled).slice(0, 200));
+    const other = await ask(V2, { question: 'Where does DC-40877 stand?', side: 'ashby', as_of: '2026-12-01T12:00:00-05:00' });
+    const otherCase = await pub('ashby', 'get_deduction_case', { case: 'DC-40877', as_of: '2026-12-01T12:00:00-05:00' }, other.session); const otherDoc = await pub('ashby', 'get_document', { reference: 'ACK-46210-S' }, other.session);
+    const noSess = await pub('ashby', 'get_document', { reference: 'ACK-46210-S' });
+    ok('a second viewer’s state is unchanged, and so is the recorded world', other.session && other.session !== session && !(otherCase.history || []).some((h) => h.record === 'case.dispute') && otherDoc.found === false && noSess.found === false
+      && ldb.prepare('SELECT count(*) n FROM events').get().n === main0 && ldb.prepare('SELECT count(*) n FROM documents').get().n === docs0, `${other.session} ${JSON.stringify(otherCase.history)} ${otherDoc.found}`);
+    const theirCard = await press(V2, pressed.decide_charge.card, other.session);
+    ok('a card cannot be pressed from another session', theirCard.status === 404, JSON.stringify(theirCard).slice(0, 160));
+    const logs = ldb.prepare("SELECT connection_id, user_name, tool, result FROM access_log WHERE tool LIKE 'card:%' ORDER BY id").all();
+    ok('the access log records who pressed each card', logs.filter((l) => l.result === 'Approved').length >= 8 && logs.every((l) => /pressed on \/p\/_test \(viewer session VS-/.test(l.user_name)) && logs.some((l) => l.connection_id === 'aviator-_test-northfield' && /Jordan Ellis/.test(l.user_name)), JSON.stringify(logs.slice(0, 3)));
+  }
   ok('no record was written by any public or Aviator call', ldb.prepare('SELECT count(*) n FROM events').get().n === events0 && ldb.prepare('SELECT count(*) n FROM proposals').get().n === props0);
 } finally { srv.kill(); cap.kill(); model.close(); }
 console.log(`${fails ? 'FAILED' : 'All hosted checks passed'}: ${fails} failed`); process.exit(fails ? 1 : 0);

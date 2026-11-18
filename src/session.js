@@ -1,0 +1,81 @@
+// Viewer sessions for hosted pages (/p/<id>). A session is a private branch of the demo world for one viewer: every write an
+// action card makes is tagged to it, every read made for it sees the recorded world plus its own writes, and other viewers and
+// the recorded world never change. A switcher page shares one session across both sides, so Jordan sees the dispute Priya
+// opened. Sessions live in memory and end after 30 minutes idle, or when the server restarts.
+//
+// How the branch works. The recorded world sits in main.events, main.documents and main.draft_rules. Session writes go to
+// TEMP tables in this connection only. TEMP views named events and documents shadow the main tables for every unqualified
+// query: each is the recorded rows plus the rows of the session in force (tg_session()), so the read code needs no change.
+// draft_rules reads Published for a draft the session (or the recorded world) published. Calls run synchronously, so the
+// session in force is set around one call at a time and never leaks into another viewer's call.
+import { randomBytes } from 'node:crypto';
+
+export const IDLE_MS = 30 * 60 * 1000;
+export const LIMITS = { per_address: 8, total: 2000, writes: 40, cards: 60 };
+let CURRENT = null;
+const SESSIONS = new Map();
+const SESSION_ID_BASE = 1e12; // session rows never collide with recorded ids
+let nextId = SESSION_ID_BASE;
+
+const EVENT_COLS = ['id', 'at', 'kind', 'po', 'system', 'party', 'channel', 'data'];
+const DOC_COLS = ['doc_id', 'reference', 'po', 'doc_type', 'name', 'sender_id', 'receiver_id', 'supplier_id', 'partner_id', 'sent_at', 'isa_ctl', 'gs_ctl', 'st_ctl', 'status', 'answers_doc_id', 'test', 'file', 'body', 'raw'];
+
+/** Installs the session branch on the server's main connection. Call once, before any statement is prepared. */
+export function installSessions(db) {
+  db.function('tg_session', { deterministic: false }, () => CURRENT);
+  const draftCols = db.prepare("SELECT name FROM pragma_table_info('draft_rules')").all().map((r) => r.name).filter((c) => c !== 'state');
+  db.exec(`
+    CREATE TEMP TABLE IF NOT EXISTS session_events (${EVENT_COLS.map((c) => (c === 'id' ? 'id INTEGER PRIMARY KEY' : `${c} TEXT`)).join(', ')}, session_id TEXT NOT NULL);
+    CREATE INDEX IF NOT EXISTS temp.session_events_s ON session_events (session_id, po);
+    CREATE TEMP TABLE IF NOT EXISTS session_documents (${DOC_COLS.map((c) => `${c} ${['isa_ctl', 'gs_ctl', 'test'].includes(c) ? 'INTEGER' : 'TEXT'}`).join(', ')}, session_id TEXT NOT NULL);
+    CREATE INDEX IF NOT EXISTS temp.session_documents_s ON session_documents (session_id, reference);
+    CREATE TEMP VIEW IF NOT EXISTS events AS SELECT ${EVENT_COLS.join(', ')} FROM main.events
+      UNION ALL SELECT ${EVENT_COLS.join(', ')} FROM temp.session_events WHERE session_id = tg_session();
+    CREATE TEMP VIEW IF NOT EXISTS documents AS SELECT ${DOC_COLS.join(', ')} FROM main.documents
+      UNION ALL SELECT ${DOC_COLS.join(', ')} FROM temp.session_documents WHERE session_id = tg_session();
+    CREATE TEMP VIEW IF NOT EXISTS draft_rules AS SELECT ${draftCols.map((c) => `d.${c}`).join(', ')},
+      CASE WHEN EXISTS (SELECT 1 FROM events e WHERE e.kind = 'rule.published' AND json_extract(e.data, '$.draft') = d.id) THEN 'Published' ELSE d.state END AS state
+      FROM main.draft_rules d;`);
+}
+
+/** Runs fn with the given session in force for every read and write it makes. */
+export function withSession(id, fn) { const prev = CURRENT; CURRENT = id || null; try { return fn(); } finally { CURRENT = prev; } }
+export const currentSession = () => CURRENT;
+
+/** Appends one event: to the recorded world when no session is in force, otherwise to the session alone. Returns its id. */
+export function appendEvent(db, row) {
+  if (!CURRENT) return Number(db.prepare(`INSERT INTO main.events (at, kind, po, system, party, channel, data) VALUES (?,?,?,?,?,?,?)`).run(row.at, row.kind, row.po, row.system, row.party, row.channel, row.data).lastInsertRowid);
+  const id = ++nextId; db.prepare(`INSERT INTO temp.session_events (${EVENT_COLS.join(', ')}, session_id) VALUES (?,?,?,?,?,?,?,?,?)`).run(id, row.at, row.kind, row.po, row.system, row.party, row.channel, row.data, CURRENT);
+  SESSIONS.get(CURRENT)?.writes.push({ kind: 'event', id }); return id;
+}
+/** Adds one document a card sent: to the viewer's session, or, approved on a company's own connection, to the shared world
+ *  (file 'session', removed again by the admin reset). */
+export function appendDocument(db, doc) {
+  if (!CURRENT) { db.prepare(`INSERT INTO main.documents (${DOC_COLS.join(', ')}) VALUES (${DOC_COLS.map(() => '?').join(',')})`).run(...DOC_COLS.map((c) => doc[c] ?? (c === 'test' ? 0 : null))); return doc.doc_id; }
+  db.prepare(`INSERT INTO temp.session_documents (${DOC_COLS.join(', ')}, session_id) VALUES (${DOC_COLS.map(() => '?').join(',')},?)`).run(...DOC_COLS.map((c) => doc[c] ?? (c === 'test' ? 0 : null)), CURRENT);
+  SESSIONS.get(CURRENT)?.writes.push({ kind: 'document', id: doc.doc_id }); return doc.doc_id;
+}
+
+// ---------- The session store ----------
+const sweep = (now = Date.now()) => { for (const [id, s] of SESSIONS) if (now - s.last > IDLE_MS) end(null, id); };
+function end(db, id) { SESSIONS.delete(id); ENDERS.forEach((f) => f(id)); }
+const ENDERS = [];
+/** Registers cleanup for an ended session (its TEMP rows). */
+export function onEnd(db) { ENDERS.push((id) => { db.prepare('DELETE FROM temp.session_events WHERE session_id = ?').run(id); db.prepare('DELETE FROM temp.session_documents WHERE session_id = ?').run(id); }); }
+
+/** The viewer's session for this page: the one named if it is live and bound to this page, else a new one. */
+export function sessionFor({ id, page, address, now = Date.now() }) {
+  sweep(now);
+  const s = id && SESSIONS.get(String(id));
+  if (s && s.page === page) { s.last = now; return { session: s, created: false }; }
+  // A viewer keeps a few sessions at most; the oldest idle one ends first. The store as a whole is capped too.
+  const mine = [...SESSIONS.values()].filter((x) => x.address === address).sort((a, b) => a.last - b.last);
+  while (mine.length >= LIMITS.per_address) end(null, mine.shift().id);
+  while (SESSIONS.size >= LIMITS.total) end(null, [...SESSIONS.values()].sort((a, b) => a.last - b.last)[0].id);
+  const ns = { id: `VS-${randomBytes(6).toString('hex')}`, page, address, created: now, last: now, writes: [], cards: new Map() };
+  SESSIONS.set(ns.id, ns); return { session: ns, created: true };
+}
+export const getSession = (id) => { sweep(); return SESSIONS.get(String(id)) || null; };
+export const endSession = (id) => end(null, id);
+export const sessionCount = () => SESSIONS.size;
+export const sessionInfo = (s) => ({ session: s.id, idle_timeout_minutes: IDLE_MS / 60000, writes: s.writes.length, cards: [...s.cards.values()].map((c) => ({ id: c.id, action: c.action, state: c.state })) });

@@ -36,7 +36,7 @@ const MAX_ADVANCE_HOURS = 48; // An explicit advance may run on to two days afte
 export const ACTIONS = {
   draft_acknowledgment: { label: 'Draft the order acknowledgment (855) from the Supplier ERP sales order', actor: 'Trading Grid', rule: 'NF-1.4', mode: 'policy', editable: true, args: ['po'] },
   draft_ship_notice:    { label: 'Draft the ship notice (856) from the load scan or fulfilment record', actor: 'Trading Grid', rule: 'AP-1.4', mode: 'policy', editable: false, args: ['po'] },
-  draft_invoice_in_erp: { label: 'Create the invoice in the Supplier ERP from the shipped quantity and draft its 810', actor: 'Supplier ERP', rule: 'AP-3.2', mode: 'approve', editable: true, args: ['po'] },
+  ashby_invoices_in_erp: { label: 'Show that Ashby creates the invoice in the Supplier ERP from the shipped quantity; Trading Grid drafts the 810 from that invoice once it is in the Supplier ERP. Nothing is written there', actor: 'Ashby (in the Supplier ERP)', rule: 'AP-3.2', mode: 'policy', editable: false, args: ['po'] },
   release_document:     { label: 'Send a drafted 855, 856 or 810 to Northfield', actor: 'Trading Grid', rule: 'AP-1.3', mode: 'approve', editable: false, args: ['po', 'document'] },
   kinross_owns_945:   { label: 'Show that Kinross owns the missing shipping advice (945) and sends it from its warehouse system, with what Kinross’s own records show; the 945 confirms it. Nothing is sent', actor: 'Kinross (in its warehouse system)', rule: 'AP-3.2', mode: 'policy', editable: false, args: ['po'] },
   ashby_corrects_early_fulfilment: { label: 'Show that the Supplier ERP posted the fulfilment before the trailer departed; Ashby corrects it in the Supplier ERP. Nothing is written there and nothing is sent', actor: 'Ashby (in the Supplier ERP)', rule: 'AP-3.2', mode: 'policy', editable: false, args: ['po', 'note'] },
@@ -290,7 +290,7 @@ function validate(db, s, action, a) {
     case 'draft_ship_notice': { if (!load && !fulfil) return `AP-1.4: a ship notice is built only from a load scan or fulfilment record, and ${po} has neither.`;
       if (!row('856')) return `No ship notice is missing or rejected on ${po}.`;
       if (s.docs.some((d) => d.po === po && d.doc_type === '856' && d.state === 'Draft')) return `A ship notice for ${po} is already drafted and not sent.`; return null; }
-    case 'draft_invoice_in_erp': { if (!row('810') || row('810').kind !== 'missing') return `No invoice is missing on ${po}.`; if (s.erp.invoices[po]) return `The Supplier ERP already holds invoice ${s.erp.invoices[po].reference} for ${po}.`;
+    case 'ashby_invoices_in_erp': { if (!row('810') || row('810').kind !== 'missing') return `No invoice is missing on ${po}.`; if (s.erp.invoices[po]) return `The Supplier ERP already holds invoice ${s.erp.invoices[po].reference} for ${po}.`;
       if (!shippedLines(db, s, po)) return `Nothing on ${po} records a shipped quantity (no ship notice sent).`; return null; }
     case 'release_document': { if (!['855', '856', '810'].includes(a.document)) return 'Name the document to release: 855, 856 or 810.';
       const d = s.docs.find((x) => x.po === po && x.doc_type === a.document && x.state === 'Draft'); if (!d) return `There is no drafted ${a.document} for ${po} to release.`;
@@ -306,8 +306,8 @@ export function decide(db, s, proposalId, decision, by = 'Priya Raman', note) {
   const p = s.proposals.find((x) => x.id === proposalId);
   if (!p) return { state: 'Refused', message: `No proposal ${proposalId}` };
   if (p.state !== 'Awaiting approval') return { state: 'Refused', message: `${proposalId} is ${p.state.toLowerCase()}; an approval cannot be replayed.` };
-  if (decision === 'edit') { p.state = 'Taken over'; p.taken_over_by = by; p.note = note || null; s.handed_over = { by, proposal: p.id, note: p.note, at: fmtET(iso(s.clock)) }; s.agent.status = 'handed_to_person';
-    trace(s, by, 'human', `Edit suggestion: ${by} set ${p.id} aside and does the case by hand`, { action: p.action, note: p.note }); audit(s, p, `Taken over by ${by}; done by hand${p.note ? `: ${p.note}` : ''}`); return { state: 'Taken over', proposal: p.id, by }; }
+  if (decision === 'take_over') { p.state = 'Taken over'; p.taken_over_by = by; p.note = note || null; s.handed_over = { by, proposal: p.id, note: p.note, at: fmtET(iso(s.clock)) }; s.agent.status = 'handed_to_person';
+    trace(s, by, 'human', `Take over: ${by} set ${p.id} aside and does the case by hand`, { action: p.action, note: p.note }); audit(s, p, `Taken over by ${by}; done by hand${p.note ? `: ${p.note}` : ''}`); return { state: 'Taken over', proposal: p.id, by }; }
   if (decision !== 'approve') { p.state = 'Rejected'; p.rejected_by = by; trace(s, by, 'human', `Rejected ${p.id}`, { action: p.action }); audit(s, p, 'Rejected'); return { state: 'Rejected', proposal: p.id }; }
   // Validated again at approval: the world may have moved since the proposal (UI pace: one minute per decision).
   s.clock += MIN; tick(db, s);
@@ -355,14 +355,16 @@ function execute(db, s, p, by) {
         lines: salesOrder(db, s, po).map(({ line, sku, northfield_item, qty, uom }) => ({ line, sku, northfield_item, qty, uom })), ...(row?.kind === 'rejected' ? { corrects: row.rejection.reference, correction: `Items from the current PO revision; replaces the item ${row.rejection.sent_value} rejected under ${row.rejection.rule_id}` } : {}), synthetic: true };
       s.docs.push(d); trace(s, 'Rule engine', 'rule', `Ship notice drafted from the ${load ? 'load scan' : 'Supplier ERP fulfilment record'}: ${cartons} cartons${d.corrects ? `; corrects ${d.corrects}` : ''}`, { reference: d.reference, built_from: d.built_from });
       r = { state: 'Completed', response: `Drafted ${d.reference} for ${cartons} cartons; not sent`, draft: d }; break; }
-    case 'draft_invoice_in_erp': {
+    case 'ashby_invoices_in_erp': {
       const sh = shippedLines(db, s, po); const so = salesOrder(db, s, po); s.clock += 3 * MIN;
       const lines = sh.lines.map((l) => { const pr = so.find((x) => x.line === l.line)?.price || 0; return { line: l.line, sku: l.sku, qty: l.qty, price: pr, amount: Math.round(l.qty * pr * 100) / 100 }; });
       const total = Math.round(lines.reduce((t, l) => t + l.amount, 0) * 100) / 100; const ref = `INV-${po.slice(3)}-W${sref(s)}`;
       s.erp.invoices[po] = { reference: ref, total, from: sh.from, lines };
       s.docs.push({ doc_type: '810', po, reference: ref, state: 'Draft', built_from: `Supplier ERP invoice from the shipped quantity (${sh.from})`, lines, total, synthetic: true });
-      trace(s, 'Supplier ERP', 'external', `Invoice ${ref} created from the shipped quantity: $${total.toFixed(2)}; 810 drafted`, { from: sh.from });
-      r = { state: 'Completed', response: `Supplier ERP invoice ${ref} for $${total.toFixed(2)} from ${sh.from}; 810 drafted, not sent`, invoice: s.erp.invoices[po] }; break; }
+      trace(s, 'Trading Grid', 'system', `Shown to Priya Raman: the invoice for ${po} is Ashby’s to create in the Supplier ERP from the shipped quantity; Trading Grid writes nothing there`, { from: sh.from });
+      trace(s, 'Supplier ERP (Ashby’s own system)', 'external', `Invoice ${ref} in the Supplier ERP: $${total.toFixed(2)} from the shipped quantity`, { from: sh.from });
+      trace(s, 'Rule engine', 'rule', `810 drafted from Supplier ERP invoice ${ref}; not sent`, {});
+      r = { state: 'Shown', response: `Ashby’s Supplier ERP invoice ${ref} for $${total.toFixed(2)} from ${sh.from}; the 810 is drafted from it, not sent`, invoice: s.erp.invoices[po] }; break; }
     case 'release_document': {
       const d = s.docs.find((x) => x.po === po && x.doc_type === a.document && x.state === 'Draft'); const row = [...s.rows.values()].find((x) => x.po === po && x.document === a.document);
       s.clock += 2 * MIN; d.state = 'Sent'; d.sent_at = iso(s.clock); d.released_by = by; d.late = row ? s.clock > row.deadline : false;
@@ -443,7 +445,7 @@ export function baselinePass(db, s, act) {
     }
     else if (r.document === '810' && r.kind === 'missing') {
       if (/^Drafted/.test(r.state)) done.push(act('release_document', { po: r.po, document: '810' }));
-      else if (/^(Missing|Late)$/.test(r.state)) { const ord = read(db, s, 'read_order', { po: r.po }); if (ord.supplier_erp.invoice === 'None') done.push(act('draft_invoice_in_erp', { po: r.po })); done.push(act('release_document', { po: r.po, document: '810' })); }
+      else if (/^(Missing|Late)$/.test(r.state)) { const ord = read(db, s, 'read_order', { po: r.po }); if (ord.supplier_erp.invoice === 'None') done.push(act('ashby_invoices_in_erp', { po: r.po })); done.push(act('release_document', { po: r.po, document: '810' })); }
     }
     else if (r.document === '945') {
       const wh = read(db, s, 'read_warehouse', { po: r.po }); askKinross(wh);

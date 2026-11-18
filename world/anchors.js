@@ -63,7 +63,7 @@ export function anchors(L, W) {
     act(day('2026-10-25', '06:10'), '2026-10-18', '2026-10-24', w1); act(day('2026-11-01', '06:10'), '2026-10-25', '2026-10-31', w2);
     W.storeWeeks = { w1, w2 };
     ev(L, day('2026-10-26', '08:05'), 'erp.inventory_read', null, 'Supplier ERP', 'ASHBY', 'API', { sku: 'ASH-TRL-09', available: 980, unit: 'Pairs', meaning: 'Available' });
-    ev(L, day('2026-10-26', '08:07'), 'agent.recommendation', null, 'Trading Grid', 'ASHBY', 'API', { agent: 'Shelf Agent', acting_for: 'Priya Raman', store: 114, finding: 'Empty shelf', recommend: 'New order', pairs: 40, also: { store: 207, finding: 'Slow sell-through', recommend: 'Transfer 24 pairs to store 118' }, approved_by: 'Priya Raman', sent_to: 'Jordan Ellis' });
+    ev(L, day('2026-10-26', '08:07'), 'rule.recommendation', null, 'Trading Grid', 'ASHBY', 'API', { found_by: 'Ashby replenishment rule AP-6.1', acting_for: 'Priya Raman', store: 114, finding: 'Empty shelf', recommend: 'New order', pairs: 40, also: { store: 207, finding: 'Slow sell-through', recommend: 'Transfer 24 pairs to store 118' }, approved_by: 'Priya Raman', sent_to: 'Jordan Ellis' });
     const po = A.p9 = 'NR-451207'; const O = { po, supplier: 'ASHBY', shipTo: 'STORE114', site: 'ASH-WH1', programme: 'STORE', requested: '2026-10-27', poDate: iso(day('2026-10-26', '10:20')), stream: 'store', lines: [{ line: 1, sku: 'ASH-TRL-09', qty: 40, price: 38, uom: 'PR' }] };
     D.po(L, O, day('2026-10-26', '10:20')); D.ack(L, O, day('2026-10-26', '10:50'));
     const dep = day('2026-10-26', '16:00');
@@ -73,7 +73,7 @@ export function anchors(L, W) {
     D.receipt(L, O, day('2026-10-27', '09:10'), { ref: 'RCV-S114-51207', asnRef: 'ASN-451207-1', qty: { 1: 40 } });
     W.pay.push({ O, invRef: 'INV-451207', amount: 1520, at: day('2026-11-25', '08:00') });
     // Shelf Agent's other two decisions later in the quarter: goods already in transit, and a transfer.
-    ev(L, day('2026-11-02', '08:07'), 'agent.recommendation', null, 'Trading Grid', 'ASHBY', 'API', { agent: 'Shelf Agent', acting_for: 'Priya Raman', store: 207, finding: 'Slow sell-through', recommend: 'Transfer', pairs: 24, to_store: 118 });
+    ev(L, day('2026-11-02', '08:07'), 'rule.recommendation', null, 'Trading Grid', 'ASHBY', 'API', { found_by: 'Ashby replenishment rule AP-6.2', acting_for: 'Priya Raman', store: 207, finding: 'Slow sell-through', recommend: 'Transfer', pairs: 24, to_store: 118 });
   }
 
   // ---------- Week 6: the order story, PO NR-450118 ----------
@@ -93,22 +93,24 @@ export function anchors(L, W) {
     ev(L, day('2026-11-02', '16:52'), 'approval', po, 'Trading Grid', 'ASHBY', 'API', { approved_by: 'Priya Raman', what: 'Change acknowledgment to order change 4: line 1 270 cases accepted' });
     // Shipment 1: lines 1 and 3, 350 cartons. The first ship notice draft carried line 1 at 300 and was held.
     const c1 = [...cartonsFor(W, 1, [[1, 270]]), ...cartonsFor(W, 391, [[3, 80]])];
-    ev(L, day('2026-11-06', '11:00'), 'tg.hold', po, 'Trading Grid', 'ASHBY', 'API', { document: 'ASN-450118-1 draft', rule: 'NF-4.5', finding: 'Line 1 ship notice 300 against 270 accepted', exposure_estimate: 150, corrected_by: 'Priya Raman', approved_by: 'Jordan Ellis', approved_at: iso(day('2026-11-06', '11:20')), released_at: iso(day('2026-11-06', '11:25')) });
+    ev(L, day('2026-11-06', '11:00'), 'tg.hold', po, 'Trading Grid', 'ASHBY', 'API', { document: 'ASN-450118-1 draft', rule: 'NF-4.5', finding: 'Line 1 ship notice 300 against 270 accepted', exposure_estimate: 150, corrected_by: 'Priya Raman', corrected_from: 'Load scan for SHP-450118-1: 350 cartons, 270 on line 1 and 80 on line 3', release_rule: 'AP-1.3', approved_by: 'Priya Raman', approved_at: iso(day('2026-11-06', '18:18')), released_at: iso(day('2026-11-06', '18:20')) });
     const dep1 = day('2026-11-06', '18:00');
     ev(L, addH(dep1, -0.5), 'wms.load_scan', po, 'Supplier ERP', 'ASHBY', 'API', { shipment: 'SHP-450118-1', cartons_loaded: 350, cartons_expected: 350, by_sscc: true });
     ev(L, dep1, 'wms.departure_scan', po, 'Supplier ERP', 'ASHBY', 'API', { shipment: 'SHP-450118-1', carrier: 'Lakeline Freight' });
-    D.asn(L, O, day('2026-11-06', '11:25'), { ref: 'ASN-450118-1', shippedAt: dep1, deliveryDate: '2026-11-07', cartons: c1, qty: { 1: 270, 2: 0, 3: 80 }, bol: 'BOL-88190', seal: 'SL-3302871', status: 'BP' });
+    // 17 November 2026: the ship notice leaves after the 17:30 load scan that corrected it and the 18:00 departure, inside
+    // NF-4.2's hour (it was sent at 11:25, before either). It keeps its control number (`numAt`); its 997 follows it.
+    D.asn(L, O, day('2026-11-06', '18:20'), { ref: 'ASN-450118-1', shippedAt: dep1, deliveryDate: '2026-11-07', cartons: c1, qty: { 1: 270, 2: 0, 3: 80 }, bol: 'BOL-88190', seal: 'SL-3302871', status: 'BP' }).numAt = iso(day('2026-11-06', '11:25'));
     D.receipt(L, O, day('2026-11-07', '07:20'), { ref: 'RCV-DC2-77290', asnRef: 'ASN-450118-1', qty: { 1: 270, 3: 80 } });
     // Shipment 2: line 2, 120 cartons, sealed trailer.
     const c2 = cartonsFor(W, 271, [[2, 120]]); const dep2 = day('2026-11-08', '18:00');
     ev(L, day('2026-11-08', '14:05'), 'wms.pack_scan', po, 'Supplier ERP', 'ASHBY', 'API', { shipment: 'SHP-450118-2', cartons_packed: 120 });
     ev(L, day('2026-11-08', '17:21'), 'wms.load_scan', po, 'Supplier ERP', 'ASHBY', 'API', { shipment: 'SHP-450118-2', cartons_loaded: 120, cartons_expected: 120, by_sscc: true, includes: '006141410000003006', in_case: 'DC-40877' });
-    ev(L, day('2026-11-08', '17:48'), 'carrier.bill_of_lading', po, 'Lakeline Freight', 'LAKELINE', 'Scanned document', { bol: 'BOL-88229', trailer: 'LKL-53-0612', terms: 'Collect; loaded and counted by shipper', seal: 'SL-3302918', in_case: 'DC-40877' });
+    ev(L, day('2026-11-08', '17:48'), 'carrier.bill_of_lading', po, 'Lakeline Freight', 'LAKELINE', 'Portal API, image', { bol: 'BOL-88229', trailer: 'LKL-53-0612', terms: 'Collect; loaded and counted by shipper', seal: 'SL-3302918', in_case: 'DC-40877' });
     ev(L, dep2, 'wms.departure_scan', po, 'Supplier ERP', 'ASHBY', 'API', { shipment: 'SHP-450118-2', carrier: 'Lakeline Freight' });
     D.asn(L, O, day('2026-11-08', '18:06'), { ref: 'ASN-450118-2', shippedAt: dep2, deliveryDate: '2026-11-09', cartons: c2, qty: { 1: 0, 2: 120, 3: 0 }, bol: 'BOL-88229', seal: 'SL-3302918' });
     const inv = D.invoice(L, O, day('2026-11-08', '10:00'), { ref: 'INV-7731', qty: { 1: 300, 2: 120, 3: 80 } });
     D.advice(L, inv, day('2026-11-08', '10:20'), { action: 'TE', errors: [{ code: 'QTY', cause: W.TED.QTY.cause, seg: 'IT1', elem: 2, bad: '300', allowed: '270 accepted on line 1; held value $1,620.00' }] });
-    ev(L, day('2026-11-09', '06:35'), 'carrier.delivery_receipt', po, 'Lakeline Freight', 'LAKELINE', 'Scanned document', { shipment: 'SHP-450118-2', delivered: 120, exceptions: 'None', seal: 'SL-3302918 intact', in_case: 'DC-40877' });
+    ev(L, day('2026-11-09', '06:35'), 'carrier.delivery_receipt', po, 'Lakeline Freight', 'LAKELINE', 'Portal API, image', { shipment: 'SHP-450118-2', delivered: 120, exceptions: 'None', seal: 'SL-3302918 intact', in_case: 'DC-40877' });
     D.receipt(L, O, day('2026-11-09', '07:20'), { ref: 'RCV-DC2-77355', asnRef: 'ASN-450118-2', qty: { 2: 119 }, short: { 2: 1 }, notScanned: { 2: ['006141410000003006'] } });
     D.invoice(L, O, day('2026-11-10', '15:30'), { ref: 'INV-7731C', replaces: 'INV-7731', qty: { 1: 270, 2: 120, 3: 80 } });
     ev(L, day('2026-11-20', '09:00'), 'case.opened', po, 'Northfield deduction case', 'NORTHFIELD', 'API', { case: 'DC-40877', charge: 'SH01', amount: 88.4, line: 2, cartons: 1, deduction: 'DM-55102', dispute_deadline: '2027-01-30' });
@@ -137,11 +139,11 @@ export function anchors(L, W) {
     const O = A.car = mk('NR-450415', [['ASH-MUG-12', 60]], { requested: '2026-11-14', poDate: iso(day('2026-11-11', '15:00')) });
     D.po(L, O, day('2026-11-11', '15:00')); D.ack(L, O, day('2026-11-11', '16:30'));
     const dep = day('2026-11-13', '15:00'); const c = cartonsFor(W, 3301, [[1, 60]]);
-    ev(L, addH(dep, -0.2), 'carrier.bill_of_lading', O.po, 'Lakeline Freight', 'LAKELINE', 'Scanned document', { bol: 'BOL-88412', terms: 'Prepaid; tendered by Ashby', condition: 'Clean', in_case: 'DC-40931' });
+    ev(L, addH(dep, -0.2), 'carrier.bill_of_lading', O.po, 'Lakeline Freight', 'LAKELINE', 'Portal API, image', { bol: 'BOL-88412', terms: 'Prepaid; tendered by Ashby', condition: 'Clean', in_case: 'DC-40931' });
     ev(L, dep, 'wms.departure_scan', O.po, 'Supplier ERP', 'ASHBY', 'API', { shipment: 'SHP-450415', carrier: 'Lakeline Freight' });
     D.asn(L, O, addH(dep, 0.3), { ref: 'ASN-450415', shippedAt: dep, deliveryDate: '2026-11-14', cartons: c });
     D.invoice(L, O, addH(dep, 1.2), { ref: 'INV-7768' });
-    ev(L, day('2026-11-14', '07:05'), 'carrier.delivery_receipt', O.po, 'Lakeline Freight', 'LAKELINE', 'Scanned document', { shipment: 'SHP-450415', delivered: 60, exceptions: '2 cartons crushed', in_case: 'DC-40931' });
+    ev(L, day('2026-11-14', '07:05'), 'carrier.delivery_receipt', O.po, 'Lakeline Freight', 'LAKELINE', 'Portal API, image', { shipment: 'SHP-450415', delivered: 60, exceptions: '2 cartons crushed', in_case: 'DC-40931' });
     D.receipt(L, O, day('2026-11-14', '07:40'), { ref: 'RCV-DC2-77590', asnRef: 'ASN-450415', qty: { 1: 58 }, short: { 1: 2 }, notScanned: { 1: c.slice(-2).map((x) => x.sscc) } });
     ev(L, day('2026-11-21', '09:00'), 'case.opened', O.po, 'Northfield deduction case', 'NORTHFIELD', 'API', { case: 'DC-40931', charge: 'SH01', amount: 208, line: 1, cartons: 2, deduction: 'DM-55140', dispute_deadline: '2027-01-30' });
     ev(L, day('2026-12-02', '11:00'), 'case.accepted', O.po, 'Northfield deduction case', 'ASHBY', 'API', { case: 'DC-40931', charge: 'SH01', amount: 208, approved_by: 'Priya Raman', reason: 'Damage in transit on prepaid freight; Northfield charges the supplier (NF-10.2)' });

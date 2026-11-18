@@ -15,6 +15,7 @@
     "openapi": "node --no-warnings scripts/openapi.js",
     "contract": "node --no-warnings scripts/contract.js",
     "smoke": "node --no-warnings scripts/smoke.js",
+    "names": "node --no-warnings scripts/no-agent-sweep.mjs",
     "aviator-test": "node --no-warnings scripts/aviator-test.mjs",
     "start": "node --no-warnings src/server.js",
     "scout": "node --no-warnings scripts/scout-test.mjs",

@@ -84,7 +84,7 @@ const spec = {
   variations: { canonical: {}, december_28: { moment: '2026-12-28 10:00 ET' }, kinross_unreachable: { moment: '2026-12-28 10:00 ET', kinross_reachable: 'no' }, northfield_upholds: { moment: '2026-12-28 10:00 ET', northfield_decision: 'uphold' }, promotions: { moment: PROMO_MOMENT } },
   actions: {
     request_evidence: { label: 'Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case', actor: 'Kinross or Lakeline Freight (task)', rule: 'AP-3.2', mode: 'approve', editable: true, args: ['record', 'evidence'] },
-    submit_dispute: { label: 'Dispute the charge in Northfield’s deduction case with the evidence that contradicts it (the NF-7.4 pack for a shortage; the deal, store activity or invoice for the unsupported amount of a promotion deduction)', actor: 'Northfield deduction case', rule: 'AP-4.1', mode: 'approve', editable: true, args: ['record'] },
+    submit_dispute: { label: 'Dispute the charge in Northfield’s deduction case with the evidence that contradicts it (the NF-7.4 pack for a shortage; the deal, store activity or invoice for the unsupported amount of a promotion deduction)', actor: 'Northfield deduction case', rule: 'AP-4.1', mode: 'approve', editable: false, args: ['record'] },
     accept_charge: { label: 'Accept the charge (no dispute)', actor: 'Supplier ERP (deduction item)', rule: 'AP-4.2', mode: 'approve', editable: false, args: ['record'] },
     file_carrier_claim: { label: 'File a loss or damage claim with Lakeline Freight for the goods cost', actor: 'Lakeline Freight', rule: 'NF-10.2', mode: 'approve', editable: true, args: ['record'] },
     match_repayment: { label: 'Match a repayment on Northfield’s remittance to the deduction in receivables and close the case', actor: 'Supplier ERP (receivables)', rule: 'NF-7.6', mode: 'policy', editable: false, args: ['record'] },
@@ -96,11 +96,8 @@ const spec = {
     { id: 'NF-7.6', owner: 'Administrator', text: 'Never show a reversal as resolved before the repayment matches in receivables.' },
     { id: 'NF-7.3', owner: 'Administrator', text: 'One dispute per deduction, within 60 days of the remittance.' },
   ],
-  modeFor: (db, s, action, args) => {
-    if (action !== 'submit_dispute' || s.modes.submit_dispute !== 'approve') return null;
-    const v = view(db, s, args.record); const onHand = v.found && v.nf_7_4_complete && !v.session.attached.length;
-    return onHand && v.amount < D.param(db, 'AP-4.1', 'max_amount') ? 'policy' : null;
-  },
+  // AP-4.1 (17 November 2026): every dispute needs Priya Raman's approval. No amount or evidence state lets one go without asking.
+  modeFor: () => null,
   queue: (db, s) => { const rows = (isPromo(s) ? promoRows(db).map((r) => promoRow(db, s, r)) : openCases(db, s).map((c) => rowOf(db, s, c))).sort((a, b) => (a.closed - b.closed) || b.amount - a.amount);
     return { as_of: fmtET(iso(s.clock)), rows, open: rows.filter((r) => !r.closed).length }; },
   reads: {

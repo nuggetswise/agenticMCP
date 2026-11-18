@@ -4,7 +4,7 @@ CREATE TABLE people (id TEXT PRIMARY KEY, name TEXT NOT NULL, party_id TEXT NOT 
 CREATE TABLE locations (id TEXT PRIMARY KEY, party_id TEXT NOT NULL REFERENCES parties(id), name TEXT NOT NULL, gln TEXT NOT NULL, active INTEGER NOT NULL, note TEXT, store_number TEXT UNIQUE);
 CREATE TABLE items (sku TEXT PRIMARY KEY, supplier_id TEXT NOT NULL REFERENCES parties(id), description TEXT NOT NULL, gtin TEXT NOT NULL, pack TEXT NOT NULL, case_price REAL NOT NULL, northfield_item TEXT NOT NULL, on_northfield_list INTEGER NOT NULL);
 CREATE TABLE rules (id TEXT PRIMARY KEY, owner TEXT NOT NULL, implements TEXT, params TEXT, rule_set TEXT NOT NULL, topic TEXT NOT NULL, doc_type TEXT, statement TEXT NOT NULL, window_hours REAL, limit_value TEXT, charge_code TEXT, charge TEXT, source TEXT NOT NULL, basis TEXT NOT NULL, public_sources TEXT NOT NULL);
-CREATE TABLE calendar (id TEXT PRIMARY KEY, week INTEGER NOT NULL, moment TEXT NOT NULL, seen_by TEXT NOT NULL, prototype TEXT NOT NULL, as_of TEXT NOT NULL, anchor TEXT NOT NULL);
+CREATE TABLE calendar (id TEXT PRIMARY KEY, seq INTEGER NOT NULL, stage TEXT NOT NULL, week INTEGER NOT NULL, moment TEXT NOT NULL, seen_by TEXT NOT NULL, prototype TEXT NOT NULL, as_of TEXT NOT NULL, anchor TEXT NOT NULL);
 
 -- Every transaction set exchanged, read from the X12 files in build/x12.
 CREATE TABLE documents (

@@ -20,7 +20,8 @@
       "id": "P1",
       "name": "P1 Long-tail",
       "status": "Built",
-      "calendar": "P1",
+      "calendar": null,
+      "off_calendar": "Not on the story calendar: the build prompts start at P5 (owner decision, 17 November 2026)",
       "seen_by": "Priya Raman",
       "agency": {
         "verdict": "rule-based",
@@ -87,7 +88,8 @@
       "id": "P4",
       "name": "P4 Marketplace to Wholesale",
       "status": "Built",
-      "calendar": "P4",
+      "calendar": null,
+      "off_calendar": "Not on the story calendar: the build prompts start at P5 (owner decision, 17 November 2026)",
       "seen_by": "Priya Raman",
       "agency": {
         "verdict": "rule-based",
@@ -458,7 +460,8 @@
       "id": "P10",
       "name": "P10 Trading Grid in the customer’s AI",
       "status": "Live",
-      "calendar": "P10",
+      "calendar": null,
+      "off_calendar": "Not on the story calendar: removed by owner decision; its tools stay on the server for Aviator and drawers",
       "seen_by": "Priya Raman",
       "agency": {
         "verdict": "not applicable",

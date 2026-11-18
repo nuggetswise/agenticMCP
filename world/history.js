@@ -48,14 +48,14 @@ export function history(L, W, { ashbyOrders = 300, otherOrders = 150 } = {}) {
     const tag = c ? { in_case: c.case } : {};
     if (!c || c.state === 'scan' || c.state === 'held') ev(addH(dep, -0.45), 'wms.load_scan', po, sys, who, 'API', { shipment: shipId, cartons_loaded: cartons.length, cartons_expected: cartons.length, by_sscc: true, ...(c && c.state === 'scan' ? tag : {}) });
     if (c && c.state === 'tally') ev(addH(dep, -0.4), 'wms.load_tally', po, sys, who, 'API', { shipment: shipId, cartons_loaded: cartons.length, by_sscc: true, signed: true, ...tag });
-    if (c) ev(addH(dep, -0.3), 'carrier.bill_of_lading', po, 'Lakeline Freight', 'LAKELINE', 'Scanned document', { bol: `BOL-${n}`, seal: `SL-${n}41`, ...tag });
+    if (c) ev(addH(dep, -0.3), 'carrier.bill_of_lading', po, 'Lakeline Freight', 'LAKELINE', 'Portal API, image', { bol: `BOL-${n}`, seal: `SL-${n}41`, ...tag });
     ev(dep, 'wms.departure_scan', po, sys, who, 'API', { shipment: shipId, carrier: 'Lakeline Freight' });
     D.asn(L, O, asnAt, { ref: asnRef, shippedAt: dep, deliveryDate: O.requested, cartons, qty: ship });
     if (late) { ev(asnAt, 'tg.late_document', po, 'Trading Grid', 'ASHBY', 'API', { document: asnRef, rule: 'NF-4.2', state: 'Late' }); stats.late++; }
     const invAt = addH(dep, U(0.5, 2)); D.invoice(L, O, invAt, { ref: invRef, qty: ship });
     const total = money(lines.reduce((a, l) => a + l.qty * l.price, 0));
     const rcvAt = et(etDay(addD(dep, 1)), `0${7 + Math.floor(R() * 3)}:${String(Math.floor(R() * 6) * 10).padStart(2, '0')}`);
-    ev(addH(rcvAt, -0.6), 'carrier.delivery_receipt', po, 'Lakeline Freight', 'LAKELINE', 'Scanned document', { shipment: shipId, delivered: cartons.length, exceptions: 'None', seal: 'Intact', ...tag });
+    ev(addH(rcvAt, -0.6), 'carrier.delivery_receipt', po, 'Lakeline Freight', 'LAKELINE', 'Portal API, image', { shipment: shipId, delivered: cartons.length, exceptions: 'None', seal: 'Intact', ...tag });
     const qty = { ...ship }, sh = {}, ns = {};
     if (c) { qty[1] = ship[1] - short; sh[1] = short; ns[1] = cartons.filter((x) => x.line === 1).slice(-short).map((x) => x.sscc); }
     D.receipt(L, O, rcvAt, { ref: `RCV-${n}`, asnRef, qty, short: sh, notScanned: ns });

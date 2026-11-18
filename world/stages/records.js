@@ -11,6 +11,9 @@
 //      Ashby's 997, not yet corrected. NR-462412: Kinross's system does not answer the status read.
 //   4. P20 (January 2027): Northfield's deduction cases for PD-2701-02, -04 and -05, Ashby's disputes, Jordan Ellis's
 //      reversals, the remittance that repays $677.20 and the Supplier ERP receivables match.
+//   5. Other suppliers' buyer orders (9 November to 3 December): a ship notice and a receiving advice for each of the 37
+//      orders that were past their delivery dates with neither (world/data/buyer-shipments.json). Three arrive late and
+//      three short; the four orders Northfield cancelled with an order change get nothing.
 // No new X12 set and no new table: every row comes from the core derive and from the returns stage (deduction_repayments).
 import { et, addH, addD, etDay } from '../lib.js';
 import { D, iso } from '../log.js';
@@ -27,7 +30,7 @@ export const P13_ORDERS = { held: 'NR-462410', rejected: 'NR-462411', silent: 'N
 export const P20_CASES = { 'PD-2701-02': 'PC-27102', 'PD-2701-04': 'PC-27104', 'PD-2701-05': 'PC-27105' };
 export const P20_REPAYMENT = 'PMT-991307';
 
-function generate(L, { W }) {
+function generate(L, { W, buyerShipments }) {
   const ev = (at, kind, po, system, party, data) => L.event({ at, kind, po, system, party, channel: 'API', data });
   const KIN = ['Kinross warehouse system', 'KINROSS']; const ERP = ['Supplier ERP', 'ASHBY']; const TG = ['Trading Grid', 'ASHBY']; const CASE = ['Northfield deduction case'];
 
@@ -60,7 +63,7 @@ function generate(L, { W }) {
     const finish = (O, cartons, dep, invAt, rcvHm) => {
       D.invoice(L, O, invAt, { ref: `INV-${n(O)}` });
       const rcvAt = et('2026-11-19', rcvHm);
-      L.event({ at: addH(rcvAt, -0.6), kind: 'carrier.delivery_receipt', po: O.po, system: 'Lakeline Freight', party: 'LAKELINE', channel: 'Scanned document', data: { shipment: `SHP-${n(O)}`, delivered: cartons.length, exceptions: 'None', seal: 'Intact' } });
+      L.event({ at: addH(rcvAt, -0.6), kind: 'carrier.delivery_receipt', po: O.po, system: 'Lakeline Freight', party: 'LAKELINE', channel: 'Portal API, image', data: { shipment: `SHP-${n(O)}`, delivered: cartons.length, exceptions: 'None', seal: 'Intact' } });
       D.receipt(L, O, rcvAt, { ref: `RCV-${n(O)}`, asnRef: `ASN-${n(O)}`, qty: Object.fromEntries(O.lines.map((l) => [l.line, l.qty])) });
     };
     const asnBase = (O, cartons, dep) => ({ ref: `ASN-${n(O)}`, shippedAt: dep, deliveryDate: O.requested, cartons, qty: Object.fromEntries(O.lines.map((l) => [l.line, l.qty])) });
@@ -131,7 +134,7 @@ function generate(L, { W }) {
       const x = taken(k.ref); const c = x.c; const id = P20_CASES[k.ref]; const amount = k.unsupported(c); total = r2(total + amount);
       ev(paidAt, 'case.opened', x.i.po, ...CASE, 'NORTHFIELD', { case: id, charge: 'PROMO', kind: 'Promotion deduction', amount: c.amount, deduction: k.ref, deal: c.deal_id, payment: pay.ref, invoice: x.i.invoice, dispute_deadline: etDay(addD(paidAt, 60)) });
       ev(et('2027-01-06', ['09:20', '09:28', '09:36'][idx]), 'case.dispute', x.i.po, ...CASE, 'ASHBY', { case: id, charge: 'PROMO', amount, deduction: k.ref, deal: c.deal_id, stands: r2(c.amount - amount), vividly_match: k.match,
-        evidence: k.evidence(c, x), drafted_by: 'Claim Agent', approved_by: 'Priya Raman' });
+        evidence: k.evidence(c, x), drafted_by: 'Ashby’s promotion deduction rules', approved_by: 'Priya Raman' });
       ev(et('2027-01-07', ['10:00', '10:10', '10:20'][idx]), 'case.decision', x.i.po, ...CASE, 'NORTHFIELD', { case: id, charge: 'PROMO', amount, deduction: k.ref, decision: 'Reversed', decided_by: 'Jordan Ellis', reason: k.why(c),
         reviewer_note: `${k.why(c)}. Reverse $${amount.toFixed(2)}${c.amount > amount ? `; $${r2(c.amount - amount).toFixed(2)} stands` : ''}.` });
       items.push({ invoice: x.i.invoice, po: x.i.po, paid: amount, invoice_amount: 0, adjustments: [{ amount, reason: x.a.reason, ref: k.ref, note: `Reversal of promotion deduction ${k.ref}, case ${id}` }] });
@@ -142,6 +145,9 @@ function generate(L, { W }) {
     // after Jordan Ellis's decisions and before the 8 January payment run (PMT-990170).
     L.doc({ type: '820', from: 'NORTHFIELD', to: 'ASHBY', at: et('2027-01-07', '16:00'), ref: P20_REPAYMENT, amount: total, payer_name: NF.name, payer_gln: NF.gln, payee_name: ASH.name, payee_gln: ASH.gln, items });
   }
+  // ---------- 5. Other suppliers' buyer orders: the ship notices and receiving advice that were missing ----------
+  // 37 orders from 17 suppliers were past their delivery dates with neither (P24, P7). Last, so nothing above moves.
+  buyerShipments(L, W);
 }
 
 export default {

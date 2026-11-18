@@ -827,7 +827,7 @@
   {
    "id": "AP-4.1",
    "owner": "Ashby",
-   "statement": "Dispute a deduction without asking only when the NF-7.4 evidence is already on hand and the amount is under $250; otherwise Priya Raman decides between dispute and write-off",
+   "statement": "Every dispute of a deduction needs Priya Raman’s approval; she decides between dispute and write-off, and a dispute goes forward only with the NF-7.4 evidence",
    "implements": [
     "NF-7.3",
     "NF-7.4"

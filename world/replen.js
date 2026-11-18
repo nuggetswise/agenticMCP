@@ -195,7 +195,7 @@ export function replenDocs(L, W, G) {
     const qty = { ...ship }; const short = {}; const ns = {};
     for (const k of Object.keys(qty)) if (!qty[k]) delete qty[k];
     if (O.shortRcv) { const l = O.lines[0]; qty[l.line] = ship[l.line] - O.shortRcv; short[l.line] = O.shortRcv; ns[l.line] = cartons.filter((c) => c.line === l.line).slice(-O.shortRcv).map((c) => c.sscc); }
-    L.event({ at: addH(rcvAt, -0.6), kind: 'carrier.delivery_receipt', po: O.po, system: 'Lakeline Freight', party: 'LAKELINE', channel: 'Scanned document', data: { shipment: shipId, delivered: cartons.length, exceptions: 'None', seal: 'Intact' } });
+    L.event({ at: addH(rcvAt, -0.6), kind: 'carrier.delivery_receipt', po: O.po, system: 'Lakeline Freight', party: 'LAKELINE', channel: 'Portal API, image', data: { shipment: shipId, delivered: cartons.length, exceptions: 'None', seal: 'Intact' } });
     D.receipt(L, O, rcvAt, { ref: `RCV-${id}`, asnRef, qty, short, notScanned: ns, ...(s.rcvAt ? { numAt: rcvPlanned } : {}) });
     O.rcvAt = rcvAt; O.cartons = cartons;
   }

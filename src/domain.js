@@ -6,7 +6,7 @@ import { fmtET, et } from '../world/lib.js';
 export const COMPANY = 'ASHBY';
 export const NOT_AVAILABLE = 'Not available to Ashby';
 const H = 3600000;
-/** The story clock: what "now" means when a question gives no as-of time. Default: P10, Tuesday 17 November 11:00 Eastern. */
+/** The story clock: what "now" means when a question gives no as-of time. Default: Tuesday 17 November 11:00 Eastern. */
 export const storyClock = () => new Date(process.env.STORY_CLOCK || '2026-11-17T16:00:00.000Z');
 export const asOfDate = (v) => { if (!v) return storyClock(); const d = new Date(/T/.test(v) ? v : `${v}T23:59:00-05:00`); if (Number.isNaN(d.getTime())) throw new Error('as_of must be an ISO date or date-time'); return d; };
 
@@ -292,4 +292,5 @@ export function deductions(db, asOf = storyClock(), from = null) {
   return { as_of: fmtET(asOf), opened_from: fmtET(start), count: rows.length, total_amount: total, cases: rows.map((c) => ({ case: c.case, po: c.po, charge: c.charge, amount: c.amount, opened: c.opened, link: `order/${encodeURIComponent(c.po)}` })) };
 }
 
-export function calendar(db) { return { quarter: 'Sunday 27 September to Saturday 26 December 2026', history: 'Closed history from 29 March to 27 June 2026, settled by 7 August: orders, documents and decided deduction cases. Lists and replays cover the current quarter unless a from date reaches back.', story_clock: fmtET(storyClock()), moments: db.prepare('SELECT * FROM calendar ORDER BY as_of').all().map((m) => ({ ...m, as_of_eastern: fmtET(m.as_of) })) }; }
+export function calendar(db) { return { quarter: 'Sunday 27 September to Saturday 26 December 2026', history: 'Closed history from 29 March to 27 June 2026, settled by 7 August: orders, documents and decided deduction cases. Lists and replays cover the current quarter unless a from date reaches back.', story_clock: fmtET(storyClock()), order: 'Moments follow the supply chain stages, not the dates: partner requirements, fulfillment, sell-through and replenishment, invoice and payment, deductions and recovery, performance.',
+  moments: db.prepare('SELECT * FROM calendar ORDER BY seq').all().map(({ seq, id, stage, prototype, seen_by, as_of, anchor, moment, week }) => ({ id, stage, prototype, seen_by, as_of, as_of_eastern: fmtET(as_of), anchor, moment, week })) }; }

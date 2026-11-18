@@ -23,7 +23,10 @@ export default function ({ db, ok, eq }) {
       && n("SELECT count(*) n FROM finding_actions a JOIN finding_actions r ON r.finding_id = a.finding_id AND r.stage = 'Raised' JOIN findings f ON f.finding_id = a.finding_id WHERE f.side = ? AND a.at < r.at", side) === 0);
   }
   const a = findingOutcomes(db, 'Ashby', { asOf: T, finding: 'NR-46215' }).findings?.[0];
-  eq('findings.nr46215_decided_14h30_late_and_confirmed_by_rcv46215', [a?.decided_against_deadline, a?.decided_late, a?.confirmed_by, a?.decision], ['14 h 30 m after its deadline', true, 'RCV-46215', 'Approved as suggested']);
+  eq('findings.nr46215_decided_14h30_late_and_confirmed_by_rcv46215', [a?.decided_against_deadline, a?.decided_late, a?.confirmed_by, a?.decision], ['14 h 30 m after its deadline', true, 'RCV-46215', 'Approved as proposed']);
+  // P22 (17 November 2026): a person's decision on a proposal is approved as proposed, edited or declined, and no row names an agent.
+  eq('findings.person_decisions_are_approved_as_proposed_edited_or_declined', db.prepare("SELECT DISTINCT decision FROM finding_actions WHERE decision IS NOT NULL ORDER BY 1").all().map((r) => r.decision).filter((d) => !['Approved as proposed', 'Edited', 'Declined'].includes(d)), []);
+  eq('findings.no_row_names_an_agent', [db.prepare("SELECT count(*) n FROM findings WHERE proposed_by LIKE '%Agent%' OR problem LIKE '%Agent%' OR coalesce(proposal, '') LIKE '%Agent%'").get().n, db.prepare("SELECT count(*) n FROM finding_actions WHERE actor LIKE '%Agent%' OR coalesce(change, '') LIKE '%Agent%' OR coalesce(detail, '') LIKE '%Agent%' OR actor LIKE 'Standing policy%'").get().n], [0, 0]);
   ok('findings.each_side_is_refused_the_other_sides_findings', findingOutcomes(db, 'Northfield', { asOf: T, finding: 'NR-46215' }).found === false && /Not available to Northfield/.test(findingOutcomes(db, 'Northfield', { asOf: T, finding: 'NR-46215' }).message)
     && /Not available to Ashby/.test(findingOutcomes(db, 'Ashby', { asOf: T, finding: 'NFD-1' }).message));
   // Value is proven only by a record: every matched repayment is a receivables match, every repaid reversal a remittance adjustment.

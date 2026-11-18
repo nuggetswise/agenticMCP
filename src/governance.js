@@ -4,12 +4,13 @@
 import { fmtET } from '../world/lib.js';
 import * as D from './domain.js';
 import { replayAgentRule } from './agents.js';
+import { RULE_SETS, ruleSet, runtimeOf } from './credit.js';
 
 export const AS = 'ashby-assistant', NF = 'northfield-assistant';
 /** The agents on each connection, the jobs they work and the authority they act under. Authority limits are read from the catalogue. */
 export const AGENTS = {
   'Watch Agent': { connection: AS, jobs: ['missing_document'], authority: () => ({ rule: null, mode: 'approve', says: 'Proposes; Priya Raman approves before anything is sent' }) },
-  'Claim Agent': { connection: AS, jobs: ['deduction'], authority: (db) => ({ rule: 'AP-4.1', mode: 'policy', limit: `$${D.param(db, 'AP-4.1', 'max_amount')}`, says: `Disputes without asking only when the NF-7.4 evidence is in the case and the charge is under $${D.param(db, 'AP-4.1', 'max_amount')} (AP-4.1); otherwise Priya Raman decides` }) },
+  'Claim Agent': { connection: AS, jobs: ['deduction'], authority: () => ({ rule: 'AP-4.1', mode: 'approve', says: 'Proposes a dispute where the NF-7.4 evidence supports one; every dispute needs Priya Raman’s approval (AP-4.1)' }) },
   'Test Agent': { connection: AS, jobs: ['trade_test'], authority: () => ({ rule: null, mode: 'approve', says: 'Proposes; Priya Raman approves, Jordan Ellis activates' }) },
   'Shelf Agent': { connection: AS, jobs: ['shelf'], authority: () => ({ rule: 'AP-6.1', mode: 'approve', says: 'Recommends; Priya Raman approves and Jordan Ellis decides the order' }) },
   'Scout Agent': { connection: AS, jobs: ['shipment_risk'], authority: () => ({ rule: 'AP-3.2', mode: 'approve', says: 'Proposes Kinross tasks and Supplier ERP changes Priya Raman approves (AP-3.2); builds a ship notice only from the load scan under standing policy (AP-1.4); release always stays with Priya Raman (AP-1.3)' }) },
@@ -19,7 +20,9 @@ export const AGENTS = {
   'Match Agent': { connection: NF, jobs: ['three_way_match'], authority: () => ({ rule: null, mode: 'suggest', says: 'Names where a variance comes from and the next step; Jordan Ellis acts' }) },
 };
 export const agentOfJob = (job) => Object.keys(AGENTS).find((a) => AGENTS[a].jobs.includes(job)) || null;
-const findAgent = (name) => Object.keys(AGENTS).find((a) => a.toLowerCase() === String(name || '').trim().toLowerCase() || a.toLowerCase() === `${String(name || '').trim().toLowerCase()} agent`) || null;
+const findAgent = (name) => runtimeOf(name);
+/** The rule sets of a connection as a caller names them: claim (Ashby’s evidence rules), … */
+const namesOf = (cid) => Object.keys(AGENTS).filter((a) => AGENTS[a].connection === cid).map((a) => `${RULE_SETS[a].runtime} (${ruleSet(a)})`).join(', ');
 const J = (s) => (s ? JSON.parse(s) : null);
 const row = (r) => ({ id: `CL-${String(r.id).padStart(4, '0')}`, at: fmtET(r.at), agent: r.agent, kind: r.kind, rule: r.rule_id, change: J(r.change), result: J(r.result), run_by: r.run_by, note: r.note });
 
@@ -29,26 +32,24 @@ export function agentState(db, agent) {
   return r && r.kind === 'pause' ? { agent, state: 'Paused', since: fmtET(r.at), by: r.run_by, reason: r.note } : { agent, state: 'Active' };
 }
 export const isPaused = (db, agent) => !!agent && agentState(db, agent).state === 'Paused';
-/** An agent acts without asking only when its standing policy allows it and it is not paused (AP-4.1 for Claim Agent). */
-export const mayActWithoutAsking = (db, agent, policyAllows) => !!policyAllows && !isPaused(db, agent);
 
 /** Pause or resume one agent of this connection. Logged on the change list with who did it; a repeat changes nothing. */
 export function setAgentState(db, cid, { agent: name, state, by, reason }) {
   const agent = findAgent(name);
-  if (!agent || AGENTS[agent].connection !== cid) return { result: 'Invalid request', message: `No agent ${name || '(none)'} on this connection. Agents: ${Object.keys(AGENTS).filter((a) => AGENTS[a].connection === cid).join(', ')}.` };
+  if (!agent || AGENTS[agent].connection !== cid) return { result: 'Invalid request', message: `No rule set ${name || '(none)'} on this connection. Rule sets: ${namesOf(cid)}.` };
   const now = agentState(db, agent); const want = state === 'paused' ? 'Paused' : 'Active';
-  if (now.state === want) return { result: 'Unchanged', agent, state: want, message: `${agent} is already ${want.toLowerCase()}.` };
+  if (now.state === want) return { result: 'Unchanged', agent, state: want, message: `${ruleSet(agent)} are already ${want.toLowerCase()}.` };
   const id = db.prepare('INSERT INTO agent_changes (at, connection_id, agent, kind, rule_id, change, result, run_by, note) VALUES (?,?,?,?,?,?,?,?,?)')
     .run(new Date().toISOString(), cid, agent, want === 'Paused' ? 'pause' : 'resume', null, JSON.stringify({ from: now.state, to: want }), JSON.stringify({ state: want }), by, reason || null).lastInsertRowid;
-  return { result: want === 'Paused' ? 'Agent paused' : 'Agent resumed', agent, state: want, change: `CL-${String(id).padStart(4, '0')}`,
-    message: want === 'Paused' ? `${agent} proposes nothing while paused. Each event it would work arrives as a plain task with no proposal.` : `${agent} works new events again under its rules.` };
+  return { result: want === 'Paused' ? 'Paused' : 'Resumed', agent, state: want, change: `CL-${String(id).padStart(4, '0')}`,
+    message: want === 'Paused' ? `${ruleSet(agent)} propose nothing while paused. Each event they would work arrives as a plain task with no proposal.` : `${ruleSet(agent)} work new events again.` };
 }
 
 /** While an agent is paused, the event it would work arrives as a plain task: the record and the job, with no proposal (R15). */
 export function plainTask(db, out, agent) {
   const st = agentState(db, agent); const record = out.record || out.case || out.invoice || out.po || null;
   return { found: out.found !== false, job: out.job || null, record, as_of: out.as_of || null, agent, agent_state: 'Paused', paused_since: st.since, paused_by: st.by,
-    task: `Work ${record || 'this record'} by hand`, proposal: null, message: `${agent} is paused, so this arrives as a plain task with no proposal. Nothing is drafted or sent.`, ...(out.link ? { link: out.link } : {}) };
+    task: `Work ${record || 'this record'} by hand`, proposal: null, message: `${ruleSet(agent)} are paused, so this arrives as a plain task with no proposal. Nothing is drafted or sent.`, ...(out.link ? { link: out.link } : {}) };
 }
 
 /** Each agent of a connection with its state and authority limit (story 1). */
@@ -63,9 +64,9 @@ export function recordTrial(db, cid, { agent, rule, change, result, by }) {
 
 /** Replays a changed agent rule (replayAgentRule) and records the trial. Only rules this company owns, and only parameters the catalogue holds. */
 export function trialAgentRule(db, dataDb, cid, { job, rule, params, records, as_of }, by) {
-  const agent = agentOfJob(job); if (!agent || AGENTS[agent].connection !== cid) return { result: 'Invalid request', message: `No agent job ${job} on this connection` };
+  const agent = agentOfJob(job); if (!agent || AGENTS[agent].connection !== cid) return { result: 'Invalid request', message: `No rule job ${job} on this connection` };
   const r = dataDb.prepare('SELECT id, owner, params FROM rules WHERE id = ?').get(String(rule || '').toUpperCase());
-  if (!r || !r.params) return { result: 'Invalid request', message: `${rule} is not a rule with parameters an agent reads` };
+  if (!r || !r.params) return { result: 'Invalid request', message: `${rule} is not a rule with parameters a rule run reads` };
   if (cid === AS && !/^Ashby/.test(r.owner)) return { result: 'Invalid request', message: `${r.id} is ${r.owner}’s rule; Ashby can trial only its own rules` };
   const inForce = JSON.parse(r.params); const bad = Object.keys(params || {}).filter((k) => !(k in inForce) || typeof params[k] !== 'number');
   if (!Object.keys(params || {}).length || bad.length) return { result: 'Invalid request', message: `${r.id} holds ${Object.keys(inForce).join(', ')}; give numbers for those only${bad.length ? ` (not ${bad.join(', ')})` : ''}` };
@@ -92,7 +93,7 @@ export function changeList(db, cid, { limit = 50, kind } = {}) {
 // catalogue tables, modes from the change list). A company changes only its own rules: Ashby its policies and agreements here;
 // Northfield its guide through draft, replay and publish (P15). Reset restores the catalogue and clears the change list.
 const SOURCE_OF = (owner) => owner === 'Supplier ERP' ? 'Supplier ERP' : /^Ashby/.test(owner || '') ? 'Ashby manual rules' : owner === 'Northfield' ? 'Northfield guide' : 'Standards and law';
-const JOB_OF_RULE = { 'AP-4.1': 'deduction', 'AP-6.1': 'shelf', 'AP-6.2': 'shelf', 'AP-6.3': 'shelf', 'AP-6.4': 'shelf' };
+const JOB_OF_RULE = { 'AP-6.1': 'shelf', 'AP-6.2': 'shelf', 'AP-6.3': 'shelf', 'AP-6.4': 'shelf' };
 const PERSON_OF = { [AS]: 'Priya Raman', [NF]: 'Jordan Ellis' };
 const lastRuleChange = (db, id) => { const r = db.prepare("SELECT * FROM agent_changes WHERE kind = 'rule_change' AND rule_id = ? ORDER BY id DESC LIMIT 1").get(id); return r ? { at: fmtET(r.at), by: r.run_by, change: J(r.change) } : null; };
 
@@ -124,13 +125,13 @@ export function updateSupplierRule(db, cid, { rule, params, apply, records, as_o
   if (!r.params) return { result: 'Invalid request', message: `${r.id} has no parameter to change; its wording is set in the catalogue` };
   const inForce = JSON.parse(r.params); const bad = Object.keys(params || {}).filter((k) => !(k in inForce) || typeof params[k] !== 'number' || !(params[k] > 0));
   if (!Object.keys(params || {}).length || bad.length) return { result: 'Invalid request', message: `${r.id} holds ${Object.keys(inForce).join(', ')}; give positive numbers for those only${bad.length ? ` (not ${bad.join(', ')})` : ''}` };
-  const job = JOB_OF_RULE[r.id]; let effect = { touches: 'No agent reads this parameter on open work', changed: [], records: 0 };
+  const job = JOB_OF_RULE[r.id]; let effect = { touches: 'No rule run reads this parameter on open work', changed: [], records: 0 };
   if (job) {
     const asOf = D.asOfDate(as_of || (job === 'deduction' ? '2026-12-28T10:00:00-05:00' : undefined)); let recs = Array.isArray(records) && records.length ? records : null;
     if (!recs && job === 'deduction') recs = db.prepare("SELECT DISTINCT json_extract(data, '$.case') c FROM events WHERE kind = 'case.opened' AND at >= '2026-09-27' AND at <= ?").all(asOf.toISOString()).map((x) => x.c);
     if (!recs && job === 'shelf') recs = db.prepare('SELECT DISTINCT store FROM store_activity ORDER BY store').all().map((x) => String(x.store));
     const rep = replayAgentRule(db, { job, change: { rule: r.id, params }, records: recs || [], asOf });
-    effect = { touches: `${agentOfJob(job)}: ${rep.changed.length} of ${rep.records} open records change next step or authority`, agent: agentOfJob(job), changed: rep.changed, records: rep.records, rows: rep.rows, as_of: rep.as_of };
+    effect = { touches: `${ruleSet(agentOfJob(job))}: ${rep.changed.length} of ${rep.records} open records change next step or authority`, agent: agentOfJob(job), changed: rep.changed, records: rep.records, rows: rep.rows, as_of: rep.as_of };
   }
   const from = Object.fromEntries(Object.keys(params).map((k) => [k, inForce[k]]));
   if (!apply) return { result: 'Effect shown; nothing saved', rule: r.id, from, to: params, effect, next: 'Call again with apply true to save the change.' };
@@ -140,7 +141,7 @@ export function updateSupplierRule(db, cid, { rule, params, apply, records, as_o
   db.prepare('UPDATE rule_versions SET params = ?, statement = ? WHERE rule_id = ? AND valid_to IS NULL').run(JSON.stringify(next), statement, r.id);
   const cl = db.prepare('INSERT INTO agent_changes (at, connection_id, agent, kind, rule_id, change, result, run_by, note) VALUES (?,?,?,?,?,?,?,?,?)')
     .run(new Date().toISOString(), cid, effect.agent || 'Rules', 'rule_change', r.id, JSON.stringify({ rule: r.id, from, to: params }), JSON.stringify(effect), by || PERSON_OF[cid], null).lastInsertRowid;
-  return { result: 'Rule changed', rule: r.id, from, to: params, statement, effect, change: `CL-${String(cl).padStart(4, '0')}`, applies: 'Every agent reads it on its next run' };
+  return { result: 'Rule changed', rule: r.id, from, to: params, statement, effect, change: `CL-${String(cl).padStart(4, '0')}`, applies: 'Every rule run reads it from its next run' };
 }
 
 /** The approval mode each agent action runs under now, from the latest mode change on the change list (none: the agent's default). */
@@ -152,14 +153,14 @@ export function modesOf(db, agent) {
  *  locked actions and guardrails stay as they are. Recorded on the change list; the agent uses it on its next run. */
 export function setAgentMode(db, cid, { agent: name, action, mode, retailer = 'Northfield Retailer' }, actionsOf, by) {
   const agent = findAgent(name);
-  if (!agent || AGENTS[agent].connection !== cid) return { result: 'Invalid request', message: `No agent ${name || '(none)'} on this connection. Agents: ${Object.keys(AGENTS).filter((a) => AGENTS[a].connection === cid).join(', ')}.` };
+  if (!agent || AGENTS[agent].connection !== cid) return { result: 'Invalid request', message: `No rule set ${name || '(none)'} on this connection. Rule sets: ${namesOf(cid)}.` };
   if (!['suggest', 'approve', 'policy'].includes(mode)) return { result: 'Invalid request', message: 'Mode is suggest, approve or policy' };
   if (retailer !== 'Northfield Retailer') return { result: 'Invalid request', message: 'Northfield Retailer is the only retailer in this world' };
-  const acts = actionsOf(agent); if (!acts) return { result: 'Invalid request', message: `${agent} has no settable actions` };
-  const a = acts[action]; if (!a) return { result: 'Invalid request', message: `${agent} actions: ${Object.keys(acts).join(', ')}` };
+  const acts = actionsOf(agent); if (!acts) return { result: 'Invalid request', message: `${ruleSet(agent)} have no settable actions` };
+  const a = acts[action]; if (!a) return { result: 'Invalid request', message: `Actions of ${ruleSet(agent)}: ${Object.keys(acts).join(', ')}` };
   const may = a.person_may_change ?? a.priya_may_change ?? a.jordan_may_change; if (!may) return { result: 'Invalid request', message: `${action} is locked at ${a.mode} (${a.rule || 'guardrail'}); only the administrator changes it` };
   const now = modesOf(db, agent)[action] || a.mode; if (now === mode) return { result: 'Unchanged', agent, action, mode };
   const cl = db.prepare('INSERT INTO agent_changes (at, connection_id, agent, kind, rule_id, change, result, run_by, note) VALUES (?,?,?,?,?,?,?,?,?)')
     .run(new Date().toISOString(), cid, agent, 'mode', a.rule || null, JSON.stringify({ action, from: now, to: mode, retailer }), JSON.stringify({ mode }), by || PERSON_OF[cid], null).lastInsertRowid;
-  return { result: 'Mode changed', agent, action, retailer, from: now, to: mode, change: `CL-${String(cl).padStart(4, '0')}`, applies: `${agent} uses it on its next run` };
+  return { result: 'Mode changed', agent, action, retailer, from: now, to: mode, change: `CL-${String(cl).padStart(4, '0')}`, applies: `${ruleSet(agent)} use it from their next run` };
 }

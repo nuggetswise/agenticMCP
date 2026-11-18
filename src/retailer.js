@@ -5,6 +5,7 @@
 import { fmtET } from '../world/lib.js';
 import { normPo, rule, param, paramAt, chargeOf, storyClock, timeLeft, notYet, promotionOf } from './domain.js';
 import { otif, scorecardAsOf, supplierRanking, QUARTER } from './score.js';
+import { foundBy } from './credit.js';
 import { et } from '../world/lib.js';
 
 /** The current period starts here. Lists and replays cover it by default; `from` reaches the history before it. */
@@ -90,15 +91,16 @@ export function caseNF(db, ref, asOf = storyClock()) {
   const decided = caseEv.filter((e) => e.kind === 'case.decision').map((e) => ({ at: fmtET(e.at), charge: e.d.charge, decision: e.d.decision, decided_by: e.d.decided_by, recommended_by: e.d.recommended_by || null, reason: e.d.reason }));
   const disputes = caseEv.filter((e) => e.kind === 'case.dispute').map((e) => ({ at: fmtET(e.at), charge: e.d.charge, amount: e.d.amount, evidence: e.d.evidence, drafted_by: e.d.drafted_by || null, approved_by: e.d.approved_by }));
   const promo = c.charge === 'PROMO' ? promotionOf(db, c.deduction) : null;
-  const review = reviewRecommendation(db, { charge: c.charge, shared: [...shared], disputes, decided, promo });
+  // The recommendation is credited to the evidence rule that produced it; no agent is named.
+  const rec0 = reviewRecommendation(db, { charge: c.charge, shared: [...shared], disputes, decided, promo }); const review = rec0.charge ? { found_by: foundBy('Review Agent', rec0.rule?.id), ...rec0 } : rec0;
   if (promo) return { found: true, case: c.case, supplier: supplierName(db, db.prepare('SELECT supplier_id FROM orders WHERE po = ?').get(po)?.supplier_id), po, as_of: fmtET(asOf), charge: c.charge, kind: 'Promotion deduction', amount: c.amount, deduction: c.deduction, deal: promo.deal, promotion: promo,
     withheld: adj.filter((a) => a.amount < 0).map((a) => ({ payment: a.payment, at: fmtET(a.paid_at), amount: a.amount, reference: a.reference, invoice: a.invoice })), repaid: repaidOn(db, decided, { ...c, po }, T),
     evidence_required: 'The deal Northfield announced (889) and the record the claimed amount rests on: store activity (852), ship notices (856) or the invoice (810)', evidence_in_case: [...shared], disputes, decisions: decided, reviewer_notes: notes, review_agent: review,
-    authority: 'Jordan Ellis decides each charge in the case (NF-7.7). Review Agent checks the evidence and recommends; it decides nothing.', link: `order/${encodeURIComponent(po)}` };
+    authority: 'Jordan Ellis decides each charge in the case (NF-7.7). Northfield’s evidence rules check the evidence and recommend; they decide nothing.', link: `order/${encodeURIComponent(po)}` };
   return { found: true, case: c.case, supplier: supplierName(db, db.prepare('SELECT supplier_id FROM orders WHERE po = ?').get(po)?.supplier_id), po, as_of: fmtET(asOf), charge: c.charge, amount: c.amount, deduction: c.deduction, cartons: c.cartons,
     withheld: adj.filter((a) => a.amount < 0).map((a) => ({ payment: a.payment, at: fmtET(a.paid_at), amount: a.amount, reference: a.reference })), repaid: repaidOn(db, decided, { ...c, po }, T),
     evidence_required: rule(db, 'NF-7.4'), evidence_in_case: [...shared], disputes, decisions: decided, reviewer_notes: notes, review_agent: review,
-    authority: 'Jordan Ellis decides each charge in the case (NF-7.7). Review Agent checks the evidence and recommends; it decides nothing.', link: `order/${encodeURIComponent(po)}` };
+    authority: 'Jordan Ellis decides each charge in the case (NF-7.7). Northfield’s evidence rules check the evidence and recommend; they decide nothing.', link: `order/${encodeURIComponent(po)}` };
 }
 
 /** Repayment of a reversed charge, read from Northfield's own remittance: a later payment line that pays more than its invoice by the reversed amount. */
@@ -112,7 +114,7 @@ function repaidOn(db, decided, c, T) {
   return hit ? [{ payment: hit.payment, at: fmtET(hit.paid_at), amount: Math.round((hit.paid - hit.invoice_amount) * 100) / 100, carried_on: `${hit.invoice} (${hit.po})`, reference: c.deduction }] : [];
 }
 
-/** Review Agent: is the evidence the guide requires in the case, and what does it support? */
+/** Northfield's evidence rules: is the evidence the guide requires in the case, and what does it support? */
 export function reviewRecommendation(db, { charge, shared, disputes, decided, promo = null }) {
   const pending = disputes.filter((d) => !decided.some((x) => x.charge === d.charge));
   if (!pending.length) return { next_step: decided.length ? 'nothing_to_do' : 'wait_for_dispute', reason: decided.length ? 'Every disputed charge is decided' : 'The supplier has not disputed' };
@@ -155,11 +157,11 @@ export function threeWayMatch(db, ref, asOf = storyClock()) {
   else if (bad.some((l) => l.origin.startsWith('quantity: billed more than shipped'))) { origin = 'quantity: billed more than the ship notice'; step = 'hold_and_request_corrected_invoice'; next = { record: 'Hold the invoice; the supplier sends a corrected invoice or credit memo', rule: rule(db, 'NF-7.8') }; }
   else if (bad.some((l) => l.origin.startsWith('quantity'))) { origin = 'quantity: received less than billed'; step = 'settle_on_receiving_advice'; next = { record: 'The receiving advice settles it: a shortage charge (SH01) or a revised receiving advice', rule: rule(db, 'NF-5.5') }; }
   else { origin = 'price'; step = 'hold_for_price'; next = { record: 'The accepted PO price settles it; the line is held', rule: rule(db, 'NF-7.11') }; }
-  return { found: true, agent: 'Match Agent', acting_for: 'Jordan Ellis', po, supplier: supplierName(db, o.supplier_id), invoice: inv.invoice, invoice_status: corrections.some((c) => c.replaces === inv.invoice) || !/replaced/i.test(inv.status) ? inv.status : 'Held', invoice_total: inv.total, as_of: fmtET(asOf), lines, corrections, variance_origin: origin, next_step: step, deciding_record: next,
+  return { found: true, found_by: bad.length ? foundBy('Match Agent', next.rule?.id) : 'Northfield matching rules NF-7.8 and NF-7.11: no variance', acting_for: 'Jordan Ellis', po, supplier: supplierName(db, o.supplier_id), invoice: inv.invoice, invoice_status: corrections.some((c) => c.replaces === inv.invoice) || !/replaced/i.test(inv.status) ? inv.status : 'Held', invoice_total: inv.total, as_of: fmtET(asOf), lines, corrections, variance_origin: origin, next_step: step, deciding_record: next,
     evidence: { purchase_order: `${po} accepted ${lines.map((l) => l.accepted).join(' · ')}`, ship_notices: lines.map((l) => l.shipped).join(' · '), receiving_advice: lines.map((l) => l.received).join(' · '), invoice: `${inv.invoice} billed ${lines.map((l) => l.billed).join(' · ')}`, corrections: corrections.map((c) => c.invoice).join(', ') || 'None' },
     rule_baseline: 'Holds every invoice that does not match and leaves a payables clerk to find why',
     not_in_this_world: 'Promotion allowances and tax lines: Northfield invoices in this quarter carry none, so neither can be the origin.',
-    authority: 'Approval of payment stays in Northfield accounts payable with Jordan Ellis. The agent finds the origin and fetches the record; it approves nothing.' };
+    authority: 'Approval of payment stays in Northfield accounts payable with Jordan Ellis. The matching rule names where the variance comes from and the record that settles it; it approves nothing.' };
 }
 
 /** Draft rules: what each checks, and replaying one against the quarter's exchanged X12 before it is published. */

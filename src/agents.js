@@ -2,13 +2,15 @@
 // returns the next step, the evidence it used and what the simplest rule would have done. Nothing here sends or changes anything.
 import { fmtET } from '../world/lib.js';
 import { normPo, rule, deductionCase, storyClock, param, chargeOf, withRuleChange } from './domain.js';
+import { foundBy } from './credit.js';
 
 const J = (s) => (s ? JSON.parse(s) : {});
 const H = 3600000;
 const evs = (db, po, t) => db.prepare('SELECT * FROM events WHERE po = ? AND at <= ? ORDER BY at').all(po, t).map((e) => ({ ...e, d: J(e.data) }));
 /** A rule's time window in hours, as the catalogue states it (R22). */
 const windowHours = (db, id) => { const r = db.prepare('SELECT window_hours FROM rules WHERE id = ?').get(id); if (!r || r.window_hours == null) throw new Error(`Rule ${id} has no time window`); return r.window_hours; };
-const out = (job, agent, record, asOf, o) => ({ job, agent, acting_for: 'Priya Raman', record, as_of: fmtET(asOf), ...o, authority: o.authority || 'Priya Raman approves before anything is sent', changes_nothing: true });
+/** One finding, credited to the rule that found it (`found_by`): the rule the matched row names, else the rule set's lead rule. No agent is named. */
+const out = (job, agent, record, asOf, o) => ({ job, found_by: foundBy(agent, o.credit || o.rule?.id || (o.rules || [])[0]), acting_for: 'Priya Raman', record, as_of: fmtET(asOf), ...(({ credit, ...rest }) => rest)(o), authority: o.authority || 'Priya Raman approves before anything is sent', changes_nothing: true });
 
 /** Watch Agent: a required document is missing or rejected. What do the source records say, and what happens next? */
 export function watchDecision(db, poIn, asOf = storyClock()) {
@@ -35,7 +37,7 @@ export function claimDecision(db, ref, asOf = storyClock()) {
   const c = deductionCase(db, ref, asOf); if (!c.found) return c;
   // A promotion deduction (P20): dispute only what the deal does not support, with the record that contradicts it.
   if (c.promotion) { const u = c.promotion.unsupported_amount;
-    return out('deduction', 'Claim Agent', c.case, asOf, { authority: 'Priya Raman approves each dispute (AP-4.1)', policy: rule(db, 'AP-4.1'), po: c.po, charge: c.charge, amount: c.amount, dispute_window: c.dispute_window, evidence: c.promotion.records,
+    return out('deduction', 'Claim Agent', c.case, asOf, { credit: u > 0 ? 'AP-4.1' : 'AP-4.2', authority: 'Priya Raman approves each dispute (AP-4.1)', policy: rule(db, 'AP-4.1'), po: c.po, charge: c.charge, amount: c.amount, dispute_window: c.dispute_window, evidence: c.promotion.records,
       decision_row: u > 0 ? 'The deal does not support the whole deduction' : 'The deduction matches its deal', next_step: u > 0 ? 'dispute_unsupported_amount' : 'accept', dispute_amount: u, stands: c.promotion.supported_amount, reason: c.promotion.reason,
       rule_baseline: 'Accept every deduction carrying a promotion reason code', dollars_the_rule_gives_up: u, confirmed_by: 'The repayment matched in Ashby’s receivables' }); }
   const st = Object.fromEntries(c.evidence.map((v) => [v.kind, v.state]));
@@ -48,9 +50,9 @@ export function claimDecision(db, ref, asOf = storyClock()) {
   else if (tally && tally !== 'Not found') { row = 'No load scan; the warehouse holds a load tally by SSCC'; next = 'attach_load_tally_and_dispute'; detail = { accepted_by: rule(db, 'NF-5.3') }; }
   else { row = 'No load scan or load tally anywhere'; next = 'recommend_accept'; detail = { reason: 'A dispute without the required evidence is not reviewed and draws ID01 $150', rule: rule(db, 'NF-7.5') }; }
   const baseline = scan === 'In the case' ? 'Dispute' : 'Accept the charge';
-  const onHand = scan === 'In the case' || tally === 'In the case'; const limit = param(db, 'AP-4.1', 'max_amount');
-  const authority = next === 'dispute_now' && onHand && c.amount < limit ? `Claim Agent may dispute without asking: the NF-7.4 evidence is in the case and $${c.amount.toFixed(2)} is under $${limit} (AP-4.1)` : next.startsWith('recommend_accept') ? 'Priya Raman decides whether to accept or write off (AP-4.2)' : 'Priya Raman decides between dispute and write-off (AP-4.1)';
-  return out('deduction', 'Claim Agent', c.case, asOf, { authority, policy: rule(db, 'AP-4.1'), po: c.po, charge: c.charge, amount: c.amount, dispute_window: c.dispute_window, evidence: Object.fromEntries(c.evidence.map((v) => [v.evidence, v.state])), decision_row: row, next_step: next, ...detail, rule_baseline: baseline, dollars_the_rule_gives_up: baseline === 'Accept the charge' && next !== 'recommend_accept' && !next.startsWith('recommend_accept_and') ? c.amount : 0, confirmed_by: 'The repayment matched in Ashby’s receivables' });
+  // AP-4.1: every dispute needs Priya Raman's approval, whatever the amount and wherever the proof sits.
+  const authority = next.startsWith('recommend_accept') ? 'Priya Raman decides whether to accept or write off (AP-4.2)' : 'Priya Raman approves each dispute and decides between dispute and write-off (AP-4.1)';
+  return out('deduction', 'Claim Agent', c.case, asOf, { credit: next.startsWith('recommend_accept') ? 'AP-4.2' : 'AP-4.1', authority, policy: rule(db, 'AP-4.1'), po: c.po, charge: c.charge, amount: c.amount, dispute_window: c.dispute_window, evidence: Object.fromEntries(c.evidence.map((v) => [v.evidence, v.state])), decision_row: row, next_step: next, ...detail, rule_baseline: baseline, dollars_the_rule_gives_up: baseline === 'Accept the charge' && next !== 'recommend_accept' && !next.startsWith('recommend_accept_and') ? c.amount : 0, confirmed_by: 'The repayment matched in Ashby’s receivables' });
 }
 
 /** Test Agent: a test ship notice failed the pack rule. Is the Supplier ERP record wrong, or the map? */
@@ -130,7 +132,7 @@ export const JOBS = { missing_document: (db, r, t) => watchDecision(db, r, t), d
 /** Replays a proposed change to an agent's rule against every record the agent would see at one time, beside the rule in force (T2.3).
  *  `change` is { rule, params }; only parameters the catalogue already holds can change. Nothing is stored or sent. */
 export function replayAgentRule(db, { job, change, records, asOf }) {
-  const f = JOBS[job]; if (!f) return { found: false, message: `No agent job ${job}` };
+  const f = JOBS[job]; if (!f) return { found: false, message: `No rule job ${job}` };
   // Compared on the next step and on who may act: a change to an authority limit moves the second, not the first.
   const pick = (r) => ({ next_step: r.next_step, authority: r.authority });
   const now = records.map((r) => pick(f(db, r, asOf)));

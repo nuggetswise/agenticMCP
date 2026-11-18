@@ -145,6 +145,15 @@ eq('scorecard.cases', sc.cases, 48000); eq('scorecard.failing', [sc.failing_case
 eq('scorecard.lines', [sc.failing_lines, sc.by_reason.map((r) => [r.lines, r.cases])], [108, [[31, 1794], [18, 1260], [9, 720], [6, 480], [44, 66]]]);
 // Order story and the money trail
 const st = D.lifecycle(ash, 'NR-450118');
+// 18 November 2026: get_order with as_of returns the order as it stood then. At the P5 moment (17:12 on 8 December) NR-460207 shows nothing dated later:
+// no damage scan (17:21), no ship notice (18:06), no receipt; without as_of the whole history is returned as before.
+{ const until = new Date('2026-12-08T17:12:00-05:00'); const cut = D.lifecycle(ash, 'NR-460207', until, { until }); const all = D.lifecycle(ash, 'NR-460207');
+  const stamps = (JSON.stringify(cut).match(/20\d\d-\d\d-\d\d \d\d:\d\d ET/g) || []).filter((x) => x > '2026-12-08 17:12 ET');
+  eq('order.as_of_leaves_out_later_records', [stamps, cut.documents.some((d) => /\(856\)/.test(d.document)), cut.receipts.length, cut.other_records.some((r) => r.record === 'wms.damage_scan'), all.other_records.some((r) => r.record === 'wms.damage_scan'), all.receipts.length > 0],
+    [[], false, 0, false, true, true]);
+  // INV-7731 before its correction: held, not yet replaced; its rejection open.
+  const u2 = new Date('2026-11-10T09:10:00-05:00'); const c2 = D.lifecycle(ash, 'NR-450118', u2, { until: u2 });
+  eq('order.as_of_status_as_it_stood', [c2.invoices.map((i) => [i.invoice, i.status]), [...new Set(c2.rejections.filter((r) => r.reference === 'INV-7731').map((r) => r.status))]], [[['INV-7731', 'Held by Northfield']], ['Open']]); }
 eq('story.two_shipments', st.shipments.map((s) => [s.ship_notice, s.cartons]), [['ASN-450118-1', 350], ['ASN-450118-2', 120]]);
 // 17 November 2026 (P23): the first ship notice leaves after the load scan that corrected it and within NF-4.2's hour of the 18:00 departure; its 997 follows it and the receiving advice comes next morning. The hold is released by Priya Raman (AP-1.3).
 { const one = (sql, ...a) => db.prepare(sql).get(...a); const asn = one("SELECT doc_id, sent_at FROM documents WHERE doc_type = '856' AND reference = 'ASN-450118-1'"); const fa = one("SELECT sent_at FROM documents WHERE doc_type = '997' AND answers_doc_id = ?", asn.doc_id); const rcv = one("SELECT sent_at FROM documents WHERE reference = 'RCV-DC2-77290'");

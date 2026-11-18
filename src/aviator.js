@@ -79,31 +79,42 @@ export const declarations = (tools) => tools.map((t) => { const p = toModel(raw(
 export const instruction = ({ person, company, other, clock }) => `You are Aviator, the assistant inside Trading Grid, acting for ${person} at ${company}. All data is fictional.
 Answer only from the results of the tools you call in this conversation. If the tools do not hold the answer, say so; never estimate, and never answer from general knowledge about a record.
 Name every record you used (PO number, document reference, case id). Unless the question gives a time, answer as of ${clock}.
+When the question or its context gives a time (as_of, or "As of"), that is now: pass it as as_of to every tool that takes one, and never mention a record, a status or an outcome dated after it, even when a tool returns one.
 A technical acknowledgment (997) is not business acceptance. Records that belong to ${other}, or to any company other than ${company}, are not available to ${company}. If the question names another company, pass it to the tool's supplier field when the tool has one and give the tool's refusal as it reads; otherwise answer "Not available to ${company}" and stop. Never answer a question about another company with ${company}'s own records.
 An order or document that ${company} is itself a party to is ${company}'s own: look it up before answering, and answer from what the tools return. Only when the tools return nothing about the event asked about, because it happened inside ${other} before anything reached ${company} (a hold, a correction, an approval), say in one sentence that this part is not available to ${company}, then list what ${company}'s own records show for that order: each document it sent or received, with its reference and its date. Never say a part is not available when a tool returned it.
 You cannot send, approve, dispute or change anything. When asked to act, say what would be proposed and that ${person} approves it on the Trading Grid screen.
 Give every quantity in the unit the record names (quantities_in, counting_unit, or a line's uom: CA is cases, EA is each); never call a quantity units. Ashby's orders with Northfield are in cases.
-Keep answers short: the answer first, then the records. Write no calendar dates: the screen shows none, so give the record and, where timing matters, the weekday and time.`;
+Write for a business reader: name a record by its reference and what it is (ship notice ASN-46215, Kinross load scan), never by a field name or a record kind such as wms.load_scan, and write cases or each, never CA or EA.
+Keep answers short: the answer first, then the records, in plain sentences with no markdown. Write no calendar dates and work out no weekday: where timing matters give the time as the record shows it (17:21 ET), and say the day before or the next day when it is not the day asked about.`;
 
 /** One question, answered by the model calling the connection's read tools. `callTool(name, args)` runs a tool exactly as the connection would. */
-export async function ask({ question, history = [], tools, callTool, side, clock, apiKey, fetchImpl = fetch, models = AVIATOR_MODELS, routes, maxTurns = 8 }) {
+export async function ask({ question, history = [], tools, callTool, side, clock, apiKey, fetchImpl = fetch, models = AVIATOR_MODELS, routes, maxTurns = 8, wait = 2500 }) {
   routes ||= apiKey ? models.map((m) => ({ key: apiKey, model: m })) : [];
   if (!routes.length) return { ok: false, status: 503, message: 'Aviator has no model key on this server.' };
   if (!question || !String(question).trim()) return { ok: false, status: 400, message: 'Ask a question.' };
   const contents = [...history.slice(-8).map((h) => ({ role: h.role === 'model' ? 'model' : 'user', parts: [{ text: String(h.text).slice(0, 4000) }] })), { role: 'user', parts: [{ text: String(question).slice(0, 4000) }] }];
   // On the last step the model may call no more tools, so it answers from what it has already read.
-  const body = (last) => ({ systemInstruction: { parts: [{ text: instruction({ ...side, clock }) }] }, contents, tools: [{ functionDeclarations: declarations(tools) }], toolConfig: { functionCallingConfig: { mode: last ? 'NONE' : 'AUTO' } }, generationConfig: { temperature: 0 } });
-  const called = []; let model = null;
+  const body = (last) => ({ systemInstruction: { parts: [{ text: instruction({ ...side, clock }) }] }, contents, tools: [{ functionDeclarations: declarations(tools) }], toolConfig: { functionCallingConfig: { mode: last ? 'NONE' : force ? 'ANY' : 'AUTO' } }, generationConfig: { temperature: 0 } });
+  const called = []; let model = null; let force = false;
+  // A busy (503) or rate-limited (429) answer on every route is retried twice after a short wait; one model call never waits past 60 seconds.
+  const post = async (rt, last) => { try { return await fetchImpl(`${API}/${rt.model}:generateContent`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': rt.key }, body: JSON.stringify(body(last)), signal: AbortSignal.timeout(60000) }); } catch (e) { return { ok: false, status: 503, text: async () => `No answer from the model in time (${e.name})` }; } };
   for (let turn = 0; turn < maxTurns; turn++) {
     let data = null, err = null;
+    for (let round = 0; round < 3 && !data; round++) {
+    if (round) await new Promise((res) => setTimeout(res, wait * round));
     for (const rt of model ? [model, ...routes.filter((x) => x !== model)] : routes) {
-      const r = await fetchImpl(`${API}/${rt.model}:generateContent`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': rt.key }, body: JSON.stringify(body(turn === maxTurns - 1)) });
+      const r = await post(rt, turn === maxTurns - 1);
       if (r.ok) { data = await r.json(); model = rt; break; }
       err = { status: r.status, text: (await r.text()).slice(0, 300) }; if (![404, 429, 500, 503].includes(r.status)) break; // unknown or busy model: try the next one
+    }
+    if (err && ![429, 503].includes(err.status)) break;
     }
     if (!data) return { ok: false, status: 502, message: `The model did not answer (${err?.status}).`, detail: err?.text, tools_called: called };
     const content = data.candidates?.[0]?.content; const parts = content?.parts || [];
     const calls = parts.filter((p) => p.functionCall);
+    // An answer given before any record was read is not an answer from the records: ask once more, requiring a tool call.
+    if (!calls.length && !called.length && !force && turn < maxTurns - 1) { force = true; continue; }
+    force = false;
     if (!calls.length) { const text = parts.map((p) => p.text || '').join('').trim(); return { ok: true, answer: text || 'No answer.', answered_from_tools: called.length > 0, tools_called: called, model: model.model, route: model.route }; }
     contents.push(content);
     const known = new Set(tools.map((t) => t.name));

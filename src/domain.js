@@ -2,6 +2,7 @@
 // One timeline. Record lookups return the record's whole history; questions about "now" take an as-of time.
 import { PRECEDENCE } from '../world/ref.js';
 import { fmtET, et } from '../world/lib.js';
+import { quantitiesIn } from './score.js';
 
 export const COMPANY = 'ASHBY';
 export const NOT_AVAILABLE = 'Not available to Ashby';
@@ -211,7 +212,7 @@ export function lifecycle(db, poIn, asOf = null) {
   const locName = (id) => db.prepare('SELECT name FROM locations WHERE id = ?').get(id)?.name || id;
   return {
     found: true, po, retailer: 'Northfield Retailer', programme: o.programme, ship_to: locName(o.ship_to),
-    received: fmtET(o.received_at), requested_delivery: o.requested_delivery, order_value: o.order_value, accepted_value: o.accepted_value,
+    received: fmtET(o.received_at), requested_delivery: o.requested_delivery, order_value: o.order_value, accepted_value: o.accepted_value, quantities_in: quantitiesIn(db, po),
     lines: db.prepare('SELECT line, sku, qty_original ordered_first, qty_ordered ordered_now, qty_accepted accepted, price, uom, delivery_date FROM order_lines WHERE po = ? ORDER BY line').all(po).map((r) => ({ ...r })),
     changes: db.prepare('SELECT seq change, line, code, qty, delivery_date, state, sent_at FROM order_changes WHERE po = ? ORDER BY seq, line').all(po).map((c) => ({ ...c, sent_at: fmtET(c.sent_at) })),
     shipments: db.prepare('SELECT * FROM shipments WHERE po = ? ORDER BY shipped_at').all(po).map((s) => ({ ship_notice: s.shipment_id, sent: fmtET(s.sent_at), truck_left: fmtET(s.shipped_at), cartons: s.cartons, ship_from: locName(s.ship_from), bill_of_lading: s.bol, seal: s.seal })),

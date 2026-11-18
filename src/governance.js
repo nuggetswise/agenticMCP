@@ -85,7 +85,7 @@ export function trialAgentRule(db, dataDb, cid, { job, rule, params, records, as
 /** The change list of a connection, newest first, with each agent's state now. */
 export function changeList(db, cid, { limit = 50, kind } = {}) {
   const rows = db.prepare(`SELECT * FROM agent_changes WHERE connection_id = ?${kind ? ' AND kind = ?' : ''} ORDER BY id DESC LIMIT ?`).all(...[cid, kind, limit].filter((x) => x !== undefined));
-  return { connection: cid, agents: agentsOf(db, cid), entries: rows.map(row) };
+  return { connection: cid, agents: agentsOf(db, cid), aviator_permissions: aviatorPermissions(db, cid), entries: rows.map(row) };
 }
 
 // ---------- P21 Admin and rules: rules by source, a supplier's own rule changed with its effect shown first, approval modes ----------
@@ -149,6 +149,42 @@ export function modesOf(db, agent) {
   const out = {}; for (const r of db.prepare("SELECT change FROM agent_changes WHERE kind = 'mode' AND agent = ? ORDER BY id").all(agent)) { const c = J(r.change); out[c.action] = c.to; }
   return out;
 }
+// ---------- Aviator's permissions, per action (P21, 18 November 2026) ----------
+// What Aviator may do when asked about an action: answer only, or propose an action card the person approves. The record
+// is the change list: an editable action starts at Answer only and takes the latest change. Locked actions never change.
+// Aviator never acts unasked, never releases a held ship notice without Priya Raman's Approve, never decides a Northfield charge.
+export const AVIATOR_PERMISSIONS = ['answer_only', 'propose_action_card'];
+export const AVIATOR_ACTIONS = {
+  [AS]: {
+    open_dispute: { label: 'Open a dispute', editable: true, starts: 'answer_only', approver: 'Priya Raman', rule: 'AP-4.1' },
+    request_order_change: { label: 'Request an order change', editable: true, starts: 'answer_only', approver: 'Priya Raman', rule: null },
+    release_held_ship_notice: { label: 'Release a held ship notice', editable: false, starts: 'propose_action_card', approver: 'Priya Raman', rule: 'AP-1.3', locked: 'Locked: a held ship notice is released only on Priya Raman’s Approve' },
+  },
+  [NF]: {
+    reject_invoice_lines: { label: 'Reject invoice lines with an application advice (EDI 824)', editable: true, starts: 'answer_only', approver: 'Jordan Ellis', rule: 'NF-7.8' },
+    request_supplier_change: { label: 'Request a change from a supplier', editable: true, starts: 'answer_only', approver: 'Jordan Ellis', rule: null },
+    decide_charge: { label: 'Decide a charge', editable: false, starts: 'answer_only', approver: 'Jordan Ellis', rule: 'NF-7.7', locked: 'Locked to answer only: Jordan Ellis decides every charge' },
+    publish_rule: { label: 'Publish a rule', editable: false, starts: 'answer_only', approver: 'Jordan Ellis', rule: null, locked: 'Locked to answer only: Jordan Ellis publishes a rule after its replay' },
+  },
+};
+const AVIATOR_LOCKS = ['Aviator never acts unasked', 'Aviator never releases a held ship notice without Priya Raman’s Approve', 'Aviator never decides a Northfield charge'];
+/** Aviator's permission for each action on this connection, as recorded now. */
+export function aviatorPermissions(db, cid) {
+  const last = {}; for (const r of db.prepare("SELECT * FROM agent_changes WHERE connection_id = ? AND kind = 'aviator_permission' ORDER BY id").all(cid)) { const c = J(r.change); last[c.action] = { permission: c.to, set_by: r.run_by, set_at: fmtET(r.at) }; }
+  return { for: PERSON_OF[cid], values: AVIATOR_PERMISSIONS, actions: Object.entries(AVIATOR_ACTIONS[cid]).map(([action, a]) => ({ action, label: a.label, permission: a.editable && last[action] ? last[action].permission : a.starts, editable: a.editable, approver: a.approver, rule: a.rule,
+    ...(a.locked ? { locked: a.locked } : {}), ...(a.editable && last[action] ? { set_by: last[action].set_by, set_at: last[action].set_at } : { set_by: null, note: a.editable ? 'Starts at answer only; no change recorded' : undefined }) })), locked: AVIATOR_LOCKS };
+}
+/** Sets Aviator's permission for one action; recorded on the change list with who set it. */
+export function setAviatorPermission(db, cid, { action, mode }, by) {
+  const acts = AVIATOR_ACTIONS[cid]; const a = acts[action]; if (!a) return { result: 'Invalid request', message: `Aviator actions on this connection: ${Object.keys(acts).join(', ')}` };
+  if (!AVIATOR_PERMISSIONS.includes(mode)) return { result: 'Invalid request', message: `Aviator’s permission is ${AVIATOR_PERMISSIONS.join(' or ')}` };
+  if (!a.editable) return { result: 'Invalid request', message: `${action}: ${a.locked}` };
+  const now = aviatorPermissions(db, cid).actions.find((x) => x.action === action).permission; if (now === mode) return { result: 'Unchanged', assistant: 'Aviator', action, permission: mode };
+  const cl = db.prepare('INSERT INTO agent_changes (at, connection_id, agent, kind, rule_id, change, result, run_by, note) VALUES (?,?,?,?,?,?,?,?,?)')
+    .run(new Date().toISOString(), cid, 'Aviator', 'aviator_permission', a.rule || null, JSON.stringify({ action, from: now, to: mode }), JSON.stringify({ permission: mode }), by || PERSON_OF[cid], null).lastInsertRowid;
+  return { result: 'Permission changed', assistant: 'Aviator', action, label: a.label, from: now, to: mode, change: `CL-${String(cl).padStart(4, '0')}`, applies: 'Aviator uses it from its next answer', approver: a.approver };
+}
+
 /** Sets one agent action's standing approval mode for a retailer: suggest, approve or policy. Only actions the person may change;
  *  locked actions and guardrails stay as they are. Recorded on the change list; the agent uses it on its next run. */
 export function setAgentMode(db, cid, { agent: name, action, mode, retailer = 'Northfield Retailer' }, actionsOf, by) {

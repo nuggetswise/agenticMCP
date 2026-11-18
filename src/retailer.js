@@ -3,8 +3,8 @@
 // warehouse, ERP, carrier and agent records stay Ashby's; Northfield's payables, draft rules and reviewer notes stay
 // Northfield's. Every answer is read as of a time; nothing here sends or changes anything.
 import { fmtET } from '../world/lib.js';
-import { normPo, rule, param, paramAt, chargeOf, storyClock, timeLeft, notYet, promotionOf } from './domain.js';
-import { otif, scorecardAsOf, supplierRanking, QUARTER } from './score.js';
+import { normPo, rule, param, paramAt, chargeOf, storyClock, timeLeft, notYet, promotionOf, asOfDate } from './domain.js';
+import { otif, scorecardAsOf, supplierRanking, QUARTER, quantitiesIn } from './score.js';
 import { foundBy } from './credit.js';
 import { et } from '../world/lib.js';
 
@@ -31,12 +31,12 @@ export function trail(db, { po: poIn, supplier, days = 30, asOf = storyClock() }
     const po = normPo(poIn); const o = db.prepare('SELECT * FROM orders WHERE po = ?').get(po); if (!o) return { found: false, message: `No order ${po} at Northfield` }; if (o.received_at > T) return notYet(po, asOf);
     const docs = db.prepare(`SELECT * FROM documents WHERE po = ? AND sent_at <= ? AND doc_type IN (${SHARED_SETS.map(() => '?').join(',')}) ORDER BY sent_at`).all(po, T, ...SHARED_SETS);
     const errs = db.prepare('SELECT e.*, d.reference FROM errors e JOIN documents d ON d.doc_id = e.doc_id JOIN documents r ON r.doc_id = e.reported_by WHERE d.po = ? AND r.sent_at <= ?').all(po, T);
-    return { found: true, po, supplier: supplierName(db, o.supplier_id), as_of: fmtET(asOf), order_value: o.order_value, requested_delivery: o.requested_delivery,
+    return { found: true, po, supplier: supplierName(db, o.supplier_id), as_of: fmtET(asOf), order_value: o.order_value, requested_delivery: o.requested_delivery, quantities_in: quantitiesIn(db, po),
       documents: docs.map((d) => ({ sent: fmtET(d.sent_at), set: d.doc_type, document: d.name, reference: d.reference, from: d.sender_id === 'NORTHFIELD' ? 'Northfield' : supplierName(db, d.sender_id), status: d.status, link: `document/${encodeURIComponent(d.reference)}` })),
       rejections: errs.map((e) => ({ document: e.reference, cause: e.cause, rule: e.rule_id, channel: e.channel, status: e.status })),
       receipts: db.prepare('SELECT receipt, received_at, line, qty, short FROM receipts WHERE po = ? AND received_at <= ? ORDER BY received_at').all(po, T).map((r) => ({ ...r, received_at: fmtET(r.received_at) })),
       invoices: db.prepare('SELECT invoice, sent_at, total, status, replaces FROM invoices WHERE po = ? AND sent_at <= ? ORDER BY sent_at').all(po, T).map((i) => ({ ...i, sent_at: fmtET(i.sent_at) })),
-      not_shown: 'The supplier’s ERP, warehouse, carrier and agent records are the supplier’s own and are not shown.' };
+      not_shown: 'The supplier’s ERP, warehouse and carrier records are the supplier’s own and are not shown.' };
   }
   const s = findSupplier(db, supplier); if (!s) return { found: false, message: `No supplier ${supplier} trades with Northfield` };
   const from = new Date(asOf.getTime() - days * 24 * H).toISOString();
@@ -157,7 +157,7 @@ export function threeWayMatch(db, ref, asOf = storyClock()) {
   else if (bad.some((l) => l.origin.startsWith('quantity: billed more than shipped'))) { origin = 'quantity: billed more than the ship notice'; step = 'hold_and_request_corrected_invoice'; next = { record: 'Hold the invoice; the supplier sends a corrected invoice or credit memo', rule: rule(db, 'NF-7.8') }; }
   else if (bad.some((l) => l.origin.startsWith('quantity'))) { origin = 'quantity: received less than billed'; step = 'settle_on_receiving_advice'; next = { record: 'The receiving advice settles it: a shortage charge (SH01) or a revised receiving advice', rule: rule(db, 'NF-5.5') }; }
   else { origin = 'price'; step = 'hold_for_price'; next = { record: 'The accepted PO price settles it; the line is held', rule: rule(db, 'NF-7.11') }; }
-  return { found: true, found_by: bad.length ? foundBy('Match Agent', next.rule?.id) : 'Northfield matching rules NF-7.8 and NF-7.11: no variance', acting_for: 'Jordan Ellis', po, supplier: supplierName(db, o.supplier_id), invoice: inv.invoice, invoice_status: corrections.some((c) => c.replaces === inv.invoice) || !/replaced/i.test(inv.status) ? inv.status : 'Held', invoice_total: inv.total, as_of: fmtET(asOf), lines, corrections, variance_origin: origin, next_step: step, deciding_record: next,
+  return { found: true, quantities_in: quantitiesIn(db, po), found_by: bad.length ? foundBy('Match Agent', next.rule?.id) : 'Northfield matching rules NF-7.8 and NF-7.11: no variance', acting_for: 'Jordan Ellis', po, supplier: supplierName(db, o.supplier_id), invoice: inv.invoice, invoice_status: corrections.some((c) => c.replaces === inv.invoice) || !/replaced/i.test(inv.status) ? inv.status : 'Held', invoice_total: inv.total, as_of: fmtET(asOf), lines, corrections, variance_origin: origin, next_step: step, deciding_record: next,
     evidence: { purchase_order: `${po} accepted ${lines.map((l) => l.accepted).join(' · ')}`, ship_notices: lines.map((l) => l.shipped).join(' · '), receiving_advice: lines.map((l) => l.received).join(' · '), invoice: `${inv.invoice} billed ${lines.map((l) => l.billed).join(' · ')}`, corrections: corrections.map((c) => c.invoice).join(', ') || 'None' },
     rule_baseline: 'Holds every invoice that does not match and leaves a payables clerk to find why',
     not_in_this_world: 'Promotion allowances and tax lines: Northfield invoices in this quarter carry none, so neither can be the origin.',
@@ -185,18 +185,18 @@ export const REPLAY_CHECKS = {
   carton_contents_units: { what: 'Carton contents match the ship notice, charged per unit that differs', set: '856', current: 'NF-4.5 ($150 plus $1 per carton)', currentValue: 0, currentCharge: 'NF-4.5' },
   ship_notice_accuracy_pct: { what: 'Ship notice accurate and complete, charged as N percent of the order’s cost', set: '856', current: null },
 };
-function failsOf(db, check, value) {
-  const docs = (set) => db.prepare(`SELECT d.*, o.supplier_id sup FROM documents d JOIN orders o ON o.po = d.po WHERE d.doc_type = ? AND d.status <> 'Superseded' AND d.sent_at >= ?`).all(set, QUARTER_FROM);
+function failsOf(db, check, value, TO = '9999') {
+  const docs = (set) => db.prepare(`SELECT d.*, o.supplier_id sup FROM documents d JOIN orders o ON o.po = d.po WHERE d.doc_type = ? AND d.status <> 'Superseded' AND d.sent_at >= ? AND d.sent_at <= ?`).all(set, QUARTER_FROM, TO);
   const first = (po, set) => db.prepare('SELECT sent_at, body FROM documents WHERE po = ? AND doc_type = ? ORDER BY sent_at').get(po, set);
   const out = [];
   if (check === 'ship_notice_minutes') for (const d of docs('856')) { const b = J(d.body); if (b.shipped_at && (Date.parse(d.sent_at) - Date.parse(b.shipped_at)) / 60000 > value) out.push(d); }
   if (check === 'acknowledgment_hours') for (const d of docs('855')) { const p = first(d.po, '850'); if (p && (Date.parse(d.sent_at) - Date.parse(p.sent_at)) / H > value) out.push(d); }
   if (check === 'invoice_days') for (const d of docs('810')) { const s = first(d.po, '856'); const b = s ? J(s.body) : null; if (b && b.shipped_at && (Date.parse(d.sent_at) - Date.parse(b.shipped_at)) / (24 * H) > value) out.push(d); }
-  const lines856 = () => db.prepare(`SELECT s.shipment_id, d.reference, d.doc_id, d.po, o.supplier_id sup, o.order_value, sl.line, sl.sku, sl.qty, sl.uom, ol.qty_ordered, ol.uom ouom, ol.price FROM shipment_lines sl JOIN shipments s ON s.shipment_id = sl.shipment_id JOIN documents d ON d.doc_id = s.doc_id JOIN orders o ON o.po = d.po JOIN order_lines ol ON ol.po = sl.po AND ol.line = sl.line WHERE d.status <> 'Superseded' AND d.sent_at >= ?`).all(QUARTER_FROM);
+  const lines856 = () => db.prepare(`SELECT s.shipment_id, d.reference, d.doc_id, d.po, o.supplier_id sup, o.order_value, sl.line, sl.sku, sl.qty, sl.uom, ol.qty_ordered, ol.uom ouom, ol.price FROM shipment_lines sl JOIN shipments s ON s.shipment_id = sl.shipment_id JOIN documents d ON d.doc_id = s.doc_id JOIN orders o ON o.po = d.po JOIN order_lines ol ON ol.po = sl.po AND ol.line = sl.line WHERE d.status <> 'Superseded' AND d.sent_at >= ? AND d.sent_at <= ?`).all(QUARTER_FROM, TO);
   const byDoc = (rows, units = () => 1) => { const m = new Map(); for (const r of rows) { const k = r.doc_id || r.reference; const x = m.get(k) || { ...r, units: 0 }; x.units += units(r); m.set(k, x); } return [...m.values()]; };
-  const errs = (rule) => db.prepare(`SELECT d.*, o.supplier_id sup, o.order_value FROM errors e JOIN documents d ON d.doc_id = e.doc_id JOIN orders o ON o.po = d.po WHERE e.rule_id = ? AND d.sent_at >= ? GROUP BY d.doc_id`).all(rule, QUARTER_FROM);
+  const errs = (rule) => db.prepare(`SELECT d.*, o.supplier_id sup, o.order_value FROM errors e JOIN documents d ON d.doc_id = e.doc_id JOIN orders o ON o.po = d.po WHERE e.rule_id = ? AND d.sent_at >= ? AND d.sent_at <= ? GROUP BY d.doc_id`).all(rule, QUARTER_FROM, TO);
   if (check === 'supplier_997_hours') for (const d of docs('850')) { const a = db.prepare("SELECT sent_at FROM documents WHERE doc_type = '997' AND answers_doc_id = ? AND sender_id = ? ORDER BY sent_at").get(d.doc_id, d.sup); if (!a || (Date.parse(a.sent_at) - Date.parse(d.sent_at)) / H > value) out.push(d); }
-  if (check === 'ship_to_mismatch') out.push(...db.prepare(`SELECT d.*, o.supplier_id sup FROM shipments s JOIN documents d ON d.doc_id = s.doc_id JOIN orders o ON o.po = s.po WHERE d.status <> 'Superseded' AND d.sent_at >= ? AND s.ship_to IS NOT NULL AND s.ship_to <> o.ship_to`).all(QUARTER_FROM), ...errs('NF-4.12'));
+  if (check === 'ship_to_mismatch') out.push(...db.prepare(`SELECT d.*, o.supplier_id sup FROM shipments s JOIN documents d ON d.doc_id = s.doc_id JOIN orders o ON o.po = s.po WHERE d.status <> 'Superseded' AND d.sent_at >= ? AND d.sent_at <= ? AND s.ship_to IS NOT NULL AND s.ship_to <> o.ship_to`).all(QUARTER_FROM, TO), ...errs('NF-4.12'));
   if (check === 'item_not_on_order') { out.push(...errs('NF-4.11')); out.push(...byDoc(lines856().filter((r) => r.sku && r.sku !== db.prepare('SELECT sku FROM order_lines WHERE po = ? AND line = ?').get(r.po, r.line)?.sku))); }
   if (check === 'uom_mismatch') { out.push(...errs('NF-4.14')); out.push(...byDoc(lines856().filter((r) => r.uom && r.ouom && r.uom !== r.ouom))); }
   if (check === 'over_shipment_pct' || check === 'under_shipment_pct') { const tot = {}; for (const r of lines856()) { const k = `${r.po}|${r.line}`; (tot[k] ||= { ...r, shipped: 0 }).shipped += r.qty; }
@@ -204,31 +204,33 @@ function failsOf(db, check, value) {
     out.push(...byDoc(bad, (t) => check === 'over_shipment_pct' ? (t.shipped - t.qty_ordered) * t.price : 1)); }
   if (check === 'duplicate_shipment_id') { const seen = {}; const corrects = (d) => db.prepare("SELECT 1 FROM document_links WHERE doc_id = ? AND kind = 'corrects'").get(d.doc_id); for (const d of docs('856').sort((a, b) => a.sent_at.localeCompare(b.sent_at))) { if (seen[d.reference] && !corrects(d)) out.push(d); seen[d.reference] = true; } } // a corrected ship notice that replaces a rejected one keeps its identifier by design
   if (check === 'carton_over_cm' || check === 'unit_over_kg') { const big = new Set(db.prepare(check === 'carton_over_cm' ? "SELECT DISTINCT sku FROM packaging_levels WHERE level = 'Case' AND max(length, width, height) * 2.54 > ?" : "SELECT DISTINCT sku FROM packaging_levels WHERE level = 'Each' AND gross_weight * 0.45359 > ?").all(value).map((r) => r.sku));
-    if (big.size) out.push(...byDoc(db.prepare(`SELECT d.*, o.supplier_id sup, c.sku FROM cartons c JOIN shipments s ON s.shipment_id = c.shipment_id JOIN documents d ON d.doc_id = s.doc_id JOIN orders o ON o.po = c.po WHERE d.status <> 'Superseded' AND d.sent_at >= ?`).all(QUARTER_FROM).filter((r) => big.has(r.sku)))); }
-  if (check === 'carton_contents_units') out.push(...byDoc(db.prepare(`SELECT d.*, o.supplier_id sup, c.qty, c.received FROM cartons c JOIN shipments s ON s.shipment_id = c.shipment_id JOIN documents d ON d.doc_id = s.doc_id JOIN orders o ON o.po = c.po WHERE d.status <> 'Superseded' AND d.sent_at >= ? AND c.qty <> c.received`).all(QUARTER_FROM), (r) => Math.abs(r.qty - r.received)));
-  if (check === 'ship_notice_accuracy_pct') out.push(...db.prepare(`SELECT d.*, o.supplier_id sup, o.order_value FROM errors e JOIN documents d ON d.doc_id = e.doc_id JOIN orders o ON o.po = d.po WHERE d.doc_type = '856' AND d.sent_at >= ? GROUP BY d.doc_id`).all(QUARTER_FROM));
+    if (big.size) out.push(...byDoc(db.prepare(`SELECT d.*, o.supplier_id sup, c.sku FROM cartons c JOIN shipments s ON s.shipment_id = c.shipment_id JOIN documents d ON d.doc_id = s.doc_id JOIN orders o ON o.po = c.po WHERE d.status <> 'Superseded' AND d.sent_at >= ? AND d.sent_at <= ?`).all(QUARTER_FROM, TO).filter((r) => big.has(r.sku)))); }
+  if (check === 'carton_contents_units') out.push(...byDoc(db.prepare(`SELECT d.*, o.supplier_id sup, c.qty, c.received FROM cartons c JOIN shipments s ON s.shipment_id = c.shipment_id JOIN documents d ON d.doc_id = s.doc_id JOIN orders o ON o.po = c.po WHERE d.status <> 'Superseded' AND d.sent_at >= ? AND d.sent_at <= ? AND c.qty <> c.received`).all(QUARTER_FROM, TO), (r) => Math.abs(r.qty - r.received)));
+  if (check === 'ship_notice_accuracy_pct') out.push(...db.prepare(`SELECT d.*, o.supplier_id sup, o.order_value FROM errors e JOIN documents d ON d.doc_id = e.doc_id JOIN orders o ON o.po = d.po WHERE d.doc_type = '856' AND d.sent_at >= ? AND d.sent_at <= ? GROUP BY d.doc_id`).all(QUARTER_FROM, TO));
   if (check === 'price_tolerance_pct') for (const d of docs('810')) { const b = J(d.body); for (const l of b.lines || []) { const ol = db.prepare('SELECT price FROM order_lines WHERE po = ? AND line = ?').get(d.po, l.line); if (ol && ol.price && Math.abs(l.price - ol.price) / ol.price * 100 > value) { out.push(d); break; } } }
   return out;
 }
-export function replayRule(db, { draft, check, value, charge }) {
+export function replayRule(db, { draft, check, value, charge, as_of }) {
+  // as_of (18 November 2026): replay only the documents exchanged by that time, for a page that opens before the quarter ends.
+  const TO = as_of ? (asOfDate(as_of) || new Date('9999-01-01')).toISOString() : '9999'; const upTo = as_of ? { documents_up_to: fmtET(TO) } : {};
   let d = null;
   if (draft) { d = db.prepare('SELECT * FROM draft_rules WHERE id = ?').get(draft.trim().toUpperCase()); if (!d) return { found: false, message: `No draft rule ${draft}` }; check = d.check_kind; value = d.value; charge = d.charge; }
   const C = REPLAY_CHECKS[check]; if (!C) return { found: false, message: `Replay checks: ${Object.keys(REPLAY_CHECKS).join(', ')}` };
   const v = Number(value); if (!Number.isFinite(v) || v < 0) return { found: false, message: 'value must be a number' };
-  if (C.needs) return { found: true, draft: d ? { id: d.id, statement: d.statement, state: d.state } : null, check: C.what.replace('N', String(v)), replayable: false, needs: C.needs, note: 'Not replayed: the quarter’s records cannot show this check yet. Nothing is published.' };
+  if (C.needs) return { found: true, ...upTo, draft: d ? { id: d.id, statement: d.statement, state: d.state } : null, check: C.what.replace('N', String(v)), replayable: false, needs: C.needs, note: 'Not replayed: the quarter’s records cannot show this check yet. Nothing is published.' };
   const basis = d?.charge_basis || 'per document'; const perFail = charge == null && d ? null : Number(charge ?? 150);
   const cost = (rows) => perFail == null ? null : Math.round(rows.reduce((t, r) => t + (basis.startsWith('percent of order') ? (r.order_value || 0) * perFail / 100 : basis.startsWith('percent of over') ? (r.units || 0) * perFail / 100 : basis === 'per unit' || basis === 'per carton' ? (r.units || 1) * perFail : perFail), 0) * 100) / 100;
-  const now = C.current == null ? [] : failsOf(db, check, C.currentValue); const then = failsOf(db, check, v);
+  const now = C.current == null ? [] : failsOf(db, check, C.currentValue, TO); const then = failsOf(db, check, v, TO);
   if (C.current == null || C.currentCharge !== undefined) {
     const by = (rows) => { const m = {}; for (const r of rows) (m[r.sup] ||= []).push(r.reference); return m; }; const B = by(then);
-    return { found: true, draft: d ? { id: d.id, statement: d.statement, state: d.state, basis: d.basis } : null, check: C.what.replace('N', String(v)), compared_with: C.current ? `${C.current} in force` : 'No such rule in force today',
-      documents_replayed: db.prepare("SELECT count(*) n FROM documents WHERE doc_type = ? AND status <> 'Superseded' AND sent_at >= ?").get(C.set, QUARTER_FROM).n, failing_with_draft: then.length, charge: perFail == null ? 'To set' : basis.startsWith('percent') ? `${perFail}% of the ${basis.replace(/^percent of (the )?/, '')}` : `$${perFail.toFixed(2)} ${basis}`,
+    return { found: true, ...upTo, draft: d ? { id: d.id, statement: d.statement, state: d.state, basis: d.basis } : null, check: C.what.replace('N', String(v)), compared_with: C.current ? `${C.current} in force` : 'No such rule in force today',
+      documents_replayed: db.prepare("SELECT count(*) n FROM documents WHERE doc_type = ? AND status <> 'Superseded' AND sent_at >= ? AND sent_at <= ?").get(C.set, QUARTER_FROM, TO).n, failing_with_draft: then.length, charge: perFail == null ? 'To set' : basis.startsWith('percent') ? `${perFail}% of the ${basis.replace(/^percent of (the )?/, '')}` : `$${perFail.toFixed(2)} ${basis}`,
       exposure_with_draft: cost(then) == null ? 'To set' : cost(then),
       by_supplier: Object.keys(B).map((s) => ({ supplier: supplierName(db, s), with_draft: B[s].length, documents: B[s].slice(0, 5) })).sort((a, b) => b.with_draft - a.with_draft),
       note: 'Replayed against the quarter’s exchanged records only. Nothing is published; publishing needs this replay on record and Jordan Ellis’s approval.' }; }
   const by = (rows) => { const m = {}; for (const r of rows) (m[r.sup] ||= []).push(r.reference); return m; };
   const A = by(now), B = by(then); const sups = [...new Set([...Object.keys(A), ...Object.keys(B)])];
-  return { found: true, draft: d ? { id: d.id, statement: d.statement, state: d.state } : null, check: C.what.replace('N', String(v)), compared_with: `${C.current} at ${C.currentValue}`, documents_replayed: db.prepare("SELECT count(*) n FROM documents WHERE doc_type = ? AND status <> 'Superseded' AND sent_at >= ?").get(C.set, QUARTER_FROM).n,
+  return { found: true, ...upTo, draft: d ? { id: d.id, statement: d.statement, state: d.state } : null, check: C.what.replace('N', String(v)), compared_with: `${C.current} at ${C.currentValue}`, documents_replayed: db.prepare("SELECT count(*) n FROM documents WHERE doc_type = ? AND status <> 'Superseded' AND sent_at >= ? AND sent_at <= ?").get(C.set, QUARTER_FROM, TO).n,
     failing_now: now.length, failing_with_draft: then.length, charge_per_failure: perFail, added_exposure: (then.length - now.length) * perFail,
     by_supplier: sups.map((s) => ({ supplier: supplierName(db, s), now: (A[s] || []).length, with_draft: (B[s] || []).length, newly_failing: (B[s] || []).filter((x) => !(A[s] || []).includes(x)).slice(0, 5) })).sort((a, b) => b.with_draft - a.with_draft),
     note: 'Replayed against the quarter’s exchanged X12 only. Nothing is published; publishing needs this replay on record and Jordan Ellis’s approval.' };

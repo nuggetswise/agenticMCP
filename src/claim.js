@@ -85,7 +85,7 @@ const spec = {
   actions: {
     request_evidence: { label: 'Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case', actor: 'Kinross or Lakeline Freight (task)', rule: 'AP-3.2', mode: 'approve', editable: true, args: ['record', 'evidence'] },
     submit_dispute: { label: 'Dispute the charge in Northfield’s deduction case with the evidence that contradicts it (the NF-7.4 pack for a shortage; the deal, store activity or invoice for the unsupported amount of a promotion deduction)', actor: 'Northfield deduction case', rule: 'AP-4.1', mode: 'approve', editable: false, args: ['record'] },
-    accept_charge: { label: 'Accept the charge (no dispute)', actor: 'Supplier ERP (deduction item)', rule: 'AP-4.2', mode: 'approve', editable: false, args: ['record'] },
+    accept_charge: { label: 'Accept the charge (no dispute)', actor: 'Supplier ERP (deduction item)', rule: 'AP-4.1', mode: 'approve', editable: false, args: ['record'] },
     file_carrier_claim: { label: 'File a loss or damage claim with Lakeline Freight for the goods cost', actor: 'Lakeline Freight', rule: 'NF-10.2', mode: 'approve', editable: true, args: ['record'] },
     match_repayment: { label: 'Match a repayment on Northfield’s remittance to the deduction in receivables and close the case', actor: 'Supplier ERP (receivables)', rule: 'NF-7.6', mode: 'policy', editable: false, args: ['record'] },
   },

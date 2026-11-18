@@ -37,8 +37,8 @@ export function claimDecision(db, ref, asOf = storyClock()) {
   const c = deductionCase(db, ref, asOf); if (!c.found) return c;
   // A promotion deduction (P20): dispute only what the deal does not support, with the record that contradicts it.
   if (c.promotion) { const u = c.promotion.unsupported_amount;
-    return out('deduction', 'Claim Agent', c.case, asOf, { credit: u > 0 ? 'AP-4.1' : 'AP-4.2', authority: 'Priya Raman approves each dispute (AP-4.1)', policy: rule(db, 'AP-4.1'), po: c.po, charge: c.charge, amount: c.amount, dispute_window: c.dispute_window, evidence: c.promotion.records,
-      decision_row: u > 0 ? 'The deal does not support the whole deduction' : 'The deduction matches its deal', next_step: u > 0 ? 'dispute_unsupported_amount' : 'accept', dispute_amount: u, stands: c.promotion.supported_amount, reason: c.promotion.reason,
+    return out('deduction', 'Claim Agent', c.case, asOf, { credit: u > 0 ? 'AP-4.1' : 'AP-4.2', authority: u > 0 ? 'Priya Raman approves each dispute (AP-4.1)' : 'No decision needed: the deal supports the deduction (AP-4.2)', policy: rule(db, 'AP-4.1'), po: c.po, charge: c.charge, amount: c.amount, dispute_window: c.dispute_window, evidence: c.promotion.records,
+      decision_row: u > 0 ? 'The deal does not support the whole deduction' : 'The deduction matches its deal', next_step: u > 0 ? 'dispute_unsupported_amount' : 'no_decision_needed', dispute_amount: u, stands: c.promotion.supported_amount, reason: c.promotion.reason,
       rule_baseline: 'Accept every deduction carrying a promotion reason code', dollars_the_rule_gives_up: u, confirmed_by: 'The repayment matched in Ashby’s receivables' }); }
   const st = Object.fromEntries(c.evidence.map((v) => [v.kind, v.state]));
   const scan = st['wms.load_scan'], tally = st['wms.load_tally']; const pod = db.prepare("SELECT data FROM events WHERE po = ? AND kind = 'carrier.delivery_receipt' ORDER BY at DESC").get(c.po);
@@ -51,8 +51,8 @@ export function claimDecision(db, ref, asOf = storyClock()) {
   else { row = 'No load scan or load tally anywhere'; next = 'recommend_accept'; detail = { reason: 'A dispute without the required evidence is not reviewed and draws ID01 $150', rule: rule(db, 'NF-7.5') }; }
   const baseline = scan === 'In the case' ? 'Dispute' : 'Accept the charge';
   // AP-4.1: every dispute needs Priya Raman's approval, whatever the amount and wherever the proof sits.
-  const authority = next.startsWith('recommend_accept') ? 'Priya Raman decides whether to accept or write off (AP-4.2)' : 'Priya Raman approves each dispute and decides between dispute and write-off (AP-4.1)';
-  return out('deduction', 'Claim Agent', c.case, asOf, { credit: next.startsWith('recommend_accept') ? 'AP-4.2' : 'AP-4.1', authority, policy: rule(db, 'AP-4.1'), po: c.po, charge: c.charge, amount: c.amount, dispute_window: c.dispute_window, evidence: Object.fromEntries(c.evidence.map((v) => [v.evidence, v.state])), decision_row: row, next_step: next, ...detail, rule_baseline: baseline, dollars_the_rule_gives_up: baseline === 'Accept the charge' && next !== 'recommend_accept' && !next.startsWith('recommend_accept_and') ? c.amount : 0, confirmed_by: 'The repayment matched in Ashby’s receivables' });
+  const authority = next.startsWith('recommend_accept') ? 'Priya Raman decides whether to accept the charge; nothing is disputed' : 'Priya Raman approves each dispute and decides between dispute and write-off (AP-4.1)';
+  return out('deduction', 'Claim Agent', c.case, asOf, { credit: next.startsWith('recommend_accept') ? null : 'AP-4.1', authority, policy: rule(db, 'AP-4.1'), po: c.po, charge: c.charge, amount: c.amount, dispute_window: c.dispute_window, evidence: Object.fromEntries(c.evidence.map((v) => [v.evidence, v.state])), decision_row: row, next_step: next, ...detail, rule_baseline: baseline, dollars_the_rule_gives_up: baseline === 'Accept the charge' && next !== 'recommend_accept' && !next.startsWith('recommend_accept_and') ? c.amount : 0, confirmed_by: 'The repayment matched in Ashby’s receivables' });
 }
 
 /** Test Agent: a test ship notice failed the pack rule. Is the Supplier ERP record wrong, or the map? */
@@ -72,9 +72,10 @@ export function shelfDecision(db, store, asOf = storyClock()) {
   const t = asOf.toISOString(); const s = String(store);
   const wk = db.prepare('SELECT * FROM store_activity WHERE store = ? AND sent_at <= ? ORDER BY period_end DESC').get(s, t);
   if (!wk) return { found: false, message: `No product activity for store ${store} at ${fmtET(asOf)}` };
-  // AP-6.1 and AP-6.4 speak of a weekly average over AP-6.4's weeks; the average uses as many of those weeks as the records hold.
+  // AP-6.1 and AP-6.4 speak of a weekly average over AP-6.4's weeks: the weeks before the report week (18 November 2026), as
+  // many as the records hold. With no earlier week on record the report week stands in.
   const avgWeeks = param(db, 'AP-6.4', 'avg_weeks');
-  const periods = db.prepare('SELECT DISTINCT period_end FROM store_activity WHERE sku = ? AND sent_at <= ? AND period_end <= ? ORDER BY period_end DESC LIMIT ?').all(wk.sku, t, wk.period_end, avgWeeks).map((r) => r.period_end);
+  const periods = db.prepare('SELECT DISTINCT period_end FROM store_activity WHERE sku = ? AND sent_at <= ? AND period_end < ? ORDER BY period_end DESC LIMIT ?').all(wk.sku, t, wk.period_end, avgWeeks).map((r) => r.period_end); if (!periods.length) periods.push(wk.period_end);
   const avgOf = (st) => { const r = db.prepare(`SELECT avg(sold) a FROM store_activity WHERE store = ? AND sku = ? AND period_end IN (${periods.map(() => '?').join(',')})`).get(st, wk.sku, ...periods); return r.a ?? 0; };
   const avg = avgOf(s);
   const all = db.prepare('SELECT DISTINCT store FROM store_activity WHERE period_end = ? AND sku = ?').all(wk.period_end, wk.sku);
@@ -88,7 +89,7 @@ export function shelfDecision(db, store, asOf = storyClock()) {
   const minAvg = param(db, 'AP-6.1', 'min_weekly_avg'), slowWeeks = param(db, 'AP-6.2', 'min_weeks_supply'), slowPct = param(db, 'AP-6.2', 'pct_of_median') / 100, keep = param(db, 'AP-6.3', 'keep_weeks'), carton = param(db, 'AP-6.4', 'carton');
   if (wk.on_hand === 0 && avg < minAvg) { row = 'Empty shelf below the minimum weekly sales'; next = 'nothing_to_do'; }
   else if (wk.on_hand === 0 && transit) { row = 'Empty shelf, and a ship notice to this store is already in transit'; next = 'wait_for_goods_in_transit'; detail = { in_transit: transit.shipment_id }; }
-  else if (wk.on_hand === 0) { row = 'Empty shelf, nothing in transit, Ashby has stock'; next = 'recommend_new_order'; detail = { to: 'Jordan Ellis', pairs: Math.max(carton, Math.ceil(avg / carton) * carton), rules: ['AP-6.1', 'AP-6.4'] }; }
+  else if (wk.on_hand === 0) { row = 'Empty shelf, nothing in transit, Ashby has stock'; next = 'recommend_new_order'; detail = { to: 'Jordan Ellis', pairs: Math.max(carton, Math.round(avg / carton) * carton), rules: ['AP-6.1', 'AP-6.4'] }; } // the whole cartons nearest one week's average, at least one
   else if (weeks >= slowWeeks && avg < median * slowPct) { row = `Slow sell-through with ${slowWeeks} or more weeks of supply`; next = 'recommend_transfer'; detail = { pairs: wk.on_hand - Math.round(keep * avg), keep_weeks: keep, rules: ['AP-6.2', 'AP-6.3'] }; }
   else { row = 'Selling and in stock'; next = 'nothing_to_do'; }
   return out('shelf', 'Shelf Agent', `Store ${s}`, asOf, { evidence, decision_row: row, next_step: next, ...detail, authority: 'Priya Raman approves the recommendation; Jordan Ellis decides the order', rule_baseline: 'Flags the empty shelf and recommends a carton multiple', confirmed_by: 'The next week’s product activity (852)' });
@@ -105,7 +106,7 @@ export function scoutDecision(db, poIn, asOf = storyClock()) {
   let row, next, detail = {};
   if (fulfil && !dep && load && /not departed/i.test(load.d.trailer_state || '')) { row = 'The Supplier ERP says shipped and the Kinross load scan says not departed'; next = 'check_departure_scan_and_ask_kinross'; detail = { before: 'Any ship notice is built', flag: 'Fulfilment posted before departure' }; }
   else if (load && load.d.cartons_loaded < load.d.cartons_expected && !dep) { row = 'A carton is staged but not on the trailer'; next = 'send_load_task_to_kinross'; detail = { carton: load.d.missing, cutoff: `Trailer seals in ${load.d.seals_in_minutes} minutes`, exposure_estimate: chargeOf(db, 'AS02', 1) + chargeOf(db, 'AS03') + chargeOf(db, 'AS04'), rules: ['NF-4.5', 'NF-4.7', 'NF-4.8'] }; }
-  else if (inv && inv.d.billed > inv.d.shipped) { row = 'The invoice draft bills more than shipped'; next = 'propose_invoice_correction_in_supplier_erp'; detail = { billed: inv.d.billed, shipped: inv.d.shipped, exposure_estimate: chargeOf(db, 'IV01'), rule: rule(db, 'NF-7.8') }; }
+  else if (inv && inv.d.billed > inv.d.to_ship) { row = 'The invoice draft bills more than is allocated to ship'; next = 'propose_invoice_correction_in_supplier_erp'; detail = { billed: inv.d.billed, to_ship: inv.d.to_ship, exposure_estimate: chargeOf(db, 'IV01'), rule: rule(db, 'NF-7.8') }; }
   else if (route && route.d.state === 'Missing') { row = 'No routing request for collect freight'; next = 'draft_routing_request'; detail = { exposure_estimate: chargeOf(db, 'RT01'), rule: rule(db, 'NF-3.2') }; }
   else if (stock && stock.d.available < stock.d.ordered_across_orders) { row = 'The warehouse has less stock than the orders need'; next = 'ask_priya_which_order_ships_short'; detail = { available: stock.d.available, ordered: stock.d.ordered_across_orders, rule: rule(db, 'NF-2.1') }; }
   else if (label && label.d.reused_sscc) { row = 'Cartons carry SSCCs already used'; next = 'send_relabel_task_to_kinross'; detail = { cartons: label.d.reused_sscc, exposure_estimate: chargeOf(db, 'LB01', Array.isArray(label.d.reused_sscc) ? label.d.reused_sscc.length : label.d.reused_sscc), rule: rule(db, 'NF-4.1') }; }

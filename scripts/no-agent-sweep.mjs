@@ -17,6 +17,20 @@ function scan(conn, tool, v, path = '') {
   if (typeof v === 'string' && /Agent/.test(v)) add(conn, tool, `VAL ${path}`, v);
 }
 function add(conn, tool, where, sample) { const k = `${conn} ${tool} ${where}`; (hits[k] ||= new Set()).add(String(sample).slice(0, 140)); }
+// Stored records read through run_readonly_sql (18 November 2026): event and document bodies, deduction case and dispute
+// records, the finding log and every other table the connection can query. A tool result is reworded on its way out, so
+// this counts in SQL instead (GLOB is case-sensitive): a value holding "Agent", an "agent" key in a JSON body, an event
+// kind starting agent., or a recommendation that says it was sent to someone.
+async function stored(conn, call) {
+  const sql = async (q) => (await call('run_readonly_sql', { sql: q })).rows || [];
+  const tables = (await sql("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")).map((r) => r.name); let cols = 0;
+  if (!tables.length) add(conn, 'run_readonly_sql', 'STORED', 'could not list tables');
+  for (const t of tables) { const one = await sql(`SELECT * FROM "${t}" LIMIT 1`); if (!one.length) continue;
+    for (const c of Object.keys(one[0])) { cols++; const n = (await sql(`SELECT count(*) n FROM "${t}" WHERE typeof("${c}") = 'text' AND ("${c}" GLOB '*Agent*' OR "${c}" GLOB '*"agent"*' OR "${c}" GLOB '*agent_*":*')`))[0]?.n; if (n) add(conn, 'run_readonly_sql', `STORED ${t}.${c}`, `${n} rows`); } }
+  for (const [what, q] of [['event kind agent.*', "SELECT count(*) n FROM events WHERE kind GLOB 'agent*'"], ['recommendation with sent_to', "SELECT count(*) n FROM events WHERE kind GLOB '*recommendation' AND data GLOB '*sent_to*'"],
+    ['case or dispute record drafted by an agent', "SELECT count(*) n FROM events WHERE kind GLOB 'case.*' AND (data GLOB '*Agent*' OR data GLOB '*agent*')"]]) { const n = (await sql(q))[0]?.n; if (n) add(conn, 'run_readonly_sql', `STORED ${what}`, `${n} rows`); }
+  console.log(`${conn}: ${tables.length} tables, ${cols} columns of stored records read through run_readonly_sql`);
+}
 async function side(conn, tok, plan) {
   const c = new Client({ name: 'sweep', version: '1' }); await c.connect(new StreamableHTTPClientTransport(new URL(`${base}/mcp/${tok}`)));
   const { tools } = await c.listTools(); const names = new Set(tools.map((t) => t.name));
@@ -24,6 +38,7 @@ async function side(conn, tok, plan) {
   const ins = c.getInstructions?.() || ''; if (/Agent/.test(ins)) add(conn, '(connection)', 'INSTRUCTIONS', (ins.match(/.{0,40}Agent.{0,40}/) || [''])[0]);
   const call = async (name, args = {}) => { const r = await c.callTool({ name, arguments: args }); const text = r.content.map((x) => x.text).join('\n'); let j; try { j = JSON.parse(text); } catch { j = text; } (called[`${conn} ${name}`] ||= 0); called[`${conn} ${name}`]++; scan(conn, name, j); return j; };
   await plan(call, names);
+  await stored(conn, call);
   for (const n of names) if (!called[`${conn} ${n}`]) console.log('NOT CALLED', conn, n);
   await c.close();
 }

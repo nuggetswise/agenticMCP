@@ -135,7 +135,7 @@ await withServer({}, 3974, async ({ base, tool, nf }) => {
   ok('a person resumes on the admin page, and the proposal returns', [302, 303].includes(rz.status) && back.next_step === 'attach_load_tally_and_dispute', String(rz.status));
   // Scout paused: the event arrives as a plain task and the model gets no turn (no key is needed to show it; without the pause Scout reports no model).
   await tool('pause_agent', { agent: 'Scout Agent' }); const ss = await tool('scout_start', {}); const st = await tool('scout_state', { session: ss.session });
-  ok('paused Scout: plain task, no proposal, no model call', ss.status === 'paused' && ss.plain_task?.proposal === null && !ss.awaiting.some((a) => a.proposed_by === 'Scout') && st.overhead.model_calls === 0 && !ss.blocked, JSON.stringify(ss).slice(0, 200));
+  ok('paused Scout: plain task, no proposal, no model call', ss.status === 'paused' && ss.plain_task?.proposal === null && !ss.awaiting.some((a) => a.proposed_by === 'Model') && st.overhead.model_calls === 0 && !ss.blocked, JSON.stringify(ss).slice(0, 200));
   await fetch(`${base}/admin/smoke/agents/Scout%20Agent/resume`, { method: 'POST', redirect: 'manual' });
   const s2 = await tool('scout_start', {}); ok('resumed Scout reaches the model step again', s2.status !== 'paused' && !!s2.blocked, JSON.stringify(s2.blocked));
   const nfp = await nf('pause_agent', { agent: 'Review Agent' }); const rv = await nf('review_deduction_case', { case: 'DC-40877', as_of: '2027-01-06' });
@@ -192,7 +192,7 @@ await withServer({}, 3975, async ({ base, client, nfClient, tool, nf }) => {
   // match_* tools are refused on Ashby's connection: not listed, and a call by name is an error, not an answer.
   { let refusedAll = true; for (const name of ['match_setup', 'match_start', 'match_decide', 'match_state', 'match_baseline', 'match_replay']) { try { const r = await client.callTool({ name, arguments: {} }); if (!r.isError) refusedAll = false; } catch { /* refused */ } }
     ok('Match: every match_* call on Ashby’s connection is refused', refusedAll); }
-  ok('Match: each hold links the PO, receiving advice and invoice', su.queue_at_moment[0].holds[0].link?.endsWith('/records/northfield/document/AA-INV-7731') && su.queue_at_moment[0].compared.purchase_order.link?.endsWith('/records/northfield/order/NR-450118') && su.queue_at_moment[0].compared.invoice.link?.endsWith('/records/northfield/document/INV-7731') && su.queue_at_moment[0].compared.receiving_advice.length === 2 && su.queue_at_moment[0].compared.receiving_advice.every((r) => /\/records\/northfield\/document\/RCV-/.test(r.link)), JSON.stringify(su.queue_at_moment[0].compared).slice(0, 200));
+  ok('Match: each hold links the PO, receiving advice and invoice', su.queue_at_moment[0].holds[0].rule === 'NF-7.8' && su.queue_at_moment[0].holds[0].advice === 'Rule engine (this session)' && su.queue_at_moment[0].compared.purchase_order.link?.endsWith('/records/northfield/order/NR-450118') && su.queue_at_moment[0].compared.invoice.link?.endsWith('/records/northfield/document/INV-7731') && su.queue_at_moment[0].compared.receiving_advice.length === 2 && su.queue_at_moment[0].compared.receiving_advice.every((r) => /\/records\/northfield\/document\/RCV-/.test(r.link)), JSON.stringify(su.queue_at_moment[0].compared).slice(0, 200));
   { const lk = await fetch(su.queue_at_moment[0].compared.receiving_advice[0].link.replace(/^https?:\/\/[^/]+/, base)); ok('Match: a linked receiving advice opens on Northfield’s records', lk.ok, String(lk.status)); }
   { const rp = await nf('match_replay', {}); const cl = await nf('get_change_list', { kind: 'trial' }); const ac = await tool('get_change_list', { kind: 'trial' });
     ok('Match: replay without a model is recorded as a trial on Northfield’s change list only', !!rp.trial && !!rp.model_run?.blocked && cl.entries.some((e) => e.id === rp.trial && e.runtime === 'match' && e.kind === 'trial') && !ac.entries.some((e) => e.runtime === 'match'), JSON.stringify(rp).slice(0, 200)); }
@@ -214,6 +214,12 @@ await withServer({}, 3975, async ({ base, tool, nf }) => {
   ok('apply saves the change with who made it, on the change list', saved.result === 'Rule changed' && /at least 500 pair/.test(saved.statement) && (await tool('get_change_list', { kind: 'rule_change' })).entries[0]?.run_by === 'Priya Raman', JSON.stringify(saved).slice(0, 200));
   const nx = await tool('recommend_next_step', { job: 'shelf', record: ch.record, as_of: '2026-10-26T08:07:00-04:00' });
   ok('the next rule run reads the changed value', nx.next_step !== before.next_step && nx.next_step === ch.with_change?.next_step, `${ch.record}: ${before.next_step} -> ${nx.next_step}`);
+  // Aviator's permissions per action (P21, 18 November 2026): editable ones start at answer only, a change is recorded with who made it, locked ones refuse.
+  { const p0 = (await tool('get_change_list', {})).aviator_permissions; const by = (p, k) => p.actions.find((x) => x.action === k);
+    ok('Aviator permissions start at answer only, with the locked actions shown locked', by(p0, 'open_dispute').permission === 'answer_only' && by(p0, 'request_order_change').permission === 'answer_only' && by(p0, 'release_held_ship_notice').editable === false && by(p0, 'release_held_ship_notice').approver === 'Priya Raman' && p0.locked.length === 3, JSON.stringify(p0).slice(0, 300));
+    const ch = await tool('set_agent_mode', { agent: 'aviator', action: 'open_dispute', mode: 'propose_action_card' }); const p1 = (await tool('get_change_list', {})); const e = p1.entries.find((x) => x.kind === 'aviator_permission');
+    ok('an Aviator permission change is recorded on the change list with who made it', ch.result === 'Permission changed' && ch.from === 'answer_only' && by(p1.aviator_permissions, 'open_dispute').permission === 'propose_action_card' && by(p1.aviator_permissions, 'open_dispute').set_by === 'Priya Raman' && e?.assistant === 'Aviator' && e?.change.to === 'propose_action_card' && e?.run_by === 'Priya Raman', JSON.stringify(e));
+    ok('a locked Aviator action and an unknown value are refused', (await tool('set_agent_mode', { agent: 'aviator', action: 'release_held_ship_notice', mode: 'answer_only' })).result === 'Invalid request' && (await tool('set_agent_mode', { agent: 'aviator', action: 'open_dispute', mode: 'policy' })).result === 'Invalid request'); }
   const m = await tool('set_agent_mode', { agent: 'Shelf Agent', action: 'recommend_order', mode: 'suggest' });
   ok('set_agent_mode records the standing mode', m.result === 'Mode changed' && m.from === 'approve' && m.to === 'suggest', JSON.stringify(m));
   ok('a locked action cannot change mode', (await tool('set_agent_mode', { agent: 'Shelf Agent', action: 'wait_for_transit', mode: 'approve' })).result === 'Invalid request');
@@ -222,5 +228,46 @@ await withServer({}, 3975, async ({ base, tool, nf }) => {
   await fetch(`${base}/admin/smoke/reset`, { method: 'POST', redirect: 'manual' });
   ok('reset restores the catalogue and clears standing modes', (await tool('list_rules_by_source')).groups.find((x) => x.source === 'Ashby manual rules').rules.find((r) => r.id === 'AP-6.1').params.min_weekly_avg === 1 && !(await tool('get_change_list', { kind: 'mode' })).entries.length);
 });
+
+
+// ---------- Aviator (18 November 2026) ----------
+// 1. Every tool on both connections, and every runtime's own tools, converts to the model's schema subset (enums only as
+//    strings). The live Ashby connection failed here: orders_needing_attention.kinross_window_hours was a numeric enum.
+// 2. With a model key, ask_aviator answers on both connections, one question per story calendar page, on the connection of
+//    whoever sees it; quantities read in cases (never units); no answer or instruction names an agent.
+{ const A = await import('../src/aviator.js'); const T = await import('../src/tools.js');
+  const rt = { match: (await import('../src/match.js')).AGENT_TOOLS, watch: (await import('../src/watch.js')).AGENT_TOOLS, scout: (await import('../src/scout.js')).AGENT_TOOLS };
+  for (const [f, n] of [['claim', 'Claim'], ['chase', 'Chase'], ['pace', 'Pace'], ['review', 'Review'], ['shelf', 'Shelf']]) rt[f] = (await import(`../src/${f}.js`))[n].AGENT_TOOLS;
+  const own = [['Ashby read tools', T.TOOLS], ['Northfield read tools', T.NF_TOOLS], ...Object.entries(rt).map(([k, v]) => [`${k} runtime`, v])].flatMap(([k, v]) => A.modelSchemaProblems(A.declarations(v)).map((p) => `${k}: ${p}`));
+  ok('model schemas: every Aviator and runtime tool is in the model’s subset, enums as strings', own.length === 0, own.slice(0, 5).join('; '));
+  ok('model schemas: kinross_window_hours goes as "24"/"48" and comes back as 24/48', JSON.stringify(A.declarations(T.TOOLS).find((d) => d.name === 'orders_needing_attention').parameters.properties.kinross_window_hours.enum) === '["24","48"]' && A.modelArgs(T.TOOLS, 'orders_needing_attention', { kinross_window_hours: '48', include_warehouse: 'true' }).kinross_window_hours === 48 && A.modelArgs(T.TOOLS, 'orders_needing_attention', { include_warehouse: 'true' }).include_warehouse === true);
+  ok('model schemas: Aviator’s instruction names no agent and asks for quantities in the record’s unit', !/Agent/.test(A.instruction({ person: 'Priya Raman', company: 'Ashby Supplier', other: 'Northfield Retailer', clock: 'x' })) && /never call a quantity units/.test(A.instruction({ person: 'p', company: 'c', other: 'o', clock: 'x' })));
+  await withServer({ WRITES: 'off' }, 3976, async ({ client, nfClient, tool, nf }) => {
+    const all = [...(await client.listTools()).tools.map((t) => ['Ashby', t]), ...(await nfClient.listTools()).tools.map((t) => ['Northfield', t])];
+    const bad = all.flatMap(([c, t]) => A.modelSchemaProblems([{ name: t.name, parameters: A.toModel(t.inputSchema) }]).map((p) => `${c} ${p}`));
+    ok(`model schemas: all ${all.length} tools on both connections convert to the model’s subset`, bad.length === 0, bad.slice(0, 5).join('; '));
+    { const np = (await nf('get_change_list', {})).aviator_permissions; ok('Northfield: Aviator may be set to propose an application advice or a supplier change; deciding a charge and publishing a rule are locked to answer only', np.actions.map((x) => `${x.action}:${x.permission}:${x.editable}`).join() === 'reject_invoice_lines:answer_only:true,request_supplier_change:answer_only:true,decide_charge:answer_only:false,publish_rule:answer_only:false', JSON.stringify(np.actions));
+      const full = await nf('replay_draft_rule', { draft: 'NFD-1' }); const part = await nf('replay_draft_rule', { draft: 'NFD-1', as_of: '2026-11-17T11:00:00-05:00' });
+      ok('a draft rule replays as of a time: fewer documents than the quarter, and it says up to when', part.documents_up_to === '2026-11-17 11:00 ET' && part.documents_replayed < full.documents_replayed && part.failing_with_draft < full.failing_with_draft && !('documents_up_to' in full), `${part.documents_replayed} of ${full.documents_replayed}`); }
+    if (!process.env.GEMINI_API_KEY) { console.log('SKIPPED Aviator answers per calendar page: no GEMINI_API_KEY on this machine (run the smoke test where the key is set)'); return; }
+    const cal = (await tool('get_story_calendar')).moments;
+    // One question per page, asked as of the page's moment; q marks a question whose answer must give quantities.
+    const Q = { P2: ['What does Northfield require before a drop-ship order ships?'], P21: ['Which of the rules we trade under can we change ourselves?'], P15: ['What would draft rule NFD-1 have charged over the quarter?'],
+      P23: ['What changed on NR-450118 today, and how many does line 1 now order?', 'q'], P13: ['Which open orders are missing a document Northfield requires?'], P5: ['How many are ordered on NR-460207, and when is its pickup?', 'q'],
+      P11: ['Why is ship notice ASN-78260 held?'], P24: ['Did Lakeline pick up NR-46602 today, and how many were ordered?', 'q'], P9: ['How many did order NR-451207 order for store 114?', 'q'],
+      P14: ['Why does INV-7731 not match its order and receipt? Give the quantities.', 'q'], P8: ['How many were received on NR-450118?', 'q'], P6: ['How many are claimed short in case DC-40877?', 'q'],
+      P20: ['Which promotion deductions came on remittance PMT-990168?'], P7: ['What is Ashby’s on-time, in-full rate for the quarter, and how much failed?', 'q'], P22: ['How many findings were confirmed this quarter?'] };
+    for (const m of cal) {
+      const [q, qty] = Q[m.id] || []; if (!q) { ok(`aviator: a question for ${m.id}`, false); continue; }
+      const sides = /then/.test(m.seen_by) ? [['Ashby', tool], ['Northfield', nf]] : /Jordan/.test(m.seen_by) ? [['Northfield', nf]] : [['Ashby', tool]];
+      for (const [side, ask] of sides) {
+        const r = await ask('ask_aviator', { question: `As of ${m.as_of_eastern}: ${q}` }); const text = r.answer || '';
+        ok(`aviator ${m.id} on ${side}: answers from its tools`, r.ok === true && r.answered_from_tools === true, `${r.status || ''} ${r.message || ''} ${(r.detail || '').slice(0, 160)}`);
+        ok(`aviator ${m.id} on ${side}: names no agent`, !/\bAgent\b/.test(JSON.stringify(r)), text.slice(0, 160));
+        if (qty) ok(`aviator ${m.id} on ${side}: quantities in cases, never units`, /\bcases?\b/i.test(text) && !/\bunits?\b/i.test(text), text.slice(0, 200));
+      }
+    }
+  });
+}
 
 console.log(`${pass} smoke checks passed, ${fails.length} failed`); for (const f of fails) console.log(`FAIL ${f}`); process.exit(fails.length ? 1 : 0);

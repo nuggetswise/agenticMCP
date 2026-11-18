@@ -10,8 +10,9 @@ export const BUYER_FX = JSON.parse(readFileSync(join(HERE, 'data', 'buyer-orders
 /** Ship notices and receiving advice added on 17 November 2026 for the other suppliers' buyer orders that had neither
  *  (scripts/add-buyer-shipments.mjs). Kept apart from the fixture, which stops on 8 November. */
 export const BUYER_SHIP = JSON.parse(readFileSync(join(HERE, 'data', 'buyer-shipments.json'), 'utf8'));
-/** Other suppliers order in each and ship 24 each to a case: the carton count on their ship notices and the unit their
- *  on-time, in-full rate counts in (NF-8.2 counts cases). */
+/** The carton count the generator writes on other suppliers' ship notices (TD1): quantity ÷ 24, rounded up, as the
+ *  original generator did. It is not a pack record and nothing reads it as one: their items carry pack "Each" and no
+ *  Case packaging level, and 356 of their 528 ship notices hold a quantity that is not a multiple of 24. */
 export const BUYER_CASE_PACK = 24;
 
 const gln = (n) => { const b = '0614141' + String(n).padStart(5, '0'); return b + gs1Check(b); };

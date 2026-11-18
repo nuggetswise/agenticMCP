@@ -13,8 +13,8 @@
   },
   "tg.carrier_events": {
    "base_rows": 1941,
-   "changed_or_lost": 0,
-   "added": 0
+   "changed_or_lost": 6,
+   "added": 9
   },
   "tg.carrier_rates": {
    "base_rows": 4,
@@ -53,13 +53,13 @@
   },
   "tg.document_links": {
    "base_rows": 37252,
-   "changed_or_lost": 0,
-   "added": 152
+   "changed_or_lost": 9,
+   "added": 169
   },
   "tg.documents": {
    "base_rows": 38198,
-   "changed_or_lost": 2,
-   "added": 154
+   "changed_or_lost": 22,
+   "added": 186
   },
   "tg.draft_rules": {
    "base_rows": 15,
@@ -68,23 +68,23 @@
   },
   "tg.errors": {
    "base_rows": 58,
-   "changed_or_lost": 0,
-   "added": 0
+   "changed_or_lost": 32,
+   "added": 33
   },
   "tg.events": {
    "base_rows": 9726,
-   "changed_or_lost": 1928,
-   "added": 1928
+   "changed_or_lost": 1960,
+   "added": 1967
   },
   "tg.finding_actions": {
    "base_rows": 1015,
-   "changed_or_lost": 113,
-   "added": 113
+   "changed_or_lost": 528,
+   "added": 533
   },
   "tg.findings": {
    "base_rows": 290,
-   "changed_or_lost": 0,
-   "added": 0
+   "changed_or_lost": 142,
+   "added": 144
   },
   "tg.forecast_lines": {
    "base_rows": 288,
@@ -139,7 +139,7 @@
   "tg.loads": {
    "base_rows": 1082,
    "changed_or_lost": 0,
-   "added": 0
+   "added": 1
   },
   "tg.location_versions": {
    "base_rows": 44,
@@ -224,7 +224,7 @@
   "tg.routing_requests": {
    "base_rows": 502,
    "changed_or_lost": 0,
-   "added": 0
+   "added": 1
   },
   "tg.rule_sets": {
    "base_rows": 5,
@@ -233,13 +233,13 @@
   },
   "tg.rule_versions": {
    "base_rows": 129,
-   "changed_or_lost": 1,
-   "added": 1
+   "changed_or_lost": 2,
+   "added": 2
   },
   "tg.rules": {
    "base_rows": 76,
-   "changed_or_lost": 1,
-   "added": 1
+   "changed_or_lost": 2,
+   "added": 2
   },
   "tg.shipment_lines": {
    "base_rows": 4350,
@@ -248,8 +248,8 @@
   },
   "tg.shipment_plans": {
    "base_rows": 1896,
-   "changed_or_lost": 0,
-   "added": 0
+   "changed_or_lost": 3,
+   "added": 3
   },
   "tg.shipment_status": {
    "base_rows": 4364,
@@ -274,7 +274,7 @@
   "tg.store_activity": {
    "base_rows": 80,
    "changed_or_lost": 0,
-   "added": 0
+   "added": 160
   },
   "tg.transfer_lines": {
    "base_rows": 21,
@@ -293,8 +293,8 @@
   },
   "tg.warehouse_scans": {
    "base_rows": 3844,
-   "changed_or_lost": 0,
-   "added": 0
+   "changed_or_lost": 8,
+   "added": 8
   },
   "ashby.adjustments": {
    "base_rows": 52,
@@ -308,8 +308,8 @@
   },
   "ashby.carrier_events": {
    "base_rows": 1941,
-   "changed_or_lost": 0,
-   "added": 0
+   "changed_or_lost": 6,
+   "added": 9
   },
   "ashby.carrier_rates": {
    "base_rows": 4,
@@ -348,33 +348,33 @@
   },
   "ashby.document_links": {
    "base_rows": 32417,
-   "changed_or_lost": 0,
-   "added": 0
+   "changed_or_lost": 9,
+   "added": 17
   },
   "ashby.documents": {
    "base_rows": 32870,
-   "changed_or_lost": 2,
-   "added": 2
+   "changed_or_lost": 22,
+   "added": 34
   },
   "ashby.errors": {
    "base_rows": 56,
-   "changed_or_lost": 0,
-   "added": 0
+   "changed_or_lost": 30,
+   "added": 31
   },
   "ashby.events": {
    "base_rows": 9469,
-   "changed_or_lost": 1928,
-   "added": 1928
+   "changed_or_lost": 1960,
+   "added": 1967
   },
   "ashby.finding_actions": {
    "base_rows": 578,
-   "changed_or_lost": 50,
-   "added": 50
+   "changed_or_lost": 303,
+   "added": 305
   },
   "ashby.findings": {
    "base_rows": 167,
-   "changed_or_lost": 0,
-   "added": 0
+   "changed_or_lost": 89,
+   "added": 90
   },
   "ashby.forecast_lines": {
    "base_rows": 288,
@@ -429,7 +429,7 @@
   "ashby.loads": {
    "base_rows": 1082,
    "changed_or_lost": 0,
-   "added": 0
+   "added": 1
   },
   "ashby.location_versions": {
    "base_rows": 44,
@@ -509,7 +509,7 @@
   "ashby.routing_requests": {
    "base_rows": 502,
    "changed_or_lost": 0,
-   "added": 0
+   "added": 1
   },
   "ashby.rule_sets": {
    "base_rows": 5,
@@ -518,13 +518,13 @@
   },
   "ashby.rule_versions": {
    "base_rows": 129,
-   "changed_or_lost": 1,
-   "added": 1
+   "changed_or_lost": 2,
+   "added": 2
   },
   "ashby.rules": {
    "base_rows": 76,
-   "changed_or_lost": 1,
-   "added": 1
+   "changed_or_lost": 2,
+   "added": 2
   },
   "ashby.shipment_lines": {
    "base_rows": 3729,
@@ -533,8 +533,8 @@
   },
   "ashby.shipment_plans": {
    "base_rows": 1896,
-   "changed_or_lost": 0,
-   "added": 0
+   "changed_or_lost": 3,
+   "added": 3
   },
   "ashby.shipment_status": {
    "base_rows": 4364,
@@ -559,7 +559,7 @@
   "ashby.store_activity": {
    "base_rows": 80,
    "changed_or_lost": 0,
-   "added": 0
+   "added": 160
   },
   "ashby.transfer_lines": {
    "base_rows": 21,
@@ -578,8 +578,8 @@
   },
   "ashby.warehouse_scans": {
    "base_rows": 3844,
-   "changed_or_lost": 0,
-   "added": 0
+   "changed_or_lost": 8,
+   "added": 8
   },
   "northfield.adjustments": {
    "base_rows": 94,
@@ -593,8 +593,8 @@
   },
   "northfield.carrier_events": {
    "base_rows": 63,
-   "changed_or_lost": 0,
-   "added": 0
+   "changed_or_lost": 3,
+   "added": 6
   },
   "northfield.carrier_rates": {
    "base_rows": 0,
@@ -633,13 +633,13 @@
   },
   "northfield.document_links": {
    "base_rows": 26581,
-   "changed_or_lost": 0,
-   "added": 152
+   "changed_or_lost": 9,
+   "added": 169
   },
   "northfield.documents": {
    "base_rows": 30126,
-   "changed_or_lost": 2,
-   "added": 154
+   "changed_or_lost": 22,
+   "added": 186
   },
   "northfield.draft_rules": {
    "base_rows": 15,
@@ -648,23 +648,23 @@
   },
   "northfield.errors": {
    "base_rows": 58,
-   "changed_or_lost": 0,
-   "added": 0
+   "changed_or_lost": 32,
+   "added": 33
   },
   "northfield.events": {
    "base_rows": 424,
-   "changed_or_lost": 48,
-   "added": 48
+   "changed_or_lost": 57,
+   "added": 61
   },
   "northfield.finding_actions": {
    "base_rows": 437,
-   "changed_or_lost": 63,
-   "added": 63
+   "changed_or_lost": 225,
+   "added": 228
   },
   "northfield.findings": {
    "base_rows": 123,
-   "changed_or_lost": 0,
-   "added": 0
+   "changed_or_lost": 53,
+   "added": 54
   },
   "northfield.forecast_lines": {
    "base_rows": 288,
@@ -804,7 +804,7 @@
   "northfield.routing_requests": {
    "base_rows": 502,
    "changed_or_lost": 0,
-   "added": 0
+   "added": 1
   },
   "northfield.rule_sets": {
    "base_rows": 2,
@@ -854,7 +854,7 @@
   "northfield.store_activity": {
    "base_rows": 80,
    "changed_or_lost": 0,
-   "added": 0
+   "added": 160
   },
   "northfield.transfer_lines": {
    "base_rows": 0,
@@ -872,5 +872,5 @@
    "added": 0
   }
  },
- "summary": "155 of 174 base tables keep every row; 19 changed without a re-baseline"
+ "summary": "139 of 174 base tables keep every row; 35 changed without a re-baseline"
 }

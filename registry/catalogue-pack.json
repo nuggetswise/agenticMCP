@@ -849,7 +849,7 @@
   {
    "id": "AP-4.2",
    "owner": "Ashby",
-   "statement": "Accepting a deduction, settling it or writing it off needs a person’s approval",
+   "statement": "Settling or writing off a disputed deduction needs a person’s approval. A deduction the deal supports needs no decision",
    "implements": [
     "NF-7.7"
    ],

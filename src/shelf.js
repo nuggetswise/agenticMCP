@@ -80,7 +80,7 @@ const spec = {
   baseline: (db, s, act) => { const k = st(s);
     for (const r of rows(db, s)) { const d = decision(db, s, r.record);
       if (k.orders[r.record]?.po && !k.orders[r.record].sales_order) act('create_sales_order', { record: r.record });
-      else if (d.evidence.on_hand === 0 && !k.recs[r.record]) act('recommend_order', { record: r.record, pairs: Math.max(40, Math.ceil(d.evidence.weekly_average / 40) * 40) }); } },
+      else if (d.evidence.on_hand === 0 && !k.recs[r.record]) act('recommend_order', { record: r.record, pairs: Math.max(40, Math.round(d.evidence.weekly_average / 40) * 40) }); } },
   outcome: (db, s) => { const k = st(s); const violations = [];
     for (const [store, r] of Object.entries(k.recs)) { const d = decision(db, s, store); if (r.kind === 'order' && d.evidence.ship_notice_in_transit !== 'None') violations.push(`Store ${store}: order recommended while ${d.evidence.ship_notice_in_transit} was in transit (duplicate stock)`); }
     return { as_of: fmtET(iso(s.clock)), recommendations: k.recs, orders: k.orders, waits: Object.keys(k.waits), refilled: Object.entries(k.orders).filter(([, o]) => o.refilled).map(([st2, o]) => `Store ${st2}: ${o.refilled}`), violations,

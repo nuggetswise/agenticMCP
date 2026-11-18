@@ -24,7 +24,9 @@
 //      changed it, then it went ahead) or Declined (the person did something else), with the change stated. A decision
 //      taken where no proposal stood carries none of the three. Every dispute is a person's decision (AP-4.1).
 // Everything is a pure function of the world's tables, so the same build gives the same log and the same read the same figures.
+import { readFileSync } from 'node:fs';
 import { fmtET, et, etDay, addD } from '../world/lib.js';
+const FINDING_IDS = JSON.parse(readFileSync(new URL('../registry/finding-ids.json', import.meta.url), 'utf8'));
 import { P5 } from '../world/p5-physical.js';
 import * as D from './domain.js';
 import { claimDecision } from './agents.js';
@@ -90,8 +92,10 @@ export function buildFindingLog(db) {
   // ───────── Rejections Northfield returned (824, 997): Ashby corrects; for Northfield each is its own rule finding ─────────
   const errs = q("SELECT e.*, d.doc_type, d.reference, d.po, d.supplier_id, d.sent_at doc_at, r.sent_at reported_at, r.reference reported_ref, r.doc_type reported_type, c.sent_at corrected_at, c.reference corrected_ref FROM errors e JOIN documents d ON d.doc_id = e.doc_id JOIN documents r ON r.doc_id = e.reported_by LEFT JOIN documents c ON c.doc_id = e.corrected_by WHERE d.test = 0 ORDER BY r.sent_at, e.error_id").all();
   const dockOpen = (po) => { const o = q('SELECT requested_delivery, ship_to FROM orders WHERE po = ?').get(po); return o ? iso(et(o.requested_delivery, o.ship_to === 'DC4' ? '07:00' : '06:00')) : null; };
+  const sameCause = new Set(); // a second error of the same cause on one document names its line, so the two findings read apart
   for (const e of errs) {
-    const uc = e.doc_type === '810' ? 'Invoice holds' : 'Missing documents'; const what = `${{ 810: 'Invoice', 856: 'Ship notice', 855: 'Order acknowledgment' }[e.doc_type] || `Document ${e.doc_type}`} ${e.reference} ${/held/i.test(e.status) || e.code === 'QTY' ? 'held' : 'rejected'}: ${e.cause}`;
+    const uc = e.doc_type === '810' ? 'Invoice holds' : 'Missing documents'; const again = sameCause.has(`${e.doc_id}|${e.cause}`); sameCause.add(`${e.doc_id}|${e.cause}`); const onLine = again ? (String(e.allowed).match(/on line (\d+)/) || [])[1] : null;
+    const what = `${{ 810: 'Invoice', 856: 'Ship notice', 855: 'Order acknowledgment' }[e.doc_type] || `Document ${e.doc_type}`} ${e.reference} ${/held/i.test(e.status) || e.code === 'QTY' ? 'held' : 'rejected'}: ${e.cause}${onLine ? ` on line ${onLine}` : ''}`;
     const deadline = e.doc_type === '856' ? dockOpen(e.po) : null; const evs = e.po ? evOf.all(e.po) : [];
     const approval = evs.find((x) => x.kind === 'approval' && x.at >= e.reported_at && (!e.corrected_at || x.at <= e.corrected_at) && /Corrected/.test(J(x.data).what || ''));
     for (const side of e.supplier_id === 'ASHBY' ? ['Ashby', 'Northfield'] : ['Northfield']) {
@@ -121,13 +125,13 @@ export function buildFindingLog(db) {
     } else if (e.kind === 'order.ship_to_changed') {
       const f = check(e, { rule: 'NF-4.7', problem: `Order change moved the ship-to from ${d.previous} to ${d.ship_to}; the Supplier ERP sales order still shows ${d.previous}`, owner: 'Ashby order desk', raised_at: e.po === P5.po ? P5.branch_at : e.at, deadline: e.po === P5.po ? P5.seal_at : null, raised_record: `${e.po} Change ${d.change}`, raised_kind: 'Order change (860)' });
       const asn = shipNotice(e.po, e.at); if (asn) { const st = q('SELECT ship_to FROM shipments WHERE shipment_id = ?').get(asn.reference)?.ship_to; if (st === d.ship_to.replace(' ', '')) { f.act('Owner fixed', asn.sent_at, 'Ashby order desk', asn.reference, 'Ship notice (856)', { detail: `Ships to ${d.ship_to}` }); confirmReceipt(f, e.po, asn.sent_at); } }
-    } else if (e.kind === 'erp.invoice_draft' && d.billed > d.shipped) {
-      const f = check(e, { rule: 'NF-7.8', record: d.invoice, problem: `Invoice draft ${d.invoice} line ${d.line} bills ${d.billed} cases; ${d.shipped} shipped; $${d.over_value.toFixed(2)} over`, owner: 'Ashby billing', deadline: iso(Date.parse(e.at) + d.batch_sends_in_minutes * MIN), amount: d.over_value, raised_record: `Supplier ERP invoice draft ${d.invoice}`, raised_kind: 'Supplier ERP · API' });
+    } else if (e.kind === 'erp.invoice_draft' && d.billed > d.to_ship) {
+      const f = check(e, { rule: 'NF-7.8', record: d.invoice, problem: `Invoice draft ${d.invoice} line ${d.line} bills ${d.billed} cases; ${d.to_ship} allocated to ship; $${d.over_value.toFixed(2)} over`, owner: 'Ashby billing', deadline: iso(Date.parse(e.at) + d.batch_sends_in_minutes * MIN), amount: d.over_value, raised_record: `Supplier ERP invoice draft ${d.invoice}`, raised_kind: 'Supplier ERP · API' });
       const inv = docsOf.all(e.po).find((x) => x.doc_type === '810' && x.reference === d.invoice); const il = inv && q('SELECT qty FROM invoice_lines WHERE invoice = ? AND line = ?').get(d.invoice, d.line);
-      if (inv && il && il.qty === d.shipped) { f.act('Owner fixed', inv.sent_at, 'Ashby billing', inv.reference, 'Invoice (810)', { detail: `Line ${d.line} bills ${il.qty}` }); confirm997(f, inv.doc_id); }
+      if (inv && il && il.qty === d.to_ship) { f.act('Owner fixed', inv.sent_at, 'Ashby billing', inv.reference, 'Invoice (810)', { detail: `Line ${d.line} bills ${il.qty}` }); confirm997(f, inv.doc_id); }
     } else if (e.kind === 'routing.request' && d.state === 'Missing') {
       const f = check(e, { rule: 'NF-3.2', problem: `Collect freight, ${d.cases} cases; no routing request sent`, owner: 'Ashby order operations', deadline: iso(Date.parse(e.at) + d.due_in_minutes * MIN), decision_needed: 1, proposal: 'Send the routing request (753)', raised_record: `Routing check, ${fmtET(e.at)}`, raised_kind: 'Rule check' });
-      const rr = docsOf.all(e.po).find((x) => x.doc_type === '753' && x.sent_at >= e.at); if (rr) { f.act('Decided', rr.sent_at, 'Priya Raman', rr.reference, 'Approval to send', { decision: 'Approved as proposed', written: 1 }); f.act('Owner fixed', rr.sent_at, 'Trading Grid', rr.reference, 'Routing request (753)'); const ri = docsOf.all(e.po).find((x) => x.doc_type === '754' && x.sent_at >= rr.sent_at); if (ri) f.act('Confirmed', ri.sent_at, 'Northfield transportation', ri.reference, 'Routing instructions (754)'); }
+      const rr = docsOf.all(e.po).find((x) => x.doc_type === '753' && x.sent_at >= e.at); if (rr) { const ok = after('tg.release', (r) => r.document === rr.reference); f.act('Decided', ok ? ok.at : rr.sent_at, ok ? J(ok.data).released_by : 'Priya Raman', rr.reference, 'Approval to send', { decision: 'Approved as proposed', written: 1 }); f.act('Owner fixed', rr.sent_at, 'Trading Grid', rr.reference, 'Routing request (753)'); const ri = docsOf.all(e.po).find((x) => x.doc_type === '754' && x.sent_at >= rr.sent_at); if (ri) f.act('Confirmed', ri.sent_at, 'Northfield transportation', ri.reference, 'Routing instructions (754)'); }
     } else if (e.kind === 'wms.inventory' && d.available < d.ordered_across_orders) {
       const f = check(e, { rule: 'NF-2.1', problem: `${d.site}: ${d.available} cases ${d.sku} free against ${d.ordered_across_orders} ordered on ${d.orders} orders; ${d.ordered_across_orders - d.available} short`, owner: 'Ashby order desk', deadline: iso(Date.parse(e.at) + d.change_cutoff_in_minutes * MIN), raised_record: `Kinross inventory read, ${fmtET(e.at)}`, raised_kind: 'Kinross inventory · API' });
       const chg = docsOf.all(e.po).find((x) => x.doc_type === '860' && x.sent_at > e.at); if (chg) { f.act('Owner fixed', chg.sent_at, 'Northfield buyer', chg.reference, 'Order change (860)'); const asn = shipNotice(e.po, chg.sent_at); if (asn) confirmReceipt(f, e.po, asn.sent_at); }
@@ -140,7 +144,8 @@ export function buildFindingLog(db) {
       for (const x of list) { const f = check(e, { rule: x.rule || 'NF-4.2', record: String(d.document).replace(' draft', ''), problem: `Ship notice held: ${x.finding}`, owner: /Kinross/.test(x.owner || '') ? 'Kinross' : x.owner || 'Ashby order operations', decision_needed: 1, proposal: 'Release the ship notice once the finding is fixed', raised_record: `Hold on ${d.document}`, raised_kind: 'Trading Grid hold' });
         const fix = evs.find((y) => y.kind === 'erp.correction' && y.at > e.at && J(y.data).rule === x.rule) || (/Kinross/.test(x.owner || '') ? after('wms.departure_scan') : null);
         if (fix) f.act('Owner fixed', fix.at, fix.kind === 'erp.correction' ? J(fix.data).owner : 'Kinross', fix.kind === 'erp.correction' ? `Supplier ERP correction, ${fmtET(fix.at)}` : `Kinross departure scan, ${fmtET(fix.at)}`, fix.kind === 'erp.correction' ? 'Supplier ERP' : 'Kinross scan · API', { detail: J(fix.data).change || null });
-        const rel = after('tg.release') || evs.find((y) => y.kind === 'approval' && y.at > e.at && /Release/.test(J(y.data).what || ''));
+        // A release counts for this hold when it names no document or names this one: an approval to send another document on the same order (an application advice, a routing request) is not a release of the ship notice.
+        const held = String(d.document).replace(' draft', ''); const rel = after('tg.release', (r) => !r.document || String(r.document).replace(' draft', '') === held) || evs.find((y) => y.kind === 'approval' && y.at > e.at && /Release/.test(J(y.data).what || ''));
         if (rel) f.act('Decided', rel.at, J(rel.data).released_by || J(rel.data).approved_by || 'Priya Raman', `Release, ${fmtET(rel.at)}`, 'Approval to release', { decision: 'Approved as proposed', detail: J(rel.data).what || J(rel.data).basis || null });
         else if (d.corrected_by && d.released_at) { f.act('Decided', d.released_at, d.corrected_by, `Hold on ${d.document}`, 'Trading Grid hold', { decision: 'Edited', change: `${x.finding}: corrected before release`, detail: `Corrected by ${d.corrected_by}; released` });
           const asn0 = shipNotice(e.po, e.at); if (asn0) f.act('Owner fixed', asn0.sent_at, 'Trading Grid', asn0.reference, 'Ship notice (856)', { detail: 'Corrected ship notice sent' }); }
@@ -187,13 +192,12 @@ export function buildFindingLog(db) {
       }
     }
   }
-  // Promotion deductions that match their deal: Ashby's promotion deduction rules propose accepting; no case is opened.
+  // Promotion deductions that match their deal need no decision (AP-4.2, 18 November 2026): no case is opened and nothing is proposed.
   for (const s of q("SELECT * FROM deal_settlements WHERE supplier_id = 'ASHBY' AND decision = 'Matched' ORDER BY deduction_ref").all()) {
-    const f = add({ side: 'Ashby', use_case: 'Promotions', rule: 'NF-7.3', record: s.deduction_ref, po: null, problem: `Promotion deduction ${s.deduction_ref} for deal ${s.claimed_deal}: $${s.claimed_amount.toFixed(2)} taken on ${s.payment}`, owner: 'Northfield claims review', raised_at: s.paid_at, deadline: iso(Date.parse(s.paid_at) + 60 * 24 * H), decision_needed: 1,
-      proposed_by: 'Ashby’s promotion deduction rules', proposal: 'Accept the charge', rule_baseline: 'Accept every deduction carrying a promotion reason code', amount: s.claimed_amount });
+    const f = add({ side: 'Ashby', use_case: 'Promotions', rule: 'NF-7.3', record: s.deduction_ref, po: null, problem: `Promotion deduction ${s.deduction_ref} for deal ${s.claimed_deal}: $${s.claimed_amount.toFixed(2)} taken on ${s.payment}`, owner: 'Northfield claims review', raised_at: s.paid_at, deadline: iso(Date.parse(s.paid_at) + 60 * 24 * H), decision_needed: 0,
+      proposed_by: 'Rule', proposal: null, rule_baseline: 'Accept every deduction carrying a promotion reason code', amount: s.claimed_amount });
     const at = iso(Date.parse(s.paid_at) + (100 + (hash(s.deduction_ref) % 20)) * MIN);
-    f.act('Raised', s.paid_at, 'Northfield', s.payment, 'Remittance (820)').act('Decided', at, 'Priya Raman', `Acceptance of ${s.deduction_ref}`, 'Trading Grid deductions', { decision: 'Approved as proposed', detail: `Accepted: ${s.reason}`, written: 1 })
-      .act('Confirmed', at, 'Priya Raman', `Acceptance of ${s.deduction_ref}`, 'Trading Grid deductions', { detail: 'Matched to its deal; nothing disputed', written: 1 });
+    f.act('Raised', s.paid_at, 'Northfield', s.payment, 'Remittance (820)').act('Confirmed', at, 'Trading Grid', `Deal match for ${s.deduction_ref}`, 'Trading Grid deductions', { detail: `Matched to its deal, no decision needed: ${s.reason}`, written: 1 });
   }
   // The disputed return (returns stage): one case, decided by Jordan Ellis.
   for (const e of q("SELECT at, po, data FROM events WHERE kind = 'return.dispute' ORDER BY at").all()) { const d = J(e.data); const dec = evOf.all(e.po).map((x) => ({ ...x, d: J(x.data) })).find((x) => x.kind === 'return.decision' && x.d.case === d.case); const reps = repay.all(d.deduction);
@@ -211,7 +215,7 @@ export function buildFindingLog(db) {
     const f = add({ side: 'Ashby', use_case: 'Store activity', rule: d.finding === 'Empty shelf' ? 'AP-6.1' : 'AP-6.2', record: `Store ${d.store}`, po: null, problem: `Store ${d.store}: ${String(d.finding).toLowerCase()}`, owner: d.recommend === 'New order' ? 'Northfield buyer' : 'Northfield store operations', raised_at: e.at, deadline: null, decision_needed: 1,
       proposed_by: ruleSet('Shelf Agent'), proposal: d.recommend === 'New order' ? `Suggest a new order of ${d.pairs} pairs to the buyer` : `Suggest a transfer of ${d.pairs} pairs to store ${d.to_store}`, rule_baseline: 'Order for every store below its reorder point', amount: null });
     f.act('Raised', e.at, 'Trading Grid', `Store activity (852) for store ${d.store}`, 'Store activity (852)');
-    if (d.approved_by) f.act('Decided', e.at, d.approved_by, `Recommendation for store ${d.store}`, 'Trading Grid', { decision: 'Approved as proposed', detail: `Sent to ${d.sent_to}` });
+    if (d.approved_by) f.act('Decided', e.at, d.approved_by, `Recommendation for store ${d.store}`, 'Trading Grid', { decision: 'Approved as proposed', detail: 'Shown in Trading Grid to Priya Raman and Jordan Ellis; nothing is sent' });
     if (d.recommend === 'New order') { const o = q("SELECT po, received_at FROM orders WHERE stream = 'store' AND ship_to = ? AND received_at >= ? ORDER BY received_at").get(`STORE${d.store}`, e.at);
       if (o) { f.po = o.po; f.act('Owner fixed', o.received_at, 'Northfield buyer', o.po, 'Purchase order (850)'); confirmReceipt(f, o.po, o.received_at); } } }
 
@@ -230,7 +234,12 @@ export function buildFindingLog(db) {
   const kept = F.filter((f) => periodOf(f.raised_at)).sort((a, b) => (a.side < b.side ? -1 : a.side > b.side ? 1 : a.raised_at < b.raised_at ? -1 : a.raised_at > b.raised_at ? 1 : `${a.use_case}|${a.record}|${a.rule}|${a.problem}` < `${b.use_case}|${b.record}|${b.rule}|${b.problem}` ? -1 : 1));
   const n = { Ashby: 0, Northfield: 0 }; const insF = q('INSERT INTO findings VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'); const insA = q('INSERT INTO finding_actions VALUES (?,?,?,?,?,?,?,?,?,?,?)');
   db.exec('BEGIN');
-  for (const f of kept) { const id = `F${f.side[0]}-${String(++n[f.side]).padStart(4, '0')}`;
+  // A finding recorded before 18 November 2026 keeps its number (registry/finding-ids.json, keyed by side, use case, record and rule), so a
+  // finding added or moved in time renumbers no other. A finding with no number there takes the next one after the highest.
+  const used = new Set(); const idOf = new Map(); const top = { Ashby: 0, Northfield: 0 };
+  for (const f of kept) { const p = FINDING_IDS[`${f.side}|${f.use_case}|${f.record}|${f.rule}`]; if (p && !used.has(p)) { used.add(p); idOf.set(f, p); } }
+  for (const p of Object.values(FINDING_IDS)) { const side = p[1] === 'A' ? 'Ashby' : 'Northfield'; top[side] = Math.max(top[side], Number(p.slice(3))); }
+  for (const f of kept) { n[f.side]++; const id = idOf.get(f) || `F${f.side[0]}-${String(++top[f.side]).padStart(4, '0')}`;
     insF.run(id, f.side, periodOf(f.raised_at), f.use_case, f.rule, f.record, f.po ?? null, f.problem, f.owner, f.raised_at, f.deadline ?? null, f.decision_needed, f.proposed_by, f.proposal ?? null, f.rule_baseline ?? null, f.amount ?? null);
     for (const a of f.actions.sort((x, y) => STAGES.indexOf(x.stage) - STAGES.indexOf(y.stage))) insA.run(id, a.stage, a.at, a.actor, a.record, a.record_kind, a.detail, a.decision, a.change, a.amount, a.written); }
   db.exec('COMMIT');

@@ -50,12 +50,12 @@ import { iso } from '../log.js';
 import { seg, d8, t4, iso8, first, n1, clean } from '../x12.js';
 import { locations, PARTY, QUARTER, HISTORY_START } from '../ref.js';
 
-const LOC = Object.fromEntries(locations.map((l) => [l.id, l]));
+export const LOC = Object.fromEntries(locations.map((l) => [l.id, l]));
 export const COLLECT_FROM = '2026-12-06';
-const WINDOW_H = 2;
+export const WINDOW_H = 2;
 const SCAC = 'LKLF';
 /** Shipping weight (lb) and cube (cubic feet) of one carton. Invented. */
-const CARTON = { 'ASH-MUG-12': [15.5, 1.3], 'ASH-NAP-4': [9.0, 1.1], 'ASH-HNY-340': [12.5, 0.9] };
+export const CARTON = { 'ASH-MUG-12': [15.5, 1.3], 'ASH-NAP-4': [9.0, 1.1], 'ASH-HNY-340': [12.5, 0.9] };
 const DOCK = Object.fromEntries(locations.filter((l) => /Dock window/.test(l.note || '')).map((l) => { const m = l.note.match(/(\d\d:\d\d) to (\d\d:\d\d)/); return [l.id, { open: m[1], close: m[2] }]; }));
 
 // ---------- masters ----------

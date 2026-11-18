@@ -57,6 +57,7 @@ export function present(v) {
   for (const [k, x] of Object.entries(v)) {
     if (k === 'agent') {
       if (typeof x === 'string' && RULE_SETS[x]) { o.rules = RULE_SETS[x].set; o.runtime = RULE_SETS[x].runtime; }
+      else if (x === 'Aviator') o.assistant = x;
       else if (x && typeof x === 'object') o.model_run = present(x); // a governance replay's second run, beside the rule baseline
       else if (x != null) o.proposed_by = present(x); // an access-log attribution: a person's assistant, the rule baseline
     } else o[KEYS[k] || (/agent/i.test(k) ? k.replace(/agents?/gi, 'rules') : k)] = present(x);

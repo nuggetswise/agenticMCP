@@ -12,7 +12,7 @@ import { z } from 'zod';
 import { createHash } from 'node:crypto';
 import { fmtET } from '../world/lib.js';
 import * as D from './domain.js';
-import { declarations } from './aviator.js';
+import { declarations, modelArgs } from './aviator.js';
 
 const MIN = 60000, H = 3600000;
 const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -43,10 +43,13 @@ export const GUARDRAILS = [
 // ---------- The world at the branch: Northfield's records of each held invoice, every record dated ----------
 /** Held invoices at a time, by the rule engine's recorded holds: an application advice (824) on an invoice under NF-7.8, NF-7.10
  *  or NF-7.11, sent by then, with no correction sent by then. Generic over every supplier; no record id is named here. */
+// A hold ends when its error is corrected or when the invoice is replaced: a line the replacing invoice bills unchanged keeps its
+// error open (INV-7731 line 2, settled by deduction), but the replaced invoice is no longer in the queue (18 November 2026).
 export function heldAt(db, at) {
   return db.prepare(`SELECT d.reference invoice, d.po, d.sent_at, e.rule_id rule, e.cause, e.sent_value, e.allowed, r.reference advice, r.sent_at advice_at, (SELECT name FROM parties WHERE id = d.supplier_id) supplier
     FROM errors e JOIN documents d ON d.doc_id = e.doc_id JOIN documents r ON r.doc_id = e.reported_by LEFT JOIN documents c ON c.doc_id = e.corrected_by
-    WHERE d.doc_type = '810' AND e.rule_id IN (${HOLD_RULES.map(() => '?').join(',')}) AND r.sent_at <= ? AND (c.doc_id IS NULL OR c.sent_at > ?) ORDER BY r.sent_at`).all(...HOLD_RULES, at, at).map((x) => ({ ...x }));
+    WHERE d.doc_type = '810' AND e.rule_id IN (${HOLD_RULES.map(() => '?').join(',')}) AND r.sent_at <= ? AND (c.doc_id IS NULL OR c.sent_at > ?)
+      AND NOT EXISTS (SELECT 1 FROM invoices n WHERE n.replaces = d.reference AND n.sent_at <= ?) ORDER BY r.sent_at`).all(...HOLD_RULES, at, at, at).map((x) => ({ ...x }));
 }
 /** Loads one invoice's case from Northfield's records: its order, changes, acknowledgments, ship notices, receipts, invoice, holds and
  *  corrections. Records after the branch are kept with their time and stay hidden from every read until the clock passes it. */
@@ -471,7 +474,8 @@ export function runBaseline(db, s, approve = (p) => decide(db, s, p, 'approve', 
 }
 
 // ---------- Match Agent: a model choosing reads and proposing actions ----------
-const AGENT_TOOLS = [
+// Exported so the model-schema check can read every declaration the model is sent.
+export const AGENT_TOOLS = [
   ...Object.entries(READS).map(([name, r]) => ({ name, description: r.description, input: r.input })),
   { name: 'propose_action', description: `Propose one action on one held invoice. The server decides whether it runs under policy, waits for Jordan Ellis, or is only a suggestion, and refuses anything a rule or guardrail forbids. Actions: ${Object.entries(ACTIONS).map(([k, a]) => `${k} (${a.label}; takes ${ARGS[k].join(', ')})`).join('; ')}. Give a short rationale grounded in records you read, and the alternatives you considered with why you did not choose them.`,
     input: { action: z.enum(Object.keys(ACTIONS)), invoice: z.string(), lines: z.array(z.number().int()).optional(), line: z.number().int().optional(), correction: z.string().optional().describe('Reference of the credit memo or corrected invoice to match'), rationale: z.string().describe('One or two sentences citing the records read'), alternatives: z.array(z.string()).optional() } },
@@ -513,7 +517,7 @@ export async function runMatch(db, s, { callModel, maxSteps = 14, maxToolCalls =
     if (!calls.length) { ag.status = s.proposals.some((p) => p.state === 'Awaiting approval') ? 'waiting_for_jordan' : 'done'; break; }
     const responses = []; let waiting = false; let blocked = null;
     for (const { functionCall: f } of calls) {
-      ag.tool_calls++; const args = f.args || {}; let result;
+      ag.tool_calls++; const args = { ...modelArgs(AGENT_TOOLS, f.name, f.args) }; let result;
       if (f.name === 'propose_action') { const { action, rationale, alternatives, ...rest } = args; for (const k of Object.keys(rest)) if (rest[k] === undefined || rest[k] === null || rest[k] === '') delete rest[k]; result = propose(db, s, 'Match Agent', action, rest, { rationale, alternatives }); if (result.state === 'Awaiting approval') waiting = true;
         if (result.state === 'Refused') { ag.refused = ag.refused || {}; ag.refused[action] = (ag.refused[action] || 0) + 1; if (ag.refused[action] >= 2) { blocked = result.message; result = { ...result, message: `${result.message} Refused twice: stop proposing ${action}; Jordan Ellis is told what is waiting.` }; } } }
       else if (READS[f.name]) { result = read(db, s, f.name, args); trace(s, 'Match Agent', 'tool', `Read ${f.name}`, { args }); }

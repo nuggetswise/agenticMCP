@@ -1,11 +1,14 @@
 // Derived views: Northfield's 13-week scorecard over the replenishment programme, and the open-order view behind Money in Motion.
 import { fmtET, etDay, addD } from '../world/lib.js';
-import { BUYER_CASE_PACK } from '../world/ref.js';
 
 const J = (s) => (s ? JSON.parse(s) : {});
 export const QUARTER = { start: '2026-09-27', end: '2026-12-26' };
 
 const money0 = (n) => n.toLocaleString('en-US');
+/** The word for an order line's unit of measure, as Trading Grid shows it. */
+export const UNIT = { CA: 'Cases', EA: 'Each', PR: 'Pairs' };
+/** The unit an order's quantities are in, from its lines' unit of measure: "Cases" for Ashby's orders. Answers name it. */
+export const quantitiesIn = (db, po) => [...new Set(db.prepare('SELECT DISTINCT uom FROM order_lines WHERE po = ?').all(po).map((r) => UNIT[r.uom] || r.uom))].join(', ') || null;
 const supplierOf = (db, id) => db.prepare('SELECT id, name FROM parties WHERE id = ?').get(id);
 
 /**
@@ -14,9 +17,10 @@ const supplierOf = (db, id) => db.prepare('SELECT id, name FROM parties WHERE id
  * advice (861) shows them received inside the purchase order's delivery window and in full against the quantity after
  * accepted order changes (850, 860). Each failing line's reason is read from documents both companies hold: the order
  * acknowledgment (855), the ship notice (856), the receiving advice (861) and, on collect freight, the missed pickup.
- * Every supplier's rate counts cases, as the formula states. Ashby's covers its DC replenishment programme, ordered in cases;
- * every other supplier orders in each and ships 24 each to a case (the carton count on its ship notices), so its lines
- * are counted at that pack: a part case counts as a case, and a line short by less than a case fails one case.
+ * The formula counts cases. Ashby's rate covers its DC replenishment programme, ordered in cases. Another supplier's lines
+ * count in cases only where its item has a Case packaging level (a part case counts as a case, and a line short by less
+ * than a case fails one case); with no such record they count in the unit on the order, and counting_unit says which.
+ * No case size is assumed (18 November 2026: no record gave other suppliers' items a case pack).
  * A line with no receiving advice at the measurement time is Open: listed, and outside the rate. A line Northfield
  * cancelled (ordered quantity 0) with nothing received is neither.
  */
@@ -31,13 +35,17 @@ export function otif(db, { supplier = 'ASHBY', from = QUARTER.start, to = QUARTE
   const missed = new Set(db.prepare("SELECT po FROM events WHERE kind = 'carrier.pickup_missed' AND at <= ?").all(T).map((r) => r.po));
   const sites = new Map(db.prepare(`SELECT po, ship_from FROM shipments WHERE po IN ${pos}`).all().map((r) => [r.po, r.ship_from]));
   let cases = 0, failing = 0; const rows = []; const open = [];
-  // Cases on a line: the quantity itself where the order is in cases, else the each quantity at the supplier's case pack.
-  const inCases = (l, q) => (l.uom === 'EA' ? Math.ceil(q / BUYER_CASE_PACK) : q);
+  // The unit a line counts in, from the records only: cases where the order is in cases; cases again where the item has a
+  // Case packaging level (its units per case, the level in force at the measurement time); otherwise the order's own unit.
+  // No case size is assumed: an item with no Case level is counted in each (or pairs), and the rate says so.
+  const packs = new Map(); for (const p of db.prepare("SELECT sku, units FROM packaging_levels WHERE level = 'Case' AND units > 0 AND (valid_from IS NULL OR valid_from <= ?) AND (valid_to IS NULL OR valid_to > ?) ORDER BY valid_from").all(T, T)) packs.set(p.sku, p.units);
+  const unitOf = (l) => (l.uom === 'CA' || (l.uom === 'EA' && packs.has(l.sku)) ? 'Cases' : UNIT[l.uom] || l.uom);
+  const inCases = (l, q) => (l.uom === 'EA' && packs.has(l.sku) ? Math.ceil(q / packs.get(l.sku)) : q); const units = new Set();
   for (const l of lines) {
     const k = `${l.po}|${l.line}`; const r = rc.get(k); const got = r ? r.q : 0; const s = sh.get(k); let reason = null, bad = 0, first = null;
     // A line with no receiving advice at the measurement time is open, not failing: it is left out of the rate and listed.
     if (!r && !missed.has(l.po)) { if (l.qty_ordered > 0) open.push({ po: l.po, line: l.line, item: l.sku, status: 'Open', cases: inCases(l, l.qty_ordered), delivery_date: l.requested_delivery, ship_notice: s ? s.asn : null, state: s ? 'Shipped, no receiving advice yet' : 'No ship notice or receiving advice yet' }); continue; }
-    const ord = inCases(l, l.qty_ordered); cases += ord;
+    const ord = inCases(l, l.qty_ordered); cases += ord; units.add(unitOf(l));
     const et = r ? fmtET(r.at) : null; const hour = et ? Number(et.slice(11, 13)) + Number(et.slice(14, 16)) / 60 : null; const [wOpen, wClose] = l.ship_to === 'DC4' ? [7, 15] : [6, 14];
     if (missed.has(l.po)) { reason = 'Collect freight not ready'; bad = ord; first = 'Carrier pickup record'; }
     else if (r && (etDay(new Date(r.at)) > l.requested_delivery || hour < wOpen || hour > wClose)) { reason = 'Prepaid arrived outside window'; bad = ord; first = `Receiving advice ${r.receipt}`; }
@@ -45,13 +53,13 @@ export function otif(db, { supplier = 'ASHBY', from = QUARTER.start, to = QUARTE
       if (l.qty_accepted != null && l.qty_accepted < l.qty_ordered) { reason = 'Allocation cut'; first = 'Order acknowledgment'; }
       else if (s && s.q < l.qty_ordered) { reason = 'Short shipped, remainder cancelled'; first = `Ship notice ${s.asn}`; }
       else { reason = 'Received below ship notice'; first = `Receiving advice ${r.receipt}`; } }
-    if (bad) { failing += bad; rows.push({ po: l.po, line: l.line, item: l.sku, site: sites.get(l.po) || null, dc: l.ship_to === 'DC4' ? 'DC 4' : l.ship_to === 'DC2' ? 'DC 2' : l.ship_to, reason, cases: bad, ordered: ord, shipped: s ? inCases(l, s.q) : 0, received: inCases(l, got), ...(l.uom === 'EA' ? { each: { ordered: l.qty_ordered, shipped: s ? s.q : 0, received: got, to_a_case: BUYER_CASE_PACK } } : {}), first_record: first, ship_notice: s ? s.asn : null, receiving_advice: r ? r.receipt : null }); }
+    if (bad) { failing += bad; rows.push({ po: l.po, line: l.line, item: l.sku, site: sites.get(l.po) || null, dc: l.ship_to === 'DC4' ? 'DC 4' : l.ship_to === 'DC2' ? 'DC 2' : l.ship_to, reason, cases: bad, ordered: ord, shipped: s ? inCases(l, s.q) : 0, received: inCases(l, got), ...(l.uom === 'EA' && packs.has(l.sku) ? { each: { ordered: l.qty_ordered, shipped: s ? s.q : 0, received: got, to_a_case: packs.get(l.sku) } } : {}), first_record: first, ship_notice: s ? s.asn : null, receiving_advice: r ? r.receipt : null }); }
   }
   const counted = lines.filter((l) => rc.has(`${l.po}|${l.line}`) || missed.has(l.po)).length;
   const by = {}; for (const r of rows) { (by[r.reason] ||= { reason: r.reason, lines: 0, cases: 0 }); by[r.reason].lines++; by[r.reason].cases += r.cases; }
   const compliant = cases - failing; const score = cases ? `${((compliant / cases) * 100).toFixed(1)}%` : null;
   return { calculated_by: 'Trading Grid', period: `${from} to ${to}`, definition: 'Northfield supplier guide 2026.2 (NF-8.2, NF-8.3): compliant cases ÷ all cases, counted per order line', programme: own ? 'DC replenishment' : 'All orders with a delivery date in the period',
-    counting_unit: 'Cases', ...(own ? {} : { case_pack: `Ordered in each; counted at ${BUYER_CASE_PACK} each to a case, the pack on the supplier’s ship notices` }), order_lines: counted, cases, failing_cases: failing, compliant_cases: compliant, score,
+    counting_unit: [...units].join(', ') || 'Cases', ...([...units].some((u) => u !== 'Cases') ? { case_pack: 'No case pack is recorded for these items (no Case packaging level), so their lines count in the unit on the order. The field names say cases; the counting unit governs.' } : {}), order_lines: counted, cases, failing_cases: failing, compliant_cases: compliant, score,
     formula: cases ? `${money0(compliant)} ÷ ${money0(cases)} = ${score}` : null, failing_lines: rows.length, by_reason: Object.values(by).sort((a, b) => b.cases - a.cases),
     open_lines: { lines: open.length, cases: open.reduce((t, o) => t + o.cases, 0), status: 'Open', note: 'No receiving advice at the measurement time: shown as Open and left out of the rate, neither compliant nor failing', ...(open.length ? { list: open.slice(0, 50) } : {}) }, lines: rows.sort((a, b) => b.cases - a.cases) };
 }
@@ -82,7 +90,7 @@ export function supplierRanking(db, asOf) {
     .sort((a, b) => b._v - a._v || b.cases - a.cases || a.supplier.localeCompare(b.supplier));
   rows.forEach((r, i) => { r.rank = i + 1; delete r._v; });
   return { as_of: fmtET(asOf), calculated: true, calculated_by: 'Trading Grid', period: `${QUARTER.start} to ${QUARTER.end}`, definition: 'Northfield supplier guide 2026.2 (NF-8.2, NF-8.3): compliant cases ÷ all cases, counted per order line, the same formula for every supplier',
-    note: 'Each rate is calculated from the purchase orders, order changes, ship notices and receiving advice Trading Grid carries for that supplier. Every supplier is counted in cases. A line with no receiving advice at the measurement time is Open: it is left out of the rate and counted under open_lines.', suppliers: rows.length, ranking: rows };
+    note: 'Each rate is calculated from the purchase orders, order changes, ship notices and receiving advice Trading Grid carries for that supplier. Each rate names its counting unit: cases where the order is in cases or the item has a case pack on record, otherwise the unit on the order. A line with no receiving advice at the measurement time is Open: it is left out of the rate and counted under open_lines.', suppliers: rows.length, ranking: rows };
 }
 
 /** In-full component and its OT01 charge (NF-8.2, NF-2.1): 3% of the goods value of in-full failing cases, by month of delivery, months under $1,000 waived. */

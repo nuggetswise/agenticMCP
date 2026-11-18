@@ -14,8 +14,67 @@ export const modelRoutes = (env = process.env) => [
 ].filter((r) => r.model);
 export const AVIATOR_MODELS = (process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite').split(',').map((s) => s.trim()).filter(Boolean);
 
-const strip = (s) => { if (Array.isArray(s)) return s.map(strip); if (!s || typeof s !== 'object') return s; const o = {}; for (const [k, v] of Object.entries(s)) if (!['$schema', 'additionalProperties', 'default'].includes(k)) o[k] = strip(v); return o; };
-export const declarations = (tools) => tools.map((t) => { const p = strip(zodToJsonSchema(z.object(t.input || {}), { target: 'openApi3' })); return { name: t.name, description: t.description.slice(0, 1000), ...(Object.keys(p.properties || {}).length ? { parameters: p } : {}) }; });
+// Tool schemas for the model. The model reads a subset of OpenAPI 3 and takes enums only as strings, so every tool on
+// both connections, and every runtime's own tools, goes through `toModel` here, and every call the model makes goes back
+// through `modelArgs` before a tool runs. Nothing else converts a schema for the model.
+//   - Keys outside the model's subset are dropped.
+//   - A non-string enum, a const, or a union of literals (z.union([z.literal(24), z.literal(48)])) becomes a string enum
+//     ("24", "48"); `modelArgs` gives the tool the original value (24) back.
+//   - A union of other schemas keeps anyOf, each branch converted.
+//   - A free-form object (z.record: no named properties) is sent as a JSON string, and parsed back.
+const KEEP = new Set(['type', 'format', 'title', 'description', 'nullable', 'enum', 'items', 'properties', 'required', 'minItems', 'maxItems', 'minimum', 'maximum', 'minLength', 'maxLength', 'anyOf', 'propertyOrdering']);
+const FORMATS = { string: ['date-time', 'enum'], number: ['float', 'double'], integer: ['int32', 'int64'] };
+const raw = (t) => zodToJsonSchema(z.object(t.input || {}), { target: 'openApi3' });
+const literalsOf = (s) => (s.enum ? s.enum : 'const' in s ? [s.const] : s.anyOf && s.anyOf.every((b) => b.enum || 'const' in b) ? s.anyOf.flatMap(literalsOf) : null);
+const freeObject = (s) => s.type === 'object' && !Object.keys(s.properties || {}).length;
+export function toModel(s) {
+  if (!s || typeof s !== 'object') return s;
+  const lits = literalsOf(s); const desc = s.description ? { description: s.description } : {};
+  if (lits) { const strs = [...new Set(lits.filter((v) => v !== null).map(String))]; return { type: 'string', ...desc, enum: strs, ...(lits.includes(null) || s.nullable ? { nullable: true } : {}) }; }
+  if (freeObject(s)) return { type: 'string', description: `${s.description ? `${s.description}. ` : ''}A JSON object, written as text.` };
+  if (Array.isArray(s.type)) { const t = s.type.filter((x) => x !== 'null'); return toModel({ ...s, type: t[0] || 'string', ...(s.type.includes('null') ? { nullable: true } : {}) }); }
+  const o = {};
+  for (const [k, v] of Object.entries(s)) {
+    if (!KEEP.has(k)) continue;
+    if (k === 'properties') o.properties = Object.fromEntries(Object.entries(v).map(([p, x]) => [p, toModel(x)]));
+    else if (k === 'items') o.items = toModel(v);
+    else if (k === 'anyOf') o.anyOf = v.map(toModel);
+    else if (k === 'format') { if ((FORMATS[s.type] || []).includes(v)) o.format = v; }
+    else o[k] = v;
+  }
+  return o;
+}
+/** The model's arguments as the tool's own schema reads them: "24" back to 24, "true" to true, a JSON string to its object. */
+function restore(s, v) {
+  if (!s || v === undefined || v === null) return v;
+  const lits = literalsOf(s); if (lits && typeof v === 'string') { const hit = lits.find((x) => String(x) === v); return hit === undefined ? v : hit; }
+  if (freeObject(s) && typeof v === 'string') { try { return JSON.parse(v); } catch { return v; } }
+  if (s.anyOf) { for (const b of s.anyOf) { const r = restore(b, v); if (r !== v) return r; } return v; }
+  const type = Array.isArray(s.type) ? s.type.find((x) => x !== 'null') : s.type;
+  if ((type === 'number' || type === 'integer') && typeof v === 'string' && v.trim() !== '' && !Number.isNaN(Number(v))) return Number(v);
+  if (type === 'boolean' && (v === 'true' || v === 'false')) return v === 'true';
+  if (type === 'array' && Array.isArray(v)) return v.map((x) => restore(s.items, x));
+  if (type === 'object' && v && typeof v === 'object' && !Array.isArray(v)) return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, restore(s.properties?.[k], x)]));
+  return v;
+}
+export const modelArgs = (tools, name, args) => { const t = tools.find((x) => x.name === name); return t ? restore(raw(t), args || {}) : (args || {}); };
+/** Every place a declaration leaves the model's subset, as path: problem. Empty when the model will accept it. */
+export function modelSchemaProblems(decl) {
+  const out = []; const TYPES = ['string', 'number', 'integer', 'boolean', 'array', 'object'];
+  const walk = (s, p) => {
+    for (const k of Object.keys(s)) if (!KEEP.has(k)) out.push(`${p}: key ${k}`);
+    if (!TYPES.includes(s.type) && !s.anyOf) out.push(`${p}: type ${JSON.stringify(s.type)}`);
+    if (s.enum && (s.type !== 'string' || s.enum.some((v) => typeof v !== 'string'))) out.push(`${p}: enum ${JSON.stringify(s.enum)} on type ${s.type}`);
+    if (s.format && !(FORMATS[s.type] || []).includes(s.format)) out.push(`${p}: format ${s.format}`);
+    if (s.type === 'object') { if (!Object.keys(s.properties || {}).length) out.push(`${p}: object with no properties`); for (const r of s.required || []) if (!s.properties?.[r]) out.push(`${p}: required ${r} is not a property`); }
+    if (s.type === 'array' && !s.items) out.push(`${p}: array with no items`);
+    for (const [k, v] of Object.entries(s.properties || {})) walk(v, `${p}.${k}`);
+    if (s.items) walk(s.items, `${p}[]`); (s.anyOf || []).forEach((b, i) => walk(b, `${p}|${i}`));
+  };
+  for (const d of decl) { if (!/^[a-zA-Z_][\w.-]{0,63}$/.test(d.name)) out.push(`${d.name}: name`); if (d.parameters) walk(d.parameters, d.name); }
+  return out;
+}
+export const declarations = (tools) => tools.map((t) => { const p = toModel(raw(t)); return { name: t.name, description: t.description.slice(0, 1000), ...(Object.keys(p.properties || {}).length ? { parameters: p } : {}) }; });
 
 export const instruction = ({ person, company, other, clock }) => `You are Aviator, the assistant inside Trading Grid, acting for ${person} at ${company}. All data is fictional.
 Answer only from the results of the tools you call in this conversation. If the tools do not hold the answer, say so; never estimate, and never answer from general knowledge about a record.
@@ -23,6 +82,7 @@ Name every record you used (PO number, document reference, case id). Unless the 
 A technical acknowledgment (997) is not business acceptance. Records that belong to ${other}, or to any company other than ${company}, are not available to ${company}. If the question names another company, pass it to the tool's supplier field when the tool has one and give the tool's refusal as it reads; otherwise answer "Not available to ${company}" and stop. Never answer a question about another company with ${company}'s own records.
 An order or document that ${company} is itself a party to is ${company}'s own: look it up before answering, and answer from what the tools return. Only when the tools return nothing about the event asked about, because it happened inside ${other} before anything reached ${company} (a hold, a correction, an approval), say in one sentence that this part is not available to ${company}, then list what ${company}'s own records show for that order: each document it sent or received, with its reference and its date. Never say a part is not available when a tool returned it.
 You cannot send, approve, dispute or change anything. When asked to act, say what would be proposed and that ${person} approves it on the Trading Grid screen.
+Give every quantity in the unit the record names (quantities_in, counting_unit, or a line's uom: CA is cases, EA is each); never call a quantity units. Ashby's orders with Northfield are in cases.
 Keep answers short: the answer first, then the records. Write no calendar dates: the screen shows none, so give the record and, where timing matters, the weekday and time.`;
 
 /** One question, answered by the model calling the connection's read tools. `callTool(name, args)` runs a tool exactly as the connection would. */
@@ -47,7 +107,7 @@ export async function ask({ question, history = [], tools, callTool, side, clock
     if (!calls.length) { const text = parts.map((p) => p.text || '').join('').trim(); return { ok: true, answer: text || 'No answer.', answered_from_tools: called.length > 0, tools_called: called, model: model.model, route: model.route }; }
     contents.push(content);
     const known = new Set(tools.map((t) => t.name));
-    contents.push({ role: 'user', parts: calls.map(({ functionCall: f }) => { const result = known.has(f.name) ? callTool(f.name, f.args || {}) : { result: 'Refused', message: `Aviator has no tool ${f.name}` }; called.push({ tool: f.name, arguments: f.args || {} }); return { functionResponse: { name: f.name, ...(f.id ? { id: f.id } : {}), response: { result } } }; }) });
+    contents.push({ role: 'user', parts: calls.map(({ functionCall: f }) => { const result = known.has(f.name) ? callTool(f.name, modelArgs(tools, f.name, f.args)) : { result: 'Refused', message: `Aviator has no tool ${f.name}` }; called.push({ tool: f.name, arguments: modelArgs(tools, f.name, f.args) }); return { functionResponse: { name: f.name, ...(f.id ? { id: f.id } : {}), response: { result } } }; }) });
   }
   return { ok: false, status: 502, message: 'Aviator stopped after too many steps without an answer.', tools_called: called };
 }

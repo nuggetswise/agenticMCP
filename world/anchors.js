@@ -63,7 +63,7 @@ export function anchors(L, W) {
     act(day('2026-10-25', '06:10'), '2026-10-18', '2026-10-24', w1); act(day('2026-11-01', '06:10'), '2026-10-25', '2026-10-31', w2);
     W.storeWeeks = { w1, w2 };
     ev(L, day('2026-10-26', '08:05'), 'erp.inventory_read', null, 'Supplier ERP', 'ASHBY', 'API', { sku: 'ASH-TRL-09', available: 980, unit: 'Pairs', meaning: 'Available' });
-    ev(L, day('2026-10-26', '08:07'), 'rule.recommendation', null, 'Trading Grid', 'ASHBY', 'API', { found_by: 'Ashby replenishment rule AP-6.1', acting_for: 'Priya Raman', store: 114, finding: 'Empty shelf', recommend: 'New order', pairs: 40, also: { store: 207, finding: 'Slow sell-through', recommend: 'Transfer 24 pairs to store 118' }, approved_by: 'Priya Raman', sent_to: 'Jordan Ellis' });
+    ev(L, day('2026-10-26', '08:07'), 'rule.recommendation', null, 'Trading Grid', 'ASHBY', 'API', { found_by: 'Ashby replenishment rule AP-6.1', acting_for: 'Priya Raman', store: 114, finding: 'Empty shelf', recommend: 'New order', pairs: 40, approved_by: 'Priya Raman' });
     const po = A.p9 = 'NR-451207'; const O = { po, supplier: 'ASHBY', shipTo: 'STORE114', site: 'ASH-WH1', programme: 'STORE', requested: '2026-10-27', poDate: iso(day('2026-10-26', '10:20')), stream: 'store', lines: [{ line: 1, sku: 'ASH-TRL-09', qty: 40, price: 38, uom: 'PR' }] };
     D.po(L, O, day('2026-10-26', '10:20')); D.ack(L, O, day('2026-10-26', '10:50'));
     const dep = day('2026-10-26', '16:00');
@@ -73,7 +73,9 @@ export function anchors(L, W) {
     D.receipt(L, O, day('2026-10-27', '09:10'), { ref: 'RCV-S114-51207', asnRef: 'ASN-451207-1', qty: { 1: 40 } });
     W.pay.push({ O, invRef: 'INV-451207', amount: 1520, at: day('2026-11-25', '08:00') });
     // Shelf Agent's other two decisions later in the quarter: goods already in transit, and a transfer.
-    ev(L, day('2026-11-02', '08:07'), 'rule.recommendation', null, 'Trading Grid', 'ASHBY', 'API', { found_by: 'Ashby replenishment rule AP-6.2', acting_for: 'Priya Raman', store: 207, finding: 'Slow sell-through', recommend: 'Transfer', pairs: 24, to_store: 118 });
+    // 18 November 2026: store 207's finding was recorded here a week late (2 November). It is recorded once, on 26 October,
+    // by the `records` stage; this record is withdrawn in place so no other record is renumbered.
+    L.retireEvent(day('2026-11-02', '08:07'));
   }
 
   // ---------- Week 6: the order story, PO NR-450118 ----------
@@ -109,7 +111,10 @@ export function anchors(L, W) {
     ev(L, dep2, 'wms.departure_scan', po, 'Supplier ERP', 'ASHBY', 'API', { shipment: 'SHP-450118-2', carrier: 'Lakeline Freight' });
     D.asn(L, O, day('2026-11-08', '18:06'), { ref: 'ASN-450118-2', shippedAt: dep2, deliveryDate: '2026-11-09', cartons: c2, qty: { 1: 0, 2: 120, 3: 0 }, bol: 'BOL-88229', seal: 'SL-3302918' });
     const inv = D.invoice(L, O, day('2026-11-08', '10:00'), { ref: 'INV-7731', qty: { 1: 300, 2: 120, 3: 80 } });
-    D.advice(L, inv, day('2026-11-08', '10:20'), { action: 'TE', errors: [{ code: 'QTY', cause: W.TED.QTY.cause, seg: 'IT1', elem: 2, bad: '300', allowed: '270 accepted on line 1; held value $1,620.00' }] });
+    // 18 November 2026 (P14): sent on Jordan Ellis's approval at 09:04 on 10 November (was 10:20 on 8 November, as the invoice was
+    // held), rejecting line 1 and line 2: by then receiving advice RCV-DC2-77355 shows 119 of line 2's 120. It keeps its control number.
+    D.advice(L, inv, day('2026-11-10', '09:04'), { action: 'TE', errors: [{ code: 'QTY', cause: W.TED.QTY.cause, seg: 'IT1', elem: 2, bad: '300', allowed: '270 accepted on line 1; held value $1,620.00' },
+      { code: 'QTY', cause: W.TED.QTY.cause, seg: 'IT1', elem: 2, bad: '120', allowed: '119 received on line 2; held value $38.40' }] }).numAt = iso(day('2026-11-08', '10:20'));
     ev(L, day('2026-11-09', '06:35'), 'carrier.delivery_receipt', po, 'Lakeline Freight', 'LAKELINE', 'Portal API, image', { shipment: 'SHP-450118-2', delivered: 120, exceptions: 'None', seal: 'SL-3302918 intact', in_case: 'DC-40877' });
     D.receipt(L, O, day('2026-11-09', '07:20'), { ref: 'RCV-DC2-77355', asnRef: 'ASN-450118-2', qty: { 2: 119 }, short: { 2: 1 }, notScanned: { 2: ['006141410000003006'] } });
     D.invoice(L, O, day('2026-11-10', '15:30'), { ref: 'INV-7731C', replaces: 'INV-7731', qty: { 1: 270, 2: 120, 3: 80 } });
@@ -202,7 +207,7 @@ export function anchors(L, W) {
     ev(L, day('2026-12-07', '14:00'), 'order.ship_to_changed', hero.po, 'Northfield ordering', 'NORTHFIELD', 'EDI', { change: 1, ship_to: 'DC 2', previous: 'DC 4', note: 'Supplier ERP sales order still shows DC 4 and the old line numbers' });
     ev(L, addH(t0, -0.4), 'wms.load_scan', hero.po, 'Kinross warehouse system', 'KINROSS', 'API', { shipment: 'SHP-460207', cartons_loaded: 659, cartons_expected: 660, by_sscc: true, missing: '006141410006005172', missing_state: 'Staged, not loaded', bol: 'BOL-91407', seal: 'SL-4471026', seals_in_minutes: 40 });
     const inv = A.riskInv = risk('NR-460219', [['ASH-MUG-12', 90], ['ASH-NAP-4', 180]], { recv: day('2026-12-05', '10:00'), site: 'KIN-GRV', ackH: 22.25, requested: '2026-12-10' });
-    ev(L, addH(t0, -2), 'erp.invoice_draft', inv.po, 'Supplier ERP', 'ASHBY', 'API', { invoice: 'INV-8012', line: 2, billed: 180, shipped: 176, over_value: 153.6, batch_sends_in_minutes: 168 });
+    ev(L, addH(t0, -2), 'erp.invoice_draft', inv.po, 'Supplier ERP', 'ASHBY', 'API', { invoice: 'INV-8012', line: 2, billed: 180, to_ship: 176, to_ship_from: 'Supplier ERP allocation for the 9 December shipment', over_value: 153.6, batch_sends_in_minutes: 168 }); // 18 November 2026: the order ships on 9 December, so the draft is checked against the 176 cases allocated to ship (was "shipped")
     const route = A.riskRoute = risk('NR-460241', [['ASH-MUG-12', 220]], { recv: day('2026-12-07', '11:00'), site: 'KIN-JOL', ackH: 20.5, requested: '2026-12-11' });
     ev(L, addH(t0, -1), 'routing.request', route.po, 'Northfield transportation', 'ASHBY', 'EDI', { state: 'Missing', freight: 'Collect', cases: 220, due_in_minutes: 1068, rule: 'NF-3.2' });
     // Groveport stock (17 November 2026): 610 cases free against 640 ordered on three orders (NR-460262 300, NR-460274 300

@@ -68,10 +68,9 @@ export const TOOLS = [
 /** Refusals and the write boundary. */
 export const BOUNDARY = [
   { name: 'compare_with_other_suppliers', title: 'Compare with other suppliers', rest: ['GET', '/v1/suppliers/compare'], description: 'Requests to compare Ashby with other Northfield suppliers or read their records. Always answers "Not available to Ashby".', input: { question: z.string().describe('What the user asked about other suppliers') } },
-  { name: 'request_change', title: 'Request a change in Trading Grid', rest: ['POST', '/v1/proposals'], description: 'Use when the user asks to send, resend, correct, approve or change anything. In this release the connection is read-only: it answers "Action not available" with the Trading Grid record where an authorized user completes and approves the action. With writes enabled it records an approval-gated proposal instead; nothing changes until Priya Raman approves it in Trading Grid.', input: { action: z.string().describe('What the user asked to do'), po: z.string().optional().describe('PO number the action concerns'), document: z.string().optional().describe('Document reference the action concerns') } },
 ];
 
-/** Ashby's writes beyond request_change. Each records a proposal a person approves; AP-4.1 has no exception. */
+/** Ashby's writes. Each records a proposal a person approves; AP-4.1 has no exception. Trading Grid sends only business documents and opens records in its own workflows: there is no general request or message tool. */
 export const ASHBY_WRITES = [
   { name: 'submit_dispute', title: 'Dispute a deduction', rule: 'AP-4.1', description: 'Disputes one charge in a Northfield deduction case with the evidence named. Every dispute needs Priya Raman’s approval (AP-4.1): this records a proposal, and she decides between dispute and write-off in Trading Grid. The dispute lands in the shared case and in both companies’ access logs.',
     input: { case: z.string().describe('Case id, for example DC-41118'), charge: z.string().optional().describe('Charge code, default the case charge'), evidence: z.array(z.string()).optional().describe('Evidence to put in the case, for example "Load tally by SSCC"'), as_of: asOf } },
@@ -126,8 +125,6 @@ export const NF_WRITES = [
     input: { case: z.string(), charge: z.string(), decision: z.enum(['Reversed', 'Upheld']), reason: z.string().optional(), as_of: asOf } },
   { name: 'publish_rule', title: 'Publish a draft rule', rule: 'NFD', description: 'Asks to publish a draft rule to suppliers. Refused unless the draft has been replayed against the quarter on this connection; otherwise records a proposal Jordan Ellis approves. Publishing is recorded for every supplier it binds.',
     input: { draft: z.string().describe('Draft rule id, for example NFD-1') } },
-  { name: 'request_change', title: 'Request a change in Trading Grid', description: 'Use when the user asks to send, correct or change anything else, for example a revised receiving advice. Records a proposal; nothing changes until Jordan Ellis approves it in Trading Grid.',
-    input: { action: z.string(), po: z.string().optional(), document: z.string().optional() } },
 ];
 export const NF_REFUSALS = [
   { name: 'read_supplier_records', title: 'A supplier’s own records', description: 'Requests to read a supplier’s ERP, warehouse or carrier records, its warehouse documents (940, 945) or its internal policies. Always answers "Not available to Northfield": those records belong to the supplier unless it shares them into a case or on a document.', input: { question: z.string().describe('What the user asked to see'), supplier: sup } },

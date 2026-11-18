@@ -68,7 +68,6 @@ const spec = {
     reverse_charge: { label: 'Reverse the charge; the repayment follows on a later remittance', actor: 'Northfield deduction case', rule: 'NF-7.7', mode: 'approve', editable: false, args: ['record', 'charge'] },
     uphold_charge: { label: 'Uphold the charge', actor: 'Northfield deduction case', rule: 'NF-7.7', mode: 'approve', editable: false, args: ['record', 'charge'] },
     mark_not_reviewed: { label: 'Record the dispute as not reviewed for missing NF-7.4 evidence (ID01)', actor: 'Northfield deduction case', rule: 'NF-7.5', mode: 'approve', editable: false, args: ['record', 'charge'] },
-    ask_supplier_for_evidence: { label: 'Ask the supplier, in the case, for a named missing record', actor: 'Northfield deduction case (message to the supplier)', rule: 'NF-7.4', mode: 'approve', editable: true, args: ['record', 'charge', 'note'] },
   },
   argTypes: { charge: z.enum(['SH01', 'AS02', 'OT01']) },
   guardrails: [
@@ -88,13 +87,10 @@ const spec = {
   validate: (nf, s, action, a) => {
     if (!a.record || !a.charge) return 'Name the case (record) and the charge.';
     const r = rows(nf, s).find((x) => x.record === a.record && x.charge === a.charge); if (!r) return `No open dispute on ${a.charge} in ${a.record}.`; if (r.closed) return `${a.record} ${a.charge} is already decided.`;
-    if (action === 'ask_supplier_for_evidence' && (!a.note || a.note.length > 400)) return 'Name the missing record in note (at most 400 characters).';
-    if (action === 'ask_supplier_for_evidence' && st(s, a.record).requested) return 'The supplier was already asked in this case.';
     return null;
   },
   execute: (nf, s, p, by, ctx) => {
     const a = p.args; const k = st(s, a.record); s.clock += 2 * MIN; const r = rows(nf, s).find((x) => x.record === a.record && x.charge === a.charge);
-    if (p.action === 'ask_supplier_for_evidence') { k.requested = { note: a.note, at: fmtET(iso(s.clock)) }; return { state: 'Sent', response: `Message to the supplier in ${a.record}: ${a.note}` }; }
     const decision = { reverse_charge: 'Reversed', uphold_charge: 'Upheld', mark_not_reviewed: 'Not reviewed' }[p.action];
     k.decisions.push({ charge: a.charge, decision, decided_by: by, recommended_by: p.by, at: fmtET(iso(s.clock)) });
     if (decision === 'Reversed') {

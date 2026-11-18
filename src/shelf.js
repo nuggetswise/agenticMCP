@@ -39,8 +39,8 @@ const spec = {
   },
   variations: { canonical: {}, in_transit: { moment: '2026-10-26 17:30 ET' }, jordan_declines: { jordan_orders: 'no_order' } },
   actions: {
-    recommend_order: { label: 'Recommend a new order to Jordan Ellis', actor: 'Jordan Ellis (recommendation from Trading Grid)', rule: 'AP-6.4', mode: 'approve', editable: true, args: ['record', 'pairs'] },
-    recommend_transfer: { label: 'Recommend a store-to-store transfer to Jordan Ellis', actor: 'Jordan Ellis (recommendation from Trading Grid)', rule: 'AP-6.3', mode: 'approve', editable: true, args: ['record', 'pairs', 'to_store'] },
+    recommend_order: { label: 'Recommend a new order, shown to Priya Raman and highlighted for Jordan Ellis on Northfield’s side of Trading Grid; Jordan orders in Northfield’s own system. Nothing is sent', actor: 'Jordan Ellis (orders in Northfield’s own system)', rule: 'AP-6.4', mode: 'policy', editable: true, args: ['record', 'pairs'] },
+    recommend_transfer: { label: 'Recommend a store-to-store transfer, shown to Priya Raman and highlighted for Jordan Ellis on Northfield’s side of Trading Grid; Jordan moves the stock in Northfield’s own system. Nothing is sent', actor: 'Jordan Ellis (in Northfield’s own system)', rule: 'AP-6.3', mode: 'policy', editable: true, args: ['record', 'pairs', 'to_store'] },
     wait_for_transit: { label: 'Record that the store waits for goods already in transit; nothing is sent', actor: 'Trading Grid', rule: 'AP-6.1', mode: 'policy', editable: false, args: ['record'] },
     create_sales_order: { label: 'Create the sales order in the Supplier ERP from Northfield’s purchase order', actor: 'Supplier ERP', rule: 'AP-3.2', mode: 'approve', editable: true, args: ['record'] },
   },
@@ -68,8 +68,8 @@ const spec = {
       case 'recommend_order': { k.recs[store] = { kind: 'order', what: `${a.pairs} pairs`, at: fmtET(iso(s.clock)) }; k.orders[store] = {};
         if (s.facts.jordan_orders === 'as_recommended') { const recorded = store === '114' && Date.parse(PO_114.at) > s.branch; const po = recorded ? PO_114.po : `NR-S${s.id.slice(3, 7).toUpperCase()}`; const at = recorded ? iso(Math.max(Date.parse(PO_114.at), s.clock + 30 * MIN)) : iso(s.clock + 2 * H);
           ctx.schedule(s, { key: `po:${store}`, at, record: store, reference: po, actor: recorded ? 'Northfield ordering (recorded)' : 'Northfield ordering (synthetic)', synthetic: !recorded, what: `Northfield purchase order ${po} for ${recorded ? PO_114.pairs : a.pairs} pairs to store ${store} (EDI 850)`, on: () => { k.orders[store].po = po; } }); }
-        return { state: 'Sent', response: `Recommendation sent to Jordan Ellis: ${a.pairs} pairs for store ${store}; no order or reservation is created` }; }
-      case 'recommend_transfer': k.recs[store] = { kind: 'transfer', what: `${a.pairs} pairs to store ${a.to_store}`, at: fmtET(iso(s.clock)) }; return { state: 'Sent', response: `Transfer recommendation sent to Jordan Ellis: ${a.pairs} pairs from store ${store} to store ${a.to_store}` };
+        return { state: 'Shown', response: `Recommendation shown on both sides of Trading Grid: ${a.pairs} pairs for store ${store}; Jordan Ellis orders in Northfield’s own system. Nothing is sent and no order or reservation is created` }; }
+      case 'recommend_transfer': k.recs[store] = { kind: 'transfer', what: `${a.pairs} pairs to store ${a.to_store}`, at: fmtET(iso(s.clock)) }; return { state: 'Shown', response: `Transfer recommendation shown on both sides of Trading Grid: ${a.pairs} pairs from store ${store} to store ${a.to_store}. Nothing is sent` };
       case 'wait_for_transit': k.waits[store] = { at: fmtET(iso(s.clock)) }; return { state: 'Completed', response: `Store ${store} waits for the goods in transit; nothing sent` };
       case 'create_sales_order': { const o = k.orders[store]; o.sales_order = o.po === PO_114.po ? 'SO-451207' : `SO-S${s.id.slice(3, 7)}`;
         if (o.po === PO_114.po) { ctx.schedule(s, { key: `asn:${store}`, at: '2026-10-26T20:05:00.000Z', record: store, reference: 'ASN-451207-1', actor: 'Trading Grid (recorded)', what: 'Ship notice ASN-451207-1 sent: 40 pairs to store 114' });

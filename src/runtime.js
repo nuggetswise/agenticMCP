@@ -9,7 +9,7 @@
 //   queue(db, s)           -> { rows: [{ id, record, what, state, closed }], ... }  (recomputed after every step)
 //   reads                  -> { name: { description, input, run(db, s, args) } }    (engine adds read_queue, read_policy, read_proposals)
 //   validate(db, s, action, args) -> null or the refusal text
-//   execute(db, s, p, by)  -> { state: 'Completed' | 'Sent' | 'Delivered' | 'Refused', response, ... }
+//   execute(db, s, p, by)  -> { state: 'Completed' | 'Sent' (a business document) | 'Shown' (an owner's fix; nothing sent) | 'Refused', response, ... }
 //   baseline(db, s, act)   -> one pass of the fixed decision table, calling act(action, args)
 //   outcome(db, s)         -> the session's result, with violations
 //   init(db, s)            -> optional, session set-up after branching
@@ -121,7 +121,7 @@ export function makeRuntime(spec) {
   function execute(db, s, p, by) {
     if (s.usedKeys.has(p.id)) return { state: 'Refused', message: 'Already executed' }; s.usedKeys.add(p.id);
     const r = spec.execute(db, s, p, by, ctx); tick(db, s);
-    p.state = ['Completed', 'Delivered', 'Sent'].includes(r.state) ? 'Executed' : 'Failed'; p.result = r; p.executed_under = by;
+    p.state = ['Completed', 'Sent', 'Shown'].includes(r.state) ? 'Executed' : 'Failed'; p.result = r; p.executed_under = by;
     trace(s, ACTIONS[p.action].actor, 'external', `${p.state}: ${ACTIONS[p.action].label}`, { proposal: p.id, response: r.response });
     audit(s, p, `${p.state}: ${r.response || r.state}`);
     return { state: p.state, proposal: p.id, result: r };

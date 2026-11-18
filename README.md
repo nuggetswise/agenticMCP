@@ -8,7 +8,7 @@ One fictional quarter of trade between Ashby Supplier and Northfield Retailer, b
 2. The same parser reads the files back; every database row is derived from the parsed documents (`world/build.js`). Records that never travel as EDI are stored as events.
 3. `src/server.js` serves one read-only connection for Ashby over MCP (`/mcp/<token>`) and REST (`/api/<token>/v1/...`, described by `/openapi.json`). Both come from `src/tools.js`.
 4. Questions are answered as of a time (`as_of`); the default is the story clock, Tuesday 17 November 2026 11:00 Eastern (`STORY_CLOCK`).
-5. `WRITES=on` turns `request_change` into approval-gated proposals; approval appends an event, reset returns to baseline. Off in this release.
+5. `WRITES=on` turns the write tools (`submit_dispute`, `release_ship_notice`, `decide_charge`, `publish_rule`) into approval-gated proposals; approval appends an event, reset returns to baseline. There is no general request tool: Trading Grid sends only business documents and opens records in its own workflows, and a fix that belongs to the owner of a record is shown with who owns it and where it is fixed.
 
 ## Commands
 
@@ -50,3 +50,10 @@ The rule catalogue (`world/ref.js`) marks each rule public, adapted or invented 
 - A hosted Aviator question that names a week or dates is resolved on the server and checked: an answer that read a different period is asked again on the secondary model, and refused if that also misses.
 - Every Kinross shipping advice (945) reports the quantity picked and loaded, as its load scan and ship notice do.
 - Page tokens for P7 and P8 are in `pages/pages.json`. Window ends (`through`) stay open until the build chat states them.
+
+### 0.4.2
+
+- Trading Grid sends only business documents. `request_change` is gone from both connections. Every runtime step that sent a request, task, note or email to Kinross, Lakeline, Ashby's desks or Northfield now shows what is wrong, who owns it and where it is fixed, with no Approve; the owner's next record confirms the fix. Northfield's correction request is the application advice (EDI 824) Jordan Ellis approves, and a ship notice the carrier contradicts is rejected with an 824. Aviator's order-change permissions are the 865 change acknowledgment (Ashby) and the 860 order change (Northfield).
+- The per-address limits key on the viewer: `CF-Connecting-IP` behind Render's Cloudflare edge, the socket address otherwise. X-Forwarded-For is never read for a limit.
+- `three_way_match` reads the remittance that paid an invoice or the invoice that replaced it, as of the moment, and names the settlement; a missing reference is refused in plain words.
+- Aviator answers name a rule set without its code ("Northfield's matching rule"), and the records read list only records.

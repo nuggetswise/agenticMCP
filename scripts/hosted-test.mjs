@@ -68,8 +68,10 @@ try {
   // ---- public read route ----
   const pub = await fetch(`${B}/public/ashby/tools/get_order?po=NR-450118`, { headers: { origin: 'https://example.org' } }); const pj = await pub.json();
   ok('public read with no token answers, with the CORS header', pub.status === 200 && pj.found === true && pub.headers.get('access-control-allow-origin') === '*', JSON.stringify(pj).slice(0, 200));
-  for (const [side, tool, b] of [['ashby', 'submit_dispute', { case: 'DC-40877' }], ['ashby', 'release_ship_notice', { document: 'ASN-46220' }], ['ashby', 'request_change', { action: 'x' }], ['northfield', 'decide_charge', { case: 'DC-40877', charge: 'SH01', decision: 'Reversed' }], ['northfield', 'publish_rule', { draft: 'NFD-1' }], ['ashby', 'update_supplier_rule', { rule: 'AP-6.4', params: { carton: 80 }, apply: true }], ['ashby', 'pause_agent', { agent: 'claim' }], ['ashby', 'scout_start', {}], ['ashby', 'run_readonly_sql', { sql: 'select 1' }], ['ashby', 'get_access_log', {}]]) {
+  for (const [side, tool, b] of [['ashby', 'submit_dispute', { case: 'DC-40877' }], ['ashby', 'release_ship_notice', { document: 'ASN-46220' }], ['northfield', 'decide_charge', { case: 'DC-40877', charge: 'SH01', decision: 'Reversed' }], ['northfield', 'publish_rule', { draft: 'NFD-1' }], ['ashby', 'update_supplier_rule', { rule: 'AP-6.4', params: { carton: 80 }, apply: true }], ['ashby', 'pause_agent', { agent: 'claim' }], ['ashby', 'scout_start', {}], ['ashby', 'run_readonly_sql', { sql: 'select 1' }], ['ashby', 'get_access_log', {}]]) {
     const r = await post(`/public/${side}/tools/${tool}`, b); ok(`public ${side} ${tool} is refused`, r.status === 403 && (await r.json()).result === 'Refused'); }
+  // There is no general request tool: Trading Grid sends only business documents.
+  for (const side of ['ashby', 'northfield']) { const r = await post(`/public/${side}/tools/request_change`, { action: 'x' }); ok(`public ${side} has no request_change`, r.status === 404 && (await r.json()).result === 'Not found'); }
   const x1 = await (await post('/public/ashby/tools/read_retailer_records', {})).json(); ok('Ashby public: Northfield private records refused', x1.result === 'Not available to Ashby', JSON.stringify(x1));
   const x2 = await (await post('/public/northfield/tools/read_supplier_records', {})).json(); ok('Northfield public: Ashby private records refused', x2.result === 'Not available to Northfield', JSON.stringify(x2));
   const x3 = await (await post('/public/ashby/tools/get_order', { po: 'NR-450118', supplier: 'Copper Ridge' })).json(); ok('Ashby public: another supplier refused', x3.result === 'Not available to Ashby', JSON.stringify(x3));
@@ -155,6 +157,12 @@ try {
   await br.close();
   { const codes = []; for (let i = 0; i < 40; i++) codes.push((await fetch(`${B}/public/ashby/tools/get_story_calendar`)).status); const last = await (await fetch(`${B}/public/ashby/tools/get_story_calendar`)).json();
     ok('public read rate limit answers 429 with its message', codes.includes(429) && /limit of requests per minute/.test(last.message || ''), `${codes.join(',')}`); }
+  // The limit is per viewer: behind Cloudflare the viewer is CF-Connecting-IP, and an X-Forwarded-For a client adds moves nothing.
+  { const at = (h) => fetch(`${B}/public/ashby/tools/get_story_calendar`, { headers: h }).then((r) => r.status);
+    const spoof = []; for (let i = 0; i < 5; i++) spoof.push(await at({ 'x-forwarded-for': `10.9.0.${i}` }));
+    const a = []; for (let i = 0; i < 45; i++) a.push(await at({ 'cf-connecting-ip': '203.0.113.7' }));
+    const other = await at({ 'cf-connecting-ip': '203.0.113.8' });
+    ok('the per-address limit follows the viewer, not a header the client adds', spoof.every((c) => c === 429) && a.includes(429) && other === 200, `spoofed ${spoof.join(',')} · viewer A ${a.slice(-3).join(',')} · viewer B ${other}`); }
   ok('no record was written by any public or Aviator call', ldb.prepare('SELECT count(*) n FROM events').get().n === events0 && ldb.prepare('SELECT count(*) n FROM proposals').get().n === props0);
 } finally { srv.kill(); cap.kill(); model.close(); }
 console.log(`${fails ? 'FAILED' : 'All hosted checks passed'}: ${fails} failed`); process.exit(fails ? 1 : 0);

@@ -1,7 +1,7 @@
 // Claim Agent runtime for P6 Charge Resolution (Ashby side). A session branches at 1 December 2026 09:00 ET (or 28 December
 // 10:00 ET) with Ashby's open Northfield deductions. Where the proof sits decides the step: in the case, held by Kinross or
 // Lakeline, replaceable by a load tally, absent, or a carrier matter. The case closes only when the repayment matches in
-// Ashby's receivables. Kinross and Lakeline answer evidence requests by deterministic rules (synthetic); Northfield decides by
+// Ashby's receivables. Kinross and Lakeline share the records they hold into the case by deterministic rules (synthetic); Northfield decides by
 // its recorded decision where the world holds one, else by NF-7.4 and NF-5.3 (synthetic). Rule baseline: dispute only when
 // the proof is already in the case, otherwise accept.
 import { fmtET } from '../world/lib.js';
@@ -72,21 +72,21 @@ const spec = {
   moments: { '2026-12-01 09:00 ET': '2026-12-01T14:00:00.000Z', '2026-12-28 10:00 ET': '2026-12-28T15:00:00.000Z', [PROMO_MOMENT]: '2027-01-06T14:00:00.000Z' }, defaultMoment: '2026-12-01 09:00 ET',
   horizonHours: 24 * 40, queueNoun: 'open deductions',
   goal: 'Resolve each Northfield charge on Northfield’s evidence rules 2026.2: recover what the proof supports, accept what it does not, and close a case only when the repayment matches in Ashby’s receivables.',
-  instruction: (s) => isPromo(s) ? PROMO_INSTRUCTION : `Work Ashby's open Northfield deductions. For each case, read the evidence and where each piece sits. NF-7.4 needs a bill of lading with seal, proof of delivery, and a load scan or load tally by SSCC (NF-5.3 accepts the tally). If a piece is held by Kinross or Lakeline, request it before disputing. If no load scan or tally exists anywhere, a dispute would not be reviewed and draws ID01 $150: recommend accepting. Damage noted on the delivery receipt on prepaid freight is a carrier matter (NF-10.2): accept the charge and file the carrier claim. Never decide a charge; Northfield's reviewer does (NF-7.7). A reversal is not money until the repayment arrives and is matched.`,
+  instruction: (s) => isPromo(s) ? PROMO_INSTRUCTION : `Work Ashby's open Northfield deductions. For each case, read the evidence and where each piece sits. NF-7.4 needs a bill of lading with seal, proof of delivery, and a load scan or load tally by SSCC (NF-5.3 accepts the tally). If a piece is held by Kinross or Lakeline, show who holds it and wait until it is shared into the case before disputing; Trading Grid sends them nothing. If no load scan or tally exists anywhere, a dispute would not be reviewed and draws ID01 $150: recommend accepting. Damage noted on the delivery receipt on prepaid freight is a carrier matter (NF-10.2): accept the charge and show that Ashby files the carrier claim with Lakeline. Never decide a charge; Northfield's reviewer does (NF-7.7). A reversal is not money until the repayment arrives and is matched.`,
   opening: (s) => isPromo(s) ? `Northfield remittance PMT-990168 arrived with five promotion deductions; they are due for review at ${s.moment}.` : `Ashby’s open Northfield deductions are due for review at ${s.moment}.`,
   facts: {
     moment: { values: ['2026-12-01 09:00 ET', '2026-12-28 10:00 ET', PROMO_MOMENT], recorded: '2026-12-01 09:00 ET', owner: 'Presenter', says: 'Story moment: 1 December (DC-40877, DC-40931), 28 December (DC-41102, DC-41118, DC-41131), or 6 January 2027 (remittance PMT-990168 with five promotion deductions, P20)' },
-    kinross_reachable: { values: ['yes', 'no'], recorded: 'yes', owner: 'Kinross', says: 'Whether Kinross answers an evidence request' },
-    lakeline_reachable: { values: ['yes', 'no'], recorded: 'yes', owner: 'Lakeline Freight', says: 'Whether Lakeline answers a request for its delivery receipt' },
+    kinross_reachable: { values: ['yes', 'no'], recorded: 'yes', owner: 'Kinross', says: 'Whether Kinross shares the records it holds into the case' },
+    lakeline_reachable: { values: ['yes', 'no'], recorded: 'yes', owner: 'Lakeline Freight', says: 'Whether Lakeline shares its delivery receipt into the case' },
     northfield_decision: { values: ['by_evidence', 'uphold'], recorded: 'by_evidence', owner: 'Northfield', says: 'How Northfield decides a dispute with no recorded decision: by NF-7.4 and NF-5.3, or uphold whatever the evidence' },
-    kinross_note: { maxLength: 300, recorded: '', owner: 'Kinross', says: 'Free text Kinross adds when it answers' },
+    kinross_note: { maxLength: 300, recorded: '', owner: 'Kinross', says: 'Free text Kinross adds to the record it shares' },
   },
   variations: { canonical: {}, december_28: { moment: '2026-12-28 10:00 ET' }, kinross_unreachable: { moment: '2026-12-28 10:00 ET', kinross_reachable: 'no' }, northfield_upholds: { moment: '2026-12-28 10:00 ET', northfield_decision: 'uphold' }, promotions: { moment: PROMO_MOMENT } },
   actions: {
-    request_evidence: { label: 'Request a held record (load scan, load tally or proof of delivery) from Kinross or Lakeline and attach it to the case', actor: 'Kinross or Lakeline Freight (task)', rule: 'AP-3.2', mode: 'approve', editable: true, args: ['record', 'evidence'] },
+    holder_shares_evidence: { label: 'Show that Kinross or Lakeline holds a record the case needs (load scan, load tally or proof of delivery) and where it sits; the record attached to the case confirms it. Nothing is sent', actor: 'Kinross or Lakeline Freight (shares it into the case)', rule: 'AP-3.2', mode: 'policy', editable: false, args: ['record', 'evidence'] },
     submit_dispute: { label: 'Dispute the charge in Northfield’s deduction case with the evidence that contradicts it (the NF-7.4 pack for a shortage; the deal, store activity or invoice for the unsupported amount of a promotion deduction)', actor: 'Northfield deduction case', rule: 'AP-4.1', mode: 'approve', editable: false, args: ['record'] },
     accept_charge: { label: 'Accept the charge (no dispute)', actor: 'Supplier ERP (deduction item)', rule: 'AP-4.1', mode: 'approve', editable: false, args: ['record'] },
-    file_carrier_claim: { label: 'File a loss or damage claim with Lakeline Freight for the goods cost', actor: 'Lakeline Freight', rule: 'NF-10.2', mode: 'approve', editable: true, args: ['record'] },
+    ashby_files_carrier_claim: { label: 'Show that damage in transit is a carrier matter (NF-10.2): Ashby files the loss or damage claim for the goods cost in Lakeline’s claims process. Nothing is sent from Trading Grid', actor: 'Ashby (in Lakeline’s claims process)', rule: 'NF-10.2', mode: 'policy', editable: false, args: ['record'] },
     match_repayment: { label: 'Match a repayment on Northfield’s remittance to the deduction in receivables and close the case', actor: 'Supplier ERP (receivables)', rule: 'NF-7.6', mode: 'policy', editable: false, args: ['record'] },
   },
   argTypes: { evidence: z.enum(['load_scan', 'load_tally', 'proof_of_delivery']) },
@@ -101,7 +101,7 @@ const spec = {
   queue: (db, s) => { const rows = (isPromo(s) ? promoRows(db).map((r) => promoRow(db, s, r)) : openCases(db, s).map((c) => rowOf(db, s, c))).sort((a, b) => (a.closed - b.closed) || b.amount - a.amount);
     return { as_of: fmtET(iso(s.clock)), rows, open: rows.filter((r) => !r.closed).length }; },
   reads: {
-    read_case: { description: 'One deduction case as Ashby sees it at the session clock: charge, amount, withheld on, dispute window, each NF-7.4 evidence piece with where it sits (in the case, held by Kinross or Lakeline, not found), the delivery exception and freight terms, and this session’s requests, dispute, decision and repayment.', input: { record: z.string().describe('Case id, for example DC-41102') },
+    read_case: { description: 'One deduction case as Ashby sees it at the session clock: charge, amount, withheld on, dispute window, each NF-7.4 evidence piece with where it sits (in the case, held by Kinross or Lakeline, not found), the delivery exception and freight terms, and this session’s owner fixes shown, dispute, decision and repayment.', input: { record: z.string().describe('Case id, for example DC-41102') },
       run: (db, s, a) => { const v = view(db, s, a.record || ''); if (!v.found) return v; const { history, ...rest } = v; return { ...rest, rules: { evidence: D.rule(db, 'NF-7.4'), tally: D.rule(db, 'NF-5.3'), not_reviewed: D.rule(db, 'NF-7.5'), carrier: D.rule(db, 'NF-10.2') } }; } },
     read_promotion_deduction: { description: 'One promotion deduction on Northfield’s remittance as Ashby sees it: the deal it names, the item, the claimed period, quantity, unit and rate, the amount withheld and the invoice it sits on. Promotion moment only.', input: { record: z.string().describe('Deduction reference, for example PD-2701-04') },
       run: (db, s, a) => { const v = promoView(db, s, a.record || ''); if (!v.found) return v; const { _settlement, ...rest } = v; const deal = db.prepare('SELECT deal_id, sku, kind, rate, rate_uom, period_start, period_end, order_start, order_end, terms, announced_doc_id FROM deals WHERE deal_id = ?').get(v.deal); return { ...rest, deal_on_the_889: deal || 'No deal on record' }; } },
@@ -126,15 +126,15 @@ const spec = {
     const v = view(db, s, a.record); if (!v.found) return v.message; const st = v.session;
     if (!openCases(db, s).some((c) => c.case === v.case)) return `${v.case} is not open at the branch.`;
     switch (action) {
-      case 'request_evidence': { const e = EV[a.evidence]; if (!e) return 'Name the evidence: load_scan, load_tally or proof_of_delivery.';
+      case 'holder_shares_evidence': { const e = EV[a.evidence]; if (!e) return 'Name the evidence: load_scan, load_tally or proof_of_delivery.';
         const piece = v.evidence.find((x) => x.evidence === e.name); if (!piece || piece.state === 'Not found') return `${e.name} does not exist for ${v.case}; nobody holds it.`;
-        if (piece.state === 'In the case') return `${e.name} is already in the case.`; if (st.requested.some((r) => r.evidence === a.evidence && !r.answered)) return `${e.name} was already requested.`;
+        if (piece.state === 'In the case') return `${e.name} is already in the case.`; if (st.requested.some((r) => r.evidence === a.evidence && !r.answered)) return `${e.name} is already shown as held by its owner.`;
         if (st.disputed || st.accepted) return `${v.case} is already ${st.disputed ? 'disputed' : 'accepted'}.`; return null; }
       case 'submit_dispute': if (st.disputed) return `NF-7.3: ${v.case} was already disputed once.`; if (st.accepted) return `${v.case} was accepted.`;
         if (!v.nf_7_4_complete) return `NF-7.4: the evidence pack is not complete in the case (${Object.entries(Object.fromEntries(v.evidence.map((e) => [e.evidence, e.state]))).filter(([, x]) => x !== 'In the case').map(([k, x]) => `${k}: ${x}`).join('; ')}).`;
         if (v.delivery_exception && v.delivery_exception !== 'None') return `The delivery receipt notes "${v.delivery_exception}": damage in transit is a carrier matter (NF-10.2), not a dispute.`; return null;
       case 'accept_charge': if (st.disputed) return `${v.case} is disputed; Northfield decides it.`; if (st.accepted) return `${v.case} is already accepted.`; return null;
-      case 'file_carrier_claim': if (!v.delivery_exception || v.delivery_exception === 'None') return `No damage is noted on the delivery receipt for ${v.case}.`; if (!/prepaid/i.test(v.freight_terms || '')) return 'On collect freight Northfield files with its own carrier; Ashby files only on prepaid freight (NF-10.2).'; if (st.carrier_claim) return 'A carrier claim is already filed.'; return null;
+      case 'ashby_files_carrier_claim': if (!v.delivery_exception || v.delivery_exception === 'None') return `No damage is noted on the delivery receipt for ${v.case}.`; if (!/prepaid/i.test(v.freight_terms || '')) return 'On collect freight Northfield files with its own carrier; Ashby files only on prepaid freight (NF-10.2).'; if (st.carrier_claim) return 'A carrier claim is already filed.'; return null;
       case 'match_repayment': if (!st.repaid) return `No repayment for ${v.case} has arrived; a reversal is not money until it is repaid (NF-7.6).`; if (st.matched) return 'Already matched.'; return null;
     }
     return null;
@@ -156,14 +156,14 @@ const spec = {
     }
     const a = p.args; const v = view(db, s, a.record); const st = v.session;
     switch (p.action) {
-      case 'request_evidence': {
+      case 'holder_shares_evidence': {
         const e = EV[a.evidence]; const piece = v.evidence.find((x) => x.evidence === e.name); const holder = holderOf(piece.holder);
         const reachable = holder === 'Kinross' ? s.facts.kinross_reachable === 'yes' : s.facts.lakeline_reachable === 'yes';
-        const req = { evidence: a.evidence, holder, sent: fmtET(iso(s.clock)), answered: false }; st.requested.push(req); s.clock += 2 * MIN;
-        if (!reachable) { req.answered = 'No answer'; return { state: 'Sent', response: `${holder} did not answer; ${e.name} stays held by ${holder}` }; }
-        ctx.schedule(s, { key: `ev:${v.case}:${a.evidence}`, at: iso(s.clock + (holder === 'Kinross' ? 40 : 90) * MIN), record: v.case, actor: `${holder} (synthetic)`, synthetic: true, what: `${holder} sent the ${e.name.toLowerCase()} for ${v.po}; attached to ${v.case}`, ...(holder === 'Kinross' && s.facts.kinross_note ? { note: s.facts.kinross_note } : {}),
+        const req = { evidence: a.evidence, holder, shown: fmtET(iso(s.clock)), answered: false }; st.requested.push(req); s.clock += 2 * MIN;
+        if (!reachable) { req.answered = 'Not shared'; return { state: 'Shown', response: `${e.name} stays held by ${holder}; ${holder} has not shared it into the case` }; }
+        ctx.schedule(s, { key: `ev:${v.case}:${a.evidence}`, at: iso(s.clock + (holder === 'Kinross' ? 40 : 90) * MIN), record: v.case, actor: `${holder} (synthetic)`, synthetic: true, what: `${holder} shared the ${e.name.toLowerCase()} for ${v.po} into ${v.case}`, ...(holder === 'Kinross' && s.facts.kinross_note ? { note: s.facts.kinross_note } : {}),
           on: () => { st.attached.push(e.name); req.answered = 'Received'; } });
-        return { state: 'Sent', response: `Request sent to ${holder} for the ${e.name.toLowerCase()}` }; }
+        return { state: 'Shown', response: `Shown to Priya Raman: ${holder} holds the ${e.name.toLowerCase()}; it is attached when ${holder} shares it into the case. Nothing is sent` }; }
       case 'submit_dispute': {
         s.clock += 3 * MIN; st.disputed = { at: fmtET(iso(s.clock)), by, evidence: v.evidence.filter((e) => e.state === 'In the case').map((e) => e.evidence) };
         const rec = db.prepare("SELECT at, data FROM events WHERE kind = 'case.decision' AND po = ? AND at > ? AND data LIKE ? ORDER BY at").get(v.po, iso(s.branch), `%"charge":"${v.charge}"%`);
@@ -175,8 +175,8 @@ const spec = {
               ctx.schedule(ss, { key: `pay:${v.case}`, at: pay.at, record: v.case, actor: pay.recorded ? 'Northfield remittance (recorded)' : 'Northfield remittance (synthetic)', synthetic: !pay.recorded, reference: pay.ref, what: `Remittance ${pay.ref} repays $${v.amount.toFixed(2)} referencing ${v.deduction}`, on: () => { st.repaid = { payment: pay.ref, at: fmtET(pay.at), amount: v.amount }; } }); } } });
         return { state: 'Completed', response: `Dispute of ${v.charge} $${v.amount.toFixed(2)} submitted to ${v.case} with ${st.disputed.evidence.join(', ')}` }; }
       case 'accept_charge': s.clock += MIN; st.accepted = { at: fmtET(iso(s.clock)), by, amount: v.amount }; return { state: 'Completed', response: `${v.charge} $${v.amount.toFixed(2)} on ${v.case} accepted in the Supplier ERP` };
-      case 'file_carrier_claim': { s.clock += 5 * MIN; const cost = Math.round(v.cartons * 54 * 100) / 100; st.carrier_claim = { claim: v.case === 'DC-40931' ? 'CR-2026-031' : `CR-S${s.id.slice(3, 7)}`, amount: v.case === 'DC-40931' ? 108 : cost, at: fmtET(iso(s.clock)) };
-        return { state: 'Completed', response: `Claim ${st.carrier_claim.claim} filed with Lakeline Freight for $${st.carrier_claim.amount.toFixed(2)}, goods cost of ${v.cartons} cartons` }; }
+      case 'ashby_files_carrier_claim': { s.clock += 5 * MIN; const cost = Math.round(v.cartons * 54 * 100) / 100; st.carrier_claim = { claim: v.case === 'DC-40931' ? 'CR-2026-031' : `CR-S${s.id.slice(3, 7)}`, amount: v.case === 'DC-40931' ? 108 : cost, at: fmtET(iso(s.clock)) };
+        return { state: 'Shown', response: `Shown to Priya Raman: a carrier claim for $${st.carrier_claim.amount.toFixed(2)}, goods cost of ${v.cartons} cartons, is Ashby’s to file in Lakeline’s claims process${v.case === 'DC-40931' ? `; claim ${st.carrier_claim.claim} is on record` : ''}. Nothing is sent` }; }
       case 'match_repayment': s.clock += MIN; st.matched = { at: fmtET(iso(s.clock)), payment: st.repaid.payment, amount: st.repaid.amount }; return { state: 'Completed', response: `${st.repaid.payment} matched to ${v.deduction} in receivables; ${v.case} closed` };
     }
     return { state: 'Refused', response: 'Unknown action' };

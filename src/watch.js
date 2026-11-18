@@ -5,14 +5,14 @@
 //                  Supplier ERP sales order, 856 only from a load scan or fulfilment record, invoice from the shipped quantity).
 //   Watch Agent  - a model choosing which reads to call and which permitted action to propose (runWatch).
 //   Priya        - approves or rejects; the server, not the model, decides when her approval is required.
-//   Kinross / Northfield (synthetic) - deterministic simulators: Kinross answers a status ask from facts; Northfield returns a
+//   Kinross / Northfield (synthetic) - deterministic simulators: Kinross's own records show where an order stands; Northfield returns a
 //                  997 (technical only) and, where the recorded world holds it later, the confirming record is revealed.
 // A rule baseline (runBaseline) reads the same records and uses the same actions with fixed logic (the spec's decision table).
 //
 // Visibility. Every recorded record after the branch is hidden from reads. What a read returns after the branch is the
-// session's own (drafts, sends, Kinross answers, synthetic 997s, each at or before the session clock) and the confirming
+// session's own (drafts, sends, Kinross records, synthetic 997s, each at or before the session clock) and the confirming
 // records revealed for a session action when the clock reaches them: the 861 for a released ship notice, and the 945 with
-// Kinross's scans for a status ask.
+// Kinross's scans once Kinross is shown as the owner of a missing 945. Trading Grid sends Kinross nothing.
 import { z } from 'zod';
 import { createHash } from 'node:crypto';
 import { fmtET, et } from '../world/lib.js';
@@ -38,9 +38,9 @@ export const ACTIONS = {
   draft_ship_notice:    { label: 'Draft the ship notice (856) from the load scan or fulfilment record', actor: 'Trading Grid', rule: 'AP-1.4', mode: 'policy', editable: false, args: ['po'] },
   draft_invoice_in_erp: { label: 'Create the invoice in the Supplier ERP from the shipped quantity and draft its 810', actor: 'Supplier ERP', rule: 'AP-3.2', mode: 'approve', editable: true, args: ['po'] },
   release_document:     { label: 'Send a drafted 855, 856 or 810 to Northfield', actor: 'Trading Grid', rule: 'AP-1.3', mode: 'approve', editable: false, args: ['po', 'document'] },
-  ask_kinross_status:   { label: 'Ask Kinross for the status of a warehouse order', actor: 'Kinross (email task)', rule: 'AP-3.2', mode: 'approve', editable: true, args: ['po'] },
-  flag_erp_record:      { label: 'Flag a fulfilment posted before departure on the Supplier ERP record', actor: 'Supplier ERP', rule: 'AP-3.2', mode: 'approve', editable: true, args: ['po', 'note'] },
-  escalate_to_priya:    { label: 'Escalate an order to Priya Raman with what is known', actor: 'Trading Grid (notice to Priya)', rule: 'AP-2.4', mode: 'policy', editable: false, args: ['po', 'message'] },
+  kinross_owns_945:   { label: 'Show that Kinross owns the missing shipping advice (945) and sends it from its warehouse system, with what Kinross’s own records show; the 945 confirms it. Nothing is sent', actor: 'Kinross (in its warehouse system)', rule: 'AP-3.2', mode: 'policy', editable: false, args: ['po'] },
+  ashby_corrects_early_fulfilment: { label: 'Show that the Supplier ERP posted the fulfilment before the trailer departed; Ashby corrects it in the Supplier ERP. Nothing is written there and nothing is sent', actor: 'Ashby (in the Supplier ERP)', rule: 'AP-3.2', mode: 'policy', editable: false, args: ['po', 'note'] },
+  raise_on_priya_queue:    { label: 'Raise an order to the top of Priya Raman’s queue with what is known; nothing is sent', actor: 'Trading Grid (Priya Raman’s queue)', rule: 'AP-2.4', mode: 'policy', editable: false, args: ['po', 'message'] },
 };
 export const GUARDRAILS = [
   { id: 'AP-1.4', owner: 'Administrator', text: 'Never build a ship notice except from a load scan or fulfilment record; quantities are never supplied by hand.' },
@@ -54,7 +54,7 @@ export const P13_MOMENT = '2026-11-18 09:00 ET';
 export const FACTS = {
   moment: { values: Object.keys(MOMENTS), recorded: P13_MOMENT, owner: 'Presenter', says: 'Story moment the session branches at: P13 (18 Nov 09:00), NR-46302 early fulfilment (19 Nov 16:00), NR-46156 rejected ship notice (17 Nov 11:00)' },
   kinross_window_hours: { values: [24, 48], recorded: 48, owner: 'Priya Raman', says: 'Priya’s rule: hours after the 940 by which Kinross must return the 945 before the order is flagged' },
-  kinross_reachable: { values: ['yes', 'no'], recorded: 'yes', owner: 'Kinross', says: 'Whether Kinross answers a status ask (no: Kinross cannot be reached and its later records stay hidden)' },
+  kinross_reachable: { values: ['yes', 'no'], recorded: 'yes', owner: 'Kinross', says: 'Whether Kinross’s records reach Trading Grid (no: its later records stay hidden and warehouse status is Unknown)' },
   departure_scanned_46220: { values: ['yes', 'no'], recorded: 'no', owner: 'Kinross', says: 'A Kinross departure scan for NR-46220 at 08:30 ET on 18 November, with no load scan and no 945 (P13 moment only)' },
 };
 export function factsToVariation(facts = {}) {
@@ -192,7 +192,7 @@ function rowState(db, s, r) {
     const w = warehouseOrder(db, s, r.po);
     if (w?.advice_at) return { state: 'Closed', closed: true, warehouse_status: 'Shipped', confirmation: `Kinross shipping advice (945) ${w.advice_ref} received ${fmtET(w.advice_at)}`, closes_on: 'Kinross 945' };
     const t = tasks.at(-1);
-    return { state: t ? (t.state === 'No answer' ? 'Unknown: Kinross did not answer' : 'Asked Kinross; waiting for the 945') : clockPast(s, r) ? 'Overdue' : 'Missing', late: clockPast(s, r), closed: false, warehouse_status: 'Unknown', closes_on: 'Kinross 945' };
+    return { state: t ? (t.state === 'No answer' ? 'Unknown: no Kinross record' : 'Kinross owns it; waiting for the 945') : clockPast(s, r) ? 'Overdue' : 'Missing', late: clockPast(s, r), closed: false, warehouse_status: 'Unknown', closes_on: 'Kinross 945' };
   }
   if (r.document === '855') {
     if (sd?.state === 'Sent') return { state: sentLate(sd) ? 'Sent Late' : 'Sent', late: sentLate(sd), closed: true, sent: fmtET(sd.sent_at), technical_ack: sd.technical_ack || 'Awaiting 997', confirmation: 'Nothing further: Northfield returns a 997 only and sends no business acceptance (NF-1.5)', closes_on: 'Sending before the deadline; a 997 is technical only' };
@@ -249,7 +249,7 @@ export const READS = {
       priya_rules: { kinross_945_window_hours: s.facts.kinross_window_hours, escalate_when_hours_left: ESCALATE_HOURS, drafts: 'A draft reaches Northfield only when Priya approves its release' }, guardrails: GUARDRAILS }) },
   read_proposals: { description: 'Every action proposed in this session, with its state (awaiting approval, approved, rejected, executed, failed, refused) and its result.', input: {},
     run: (db, s) => ({ proposals: s.proposals.map((p) => ({ id: p.id, action: p.action, args: p.args, state: p.state, result: p.result || null })) }) },
-  read_tasks: { description: 'Every status ask sent to Kinross in this session with its state and Kinross’s answer.', input: {},
+  read_owner_fixes: { description: 'Every order where Kinross was shown as the owner of a missing 945 in this session, with what Kinross’s records showed. Nothing is sent to Kinross.', input: {},
     run: (db, s) => ({ tasks: s.tasks }) },
 };
 export function read(db, s, name, args = {}) {
@@ -264,8 +264,8 @@ const keyOf = (action, args) => createHash('sha1').update(JSON.stringify([action
 export function propose(db, s, by, action, args = {}, why = {}) {
   const def = ACTIONS[action]; if (!def) return { state: 'Refused', message: `No action ${action}` };
   if (args.po) args = { ...args, po: D.normPo(args.po) };
-  const key = keyOf(action, { po: args.po, document: args.document, n: action === 'ask_kinross_status' ? s.tasks.filter((t) => t.po === args.po).length : 0 });
-  const open = s.proposals.find((p) => p.key === key && ['Awaiting approval', 'Approved', ...(['ask_kinross_status'].includes(action) ? [] : ['Executed'])].includes(p.state));
+  const key = keyOf(action, { po: args.po, document: args.document, n: action === 'kinross_owns_945' ? s.tasks.filter((t) => t.po === args.po).length : 0 });
+  const open = s.proposals.find((p) => p.key === key && ['Awaiting approval', 'Approved', ...(['kinross_owns_945'].includes(action) ? [] : ['Executed'])].includes(p.state));
   if (open) return { state: 'Duplicate', proposal: open.id, message: `The same action is already ${open.state.toLowerCase()} (${open.id}).` };
   const bad = validate(db, s, action, args); if (bad) { trace(s, 'Trading Grid', 'rule', `Refused ${action}`, { by, args, reason: bad }); return { state: 'Refused', message: bad }; }
   const p = { id: `WP-${s.proposals.length + 1}`, key, action, args, by, rationale: why.rationale || null, alternatives: why.alternatives || [], state: 'Awaiting approval', needs: s.modes[action], at: fmtET(iso(s.clock)) };
@@ -295,10 +295,10 @@ function validate(db, s, action, a) {
     case 'release_document': { if (!['855', '856', '810'].includes(a.document)) return 'Name the document to release: 855, 856 or 810.';
       const d = s.docs.find((x) => x.po === po && x.doc_type === a.document && x.state === 'Draft'); if (!d) return `There is no drafted ${a.document} for ${po} to release.`;
       if (a.document === '856' && !dep) return `NF-4.2: a ship notice is sent after departure, and ${po} has no departure scan.`; return null; }
-    case 'ask_kinross_status': { const w = warehouseOrder(db, s, po); if (!w) return `${po} is not a Kinross order; it ships from Ashby’s own site.`; if (w.advice_at) return `Kinross already returned the 945 for ${po}.`;
-      const last = s.tasks.filter((t) => t.po === po).pop(); if (last && s.clock - Date.parse(last.sent_iso) < 60 * MIN) return `Kinross was asked about ${po} ${Math.round((s.clock - Date.parse(last.sent_iso)) / MIN)} minutes ago; ask again after 60 minutes.`; return null; }
-    case 'flag_erp_record': { if (!fulfil || dep) return `No fulfilment posted before departure on ${po}.`; if (s.erp.notes.some((n) => n.po === po)) return `The Supplier ERP record for ${po} is already flagged.`; if (a.note && a.note.length > 300) return 'A note is at most 300 characters.'; return null; }
-    case 'escalate_to_priya': { if (!rows.length) return `Nothing is open on ${po}.`; if (!a.message || a.message.length > 600) return 'Give the message for Priya (at most 600 characters).'; if (s.notices.some((n) => n.po === po && n.kind === 'escalation' && s.clock - n.at_ms < 60 * MIN)) return `${po} was escalated less than an hour ago.`; return null; }
+    case 'kinross_owns_945': { const w = warehouseOrder(db, s, po); if (!w) return `${po} is not a Kinross order; it ships from Ashby’s own site.`; if (w.advice_at) return `Kinross already returned the 945 for ${po}.`;
+      const last = s.tasks.filter((t) => t.po === po).pop(); if (last && s.clock - Date.parse(last.sent_iso) < 60 * MIN) return `Kinross’s records for ${po} were read ${Math.round((s.clock - Date.parse(last.sent_iso)) / MIN)} minutes ago; read them again after 60 minutes.`; return null; }
+    case 'ashby_corrects_early_fulfilment': { if (!fulfil || dep) return `No fulfilment posted before departure on ${po}.`; if (s.erp.notes.some((n) => n.po === po)) return `The Supplier ERP record for ${po} is already flagged.`; if (a.note && a.note.length > 300) return 'A note is at most 300 characters.'; return null; }
+    case 'raise_on_priya_queue': { if (!rows.length) return `Nothing is open on ${po}.`; if (!a.message || a.message.length > 600) return 'Give the message for Priya (at most 600 characters).'; if (s.notices.some((n) => n.po === po && n.kind === 'escalation' && s.clock - n.at_ms < 60 * MIN)) return `${po} was escalated less than an hour ago.`; return null; }
   }
   return null;
 }
@@ -372,15 +372,15 @@ function execute(db, s, p, by) {
       if (a.document === '856') { const rc = q1(db, 'SELECT receipt, received_at, sum(qty) qty FROM receipts WHERE po = ? AND received_at > ? GROUP BY receipt ORDER BY received_at').get(po, iso(cutOf(s)));
         if (rc) { const cartons = rc.qty; schedule(s, { key: `861:${po}`, type: 'doc', doc_type: '861', po, reference: rc.receipt, at: iso(Math.max(Date.parse(rc.received_at), s.clock + 10 * MIN)), received: cartons, actor: 'Northfield (recorded receipt)', what: `Receiving advice (861) ${rc.receipt}: ${cartons} cartons received; ${cartons === d.cartons ? 'matches' : 'does not match'} ship notice ${d.reference}`, source: 'Northfield (recorded; revealed as the confirming record)' }); } }
       r = { state: 'Completed', response: `${d.reference} sent at ${fmtET(d.sent_at)}${d.late ? '; Late (stays Late)' : ''}. A 997 follows; it is technical only.`, late: d.late }; break; }
-    case 'ask_kinross_status': {
+    case 'kinross_owns_945': {
       s.clock += 10 * MIN; const w = warehouseOrder(db, s, po);
       const t = { id: `KT-${s.tasks.length + 1}`, po, proposal: p.id, sent_at: fmtET(iso(s.clock - 10 * MIN)), sent_iso: iso(s.clock - 10 * MIN), synthetic: true };
-      if (unreachable(s)) Object.assign(t, { state: 'No answer', response: 'Kinross did not answer; warehouse status Unknown' });
+      if (unreachable(s)) Object.assign(t, { state: 'No answer', response: 'No Kinross record has reached Trading Grid; warehouse status Unknown' });
       else {
         const rec = q1(db, 'SELECT advice_at FROM warehouse_orders WHERE po = ?').get(po); const kev = q1(db, 'SELECT at, kind, system, data FROM events WHERE po = ? AND system = ? AND at > ? ORDER BY at').all(po, KINROSS, iso(cutOf(s)));
         const now = iso(s.clock); const syn = s.synthetic.find((e) => e.po === po && e.kind === 'wms.departure_scan');
         const recDep = kev.find((e) => e.kind === 'wms.departure_scan' && e.at <= now), recLoad = kev.find((e) => e.kind === 'wms.load_scan' && e.at <= now);
-        const response = syn ? `The trailer left at ${fmtET(syn.at)}; the load scan and 945 follow when our 945 job runs` : rec?.advice_at && rec.advice_at <= now ? `945 sent at ${fmtET(rec.advice_at)}` : recDep ? `Departed at ${fmtET(recDep.at)}; the 945 follows` : recLoad ? 'Loaded; the trailer has not departed' : 'Picked; the load is not on a trailer and has not departed';
+        const response = syn ? `Kinross records: the trailer left at ${fmtET(syn.at)}; the load scan and 945 follow when Kinross’s 945 job runs` : rec?.advice_at && rec.advice_at <= now ? `945 sent at ${fmtET(rec.advice_at)}` : recDep ? `Departed at ${fmtET(recDep.at)}; the 945 follows` : recLoad ? 'Loaded; the trailer has not departed' : 'Picked; the load is not on a trailer and has not departed';
         Object.assign(t, { state: 'Answered', response });
         // The confirming record: the recorded 945 and the Kinross scans before it, revealed when the clock reaches them.
         if (rec?.advice_at && rec.advice_at > iso(cutOf(s))) {
@@ -390,16 +390,17 @@ function execute(db, s, p, by) {
           schedule(s, { key: `945:${po}`, type: 'doc', doc_type: '945', po, reference: `WSA-${po.slice(3)}`, at: with945, actor: 'Kinross (recorded)', what: `Kinross shipping advice (945) WSA-${po.slice(3)} received`, source: 'Kinross (recorded; revealed as the confirming record)' });
         }
       }
-      s.tasks.push(t); trace(s, 'Kinross (synthetic)', 'external', `Kinross ${t.state === 'No answer' ? 'did not answer' : 'answered'} the status ask on ${po}`, { task: t.id, response: t.response, note: t.note || null });
-      r = { state: t.state === 'No answer' ? 'Sent' : 'Completed', response: t.response, ...(t.note ? { note: t.note } : {}), warehouse_status: w?.advice_at ? 'Shipped' : 'Unknown until the 945 arrives' }; tick(db, s); break; }
-    case 'flag_erp_record': { s.clock += MIN; const n = { po, note: a.note || 'Fulfilment posted before the trailer departed; no 945 and no departure scan yet', by, at: fmtET(iso(s.clock)) }; s.erp.notes.push(n);
-      trace(s, 'Supplier ERP', 'external', `Note added to the fulfilment record of ${po}`, { note: n.note }); r = { state: 'Completed', response: 'Note added on the Supplier ERP record' }; break; }
-    case 'escalate_to_priya': { s.clock += MIN; s.notices.push({ po, kind: 'escalation', message: a.message, at: fmtET(iso(s.clock)), at_ms: s.clock, by: p.by });
-      trace(s, 'Trading Grid', 'system', `Escalated ${po} to Priya Raman`, { message: a.message }); r = { state: 'Delivered', response: 'Priya Raman notified with what is known' }; break; }
+      s.tasks.push(t); trace(s, 'Trading Grid', 'system', `Shown to Priya Raman: Kinross owns the 945 for ${po} and sends it from its warehouse system; nothing is sent`, { fix: t.id });
+      trace(s, 'Kinross (synthetic)', 'external', t.state === 'No answer' ? `No Kinross record for ${po} has reached Trading Grid` : `Kinross records for ${po}: ${t.response}`, { fix: t.id, response: t.response, note: t.note || null });
+      r = { state: t.state === 'No answer' ? 'Shown' : 'Completed', response: t.response, ...(t.note ? { note: t.note } : {}), warehouse_status: w?.advice_at ? 'Shipped' : 'Unknown until the 945 arrives' }; tick(db, s); break; }
+    case 'ashby_corrects_early_fulfilment': { s.clock += MIN; const n = { po, note: a.note || 'Fulfilment posted before the trailer departed; no 945 and no departure scan yet', by, at: fmtET(iso(s.clock)) }; s.erp.notes.push(n);
+      trace(s, 'Trading Grid', 'system', `Shown to Priya Raman: the Supplier ERP posted fulfilment on ${po} before the trailer departed; Ashby corrects it in the Supplier ERP`, { finding: n.note }); r = { state: 'Shown', response: 'Shown on Priya Raman’s queue; Ashby corrects it in the Supplier ERP and the next Supplier ERP record confirms it' }; break; }
+    case 'raise_on_priya_queue': { s.clock += MIN; s.notices.push({ po, kind: 'escalation', message: a.message, at: fmtET(iso(s.clock)), at_ms: s.clock, by: p.by });
+      trace(s, 'Trading Grid', 'system', `Raised ${po} to the top of Priya Raman’s queue`, { message: a.message }); r = { state: 'Shown', response: 'Raised on Priya Raman’s queue with what is known; nothing is sent' }; break; }
     default: r = { state: 'Refused', response: 'Unknown action' };
   }
   tick(db, s);
-  p.state = ['Completed', 'Delivered', 'Sent'].includes(r.state) ? 'Executed' : 'Failed'; p.result = r; p.executed_under = by;
+  p.state = ['Completed', 'Sent', 'Shown'].includes(r.state) ? 'Executed' : 'Failed'; p.result = r; p.executed_under = by;
   audit(s, p, `${p.state}: ${r.response || r.state}`);
   return { state: p.state, proposal: p.id, result: r };
 }
@@ -425,10 +426,10 @@ export function baselinePass(db, s, act) {
   const q = read(db, s, 'read_queue'); const done = [];
   for (const r of q.rows.filter((x) => !x.closed)) {
     const row = s.rows.get(r.id); const hoursLeft = (row.deadline - s.clock) / H;
-    const escalate = (why) => { if (!s.notices.some((n) => n.po === r.po && n.kind === 'escalation')) done.push(act('escalate_to_priya', { po: r.po, message: `${r.po} ${r.document}: ${why}. ${D.timeLeft(new Date(row.deadline), new Date(s.clock))}.` })); };
+    const escalate = (why) => { if (!s.notices.some((n) => n.po === r.po && n.kind === 'escalation')) done.push(act('raise_on_priya_queue', { po: r.po, message: `${r.po} ${r.document}: ${why}. ${D.timeLeft(new Date(row.deadline), new Date(s.clock))}.` })); };
     const askKinross = (wh) => { const t = s.tasks.filter((x) => x.po === r.po); const last = t.at(-1);
       if (!wh.warehouse_order_940?.reference || wh.shipping_advice_945 !== 'Not received') return;
-      if (!last || (last.state === 'No answer' && t.length < 3 && s.clock - Date.parse(last.sent_iso) >= 60 * MIN)) done.push(act('ask_kinross_status', { po: r.po })); };
+      if (!last || (last.state === 'No answer' && t.length < 3 && s.clock - Date.parse(last.sent_iso) >= 60 * MIN)) done.push(act('kinross_owns_945', { po: r.po })); };
     if (r.document === '855' && /^(Missing|Late)$/.test(r.state)) { done.push(act('draft_acknowledgment', { po: r.po })); done.push(act('release_document', { po: r.po, document: '855' })); }
     else if (r.document === '855' && /^Drafted/.test(r.state)) done.push(act('release_document', { po: r.po, document: '855' }));
     else if (r.document === '856') {
@@ -436,7 +437,7 @@ export function baselinePass(db, s, act) {
       const source = wh.load_scan !== 'None' || ord.supplier_erp.fulfilment !== 'Not posted'; const departed = wh.departure_scan !== 'None';
       if (/^Drafted/.test(r.state)) { if (departed) done.push(act('release_document', { po: r.po, document: '856' })); }
       else if (r.kind === 'rejected') { done.push(act('draft_ship_notice', { po: r.po })); done.push(act('release_document', { po: r.po, document: '856' })); }
-      else if (r.kind === 'held') { if (!s.erp.notes.some((n) => n.po === r.po)) done.push(act('flag_erp_record', { po: r.po })); askKinross(wh); if (hoursLeft <= ESCALATE_HOURS) escalate('Supplier ERP shows shipped; no departure scan and no 945'); }
+      else if (r.kind === 'held') { if (!s.erp.notes.some((n) => n.po === r.po)) done.push(act('ashby_corrects_early_fulfilment', { po: r.po })); askKinross(wh); if (hoursLeft <= ESCALATE_HOURS) escalate('Supplier ERP shows shipped; no departure scan and no 945'); }
       else if (departed && source && /^(Missing|Late)$/.test(r.state)) { done.push(act('draft_ship_notice', { po: r.po })); done.push(act('release_document', { po: r.po, document: '856' })); }
       else if (departed && !source) { askKinross(wh); if (hoursLeft <= ESCALATE_HOURS) escalate('departed with no load scan and no fulfilment record; no ship notice can be built'); }
     }
@@ -467,15 +468,15 @@ export function runBaseline(db, s, approve = (id) => decide(db, s, id, 'approve'
 export const AGENT_TOOLS = [
   ...Object.entries(READS).map(([name, r]) => ({ name, description: r.description, input: r.input })),
   { name: 'propose_action', description: `Propose one action. The server decides whether it runs under policy or waits for Priya Raman, and refuses anything a rule or guardrail forbids. Actions: ${Object.entries(ACTIONS).map(([k, a]) => `${k} (${a.label}; takes ${a.args.join(', ')})`).join('; ')}. Give a short rationale grounded in records you read, and the alternatives you considered with why you did not choose them.`,
-    input: { action: z.enum(Object.keys(ACTIONS)), po: z.string().describe('PO number'), document: z.enum(['855', '856', '810']).optional().describe('With release_document: which drafted document to send'), note: z.string().optional().describe('With flag_erp_record'), message: z.string().optional().describe('With escalate_to_priya: what Priya needs to know'), rationale: z.string().describe('One or two sentences citing the records read'), alternatives: z.array(z.string()).optional().describe('Options considered and why not chosen') } },
+    input: { action: z.enum(Object.keys(ACTIONS)), po: z.string().describe('PO number'), document: z.enum(['855', '856', '810']).optional().describe('With release_document: which drafted document to send'), note: z.string().optional().describe('With ashby_corrects_early_fulfilment'), message: z.string().optional().describe('With raise_on_priya_queue: what Priya needs to know'), rationale: z.string().describe('One or two sentences citing the records read'), alternatives: z.array(z.string()).optional().describe('Options considered and why not chosen') } },
 ];
 const INSTRUCTION = (s) => `You are Watch Agent, working for Priya Raman at Ashby Supplier on Trading Grid. All data is fictional.
 Goal: ${s.goal}
 Find the open orders that are missing a document Northfield requires, find out from the source records why each is missing, and propose the next step for each with propose_action.
-Use only facts returned by your tools. Never state a record, quantity or confirmation the tools did not return. Read the policy before proposing. A proposal that waits for approval is not done. A technical acknowledgment (997) is never business acceptance. A ship notice is confirmed only by Northfield's receiving advice (861); a Kinross request only by the 945. A late document stays Late after it is sent.
+Use only facts returned by your tools. Never state a record, quantity or confirmation the tools did not return. Read the policy before proposing. A proposal that waits for approval is not done. A technical acknowledgment (997) is never business acceptance. A ship notice is confirmed only by Northfield's receiving advice (861); a missing 945 only by the 945 Kinross sends. A late document stays Late after it is sent. Trading Grid sends only business documents (855, 856, 810); it never sends a request, task, note or email to Kinross, Ashby's desks or Northfield: for a fix that belongs to the owner of a record, the action shows what is wrong, who owns it and where it is fixed, and the owner's next record confirms it.
 A draft made under Priya's standing policy has not reached Northfield: once a document is drafted, propose release_document for it in the same pass, so every drafted document waits for Priya's decision rather than sitting unsent.
 Never retry an action the server refused; read the refusal and change course, or stop and say what waits for Priya.
-When you are waiting for Priya, Kinross or Northfield, stop and say in one or two sentences what you proposed and why. When new evidence arrives, re-read what changed and reconsider; do not repeat an action a party already answered for the same reason.`;
+When you are waiting for Priya or for the next record from Kinross or Northfield, stop and say in one or two sentences what you proposed and why. When new evidence arrives, re-read what changed and reconsider; do not repeat an action whose record already arrived for the same reason.`;
 
 /** At its limit the agent never just stops: it reports what it waits for, a proposal for Priya Raman or an answer from Kinross or Northfield. */
 function waitAtLimit(s, ag, t0) {
@@ -519,7 +520,7 @@ export async function runWatch(db, s, { callModel, maxSteps = 14, maxToolCalls =
   ag.ms += Date.now() - t0;
   return { ok: true, status: ag.status, awaiting: s.proposals.filter((p) => p.state === 'Awaiting approval').map((p) => ({ id: p.id, action: p.action, args: p.args, rationale: p.rationale, alternatives: p.alternatives })) };
 }
-// ---------- Run by the rules, with no agent (D75): the decision table proposes, Priya approves, the records answer ----------
+// ---------- Run by the rules, with no agent (D75): the decision table proposes, Priya approves what is sent, the records answer ----------
 // The same queue, reads, actions, approval modes and simulators as an agent session. No model is called and nothing is
 // credited to an agent. The Kinross window is Priya's rule in the catalogue (AP-7.2, 24 hours; the agreement with Kinross, KX-945, allows 48), so a change in admin flags different rows.
 const RULES = 'Rule engine';
@@ -569,9 +570,11 @@ export function rulesRecording(db, opts = {}) {
   for (const po of [...new Set(start.queue.rows.map((r) => r.po))]) {
     const s = startRules(db, opts); steps[po] = [];
     for (let i = 0; i < 6; i++) {
-      const mine = s.proposals.filter((p) => p.state === 'Awaiting approval' && p.args.po === po); if (!mine.length) break;
-      for (const p of mine) decideRules(db, s, p.id, 'approve');
+      // A step is an approval, or, where the fix belongs to the owner of a record (nothing to approve), the owner's next record.
+      const mine = s.proposals.filter((p) => p.state === 'Awaiting approval' && p.args.po === po);
       const due = () => s.pending.filter((p) => p.po === po && Date.parse(p.at) <= s.horizon);
+      if (!mine.length && !due().length) break;
+      for (const p of mine) decideRules(db, s, p.id, 'approve');
       for (let k = 0; k < 8 && due().length && !s.proposals.some((p) => p.state === 'Awaiting approval' && p.args.po === po); k++) advanceRules(db, s, { to: Math.min(...due().map((p) => Date.parse(p.at))) });
       steps[po].push(cut(rulesView(db, s), po));
     }

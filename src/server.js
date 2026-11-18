@@ -102,7 +102,7 @@ function addEvent(at, kind, po, party, data) { return db.prepare('INSERT INTO ev
 function propose(cid, kind, rule, action, target, payload, by = assistantOf(cid)) {
   const id = `PR-${String(db.prepare('SELECT count(*) n FROM proposals').get().n + 1).padStart(4, '0')}`; const side = SIDE[cid];
   db.prepare('INSERT INTO proposals (id, connection_id, kind, approver, rule_id, created_at, created_by, action, target, payload, state, authority_mode) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)').run(id, cid, kind, side.person, rule || null, new Date().toISOString(), by, action, target || '', JSON.stringify(payload), 'Awaiting approval', 'approve');
-  log(cid, kind === 'change' ? 'request_change' : ({ dispute: 'submit_dispute', release: 'release_ship_notice', decision: 'decide_charge', publish: 'publish_rule' })[kind], [], payload, 'Proposal recorded', [id, target].filter(Boolean),
+  log(cid, ({ dispute: 'submit_dispute', release: 'release_ship_notice', decision: 'decide_charge', publish: 'publish_rule' })[kind], [], payload, 'Proposal recorded', [id, target].filter(Boolean),
     { agent: by, rule, mode: 'approve', approver: `${side.person} (awaiting)`, outcome: `Proposal ${id} awaiting approval` });
   return { result: 'Proposal recorded', proposal: id, state: 'Awaiting approval', approver: side.person, rule: rule ? D.rule(db, rule) : null, message: `Nothing has left ${side.company}. ${side.person} approves or rejects this proposal in Trading Grid.`, approve_at: `${BASE}/admin/<token>` };
 }
@@ -137,7 +137,6 @@ function write(cid, name, args) {
     if (!db.prepare('SELECT 1 FROM rule_replays WHERE draft_id = ?').get(id)) { log(cid, name, [], args, 'Refused: replay first', [id], refusedW(cid, null, 'Refused: replay first')); return { result: 'Refused', message: `${id} has not been replayed against the quarter. Call replay_draft_rule with draft ${id} first; a rule is published only after a replay.` }; }
     return propose(cid, 'publish', null, `Publish ${id}: ${d.statement}`, id, { draft: id });
   }
-  if (name === 'request_change') { const po = args.po ? D.normPo(args.po) : null; return propose(cid, 'change', null, args.action, po || args.document || '', args); }
   return { result: 'Invalid request', error: `Unknown tool ${name}` };
 }
 
@@ -163,7 +162,7 @@ export function call(cid, name, args = {}) {
   if (cid === AS && name === 'compare_with_other_suppliers') { log(cid, name, [], args, D.NOT_AVAILABLE, []); return { result: D.NOT_AVAILABLE, message: 'Other suppliers’ records are not available on Ashby’s connection.' }; }
   if (cid === AS && name === 'read_retailer_records') return refuse(cid, name, args, ASHBY_PRIVATE.what);
   if (cid === NF && name === 'read_supplier_records') return refuse(cid, name, args, 'Suppliers’ ERP, warehouse and carrier records and their internal policies');
-  if ([...(cid === AS ? ASHBY_WRITES : NF_WRITES), { name: 'request_change' }].some((w) => w.name === name)) return write(cid, name, args);
+  if ((cid === AS ? ASHBY_WRITES : NF_WRITES).some((w) => w.name === name)) return write(cid, name, args);
   if (name === 'run_readonly_sql') {
     const missing = side.scopes.filter((s) => !has(s)); if (missing.length) { log(cid, name, side.scopes, args, 'Scope not granted', []); return { result: 'Scope not granted', missing_scopes: missing }; }
     const q = String(args.sql || '').trim().replace(/;+\s*$/, '');
@@ -244,7 +243,7 @@ const NF_SQL_TOOL = { name: 'run_readonly_sql', title: 'Read-only SQL over North
 const LOG_TOOL = { name: 'get_access_log', title: 'Access log', description: 'Every call made on this connection, and writes the other company made into shared records: time, user, tool, scopes used, arguments, result and records returned. Newest first.', input: { limit: z.number().int().min(1).max(200).optional() } };
 export const ALL_TOOLS = [...TOOLS, ...BOUNDARY, ...ASHBY_WRITES, ...ASHBY_REFUSALS, SQL_TOOL, LOG_TOOL];
 export const ALL_NF_TOOLS = [...NF_TOOLS, ...NF_WRITES, ...NF_REFUSALS, NF_SQL_TOOL, LOG_TOOL];
-const WRITE_NAMES = new Set(['request_change', 'submit_dispute', 'release_ship_notice', 'decide_charge', 'publish_rule']);
+const WRITE_NAMES = new Set(['submit_dispute', 'release_ship_notice', 'decide_charge', 'publish_rule']);
 // Governance tools (T2.3). Pause and a trial change no Trading Grid record but do record on the change list, so none is marked read-only.
 const agentNames = (cid) => Object.keys(G.AGENTS).filter((a) => G.AGENTS[a].connection === cid).map((a) => `${RULE_SETS[a].runtime} (${ruleSet(a)})`).join(', ');
 const GOV = (cid) => [
@@ -267,12 +266,12 @@ const INSTRUCTIONS = {
     'Questions about "now" are answered as of the story clock, Tuesday 17 November 2026 11:00 Eastern, unless you pass as_of. get_story_calendar lists other moments.',
     'Find records by PO number, document reference or case id. Answer only from tool results and cite each record with its link.',
     'Keep a technical acknowledgment (997) separate from business acceptance: Northfield sends no business acceptance.',
-    WRITES ? 'Writes follow Ashby’s rules: submit_dispute, release_ship_notice and request_change record proposals Priya Raman approves in Trading Grid; every dispute needs her approval (AP-4.1), and ship notice release always stays with a person (AP-1.3). Findings are credited to the rule that found them; no answer names an agent.' : 'Nothing on this connection creates, changes or sends a Trading Grid record. For any action, call request_change and give the user its Trading Grid link.',
+    WRITES ? 'Writes follow Ashby’s rules: submit_dispute and release_ship_notice record proposals Priya Raman approves in Trading Grid; every dispute needs her approval (AP-4.1), and ship notice release always stays with a person (AP-1.3). Findings are credited to the rule that found them; no answer names an agent.' : 'Nothing on this connection creates, changes or sends a Trading Grid record. Trading Grid sends only business documents and never sends requests, tasks, notes or email: for any other action, say what is wrong, who owns it and where they fix it.',
     'Records of other suppliers are not available, and Northfield’s payables, draft rules and reviewer notes are Northfield’s: say "Not available to Ashby".'].join(' '),
   [NF]: () => ['This is Northfield Retailer’s connection to Trading Grid for Jordan Ellis’s own assistant. All data is fictional.',
     'It holds the same quarter of trade as its suppliers see, 27 September to 26 December 2026, settlement to 9 January 2027. Times are US Eastern; the default as_of is Tuesday 17 November 2026 11:00 Eastern.',
     'Documents exchanged with suppliers are shared: both sides see the same X12. A supplier’s ERP, warehouse and carrier records are the supplier’s: say "Not available to Northfield" unless the supplier shared them into a case.',
-    WRITES ? 'Writes follow Northfield’s guide: decide_charge, publish_rule and request_change record proposals Jordan Ellis approves in Trading Grid. Jordan decides every charge (NF-7.7). A rule is published only after replay_draft_rule.' : 'This connection is read-only.',
+    WRITES ? 'Writes follow Northfield’s guide: decide_charge and publish_rule record proposals Jordan Ellis approves in Trading Grid. Jordan decides every charge (NF-7.7). A rule is published only after replay_draft_rule.' : 'This connection is read-only.',
     'Answer only from tool results and cite each record with its link.'].join(' '),
 };
 // ---------- Scout (P5): a server-side agent working in an isolated session branched from the recorded world ----------
@@ -319,7 +318,7 @@ const SCOUT_TOOLS = [
   { name: 'scout_decide', title: 'Decide a shipment session proposal as Priya Raman', description: 'Records Priya Raman’s decision on one proposal in a shipment session: approve, reject, or edit (Edit suggestion: she sets it aside and does the case by hand, recorded with her name). On approval the server executes it (Kinross and Northfield respond by their rules), then the model continues from the result. An approval cannot be replayed. Only call this when the user has decided.', input: { session: z.string(), proposal: z.string().describe('Proposal id, for example SP-2'), decision: z.enum(['approve', 'reject', 'edit']).describe('approve, reject, or edit: Edit suggestion, where Priya sets the proposal aside and does the case by hand; the model then stops proposing in this session'), note: z.string().optional().describe('With edit: what Priya does instead'), brief: z.boolean().optional().describe('Return only the session id, status, proposals awaiting approval and outcome') }, run: scoutDecide },
   { name: 'scout_state', title: 'Shipment session state and trace', description: 'Current state of a shipment session: clock, load, proposals awaiting approval, outcome so far, trace and agent overhead.', input: { session: z.string() }, run: async ({ session }) => scoutView(Scout.getSession(session)) },
   { name: 'scout_baseline', title: 'Rule baseline on NR-460207', description: 'Runs the deterministic rule baseline on the same branch and variation, with the same reads and actions and a labelled test approver, and returns its outcome and trace.', input: { variation: VAR, facts: FACTS_IN, policy: POLICY_IN }, run: scoutBaseline },
-  { name: 'scout_replay', title: 'Governance replay: rule baseline and model run side by side', description: 'Runs the rule baseline and the model run on the same branch and variation, approving every proposal as a labelled test approver, and returns both outcomes, one-line traces and the model’s overhead. Pass detail full for every trace field. Pass policy to trial a changed approval mode for an editable action (for example {"kinross_load": "policy"}): the baseline then also runs under the policy in force and the actions whose authority differs are listed. Every replay is recorded on the change list as a trial (get_change_list). Locked actions (AP-1.3 release, AP-1.4 build, AP-5.1 reserved stock) cannot change. For governance review, not operation.', input: { variation: VAR, detail: z.enum(['brief', 'full']).optional(), policy: z.record(z.enum(['suggest', 'approve', 'policy'])).optional().describe('Action to mode: suggest, approve or policy') }, run: (a) => scoutReplay(a) },
+  { name: 'scout_replay', title: 'Governance replay: rule baseline and model run side by side', description: 'Runs the rule baseline and the model run on the same branch and variation, approving every proposal as a labelled test approver, and returns both outcomes, one-line traces and the model’s overhead. Pass detail full for every trace field. Pass policy to trial a changed approval mode for an editable action (for example {"kinross_loads_carton": "policy"}): the baseline then also runs under the policy in force and the actions whose authority differs are listed. Every replay is recorded on the change list as a trial (get_change_list). Locked actions (AP-1.3 release, AP-1.4 build, AP-5.1 reserved stock) cannot change. For governance review, not operation.', input: { variation: VAR, detail: z.enum(['brief', 'full']).optional(), policy: z.record(z.enum(['suggest', 'approve', 'policy'])).optional().describe('Action to mode: suggest, approve or policy') }, run: (a) => scoutReplay(a) },
 ];
 // ---------- Watch Agent (P13): a server-side agent on the open-order queue, in an isolated session branched from the recorded world ----------
 const watchPaused = () => G.isPaused(db, 'Watch Agent');
@@ -432,7 +431,7 @@ for (const t of [...SCOUT_TOOLS, ...WATCH_TOOLS, ...MATCH_TOOLS, ...RUNTIME_TOOL
 const SESSION_TOOLS = (cid) => cid === AS ? [...SCOUT_TOOLS, ...WATCH_TOOLS, ...RUNTIME_TOOLS[AS]] : [...MATCH_TOOLS, ...RUNTIME_TOOLS[NF]];
 async function runSessionTool(cid, t, args) { let out; try { out = await t.run(args); if (cid === NF) out = linkify(out, SIDE[NF]); } catch (e) { out = { result: 'Invalid request', error: e.message }; } log(cid, t.name, [], args, out.result || out.status || 'Answered', []); return out; }
 function makeServer(cid) {
-  const server = new McpServer({ name: cid === AS ? 'trading-grid-ashby' : 'trading-grid-northfield', title: cid === AS ? 'Trading Grid · Ashby Supplier' : 'Trading Grid · Northfield Retailer', version: '0.4.1' }, { instructions: INSTRUCTIONS[cid]() });
+  const server = new McpServer({ name: cid === AS ? 'trading-grid-ashby' : 'trading-grid-northfield', title: cid === AS ? 'Trading Grid · Ashby Supplier' : 'Trading Grid · Northfield Retailer', version: '0.4.2' }, { instructions: INSTRUCTIONS[cid]() });
   // Every tool on the connection answers through `present` (src/credit.js): no result, title or description names an agent.
   const register = server.registerTool.bind(server);
   server.registerTool = (name, meta, handler) => register(name, { ...meta, title: present(meta.title), description: present(meta.description) }, async (args) => {
@@ -476,7 +475,7 @@ app.use((req, res, next) => { const json = res.json.bind(res); res.json = (body)
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false }));
 app.get('/', (req, res) => res.type('html').send(homePage()));
-app.get('/healthz', (req, res) => res.json({ status: 'ok', version: '0.4.1', writes: WRITES, connections: [AS, NF], aviator: !!process.env.GEMINI_API_KEY, model_routes: Aviator.modelRoutes().map((r) => `${r.route} · ${r.model}`) }));
+app.get('/healthz', (req, res) => res.json({ status: 'ok', version: '0.4.2', writes: WRITES, connections: [AS, NF], aviator: !!process.env.GEMINI_API_KEY, model_routes: Aviator.modelRoutes().map((r) => `${r.route} · ${r.model}`) }));
 const cidOf = (req, res) => { const c = BY_TOKEN[req.params.token]; if (!c) { res.status(404).send('Not found'); return null; } return c; };
 
 app.post('/mcp/:token', async (req, res) => {
@@ -566,6 +565,8 @@ const CHARGE_WORDS = new Map(db.prepare('SELECT charge_code, topic FROM rules WH
 const KIND_WORDS = { wms: 'Kinross', carrier: 'Lakeline', erp: 'Supplier ERP', tg: 'Trading Grid', case: 'deduction case', rule: 'rule' };
 export function plainAnswer(text) {
   let t = String(text || '');
+  // A credit that names its rule set ("Northfield matching rule NF-7.8") reads as the owner's rule set, with no code.
+  t = t.replace(/\b(Northfield|Ashby)(?:’s|'s)? ((?:[a-z]+ ){0,3}?)rules? (?:[A-Z]{2,3}-\d+(?:\.\d+)?)(?:(?:,| and) (?:[A-Z]{2,3}-\d+(?:\.\d+)?))*/g, (m, who, kind) => `${who}’s ${kind}rule`);
   t = t.replace(/\s*\((?:rule |under |per |see )?(?:[A-Z]{2,3}-\d+(?:\.\d+)?|[A-Z]{2}\d{2})(?:[,;/ ]+(?:and )?(?:[A-Z]{2,3}-\d+(?:\.\d+)?|[A-Z]{2}\d{2}))*\)/g, '');
   t = t.replace(/\b(?:rule )?([A-Z]{2,3}-\d+(?:\.\d+)?)\b/g, (m, id) => RULE_WORDS.get(id) || m);
   t = t.replace(/\b([A-Z]{2}\d{2})\b/g, (m, c) => CHARGE_WORDS.get(c) || m);
@@ -577,7 +578,9 @@ export function plainAnswer(text) {
 /** The records an answer read, by their business names: those it names first, then the rest it read. */
 function recordsRead(text, results) {
   const refs = []; const add = (r) => { if (r && !refs.includes(r)) refs.push(r); };
-  const all = []; for (const r of results) for (const x of refsOf(r)) if (!all.includes(x)) all.push(x);
+  // Only records: a reference (NR-450118, INV-7731C, PMT-990412) or a record kind; never a sentence a tool returned about one.
+  const isRecord = (x) => /^[A-Z][A-Z0-9]*-[A-Z0-9][A-Z0-9.#-]*$/.test(x) || /^[a-z]+\.[a-z_]+$/.test(x) || /^\d{3}$/.test(x);
+  const all = []; for (const r of results) for (const x of refsOf(r)) if (isRecord(String(x)) && !all.includes(x)) all.push(x);
   for (const x of all) if (String(text).includes(x)) add(x); for (const x of all) if (refs.length < 8) add(x);
   return refs.map((ref) => {
     if (db.prepare('SELECT 1 FROM orders WHERE po = ?').get(ref)) return { record: ref, name: `Purchase order ${ref}` };
@@ -593,7 +596,11 @@ function recordsRead(text, results) {
     return { record: ref, name: ref };
   }).filter((r, i, a) => r && a.findIndex((x) => x && x.name === r.name) === i);
 }
-const ipOf = (req) => req.ip || req.socket?.remoteAddress || 'unknown';
+// The viewer's address for the per-address limits. Render sits behind Cloudflare: Cloudflare sets CF-Connecting-IP to the
+// connecting client and overwrites any value a client sends, while Render only appends to X-Forwarded-For, so req.ip there is a
+// proxy hop shared by many viewers and moved by any X-Forwarded-For a client adds (measured 18 November 2026). Locally, with no
+// Cloudflare in front, the socket address is the viewer; X-Forwarded-For is never read for a limit.
+const ipOf = (req) => { const cf = String(req.get('cf-connecting-ip') || req.get('true-client-ip') || '').trim(); return /^[0-9a-f.:]{3,45}$/i.test(cf) ? cf : req.socket?.remoteAddress || 'unknown'; };
 const AV_MINUTE = windowLimit(LIMITS.aviator_per_minute, 60000), AV_DAY = windowLimit(LIMITS.aviator_per_day, 86400000), PUBLIC_MINUTE = windowLimit(LIMITS.public_per_minute, 60000);
 export const resetLimits = () => { AV_MINUTE.reset(); AV_DAY.reset(); PUBLIC_MINUTE.reset(); };
 const asOfIso = (v) => { if (!v) return null; try { return D.asOfDate(String(v)).toISOString(); } catch { return null; } };

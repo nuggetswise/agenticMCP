@@ -268,7 +268,7 @@ for (const p of REG.prototypes) {
     for (const p of s.proposals) if (!s.audit.some((a) => a.proposal === p.id && a.outcome.startsWith(p.state))) missing.push(`${name} ${p.id} ${p.state}: no final entry`);
     for (const a of s.audit) { entries++; if (!a.agent || !a.authority_rule || !['suggest', 'approve', 'policy'].includes(a.authority_mode) || !a.approver || !a.outcome) missing.push(`${name} ${a.proposal}`); } }
   ok('governance.every_scout_write_names_agent_authority_approver_outcome', !missing.length && entries > 20, `${entries} entries; ${missing.slice(0, 3).join('; ')}`);
-  { const s = Scout.startSession(db); Scout.decide(db, s, Scout.propose(db, s, 'Model', 'erp_align_order').proposal, 'approve'); const r = Scout.propose(db, s, 'Model', 'build_ship_notice'); const a = s.audit.find((x) => x.proposal === r.proposal);
+  { const s = Scout.startSession(db); Scout.decide(db, s, Scout.propose(db, s, 'Model', 'order_desk_corrects_sales_order').proposal, 'approve'); const r = Scout.propose(db, s, 'Model', 'build_ship_notice'); const a = s.audit.find((x) => x.proposal === r.proposal);
     eq('governance.standing_policy_write_names_the_policy', [r.state, a?.authority_rule, a?.authority_mode, a?.approver], ['Executed', 'AP-1.4', 'policy', 'Standing policy, set by Priya Raman']); }
   // Story 2: pause turns the agent's proposal into a plain task, stops AP-4.1's acting without asking and keeps the model from running; resume restores it.
   { const before = A.claimDecision(ash, 'DC-40877', at);
@@ -282,8 +282,9 @@ for (const p of REG.prototypes) {
   { G.setAgentState(gdb, G.AS, { agent: 'Scout', state: 'paused', by: 'Priya Raman' }); const s = Scout.startSession(db);
     const run = await Scout.runScout(db, s, { callModel: noModel, paused: () => G.isPaused(gdb, 'Scout Agent') });
     eq('governance.paused_scout_gets_no_model_turn', [run.status, s.agent.calls, s.proposals.filter((p) => p.by === 'Model').length], ['paused', 0, 0]); G.setAgentState(gdb, G.AS, { agent: 'Scout Agent', state: 'active', by: 'Priya Raman' }); }
-  { const s = Scout.startSession(db); const p = Scout.propose(db, s, 'Model', 'kinross_load', { sscc: s.world.carton.sscc });
-    const d = Scout.decide(db, s, p.proposal, 'edit', 'Priya Raman', 'Calls Kinross herself'); const a = s.audit.at(-1); const run = await Scout.runScout(db, s, { callModel: noModel });
+  // Only a business document waits for approval on the shipment itself, so the override is taken on the ship notice release.
+  { const s = Scout.startSession(db); Scout.propose(db, s, 'Model', 'order_desk_corrects_sales_order'); Scout.propose(db, s, 'Model', 'build_ship_notice'); const p = Scout.propose(db, s, 'Model', 'release_ship_notice');
+    const d = Scout.decide(db, s, p.proposal, 'edit', 'Priya Raman', 'Releases it herself after checking the load'); const a = s.audit.at(-1); const run = await Scout.runScout(db, s, { callModel: noModel });
     eq('governance.override_is_recorded_with_who_made_it', [d.state, a.approver, /^Taken over by Priya Raman/.test(a.outcome), s.handed_over?.by, run.status, s.agent.calls, Scout.decide(db, s, p.proposal, 'approve').state], ['Taken over', 'Priya Raman', true, 'Priya Raman', 'handed_to_person', 0, 'Refused']); }
   // Story 4: a trial of a changed agent rule is a change-list entry: what changed, the replay result, drift, rollback, who ran it and when.
   { const t = G.trialAgentRule(gdb, ash, G.AS, { job: 'shelf', rule: 'AP-6.1', params: { min_weekly_avg: 500 }, records: ['114', '207'], as_of: '2026-10-26T08:07:00-04:00' }, 'Gate check');
@@ -292,16 +293,18 @@ for (const p of REG.prototypes) {
       [e?.id, t.trial, 'trial', 'Shelf Agent', 'AP-6.1', { rule: 'AP-6.1', from: { min_weekly_avg: 1 }, to: { min_weekly_avg: 500 } }, ['114'], 'Gate check', true, true, true]);
     // A Northfield rule, a parameter the rule does not hold, and AP-4.1, which holds none: every dispute needs Priya Raman's approval.
     eq('governance.trial_refuses_rules_it_cannot_change', [G.trialAgentRule(gdb, ash, G.AS, { job: 'deduction', rule: 'NF-7.4', params: { x: 1 } }, 'g').result, G.trialAgentRule(gdb, ash, G.AS, { job: 'shelf', rule: 'AP-6.1', params: { limit: 1 }, records: ['114'] }, 'g').result, G.trialAgentRule(gdb, ash, G.AS, { job: 'deduction', rule: 'AP-4.1', params: { max_amount: 50 } }, 'g').result, G.changeList(gdb, G.AS, { kind: 'trial' }).entries.length], ['Invalid request', 'Invalid request', 'Invalid request', 1]);
-    const sr = await Scout.replay(db, { policy: { kinross_load: 'policy', release_ship_notice: 'policy' }, callModel: null });
-    eq('governance.scout_policy_trial_shows_authority_beside_the_policy_in_force', [sr.policy_trial.asked.map((a) => [a.action, a.applied]), sr.policy_trial.differs.some((d) => d.action === 'kinross_load' && d.needs === 'policy' && d.under === 'change'), sr.policy_trial.in_force.outcome.approvals > sr.policy_trial.with_change.outcome.approvals],
-      [[['kinross_load', true], ['release_ship_notice', false]], true, true]); } }
+    // The routing request (EDI 753) is the editable action Priya approves; a ship notice release stays locked (AP-1.3).
+    const sr = await Scout.replay(db, { policy: { send_routing_request: 'policy', release_ship_notice: 'policy' }, callModel: null });
+    eq('governance.scout_policy_trial_shows_authority_beside_the_policy_in_force', [sr.policy_trial.asked.map((a) => [a.action, a.applied]), sr.policy_trial.differs.some((d) => d.action === 'send_routing_request' && d.needs === 'policy' && d.under === 'change'), sr.policy_trial.differs.some((d) => d.action === 'send_routing_request' && d.under === 'rule in force' && d.state === 'Awaiting approval') && sr.policy_trial.with_change.outcome.actions_executed > sr.policy_trial.in_force.outcome.actions_executed],
+      [[['send_routing_request', true], ['release_ship_notice', false]], true, true]); } }
 // The server holds no branch on a record id: no anchor PO or case id appears in the decision code.
 { const src = readFileSync(join(ROOT, 'src', 'agents.js'), 'utf8') + readFileSync(join(ROOT, 'src', 'domain.js'), 'utf8'); const ids = src.match(/NR-\d{5,6}|DC-\d{5}|ASN-\d{5}|INV-\d{4}/g) || [];
   eq('mutation.no_record_ids_in_decision_code', ids, []); }
 
 // ── Northfield scope: answers computed from shared records ─────────────────────────────────────────────────────────
-{ const m1 = NR.threeWayMatch(db, 'INV-7731', D.asOfDate('2026-11-10T09:00:00-05:00')); const m2 = NR.threeWayMatch(db, 'INV-7731', D.asOfDate('2026-12-30'));
-  results['nf.match.quantity'] = m1.found && m1.variance_origin.startsWith('quantity'); results['nf.match.correction'] = m2.found && m2.variance_origin.startsWith('missed correction');
+{ const m1 = NR.threeWayMatch(db, 'INV-7731', D.asOfDate('2026-11-10T09:00:00-05:00')); const m2 = NR.threeWayMatch(db, 'INV-7731', D.asOfDate('2026-11-24')); const m3 = NR.threeWayMatch(db, 'INV-7731', D.asOfDate('2026-12-30'));
+  // A corrected invoice on file before payment is a missed correction; once the remittance pays it, the variance is settled.
+  results['nf.match.quantity'] = m1.found && m1.variance_origin.startsWith('quantity'); results['nf.match.correction'] = m2.found && m2.variance_origin.startsWith('missed correction') && m3.found && m3.variance_origin.startsWith('settled') && Array.isArray(m3.payments) && m3.payments[0]?.remittance === 'PMT-990412';
   const r = NR.replayRule(db, { draft: 'NFD-1' }); const byHand = db.prepare("SELECT d.body, d.sent_at FROM documents d WHERE d.doc_type = '856' AND d.status <> 'Superseded' AND d.sent_at >= ?").all(NR.QUARTER_FROM).filter((d) => { const b = JSON.parse(d.body); return b.shipped_at && (Date.parse(d.sent_at) - Date.parse(b.shipped_at)) / 60000 > 30; }).length;
   results['nf.replay.nfd1'] = r.found && r.failing_with_draft === byHand && r.failing_with_draft > r.failing_now;
   results['nf.publish_needs_replay'] = true;

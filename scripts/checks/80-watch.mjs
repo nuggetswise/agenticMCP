@@ -32,11 +32,11 @@ export default function ({ db, ok, eq }) {
   eq('watch.baseline_nr46215_drafts_from_load_scan_and_stays_late', [steps(canon.s, 'NR-46215'), canon.s.docs.find((d) => d.po === 'NR-46215').built_from.startsWith('Load scan'), canon.o.rows.find((r) => r.po === 'NR-46215').state],
     [['draft_ship_notice', 'release_document 856'], true, 'Closed; sent Late']);
   const first46220 = canon.s.proposals.filter((p) => p.args.po === 'NR-46220'); const k945 = canon.s.revealed.find((r) => r.po === 'NR-46220' && r.doc_type === '945');
-  ok('watch.baseline_nr46220_sends_nothing_and_asks_kinross_first', first46220[0]?.action === 'ask_kinross_status' && !canon.s.docs.some((d) => d.po === 'NR-46220' && d.state === 'Sent' && Date.parse(d.sent_at) < Date.parse(k945.at)), JSON.stringify(first46220.map((p) => p.action)));
+  ok('watch.baseline_nr46220_sends_nothing_and_asks_kinross_first', first46220[0]?.action === 'kinross_owns_945' && !canon.s.docs.some((d) => d.po === 'NR-46220' && d.state === 'Sent' && Date.parse(d.sent_at) < Date.parse(k945.at)), JSON.stringify(first46220.map((p) => p.action)));
   eq('watch.baseline_canonical_end_state', { on_time: canon.o.sent_on_time, late: canon.o.sent_late, confirmed: canon.o.kinross_confirmed, left_alone: canon.o.nothing_to_chase },
     { on_time: ['NR-46210 855', 'NR-462411 856', 'NR-46226 810', 'NR-46220 856'], late: ['NR-46215 856'], confirmed: ['NR-46220'], left_alone: ['NR-46231'] });
   const f302 = base('early_fulfilment_46302'); const p302 = f302.s.proposals.filter((p) => p.args.po === 'NR-46302'); const dep302 = f302.s.revealed.find((r) => r.kind === 'wms.departure_scan');
-  ok('watch.baseline_nr46302_holds_asks_flags_then_drafts_after_departure', JSON.stringify(steps(f302.s, 'NR-46302')) === JSON.stringify(['flag_erp_record', 'ask_kinross_status', 'escalate_to_priya', 'draft_ship_notice', 'release_document 856'])
+  ok('watch.baseline_nr46302_holds_asks_flags_then_drafts_after_departure', JSON.stringify(steps(f302.s, 'NR-46302')) === JSON.stringify(['ashby_corrects_early_fulfilment', 'kinross_owns_945', 'raise_on_priya_queue', 'draft_ship_notice', 'release_document 856'])
     && !!p302.length && f302.s.docs.find((d) => d.doc_type === '856').sent_at >= dep302.at && f302.s.docs.find((d) => d.doc_type === '856').built_from.startsWith('Load scan'), JSON.stringify(steps(f302.s, 'NR-46302')));
   const r156 = base('rejected_ship_notice_46156'); const d156 = r156.s.docs.find((d) => d.po === 'NR-46156');
   ok('watch.baseline_nr46156_shows_824_and_drafts_corrected_ship_notice', JSON.stringify(steps(r156.s, 'NR-46156')) === JSON.stringify(['draft_ship_notice', 'release_document 856']) && d156.corrects === 'ASN-46156' && /NF-4\.11/.test(d156.correction)
@@ -57,7 +57,7 @@ export default function ({ db, ok, eq }) {
   // ---------- 4. NR-46231 is never chased ----------
   const all = Object.keys(W.VARIATIONS).map((v) => (v === 'canonical' ? canon : v === 'early_fulfilment_46302' ? f302 : v === 'rejected_ship_notice_46156' ? r156 : v === 'kinross_unreachable' ? un : v === 'departure_scanned_46220' ? dsc : base(v)));
   const t231 = W.startSession(db, { variation: W.VARIATIONS.canonical });
-  const tries = Object.keys(W.ACTIONS).map((a) => W.propose(db, t231, 'Test', a, { po: 'NR-46231', ...(a === 'release_document' ? { document: '855' } : {}), ...(a === 'escalate_to_priya' ? { message: 'Chase the acceptance' } : {}) }).state);
+  const tries = Object.keys(W.ACTIONS).map((a) => W.propose(db, t231, 'Test', a, { po: 'NR-46231', ...(a === 'release_document' ? { document: '855' } : {}), ...(a === 'raise_on_priya_queue' ? { message: 'Chase the acceptance' } : {}) }).state);
   ok('watch.nr46231_never_chased', all.every(({ s }) => !s.proposals.some((p) => p.args.po === 'NR-46231')) && tries.every((x) => x === 'Refused'), JSON.stringify(tries));
 
   // ---------- 5. A 997 is never shown as acceptance; a late document stays Late; a row closes only on its confirmation ----------

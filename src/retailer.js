@@ -22,7 +22,7 @@ const supplierName = (db, id) => db.prepare('SELECT name FROM parties WHERE id =
 const findSupplier = (db, s) => { if (!s) return null; const k = String(s).trim().toLowerCase(); return db.prepare("SELECT id, name FROM parties WHERE kind = 'Supplier' AND (lower(id) = ? OR lower(name) = ? OR lower(name) LIKE ?)").get(k, k, `${k}%`) || null; };
 
 /** A refusal for a record that belongs to Ashby. */
-export const ashbyPrivate = (what) => ({ found: false, not_available: true, result: NOT_AVAILABLE_NF, message: `${NOT_AVAILABLE_NF}: ${what} belongs to Ashby Supplier and is not shared with Northfield. Ask the supplier to share it into the deduction case or on a document.` });
+export const ashbyPrivate = (what) => ({ found: false, not_available: true, result: NOT_AVAILABLE_NF, message: `${NOT_AVAILABLE_NF}: ${what} belongs to Ashby Supplier and is not shared with Northfield unless the supplier shares it into the deduction case or on a document.` });
 
 /** A PO's shared trail, or one supplier's exchange over a period. */
 export function trail(db, { po: poIn, supplier, days = 30, asOf = storyClock() } = {}) {
@@ -169,7 +169,8 @@ export function reviewRecommendation(db, { charge, shared, disputes, decided, pr
 
 /** Three-way match: PO, receiving advice and invoice for one invoice or PO, and where the variance comes from. */
 export function threeWayMatch(db, ref, asOf = storyClock()) {
-  const key = ref.trim().toUpperCase(); const T = asOf.toISOString();
+  if (!ref || !String(ref).trim()) return { found: false, message: 'Name the invoice number (for example INV-7731) or the PO number.' };
+  const key = String(ref).trim().toUpperCase(); const T = asOf.toISOString();
   const inv0 = db.prepare('SELECT * FROM invoices WHERE upper(invoice) = ?').get(key); const po = inv0 ? inv0.po : normPo(key);
   const o = db.prepare('SELECT * FROM orders WHERE po = ?').get(po); if (!o) return { found: false, message: `No invoice or order ${ref} at Northfield` };
   const invs = db.prepare('SELECT * FROM invoices WHERE po = ? AND sent_at <= ? ORDER BY sent_at').all(po, T); if (!invs.length) return { found: false, message: `No invoice on ${po} at ${fmtET(asOf)}` };
@@ -186,14 +187,21 @@ export function threeWayMatch(db, ref, asOf = storyClock()) {
   });
   const corrections = invs.filter((i) => i.replaces === inv.invoice || (i.invoice !== inv.invoice && i.replaces)).map((i) => ({ invoice: i.invoice, replaces: i.replaces, sent: fmtET(i.sent_at), total: i.total, status: i.status }));
   const bad = lines.filter((l) => l.origin !== 'matches' && l.origin !== 'not billed');
+  // Payment as of the moment: Northfield's remittance (820) lines for this invoice or an invoice that replaces it.
+  const billedAs = [inv.invoice, ...corrections.filter((c) => c.replaces === inv.invoice).map((c) => c.invoice)];
+  const payments = db.prepare(`SELECT payment, paid_at, invoice, paid, invoice_amount FROM remittance_items WHERE invoice IN (${billedAs.map(() => '?').join(',')}) AND paid_at <= ? ORDER BY paid_at`).all(...billedAs, T)
+    .map((r) => ({ remittance: r.payment, paid: fmtET(r.paid_at), invoice: r.invoice, amount_paid: r.paid, invoice_amount: r.invoice_amount, ...(r.invoice_amount - r.paid > 0.004 ? { withheld: Math.round((r.invoice_amount - r.paid) * 100) / 100 } : {}) }));
+  const paidAs = payments.at(-1);
   let origin, next, step;
-  if (!bad.length) { origin = 'none'; step = 'release_for_payment'; next = { record: 'Payment on the next remittance', rule: null }; }
+  if (paidAs && paidAs.invoice !== inv.invoice) { origin = `settled: corrected invoice ${paidAs.invoice} replaced ${inv.invoice} and was paid on remittance ${paidAs.remittance}`; step = 'none'; next = { record: `Remittance ${paidAs.remittance} paid ${paidAs.invoice}${paidAs.withheld ? `, with ${paidAs.withheld.toFixed(2)} withheld` : ''}`, rule: rule(db, 'NF-7.2') }; }
+  else if (paidAs && !bad.length) { origin = 'none'; step = 'none'; next = { record: `Remittance ${paidAs.remittance} paid ${paidAs.invoice}`, rule: null }; }
+  else if (!bad.length) { origin = 'none'; step = 'release_for_payment'; next = { record: 'Payment on the next remittance', rule: null }; }
   else if (corrections.length && corrections.some((c) => c.replaces === inv.invoice)) { origin = 'missed correction: a corrected invoice is on file but the original is still the one being matched'; step = 'match_corrected_invoice'; next = { record: `Match corrected invoice ${corrections.find((c) => c.replaces === inv.invoice).invoice} and close ${inv.invoice}`, rule: rule(db, 'NF-7.2') }; }
-  else if (bad.some((l) => l.origin.startsWith('quantity: billed more than shipped'))) { origin = 'quantity: billed more than the ship notice'; step = 'hold_and_request_corrected_invoice'; next = { record: 'Hold the invoice; the supplier sends a corrected invoice or credit memo', rule: rule(db, 'NF-7.8') }; }
+  else if (bad.some((l) => l.origin.startsWith('quantity: billed more than shipped'))) { origin = 'quantity: billed more than the ship notice'; step = 'hold_and_reject_with_824'; next = { record: 'Hold the invoice and reject the held lines with an application advice (824); the supplier answers with a corrected invoice or credit memo', rule: rule(db, 'NF-7.8') }; }
   else if (bad.some((l) => l.origin.startsWith('quantity'))) { origin = 'quantity: received less than billed'; step = 'settle_on_receiving_advice'; next = { record: 'The receiving advice settles it: a shortage charge (SH01) or a revised receiving advice', rule: rule(db, 'NF-5.5') }; }
   else { origin = 'price'; step = 'hold_for_price'; next = { record: 'The accepted PO price settles it; the line is held', rule: rule(db, 'NF-7.11') }; }
-  return { found: true, quantities_in: quantitiesIn(db, po), found_by: bad.length ? foundBy('Match Agent', next.rule?.id) : 'Northfield matching rules NF-7.8 and NF-7.11: no variance', acting_for: 'Jordan Ellis', po, supplier: supplierName(db, o.supplier_id), invoice: inv.invoice, invoice_status: corrections.some((c) => c.replaces === inv.invoice) || !/replaced/i.test(inv.status) ? inv.status : 'Held', invoice_total: inv.total, as_of: fmtET(asOf), lines, corrections, variance_origin: origin, next_step: step, deciding_record: next,
-    evidence: { purchase_order: `${po} accepted ${lines.map((l) => l.accepted).join(' · ')}`, ship_notices: lines.map((l) => l.shipped).join(' · '), receiving_advice: lines.map((l) => l.received).join(' · '), invoice: `${inv.invoice} billed ${lines.map((l) => l.billed).join(' · ')}`, corrections: corrections.map((c) => c.invoice).join(', ') || 'None' },
+  return { found: true, quantities_in: quantitiesIn(db, po), found_by: bad.length ? foundBy('Match Agent', next.rule?.id) : 'Northfield matching rules NF-7.8 and NF-7.11: no variance', acting_for: 'Jordan Ellis', po, supplier: supplierName(db, o.supplier_id), invoice: inv.invoice, invoice_status: corrections.some((c) => c.replaces === inv.invoice) || !/replaced/i.test(inv.status) ? inv.status : 'Held', invoice_total: inv.total, as_of: fmtET(asOf), lines, corrections, payments: payments.length ? payments : 'No payment on a remittance by this time', variance_origin: origin, next_step: step, deciding_record: next,
+    evidence: { purchase_order: `${po} accepted ${lines.map((l) => l.accepted).join(' · ')}`, ship_notices: lines.map((l) => l.shipped).join(' · '), receiving_advice: lines.map((l) => l.received).join(' · '), invoice: `${inv.invoice} billed ${lines.map((l) => l.billed).join(' · ')}`, corrections: corrections.map((c) => c.invoice).join(', ') || 'None', remittance: payments.map((x) => `${x.remittance} paid ${x.invoice} ${x.amount_paid.toFixed(2)}`).join(', ') || 'None' },
     rule_baseline: 'Holds every invoice that does not match and leaves a payables clerk to find why',
     not_in_this_world: 'Promotion allowances and tax lines: Northfield invoices in this quarter carry none, so neither can be the origin.',
     authority: 'Approval of payment stays in Northfield accounts payable with Jordan Ellis. The matching rule names where the variance comes from and the record that settles it; it approves nothing.' };

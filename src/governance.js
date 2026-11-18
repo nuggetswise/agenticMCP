@@ -9,14 +9,14 @@ import { RULE_SETS, ruleSet, runtimeOf } from './credit.js';
 export const AS = 'ashby-assistant', NF = 'northfield-assistant';
 /** The agents on each connection, the jobs they work and the authority they act under. Authority limits are read from the catalogue. */
 export const AGENTS = {
-  'Watch Agent': { connection: AS, jobs: ['missing_document'], authority: () => ({ rule: null, mode: 'approve', says: 'Proposes; Priya Raman approves before anything is sent' }) },
+  'Watch Agent': { connection: AS, jobs: ['missing_document'], authority: () => ({ rule: null, mode: 'approve', says: 'Drafts the missing 855, 856 or 810 and Priya Raman approves before it is sent; where Kinross or the Supplier ERP owns the fix, shows who fixes it and where, and sends nothing' }) },
   'Claim Agent': { connection: AS, jobs: ['deduction'], authority: () => ({ rule: 'AP-4.1', mode: 'approve', says: 'Proposes a dispute where the NF-7.4 evidence supports one; every dispute needs Priya Raman’s approval (AP-4.1)' }) },
   'Test Agent': { connection: AS, jobs: ['trade_test'], authority: () => ({ rule: null, mode: 'approve', says: 'Proposes; Priya Raman approves, Jordan Ellis activates' }) },
-  'Shelf Agent': { connection: AS, jobs: ['shelf'], authority: () => ({ rule: 'AP-6.1', mode: 'approve', says: 'Recommends; Priya Raman approves and Jordan Ellis decides the order' }) },
-  'Scout Agent': { connection: AS, jobs: ['shipment_risk'], authority: () => ({ rule: 'AP-3.2', mode: 'approve', says: 'Proposes Kinross tasks and Supplier ERP changes Priya Raman approves (AP-3.2); builds a ship notice only from the load scan under standing policy (AP-1.4); release always stays with Priya Raman (AP-1.3)' }) },
+  'Shelf Agent': { connection: AS, jobs: ['shelf'], authority: () => ({ rule: 'AP-6.1', mode: 'policy', says: 'Recommends on both sides of Trading Grid and sends nothing; Jordan Ellis orders in Northfield’s own system' }) },
+  'Scout Agent': { connection: AS, jobs: ['shipment_risk'], authority: () => ({ rule: 'AP-3.2', mode: 'approve', says: 'Shows what Kinross and Ashby’s desks fix in their own systems and sends them nothing (AP-3.2); builds a ship notice only from the load scan under standing policy (AP-1.4); the routing request and the ship notice release wait for Priya Raman (AP-1.3)' }) },
   'Pace Agent': { connection: AS, jobs: ['scorecard'], authority: () => ({ rule: null, mode: 'policy', says: 'Explains the on-time, in-full rate on Ashby’s own screen; nothing is sent, so there is nothing to approve' }) },
   'Review Agent': { connection: NF, jobs: ['deduction_review'], authority: () => ({ rule: 'NF-7.7', mode: 'suggest', says: 'Recommends only; Jordan Ellis decides each charge (NF-7.7)' }) },
-  'Chase Agent': { connection: NF, jobs: ['ship_notice_chase'], authority: () => ({ rule: 'NF-7.7', mode: 'approve', says: 'Proposes requests to the supplier and Lakeline; Jordan Ellis approves each and decides every charge (NF-7.7)' }) },
+  'Chase Agent': { connection: NF, jobs: ['ship_notice_chase'], authority: () => ({ rule: 'NF-7.7', mode: 'approve', says: 'Shows what Ashby and Lakeline owe and sends them nothing; Jordan Ellis approves each application advice (824) and decides every charge (NF-7.7)' }) },
   'Match Agent': { connection: NF, jobs: ['three_way_match'], authority: () => ({ rule: null, mode: 'suggest', says: 'Names where a variance comes from and the next step; Jordan Ellis acts' }) },
 };
 export const agentOfJob = (job) => Object.keys(AGENTS).find((a) => AGENTS[a].jobs.includes(job)) || null;
@@ -157,12 +157,12 @@ export const AVIATOR_PERMISSIONS = ['answer_only', 'propose_action_card'];
 export const AVIATOR_ACTIONS = {
   [AS]: {
     open_dispute: { label: 'Open a dispute', editable: true, starts: 'answer_only', approver: 'Priya Raman', rule: 'AP-4.1' },
-    request_order_change: { label: 'Request an order change', editable: true, starts: 'answer_only', approver: 'Priya Raman', rule: null },
+    answer_order_change: { label: 'Answer an order change with a change acknowledgment (EDI 865)', editable: true, starts: 'answer_only', approver: 'Priya Raman', rule: null },
     release_held_ship_notice: { label: 'Release a held ship notice', editable: false, starts: 'propose_action_card', approver: 'Priya Raman', rule: 'AP-1.3', locked: 'Locked: a held ship notice is released only on Priya Raman’s Approve' },
   },
   [NF]: {
     reject_invoice_lines: { label: 'Reject invoice lines with an application advice (EDI 824)', editable: true, starts: 'answer_only', approver: 'Jordan Ellis', rule: 'NF-7.8' },
-    request_supplier_change: { label: 'Request a change from a supplier', editable: true, starts: 'answer_only', approver: 'Jordan Ellis', rule: null },
+    send_order_change: { label: 'Send an order change to a supplier (EDI 860)', editable: true, starts: 'answer_only', approver: 'Jordan Ellis', rule: null },
     decide_charge: { label: 'Decide a charge', editable: false, starts: 'answer_only', approver: 'Jordan Ellis', rule: 'NF-7.7', locked: 'Locked to answer only: Jordan Ellis decides every charge' },
     publish_rule: { label: 'Publish a rule', editable: false, starts: 'answer_only', approver: 'Jordan Ellis', rule: null, locked: 'Locked to answer only: Jordan Ellis publishes a rule after its replay' },
   },

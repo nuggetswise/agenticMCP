@@ -62,7 +62,7 @@
   },
   "p7": {
    "calendar": "P7",
-   "artifact": null,
+   "artifact": "https://claude.ai/artifact/9F1PiXsrUJ54AJq1dSJMbu",
    "sides": [
     "ashby",
     "northfield"
@@ -71,7 +71,7 @@
   },
   "p8": {
    "calendar": "P8",
-   "artifact": null,
+   "artifact": "https://claude.ai/artifact/RB5p54UuQ9GFGDPxhGzU3a",
    "sides": [
     "northfield"
    ],

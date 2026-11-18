@@ -74,22 +74,35 @@ export function quarterClosedAt(db, supplier = 'ASHBY') {
 }
 
 /** The quarter's rate as Trading Grid has calculated it at a point in time. Before the quarter's last receiving advice it gives no figure. */
-export function scorecardAsOf(db, asOf, supplier = 'ASHBY') {
+/** A period inside the quarter: order lines count by their delivery date. No period means the quarter. */
+const within = (p) => (p ? { from: p.from < QUARTER.start ? QUARTER.start : p.from, to: p.to > QUARTER.end ? QUARTER.end : p.to } : {});
+export const covered = (p) => ({ ...(p ? within(p) : { from: QUARTER.start, to: QUARTER.end }), counts: 'Order lines with a delivery date in the period', ...(p ? { basis: p.basis } : { basis: 'The quarter' }) });
+export const WAREHOUSE = { 'KIN-JOL': 'Kinross Joliet', 'KIN-GRV': 'Kinross Groveport', 'ASH-WH1': 'Ashby warehouse' };
+/** Ashby's failing lines in a period, with the warehouse each shipped from, grouped by warehouse and reason; `warehouse` keeps one warehouse's lines. */
+export function failingLines(db, asOf, period, warehouse) {
+  const all = otif(db, { asOf, ...within(period) }).lines.map((l) => ({ ...l, warehouse: WAREHOUSE[l.site] || l.site }));
+  const g = {}; for (const l of all) { const w = (g[l.warehouse] ||= { warehouse: l.warehouse, lines: 0, cases: 0, by_reason: {} }); w.lines++; w.cases += l.cases; const r = (w.by_reason[l.reason] ||= { reason: l.reason, lines: 0, cases: 0 }); r.lines++; r.cases += l.cases; }
+  const by_warehouse = Object.values(g).map((w) => ({ ...w, by_reason: Object.values(w.by_reason).sort((a, b) => b.cases - a.cases) })).sort((a, b) => b.cases - a.cases);
+  if (!warehouse) return { by_warehouse, lines: all };
+  const want = String(warehouse).toLowerCase().replace(/kinross|warehouse|\s/g, ''); const hit = by_warehouse.find((w) => w.warehouse.toLowerCase().replace(/kinross|warehouse|\s/g, '') === want);
+  return { by_warehouse, warehouse: hit ? hit.warehouse : warehouse, warehouse_found: !!hit, lines: hit ? all.filter((l) => l.warehouse === hit.warehouse) : [] };
+}
+export function scorecardAsOf(db, asOf, supplier = 'ASHBY', period = null) {
   const closed = quarterClosedAt(db, 'ASHBY');
-  if (closed && closed <= asOf.toISOString()) { const s = otif(db, { supplier, asOf }); delete s.lines; return { as_of: fmtET(asOf), calculated: true, ...s }; }
+  if (closed && closed <= asOf.toISOString()) { const s = otif(db, { supplier, asOf, ...within(period) }); delete s.lines; return { as_of: fmtET(asOf), calculated: true, period_covered: covered(period), ...s }; }
   return { as_of: fmtET(asOf), calculated: false, calculated_by: 'Trading Grid', message: `Trading Grid calculates the on-time, in-full rate for ${QUARTER.start} to ${QUARTER.end} when the quarter's last receiving advice arrives${closed ? `, ${fmtET(closed)}` : ''}. It is not calculated at ${fmtET(asOf)}.` };
 }
 
 /** Every supplier with a rate for the quarter, ranked, each with its failing lines and top reason (Northfield's view, P7). */
-export function supplierRanking(db, asOf) {
+export function supplierRanking(db, asOf, period = null) {
   const closed = quarterClosedAt(db, 'ASHBY');
   if (!closed || closed > asOf.toISOString()) return { as_of: fmtET(asOf), calculated: false, calculated_by: 'Trading Grid', message: `Trading Grid calculates the on-time, in-full rates for ${QUARTER.start} to ${QUARTER.end} when the quarter's last receiving advice arrives${closed ? `, ${fmtET(closed)}` : ''}. They are not calculated at ${fmtET(asOf)}.` };
   const ids = db.prepare("SELECT DISTINCT o.supplier_id id FROM orders o WHERE o.requested_delivery >= ? AND o.requested_delivery <= ? AND (o.supplier_id <> 'ASHBY' OR o.stream = 'replenishment')").all(QUARTER.start, QUARTER.end).map((r) => r.id);
-  const rows = ids.map((id) => { const s = otif(db, { supplier: id, asOf }); return { supplier: supplierOf(db, id)?.name || id, supplier_id: id, score: s.score, _v: s.cases ? s.compliant_cases / s.cases : -1, counting_unit: s.counting_unit, order_lines: s.order_lines, cases: s.cases, compliant_cases: s.compliant_cases, formula: s.formula,
+  const rows = ids.map((id) => { const s = otif(db, { supplier: id, asOf, ...within(period) }); return { supplier: supplierOf(db, id)?.name || id, supplier_id: id, score: s.score, _v: s.cases ? s.compliant_cases / s.cases : -1, counting_unit: s.counting_unit, order_lines: s.order_lines, cases: s.cases, compliant_cases: s.compliant_cases, formula: s.formula,
     failing_lines: s.failing_lines, failing_cases: s.failing_cases, open_lines: s.open_lines.lines, open_cases: s.open_lines.cases, top_reason: s.by_reason[0] ? { reason: s.by_reason[0].reason, lines: s.by_reason[0].lines, cases: s.by_reason[0].cases } : null }; }).filter((r) => r.cases > 0)
     .sort((a, b) => b._v - a._v || b.cases - a.cases || a.supplier.localeCompare(b.supplier));
   rows.forEach((r, i) => { r.rank = i + 1; delete r._v; });
-  return { as_of: fmtET(asOf), calculated: true, calculated_by: 'Trading Grid', period: `${QUARTER.start} to ${QUARTER.end}`, definition: 'Northfield supplier guide 2026.2 (NF-8.2, NF-8.3): compliant cases ÷ all cases, counted per order line, the same formula for every supplier',
+  return { as_of: fmtET(asOf), calculated: true, calculated_by: 'Trading Grid', period: `${covered(period).from} to ${covered(period).to}`, period_covered: covered(period), definition: 'Northfield supplier guide 2026.2 (NF-8.2, NF-8.3): compliant cases ÷ all cases, counted per order line, the same formula for every supplier',
     note: 'Each rate is calculated from the purchase orders, order changes, ship notices and receiving advice Trading Grid carries for that supplier. Each rate names its counting unit: cases where the order is in cases or the item has a case pack on record, otherwise the unit on the order. A line with no receiving advice at the measurement time is Open: it is left out of the rate and counted under open_lines.', suppliers: rows.length, ranking: rows };
 }
 

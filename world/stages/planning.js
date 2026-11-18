@@ -142,10 +142,8 @@ const docs = {
 // ---------- the stock ledger behind Kinross's 846 ----------
 /**
  * Kinross's stock of each Ashby item at each site, rebuilt from records already in the world, never the reverse:
- *  - every pick: the 945's shipped quantity, except where Kinross's own pick record (wms.short_pick) or Ashby's
- *    allocation (erp.allocation) says fewer were picked. On those 40 lines the 945 reports the ordered quantity as
- *    shipped while the ship notice, receipt and pick record carry the smaller figure; the 945s are kept as they are
- *    and the stock follows the pick record (scripts/checks/30-planning.mjs lists them).
+ *  - every pick: the 945's shipped quantity. Since 18 November 2026 each 945 reports what Kinross picked and loaded, the
+ *    same figure as its pick record (wms.short_pick), Ashby's allocation (erp.allocation), the load scan and the ship notice.
  *  - a short pick means the stock at that wave was exactly what was picked;
  *  - Kinross's inventory read on 8 December (590 ASH-MUG-12 at Groveport, P5) is the stock at that minute.
  * Inbound stock is invented: receipts at Kinross's two dock slots (12:00 and 17:30 UTC), sized just in time to hold a

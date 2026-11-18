@@ -53,13 +53,16 @@ export default function ({ db, ash, nf, ok, eq, none, n, ROOT }) {
   const sp = db.prepare("SELECT e.po, e.data, w.site, w.shipped_at FROM events e JOIN warehouse_orders w ON w.po = e.po WHERE e.kind = 'wms.short_pick'").all();
   const spBad = sp.filter((e) => { const d = J(e.data); const k = `${e.site}|${d.sku}|${minus(e.shipped_at, PICK_LEAD_H)}`; const r = waveRow.get(e.site, d.sku, minus(e.shipped_at, PICK_LEAD_H)); return !r || r.available !== waves.get(k).qty || r.available >= waves.get(k).need || d.site !== e.site; });
   eq('planning.stock_agrees_with_short_picks', [sp.length, spBad.map((e) => e.po)], [31, []]);
-  // The 945 contradiction: on 40 Kinross lines the 945 reports the ordered quantity as shipped while the pick record,
-  // ship notice and receipt carry fewer. The 945s are existing records and stay as they are; stock follows the pick.
+  // 18 November 2026: every Kinross shipping advice (945) reports the quantity Kinross picked and loaded, the same figure its
+  // pick record, load scan and the ship notice carry. Until then 40 short-shipped and allocation-cut lines reported the ordered quantity.
   const w945 = []; for (const d of db.prepare("SELECT po, body FROM documents WHERE doc_type = '945'").all()) for (const l of J(d.body).lines) w945.push({ po: d.po, ...l });
   const shipQ = new Map(picks.map((p) => [`${p.po}|${p.sku}`, p.qty]));
   const contra = w945.filter((l) => shipQ.get(`${l.po}|${l.sku}`) !== l.shipped);
-  const explained = new Set(db.prepare("SELECT po FROM events WHERE kind IN ('wms.short_pick','erp.allocation')").all().map((r) => r.po));
-  eq('planning.945_shipped_agrees_except_recorded_short_picks', [w945.length - contra.length, contra.length, contra.filter((l) => !explained.has(l.po)).length], [w945.length - 40, 40, 0]);
+  eq('planning.945_shipped_agrees_with_every_pick', [contra.length, w945.filter((l) => l.shipped < l.ordered).length], [0, 40]);
+  { const asn = new Map(db.prepare("SELECT sl.po, sl.sku, sum(sl.qty) q FROM shipment_lines sl JOIN warehouse_orders w ON w.po = sl.po GROUP BY sl.po, sl.sku").all().map((r) => [`${r.po}|${r.sku}`, r.q]));
+    const scan = new Map(db.prepare("SELECT po, json_extract(data,'$.cartons_loaded') n FROM events WHERE kind = 'wms.load_scan'").all().map((r) => [r.po, r.n])); const byPo = new Map(); for (const l of w945) byPo.set(l.po, (byPo.get(l.po) || 0) + l.shipped);
+    const short = w945.filter((l) => l.shipped < l.ordered);
+    eq('planning.945_short_lines_match_ship_notice_and_load_scan', [short.filter((l) => asn.get(`${l.po}|${l.sku}`) !== l.shipped).map((l) => l.po), short.filter((l) => scan.has(l.po) && scan.get(l.po) !== byPo.get(l.po)).map((l) => l.po)], [[], []]); }
 
   // ---- order status ----
   none('planning.every_order_at_risk_has_a_status_report', "SELECT e.po FROM events e WHERE e.kind IN ('wms.short_pick','erp.allocation') AND NOT EXISTS (SELECT 1 FROM order_status s WHERE s.po = e.po AND s.state = 'Latest')");

@@ -558,7 +558,7 @@
    "get": {
     "operationId": "get_scorecard",
     "summary": "On-time, in-full rate, calculated by Trading Grid",
-    "description": "Ashby’s on-time, in-full rate for Northfield over the 13-week quarter, calculated by Trading Grid from the documents it carries (purchase orders, order changes, ship notices, receiving advice): compliant cases ÷ all cases per order line, on Northfield’s definition, with the formula, the cases, the failing lines by reason and, on request, every failing line with the record where it first went wrong. The Trading Grid calculation only: Northfield’s own published scorecard is Northfield’s record and is not returned. Calculated when the quarter’s last receiving advice arrives; before then it answers that the rate is not calculated.",
+    "description": "Ashby’s on-time, in-full rate for Northfield over the 13-week quarter, calculated by Trading Grid from the documents it carries (purchase orders, order changes, ship notices, receiving advice): compliant cases ÷ all cases per order line, on Northfield’s definition, with the formula, the cases, the failing lines by reason and, on request, every failing line with the record where it first went wrong. Pass from and to (or period) for the order lines due in one week or range, and warehouse for the lines shipped from Kinross Joliet or Kinross Groveport; the answer always lists failing lines by warehouse. The Trading Grid calculation only: Northfield’s own published scorecard is Northfield’s record and is not returned. Calculated when the quarter’s last receiving advice arrives; before then it answers that the rate is not calculated.",
     "tags": [
      "Performance review"
     ],
@@ -579,6 +579,51 @@
        "description": "Include every failing line"
       },
       "description": "Include every failing line"
+     },
+     {
+      "name": "from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "First day of the period, a date such as 2026-11-22. Give from and to when the question names a week or dates"
+      },
+      "description": "First day of the period, a date such as 2026-11-22. Give from and to when the question names a week or dates"
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Last day of the period, a date such as 2026-11-28"
+      },
+      "description": "Last day of the period, a date such as 2026-11-28"
+     },
+     {
+      "name": "period",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "enum": [
+        "this_week",
+        "last_week",
+        "next_week"
+       ],
+       "description": "A named week instead of dates, resolved from as_of: this_week, last_week or next_week. Weeks run Sunday to Saturday"
+      },
+      "description": "A named week instead of dates, resolved from as_of: this_week, last_week or next_week. Weeks run Sunday to Saturday"
+     },
+     {
+      "name": "warehouse",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Only the failing lines shipped from one warehouse: Kinross Joliet or Kinross Groveport"
+      },
+      "description": "Only the failing lines shipped from one warehouse: Kinross Joliet or Kinross Groveport"
      },
      {
       "name": "as_of",

@@ -114,7 +114,7 @@ export function build(nPre, jitter) {
     O.lines[0].qty = 40; O.lines[1].qty = 8; }
   W.scorecard = { ordered: 48000, failing: W.slots.reduce((a, s) => a + s.cases, 0), lines: W.slots.length };
 
-  // ---------- Claim Agent evidence states: three one-carton receipt shortages on Kinross shipments ----------
+  // ---------- Evidence states for Ashby's evidence rules: three one-carton receipt shortages on Kinross shipments ----------
   const claimPool = G.life.filter((O) => O.pattern === 'B' && O.shortRcv === 1 && O.r > et('2026-11-19', '00:00') && O.r < et('2026-12-01', '00:00'));
   if (claimPool.length < 3) throw new Error(`Only ${claimPool.length} one-carton receipt shortages fall in the claim window`);
   W.claimCases.forEach((c, i) => { const O = claimPool[i]; O.claim = c; c.po = O.po; O.noLoadScan = c.evidence !== 'held_by_warehouse'; });
@@ -152,12 +152,15 @@ const P10_PAIR = (d) => (d.from === 'ASHBY' && d.to === 'NORTHFIELD') || (d.from
 /** Remittances: Northfield pays each Ashby invoice 30 days after it was sent, one remittance per payment day. */
 function remittances(L, W, G) {
   const byDay = new Map(); const add = (at, item) => { const k = etDay(at); (byDay.get(k) || byDay.set(k, []).get(k)).push(item); };
-  for (const O of G.life) if (O.invAt) { const at = addD(O.invAt, 30); if (at <= et('2027-01-06', '00:00')) add(at, { invoice: O.invRef, po: O.po, paid: O.invTotal, invoice_amount: O.invTotal, adjustments: [], O }); }
+  // 18 November 2026 (P6): the three one-carton shortages are withheld on remittance PMT-990412 on 1 December, which pays
+  // their invoices that day, so Priya Raman's five deductions arrive on one remittance. Their invoices leave the 30-day run.
+  const dec1 = W.remit.find((r) => r.ref === 'PMT-990412');
+  for (const O of G.life) if (O.invAt && O.claim) { const amt = Math.round((O.lines[0].price + 50) * 100) / 100; O.claim.amount = amt; O.claim.payAt = iso(dec1.at);
+    dec1.items.push({ invoice: O.invRef, po: O.po, paid: Math.round((O.invTotal - amt) * 100) / 100, invoice_amount: O.invTotal, adjustments: [{ amount: -amt, reason: '04', ref: O.claim.dm, note: `SH01 shortage, PO ${O.po} line 1, 1 carton, case ${O.claim.case}` }] }); }
+  for (const O of G.life) if (O.invAt && !O.claim) { const at = addD(O.invAt, 30); if (at <= et('2027-01-06', '00:00')) add(at, { invoice: O.invRef, po: O.po, paid: O.invTotal, invoice_amount: O.invTotal, adjustments: [], O }); }
   for (const p of W.pay) add(p.at, { invoice: p.invRef, po: p.O.po, paid: p.amount, invoice_amount: p.amount, adjustments: [] });
-  // Claim cases: the shortage is withheld when the invoice is paid.
   let seq = 990100;
   for (const [k, items] of [...byDay.entries()].sort()) {
-    for (const it of items) if (it.O?.claim) { const cost = it.O.lines[0].price; const amt = Math.round((cost + 50) * 100) / 100; it.paid = Math.round((it.invoice_amount - amt) * 100) / 100; it.adjustments = [{ amount: -amt, reason: '04', ref: it.O.claim.dm, note: `SH01 shortage, PO ${it.O.po} line 1, 1 carton, case ${it.O.claim.case}` }]; it.O.claim.amount = amt; it.O.claim.payAt = iso(et(k, '08:00')); }
     const ref = k === '2026-12-15' ? 'PMT-990877' : `PMT-${seq++}`;
     const clean = items.map(({ O, ...x }) => x).sort((a, b) => b.paid - a.paid);
     if (k === '2026-12-15') { clean[0].adjustments = [...clean[0].adjustments, ...W.compliance]; clean[0].paid = Math.round((clean[0].paid - 251) * 100) / 100; }
@@ -166,7 +169,7 @@ function remittances(L, W, G) {
   }
   for (const r of W.remit) D.remit(L, r.to || 'ASHBY', r.at, r.ref, r.items);
   for (const c of W.claimCases) {
-    const O = G.life.find((x) => x.po === c.po); const opened = addD(O.rcvAt, 9);
+    const O = G.life.find((x) => x.po === c.po); const opened = et('2026-12-01', '08:30'); // each case opens the morning its remittance arrives
     L.event({ at: opened, kind: 'case.opened', po: O.po, system: 'Northfield deduction case', party: 'NORTHFIELD', channel: 'API', data: { case: c.case, charge: 'SH01', amount: c.amount, line: 1, cartons: 1, deduction: c.dm, evidence_state: c.evidence } });
     L.event({ at: addH(O.departed, -0.3), kind: 'carrier.bill_of_lading', po: O.po, system: 'Lakeline Freight', party: 'LAKELINE', channel: 'Portal API, image', data: { bol: `BOL-${O.n}`, seal: `SL-${O.n}77`, in_case: c.case } });
     if (c.evidence === 'tally_only') L.event({ at: addH(O.departed, -0.35), kind: 'wms.load_tally', po: O.po, system: 'Kinross warehouse system', party: 'KINROSS', channel: 'API', data: { shipment: `SHP-${O.n}`, cartons_loaded: O.cartons.length, by_sscc: true, signed: true, held_by: 'Kinross Logistics' } });

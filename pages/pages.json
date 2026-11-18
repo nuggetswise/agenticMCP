@@ -60,6 +60,32 @@
    ],
    "token": "p21-ieks0rMbY9Jb"
   },
+  "p7": {
+   "calendar": "P7",
+   "artifact": null,
+   "sides": [
+    "ashby",
+    "northfield"
+   ],
+   "token": "p7-lu7bQPzATKd4"
+  },
+  "p8": {
+   "calendar": "P8",
+   "artifact": null,
+   "sides": [
+    "northfield"
+   ],
+   "token": "p8-LZXGPnCFYuh0"
+  },
+  "p6": {
+   "calendar": "P6",
+   "artifact": null,
+   "sides": [
+    "ashby",
+    "northfield"
+   ],
+   "token": "p6-XrA32zu7UnKP"
+  },
   "_test": {
    "calendar": "P9",
    "artifact": null,

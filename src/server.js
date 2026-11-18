@@ -9,7 +9,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
 import { buildWorld, MAIN_DB, ASHBY_DB, NORTHFIELD_DB } from '../world/build.js';
-import { fmtET } from '../world/lib.js';
+import { fmtET, etDay } from '../world/lib.js';
 import * as NR from './retailer.js';
 import * as D from './domain.js';
 import { TOOLS, BOUNDARY, SCOPES, ASHBY_WRITES, ASHBY_REFUSALS, NF_TOOLS, NF_WRITES, NF_REFUSALS, NF_SCOPES, ASHBY_PRIVATE, refusalText } from './tools.js';
@@ -432,7 +432,7 @@ for (const t of [...SCOUT_TOOLS, ...WATCH_TOOLS, ...MATCH_TOOLS, ...RUNTIME_TOOL
 const SESSION_TOOLS = (cid) => cid === AS ? [...SCOUT_TOOLS, ...WATCH_TOOLS, ...RUNTIME_TOOLS[AS]] : [...MATCH_TOOLS, ...RUNTIME_TOOLS[NF]];
 async function runSessionTool(cid, t, args) { let out; try { out = await t.run(args); if (cid === NF) out = linkify(out, SIDE[NF]); } catch (e) { out = { result: 'Invalid request', error: e.message }; } log(cid, t.name, [], args, out.result || out.status || 'Answered', []); return out; }
 function makeServer(cid) {
-  const server = new McpServer({ name: cid === AS ? 'trading-grid-ashby' : 'trading-grid-northfield', title: cid === AS ? 'Trading Grid · Ashby Supplier' : 'Trading Grid · Northfield Retailer', version: '0.4.0' }, { instructions: INSTRUCTIONS[cid]() });
+  const server = new McpServer({ name: cid === AS ? 'trading-grid-ashby' : 'trading-grid-northfield', title: cid === AS ? 'Trading Grid · Ashby Supplier' : 'Trading Grid · Northfield Retailer', version: '0.4.1' }, { instructions: INSTRUCTIONS[cid]() });
   // Every tool on the connection answers through `present` (src/credit.js): no result, title or description names an agent.
   const register = server.registerTool.bind(server);
   server.registerTool = (name, meta, handler) => register(name, { ...meta, title: present(meta.title), description: present(meta.description) }, async (args) => {
@@ -476,7 +476,7 @@ app.use((req, res, next) => { const json = res.json.bind(res); res.json = (body)
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false }));
 app.get('/', (req, res) => res.type('html').send(homePage()));
-app.get('/healthz', (req, res) => res.json({ status: 'ok', version: '0.4.0', writes: WRITES, connections: [AS, NF], aviator: !!process.env.GEMINI_API_KEY, model_routes: Aviator.modelRoutes().map((r) => `${r.route} · ${r.model}`) }));
+app.get('/healthz', (req, res) => res.json({ status: 'ok', version: '0.4.1', writes: WRITES, connections: [AS, NF], aviator: !!process.env.GEMINI_API_KEY, model_routes: Aviator.modelRoutes().map((r) => `${r.route} · ${r.model}`) }));
 const cidOf = (req, res) => { const c = BY_TOKEN[req.params.token]; if (!c) { res.status(404).send('Not found'); return null; } return c; };
 
 app.post('/mcp/:token', async (req, res) => {
@@ -598,6 +598,24 @@ const AV_MINUTE = windowLimit(LIMITS.aviator_per_minute, 60000), AV_DAY = window
 export const resetLimits = () => { AV_MINUTE.reset(); AV_DAY.reset(); PUBLIC_MINUTE.reset(); };
 const asOfIso = (v) => { if (!v) return null; try { return D.asOfDate(String(v)).toISOString(); } catch { return null; } };
 
+// The period a question names, resolved from the page's as-of time: "this week", "last week", "next week", "the week of
+// 22 November", "22 to 28 November". Weeks run Sunday to Saturday. Null when the question names none.
+const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+export function askedPeriod(question, at) {
+  const q = String(question).toLowerCase(); const today = etDay(at); const w = D.weekOf(today); const sh = (d, n) => new Date(Date.parse(`${d}T12:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
+  // A day and month with no year is the one nearest the as-of time.
+  const dayIn = (d, mon) => { const m = MONTHS.findIndex((x) => x.startsWith(mon.slice(0, 3))); if (m < 0 || d < 1 || d > 31) return null; const y = Number(today.slice(0, 4));
+    return [y - 1, y, y + 1].map((yy) => `${yy}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`).sort((a, b) => Math.abs(Date.parse(a) - Date.parse(today)) - Math.abs(Date.parse(b) - Date.parse(today)))[0]; };
+  const MON = '(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
+  let m = q.match(new RegExp(`\\b(\\d{1,2})(?:st|nd|rd|th)?\\s*(?:to|through|until|-|–)\\s*(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?${MON}\\b`));
+  if (m) { const a = dayIn(Number(m[1]), m[3]), b = dayIn(Number(m[2]), m[3]); if (a && b && a <= b) return { from: a, to: b, words: `${m[1]} to ${m[2]} ${m[3]}` }; }
+  m = q.match(new RegExp(`\\bweek (?:of|beginning|starting|ending)\\s+(?:the\\s+)?(?:(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?${MON}|${MON}\\s+(\\d{1,2}))`));
+  if (m) { const d = dayIn(Number(m[1] || m[4]), m[2] || m[3]); if (d) return { ...D.weekOf(d), words: `the week of ${m[1] || m[4]} ${m[2] || m[3]}` }; }
+  if (/\blast week\b/.test(q)) return { from: sh(w.from, -7), to: sh(w.to, -7), words: 'last week' };
+  if (/\bnext week\b/.test(q)) return { from: sh(w.from, 7), to: sh(w.to, 7), words: 'next week' };
+  if (/\bthis week\b/.test(q)) return { ...w, words: 'this week' };
+  return null;
+}
 const REFUSALS = { side: 'This page does not show that workspace.', moment: 'This page answers only at its own moment in the story.', long: 'Shorten the question to 500 characters or fewer.', turns: 'Start a new conversation. This one has reached 10 turns.', empty: 'Type a question.' };
 const MAX_QUESTION = 500, MAX_TURNS = 10;
 /** One question from a hosted page. The token binds the prototype, the sides it shows and its story window; a side or
@@ -621,17 +639,30 @@ async function pageAviator(page, req, res) {
   const at = new Date(asOf);
   const context = typeof b.context === 'string' ? b.context.slice(0, 300) : b.context ? JSON.stringify(b.context).slice(0, 300) : '';
   const history = turns.filter((h) => h && typeof h.text === 'string').map((h) => ({ role: h.role === 'model' || h.role === 'aviator' ? 'model' : 'user', text: h.text.slice(0, 2000) }));
-  const tools = cid === AS ? TOOLS : NF_TOOLS; const S = SIDE[cid]; const results = [];
-  // Every tool that takes as_of reads at the page's moment or earlier, whatever the model passes.
-  const callTool = (name, args) => { const t = tools.find((x) => x.name === name); const a = { ...(args || {}) };
-    if (t && t.input && 'as_of' in t.input && (!a.as_of || !asOfIso(a.as_of) || new Date(asOfIso(a.as_of)) > at)) a.as_of = asOf;
-    const r = withVia(via, () => present(call(cid, name, a))); results.push(r); return r; };
-  const q = `${question}\n(As of ${fmtET(at)}.${context ? ` On screen: ${context}.` : ''})`;
-  let out; try { out = await Aviator.ask({ question: q, history, tools, callTool, side: { person: S.person, company: S.company, other: S.other }, clock: fmtET(at), routes: Aviator.modelRoutes() }); } catch (e) { console.error(e); out = { ok: false, status: 500, message: 'Aviator failed.' }; }
+  const tools = cid === AS ? TOOLS : NF_TOOLS; const S = SIDE[cid]; const asked = askedPeriod(question, at);
+  const periodTools = new Set(tools.filter((t) => t.period).map((t) => t.name));
+  // One run of the model: every tool that takes as_of reads at the page's moment or earlier, whatever the model passes.
+  const run = async (routes, hint) => { const results = []; const periods = [];
+    const callTool = (name, args) => { const t = tools.find((x) => x.name === name); const a = { ...(args || {}) };
+      if (t && t.input && 'as_of' in t.input && (!a.as_of || !asOfIso(a.as_of) || new Date(asOfIso(a.as_of)) > at)) a.as_of = asOf;
+      const r = withVia(via, () => present(call(cid, name, a))); results.push(r); if (periodTools.has(name)) periods.push(r && r.period_covered ? r.period_covered : null); return r; };
+    const q = `${question}\n(As of ${fmtET(at)}.${context ? ` On screen: ${context}.` : ''}${asked ? ` The question's period, ${asked.words}, is ${asked.from} to ${asked.to}: pass from ${asked.from} and to ${asked.to} to the tool that takes a period, and answer for those days only.` : ''}${hint || ''})`;
+    let out; try { out = await Aviator.ask({ question: q, history, tools, callTool, side: { person: S.person, company: S.company, other: S.other }, clock: fmtET(at), routes }); } catch (e) { console.error(e); out = { ok: false, status: 500, message: 'Aviator failed.' }; }
+    // The answer covers the asked period when a tool that reads a period read exactly those days.
+    const covers = !asked || periods.some((p) => p && p.from === asked.from && p.to === asked.to);
+    return { out, results, covers, readPeriod: periods.length > 0 }; };
+  const all = Aviator.modelRoutes(); let r = await run(all); let retried = null;
+  // An answer for a different period than the question asked is asked again on the secondary model (the primary when
+  // there is none). If that also reads another period, the page gets a plain refusal rather than a wrong answer.
+  if (r.out.ok && !r.covers) { const second = all.filter((x) => x.route === 'secondary'); retried = second.length ? 'secondary' : 'primary';
+    const r2 = await run(second.length ? second : all, ` The first answer read a different period. Call the tool again with from ${asked.from} and to ${asked.to}.`);
+    if (r2.out.ok && (r2.covers || (!r2.readPeriod && !r.readPeriod))) r = r2; else r = { ...r2, out: r2.out.capped ? r2.out : { ok: false, wrong_period: true, tools_called: [...(r.out.tools_called || []), ...(r2.out.tools_called || [])] } }; }
+  const { out, results } = r;
   // The access log holds the question's length, the tools called, the model route and the time taken: never the question or the answer.
-  withVia(via, () => log(cid, 'aviator', [], { question_chars: question.length, tools: (out.tools_called || []).map((t) => t.tool), model_route: out.model ? `${out.route || 'primary'} · ${out.model}` : null, ms: Date.now() - started, as_of: asOf }, out.ok ? `Answered from ${out.tools_called.length} tool call(s)` : out.capped ? 'Daily model cap reached' : 'No answer', []));
+  withVia(via, () => log(cid, 'aviator', [], { question_chars: question.length, tools: (out.tools_called || []).map((t) => t.tool), model_route: out.model ? `${out.route || 'primary'} · ${out.model}` : null, ms: Date.now() - started, as_of: asOf, ...(asked ? { period: `${asked.from} to ${asked.to}` } : {}), ...(retried ? { retried_for_period_on: retried } : {}) }, out.ok ? `Answered from ${out.tools_called.length} tool call(s)` : out.capped ? 'Daily model cap reached' : out.wrong_period ? 'Refused: the answer read a different period' : 'No answer', []));
+  if (out.wrong_period) return res.status(422).json({ ok: false, message: `Ask again with the dates. Aviator could not read ${asked.from} to ${asked.to} for this question.` });
   if (!out.ok) return res.status(out.capped ? 429 : 503).json({ ok: false, limited: !!out.capped, message: out.capped ? MESSAGES.cap : /no model key/.test(out.message || '') ? 'Aviator is not available on this server.' : 'Ask again in a moment. Aviator did not receive an answer.' });
-  res.json({ ok: true, answer: plainAnswer(out.answer), read: recordsRead(out.answer, results), side, as_of: asOf, as_of_eastern: fmtET(at) });
+  res.json({ ok: true, answer: plainAnswer(out.answer), read: recordsRead(out.answer, results), side, as_of: asOf, as_of_eastern: fmtET(at), ...(asked ? { period: { from: asked.from, to: asked.to } } : {}) });
 }
 
 // ---------- Public read route (/public/<side>/tools/<name>) ----------

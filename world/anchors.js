@@ -227,7 +227,7 @@ export function anchors(L, W) {
     W.riskOrders = [hero, inv, route, alloc, lab, off, conf];
   }
 
-  // ---------- Claim Agent's other evidence states (Kinross shipments, December remittances) ----------
+  // ---------- Other evidence states for Ashby's evidence rules (Kinross shipments, withheld on PMT-990412) ----------
   W.claimCases = [
     { case: 'DC-41102', dm: 'DM-55640', evidence: 'held_by_warehouse' },   // load scan exists at Kinross, not in the case
     { case: 'DC-41118', dm: 'DM-55655', evidence: 'tally_only' },          // no load scan; Kinross has a load tally by SSCC

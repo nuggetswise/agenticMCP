@@ -43,3 +43,10 @@ The rule catalogue (`world/ref.js`) marks each rule public, adapted or invented 
 - Limits (`src/limits.js`, env `AVIATOR_PER_MINUTE` 6, `AVIATOR_PER_ADDRESS_DAY` 60, `PUBLIC_PER_MINUTE` 120, `MODEL_DAILY_CAP` 600): per-address rate limits and one daily cap on every model call, each with a plain message. Questions are capped at 500 characters and history at 10 turns.
 - `/public/<side>/tools/<name>`: read tools only, with that side's scopes and refusals, logged as `public-<side>`. Writes, governance, sessions, SQL and the access log are refused.
 - `npm run hosted` tests all of this from `pages/_test.html` in Chrome with a local stand-in model.
+
+### 0.4.1
+
+- Periods resolve from `as_of`. `get_scorecard`, `supplier_scorecard` and the new Northfield tool `open_order_value` take `from` and `to` (dates) or `period` (`this_week`, `last_week`, `next_week`; weeks run Sunday to Saturday) and return `period_covered`. `get_scorecard` also takes `warehouse` and lists failing lines by warehouse.
+- A hosted Aviator question that names a week or dates is resolved on the server and checked: an answer that read a different period is asked again on the secondary model, and refused if that also misses.
+- Every Kinross shipping advice (945) reports the quantity picked and loaded, as its load scan and ship notice do.
+- Page tokens for P7 and P8 are in `pages/pages.json`. Window ends (`through`) stay open until the build chat states them.

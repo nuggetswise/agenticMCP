@@ -87,6 +87,7 @@ An order or document that ${company} is itself a party to is ${company}'s own: l
 You cannot send, approve, dispute or change anything. When asked to act, say what would be proposed and that ${person} approves it on the Trading Grid screen.
 Give every quantity in the unit the record names (quantities_in, counting_unit, or a line's uom: CA is cases, EA is each); never call a quantity units. Ashby's orders with Northfield are in cases.
 Write for a business reader: name a record by its reference and what it is (ship notice ASN-46215, Kinross load scan), never by a field name or a record kind such as wms.load_scan, and write cases or each, never CA or EA.
+A week runs Sunday to Saturday. "This week", "last week" and "next week" are counted from the as-of time, never from today's date. When the question names a week, dates or a period, pass it to every tool that takes from and to (or period), answer for that period only, and say which days the answer covers; when it names a warehouse, pass it. Never give a quarter's figure for a week, or one record for a question about all of them.
 Keep answers short: the answer first, then the records, in plain sentences with no markdown. Write no calendar dates and work out no weekday: where timing matters give the time as the record shows it (17:21 ET), and say the day before or the next day when it is not the day asked about.`;
 
 /** One question, answered by the model calling the connection's read tools. `callTool(name, args)` runs a tool exactly as the connection would. */

@@ -132,13 +132,13 @@ export function replenDocs(L, W, G) {
     if (isKin) {
       const whAt = s.whAt || addH(O.dep, -U(6, 20));
       D.whOrder(L, O, whAt, `WSO-${id}`, { shipDate: etDay(O.dep) });
-      if (s.whAdviceAt) D.whAdvice(L, O, s.whAdviceAt, `WSA-${id}`, { shipmentId: shipId, shippedAt: O.departed });
+      if (s.whAdviceAt) D.whAdvice(L, O, s.whAdviceAt, `WSA-${id}`, { shipmentId: shipId, shippedAt: O.departed, shipped: ship });
     }
     const fulfilAt = s.erpEarly || addH(O.departed, -U(0.2, 0.8));
     L.event({ at: fulfilAt, kind: 'erp.fulfilment_posted', po: O.po, system: 'Supplier ERP', party: 'ASHBY', channel: 'API', data: { shipment: shipId, cartons: cartons.length } });
     if (!O.noLoadScan) L.event({ at: addH(O.departed, -0.45), kind: 'wms.load_scan', po: O.po, system: isKin ? 'Kinross warehouse system' : 'Supplier ERP', party: isKin ? 'KINROSS' : 'ASHBY', channel: 'API', data: { shipment: shipId, cartons_loaded: cartons.length, cartons_expected: cartons.length, by_sscc: true } });
     L.event({ at: O.departed, kind: 'wms.departure_scan', po: O.po, system: isKin ? 'Kinross warehouse system' : 'Supplier ERP', party: isKin ? 'KINROSS' : 'ASHBY', channel: 'API', data: { shipment: shipId, carrier: 'Lakeline Freight' } });
-    if (isKin && !s.whAdviceAt) D.whAdvice(L, O, addH(O.departed, U(0.1, 0.5)), `WSA-${id}`, { shipmentId: shipId, shippedAt: O.departed });
+    if (isKin && !s.whAdviceAt) D.whAdvice(L, O, addH(O.departed, U(0.1, 0.5)), `WSA-${id}`, { shipmentId: shipId, shippedAt: O.departed, shipped: ship });
 
     // Ship notice: within 1 hour of departure (NF-4.2).
     // The planned time is drawn for every order without a set time, so a moved ship notice (`s.asnAfter`) leaves the random stream as it was.

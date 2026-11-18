@@ -2,8 +2,8 @@
 // Shared records are the documents both companies exchanged and the deduction case they both work in. Ashby's
 // warehouse, ERP, carrier and agent records stay Ashby's; Northfield's payables, draft rules and reviewer notes stay
 // Northfield's. Every answer is read as of a time; nothing here sends or changes anything.
-import { fmtET } from '../world/lib.js';
-import { normPo, rule, param, paramAt, chargeOf, storyClock, timeLeft, notYet, promotionOf, asOfDate } from './domain.js';
+import { fmtET, etDay } from '../world/lib.js';
+import { normPo, rule, param, paramAt, chargeOf, storyClock, timeLeft, notYet, promotionOf, asOfDate, weekOf } from './domain.js';
 import { otif, scorecardAsOf, supplierRanking, QUARTER, quantitiesIn } from './score.js';
 import { foundBy } from './credit.js';
 import { et } from '../world/lib.js';
@@ -60,12 +60,47 @@ export function documentNF(db, reference) {
 /** On-time, in-full as Trading Grid calculates it (P7). With a supplier: that supplier's rate, reasons and, on request, its
  * failing lines with the documents behind each. Without one: every supplier with a rate, ranked. A supplier's ERP, warehouse
  * and carrier records play no part: each reason is read from documents Northfield exchanged with the supplier. */
-export function scorecardNF(db, supplier, asOf = storyClock(), { lines = false } = {}) {
-  if (!supplier) return { found: true, ...supplierRanking(db, asOf) };
+export function scorecardNF(db, supplier, asOf = storyClock(), { lines = false, period = null } = {}) {
+  if (!supplier) return { found: true, ...supplierRanking(db, asOf, period) };
   const s = findSupplier(db, supplier); if (!s) return { found: false, message: `No supplier ${supplier}` };
-  const r = scorecardAsOf(db, asOf, s.id); if (r.calculated && !r.cases) return { found: false, message: `${s.name} has no order line with a delivery date in the quarter` };
-  if (r.calculated && lines) r.lines = otif(db, { supplier: s.id, asOf }).lines.map((l) => ({ ...l, order: `order/${encodeURIComponent(l.po)}` }));
+  const r = scorecardAsOf(db, asOf, s.id, period); if (r.calculated && !r.cases) return { found: false, period_covered: r.period_covered, message: `${s.name} has no received order line with a delivery date from ${r.period_covered.from} to ${r.period_covered.to}` };
+  if (r.calculated && (lines || period)) r.lines = otif(db, { supplier: s.id, asOf, ...(period ? { from: r.period_covered.from, to: r.period_covered.to } : {}) }).lines.map((l) => ({ ...l, order: `order/${encodeURIComponent(l.po)}` }));
   return { found: true, supplier: s.name, ...r };
+}
+
+/** Open-order value from purchase order to payment (P8), read from the documents Trading Grid carries for buyer purchase
+ *  orders: each open order's furthest stage, the value unfilled at acknowledgment, and the invoices that fall due in a
+ *  period (invoice date plus its payment terms; default the week holding as_of, Sunday to Saturday). An order closes
+ *  when a remittance pays it. Store and replenishment orders are left out. */
+/** Buyer purchase orders received after the closed history (29 March to 27 June 2026). */
+const HISTORY_END = '2026-06-28';
+const STAGE_NAMES = ['Ordered', 'Acknowledged', 'Shipped', 'Received', 'Invoiced'];
+export function openOrders(db, asOf = storyClock(), { period = null, supplier = null, list = false } = {}) {
+  const T = asOf.toISOString(); const sup = supplier ? findSupplier(db, supplier) : null; if (supplier && !sup) return { found: false, message: `No supplier ${supplier}` };
+  const orders = db.prepare(`SELECT po, supplier_id, order_value, accepted_value FROM orders WHERE stream = 'buyer' AND received_at >= ? AND received_at <= ? ${sup ? 'AND supplier_id = ?' : ''}`).all(...[HISTORY_END, T, ...(sup ? [sup.id] : [])]);
+  const paid = new Set(db.prepare('SELECT DISTINCT po FROM remittance_items WHERE paid_at <= ?').all(T).map((r) => r.po));
+  const stageOf = new Map(); for (const d of db.prepare("SELECT po, doc_type FROM documents WHERE sent_at <= ? AND status <> 'Rejected' AND test = 0 AND doc_type IN ('855','856','861','810')").all(T)) { const k = { 855: 2, 856: 3, 861: 4, 810: 5 }[d.doc_type]; if (k > (stageOf.get(d.po) || 1)) stageOf.set(d.po, k); }
+  const acked = new Map(db.prepare("SELECT l.po, sum(l.qty_original * l.price_original) ordered FROM order_lines l GROUP BY l.po").all().map((r) => [r.po, r.ordered]));
+  const ackAt = new Set(db.prepare("SELECT DISTINCT po FROM documents WHERE doc_type = '855' AND sent_at <= ? AND status <> 'Rejected'").all(T).map((r) => r.po));
+  const per = period || { ...weekOf(etDay(asOf)), basis: `this week at ${fmtET(asOf)}; weeks run Sunday to Saturday` };
+  const inv = db.prepare("SELECT invoice, po, sent_at, total, terms_days, status FROM invoices WHERE sent_at <= ? AND status NOT LIKE 'Rejected%' AND status NOT LIKE '%replaced%'").all(T);
+  const open = orders.filter((o) => !paid.has(o.po)); const openSet = new Set(open.map((o) => o.po)); const nameOf = new Map();
+  const name = (id) => nameOf.get(id) || nameOf.set(id, supplierName(db, id)).get(id);
+  const due = inv.filter((i) => openSet.has(i.po)).map((i) => ({ ...i, due: etDay(new Date(Date.parse(i.sent_at) + i.terms_days * 86400000)) })).filter((i) => i.due >= per.from && i.due <= per.to)
+    .map((i) => ({ supplier: name(open.find((o) => o.po === i.po).supplier_id), po: i.po, invoice: i.invoice, amount: i.total, invoice_date: etDay(new Date(i.sent_at)), terms_days: i.terms_days, due: i.due })).sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : b.amount - a.amount));
+  const money = (n) => Math.round(n * 100) / 100; const sum = (xs, f) => money(xs.reduce((t, x) => t + f(x), 0));
+  const rows = open.map((o) => ({ supplier: name(o.supplier_id), po: o.po, stage: STAGE_NAMES[(stageOf.get(o.po) || 1) - 1], value: o.order_value, unfilled_at_acknowledgment: ackAt.has(o.po) && o.accepted_value != null ? money(Math.max(0, (acked.get(o.po) ?? o.order_value) - o.accepted_value)) : 0 }));
+  const unf = rows.filter((r) => r.unfilled_at_acknowledgment > 0);
+  const bySup = {}; for (const r of rows) { const x = (bySup[r.supplier] ||= { supplier: r.supplier, open_orders: 0, open_value: 0, due_in_period: 0, unfilled_at_acknowledgment: 0 }); x.open_orders++; x.open_value = money(x.open_value + r.value); x.unfilled_at_acknowledgment = money(x.unfilled_at_acknowledgment + r.unfilled_at_acknowledgment); }
+  for (const d of due) bySup[d.supplier].due_in_period = money(bySup[d.supplier].due_in_period + d.amount);
+  return { found: true, as_of: fmtET(asOf), ...(sup ? { supplier: sup.name } : {}), read_by: 'Trading Grid, from the order documents it carries',
+    definitions: ['Buyer purchase orders only: store and replenishment orders are left out', 'An order closes when a remittance (820) pays it', 'Stage is the furthest document on the order: purchase order, acknowledgment, ship notice, receiving advice, invoice', 'An invoice falls due on its invoice date plus its payment terms', 'A week runs Sunday to Saturday'],
+    orders: orders.length, paid_orders: orders.length - open.length, open_orders: open.length, open_value: sum(rows, (r) => r.value),
+    by_stage: STAGE_NAMES.map((s) => ({ stage: s, orders: rows.filter((r) => r.stage === s).length, value: sum(rows.filter((r) => r.stage === s), (r) => r.value) })),
+    unfilled_at_acknowledgment: { orders: unf.length, value: sum(unf, (r) => r.unfilled_at_acknowledgment), basis: 'Ordered value less acknowledged value', list: unf.sort((a, b) => b.unfilled_at_acknowledgment - a.unfilled_at_acknowledgment).slice(0, 40).map(({ supplier, po, unfilled_at_acknowledgment: v }) => ({ supplier, po, unfilled: v })) },
+    period_covered: { from: per.from, to: per.to, basis: per.basis, counts: 'Invoices on open orders with a due date in the period' },
+    due_in_period: { invoices: due.length, orders: new Set(due.map((d) => d.po)).size, value: sum(due, (d) => d.amount), list: due },
+    by_supplier: Object.values(bySup).sort((a, b) => b.open_value - a.open_value), ...(list || sup ? { open_order_list: rows.sort((a, b) => b.value - a.value).slice(0, 200) } : {}) };
 }
 
 const caseOpened = (db, key) => db.prepare("SELECT * FROM events WHERE kind = 'case.opened'").all().map((e) => ({ ...e, d: J(e.data) })).find((e) => e.d.case === key || e.d.deduction === key || e.po === normPo(key));

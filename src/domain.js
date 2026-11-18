@@ -1,7 +1,7 @@
 // Answer logic shared by the MCP tools, the record pages and the checks.
 // One timeline. Record lookups return the record's whole history; questions about "now" take an as-of time.
 import { PRECEDENCE } from '../world/ref.js';
-import { fmtET, et } from '../world/lib.js';
+import { addD, etDay, fmtET, et } from '../world/lib.js';
 import { quantitiesIn } from './score.js';
 
 export const COMPANY = 'ASHBY';
@@ -10,6 +10,20 @@ const H = 3600000;
 /** The story clock: what "now" means when a question gives no as-of time. Default: Tuesday 17 November 11:00 Eastern. */
 export const storyClock = () => new Date(process.env.STORY_CLOCK || '2026-11-17T16:00:00.000Z');
 export const asOfDate = (v) => { if (!v) return storyClock(); const d = new Date(/T/.test(v) ? v : `${v}T23:59:00-05:00`); if (Number.isNaN(d.getTime())) throw new Error('as_of must be an ISO date or date-time'); return d; };
+
+/** A period for a tool, resolved from as_of: explicit from and to dates, or a named period. Weeks run Sunday to Saturday,
+ *  US Eastern, as the story calendar counts them. Null when none is asked. */
+export const PERIODS = ['this_week', 'last_week', 'next_week'];
+const dayOf = (v) => (/^\d{4}-\d{2}-\d{2}/.test(String(v)) ? String(v).slice(0, 10) : null);
+const shift = (day, n) => new Date(Date.parse(`${day}T12:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
+export const weekOf = (day) => { const dow = new Date(`${day}T12:00:00Z`).getUTCDay(); const from = shift(day, -dow); return { from, to: shift(from, 6) }; };
+export function resolvePeriod({ from, to, period } = {}, asOf = storyClock()) {
+  if (from || to) { const f = dayOf(from), t = dayOf(to); if ((from && !f) || (to && !t)) throw new Error('from and to must be dates, for example 2026-11-22'); if (f && t && f > t) throw new Error('from is after to');
+    return { from: f || t, to: t || f, basis: 'The dates asked for' }; }
+  if (!period) return null; if (!PERIODS.includes(period)) throw new Error(`period is one of ${PERIODS.join(', ')}`);
+  const w = weekOf(etDay(asOf)); const n = period === 'last_week' ? -7 : period === 'next_week' ? 7 : 0;
+  return { from: shift(w.from, n), to: shift(w.to, n), basis: `${period.replace('_', ' ')} at ${fmtET(asOf)}; weeks run Sunday to Saturday` };
+}
 
 export function timeLeft(deadline, clock) {
   const ms = deadline - clock;

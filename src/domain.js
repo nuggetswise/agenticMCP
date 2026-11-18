@@ -203,26 +203,45 @@ export function deliveries(db, pos) {
 /** An order that Northfield has not yet sent does not exist at that time (CALLS 72). */
 export const notYet = (po, asOf) => ({ found: false, po, as_of: fmtET(asOf), message: `No such order as of ${fmtET(asOf)}: ${po}` });
 
-export function lifecycle(db, poIn, asOf = null) {
+// `until` (18 November 2026): a caller that names a time gets the order as it stood then. Every record dated after it is left out, a
+// document's status is the one it had (a correction sent later is not shown), and a line's quantities follow the changes sent by then.
+export function lifecycle(db, poIn, asOf = null, { until = null } = {}) {
   const po = normPo(poIn); const own = ownsOrder(db, po);
   if (own === 'missing') return { found: false, message: `No order ${po} in Ashby’s records` };
   if (own === 'other') return { found: false, not_available: true, message: NOT_AVAILABLE };
   const o = db.prepare('SELECT * FROM orders WHERE po = ?').get(po);
   if (asOf && o.received_at > asOf.toISOString()) return notYet(po, asOf);
   const locName = (id) => db.prepare('SELECT name FROM locations WHERE id = ?').get(id)?.name || id;
+  const T = until ? until.toISOString() : '9999'; const by = (at) => at != null && at <= T;
+  const docs = db.prepare('SELECT * FROM documents WHERE po = ? ORDER BY sent_at').all(po).filter((d) => by(d.sent_at));
+  const errs = db.prepare('SELECT e.cause, e.status, d.reference, d.doc_id, r.sent_at reported_at, c.sent_at corrected_at FROM errors e JOIN documents d ON d.doc_id = e.doc_id JOIN documents r ON r.doc_id = e.reported_by LEFT JOIN documents c ON c.doc_id = e.corrected_by WHERE d.po = ?').all(po).filter((e) => by(e.reported_at));
+  // A document's status as it stood: Delivered until its rejection or hold arrived, and corrected or replaced only once that document was sent.
+  const statusThen = (d) => { if (!until || d.status === 'Delivered') return d.status; const mine = errs.filter((e) => e.doc_id === d.doc_id);
+    if (d.status === 'Superseded') return docs.some((x) => x.reference === d.reference && x.doc_type === d.doc_type && x.sent_at > d.sent_at) ? d.status : 'Delivered';
+    if (!mine.length) return 'Delivered'; if (mine.every((e) => by(e.corrected_at))) return d.status; return /^Held/.test(d.status) ? 'Held by Northfield' : 'Rejected'; };
+  const changes = db.prepare('SELECT seq change, line, code, qty, delivery_date, state, sent_at FROM order_changes WHERE po = ? ORDER BY seq, line').all(po).filter((c) => by(c.sent_at));
+  const laterChange = until && db.prepare('SELECT 1 x FROM order_changes WHERE po = ? AND sent_at > ?').get(po, T);
+  const laterAck = until && db.prepare("SELECT 1 x FROM documents WHERE po = ? AND doc_type IN ('855','865') AND sent_at > ?").get(po, T);
+  const acked = docs.some((d) => d.doc_type === '855' || d.doc_type === '865');
+  const lines = db.prepare('SELECT line, sku, qty_original ordered_first, qty_ordered ordered_now, qty_accepted accepted, price, uom, delivery_date FROM order_lines WHERE po = ? ORDER BY line').all(po).map((r) => {
+    const l = { ...r }; if (!until) return l;
+    if (laterChange) { const c = changes.filter((x) => x.line === l.line && x.qty != null).pop(); l.ordered_now = c ? c.qty : l.ordered_first; }
+    if (!acked) l.accepted = null; else if (laterAck || laterChange) l.accepted = null;
+    return l; });
+  const invStatus = (i) => { const d = docs.find((x) => x.doc_type === '810' && x.reference === i.invoice); return d ? statusThen(d) : i.status; };
   return {
     found: true, po, retailer: 'Northfield Retailer', programme: o.programme, ship_to: locName(o.ship_to),
-    received: fmtET(o.received_at), requested_delivery: o.requested_delivery, order_value: o.order_value, accepted_value: o.accepted_value, quantities_in: quantitiesIn(db, po),
-    lines: db.prepare('SELECT line, sku, qty_original ordered_first, qty_ordered ordered_now, qty_accepted accepted, price, uom, delivery_date FROM order_lines WHERE po = ? ORDER BY line').all(po).map((r) => ({ ...r })),
-    changes: db.prepare('SELECT seq change, line, code, qty, delivery_date, state, sent_at FROM order_changes WHERE po = ? ORDER BY seq, line').all(po).map((c) => ({ ...c, sent_at: fmtET(c.sent_at) })),
-    shipments: db.prepare('SELECT * FROM shipments WHERE po = ? ORDER BY shipped_at').all(po).map((s) => ({ ship_notice: s.shipment_id, sent: fmtET(s.sent_at), truck_left: fmtET(s.shipped_at), cartons: s.cartons, ship_from: locName(s.ship_from), bill_of_lading: s.bol, seal: s.seal })),
-    receipts: db.prepare('SELECT receipt, received_at, line, qty, short FROM receipts WHERE po = ? ORDER BY received_at, line').all(po).map((r) => ({ ...r, received_at: fmtET(r.received_at) })),
-    invoices: db.prepare('SELECT invoice, sent_at, total, status, replaces FROM invoices WHERE po = ? ORDER BY sent_at').all(po).map((i) => ({ ...i, sent_at: fmtET(i.sent_at) })),
-    payments: db.prepare('SELECT * FROM remittance_items WHERE po = ? ORDER BY paid_at').all(po).map((p) => ({ payment: p.payment, paid: fmtET(p.paid_at), invoice: p.invoice, amount: p.paid, invoice_amount: p.invoice_amount })),
-    charges: db.prepare('SELECT * FROM adjustments WHERE po = ? ORDER BY paid_at').all(po).map((a) => ({ payment: a.payment, at: fmtET(a.paid_at), amount: a.amount, reference: a.reference, note: a.note })),
-    documents: db.prepare('SELECT * FROM documents WHERE po = ? ORDER BY sent_at').all(po).map((d) => docRow(db, d)),
-    rejections: db.prepare('SELECT e.cause, e.status, d.reference FROM errors e JOIN documents d ON d.doc_id = e.doc_id WHERE d.po = ?').all(po).map((e) => ({ ...e })),
-    other_records: db.prepare('SELECT at, kind, system, channel, data FROM events WHERE po = ? ORDER BY at').all(po).map((e) => ({ at: fmtET(e.at), record: e.kind, system: e.system, channel: e.channel, ...J(e.data) })),
+    ...(until ? { as_of: fmtET(T), note: 'The order as it stood at this time: every record dated after it is left out' } : {}),
+    received: fmtET(o.received_at), requested_delivery: o.requested_delivery, order_value: o.order_value, accepted_value: until && (!acked || laterAck || laterChange) ? null : o.accepted_value, quantities_in: quantitiesIn(db, po),
+    lines, changes: changes.map((c) => ({ ...c, sent_at: fmtET(c.sent_at) })),
+    shipments: db.prepare('SELECT * FROM shipments WHERE po = ? ORDER BY shipped_at').all(po).filter((s) => by(s.sent_at) || by(s.shipped_at)).map((s) => ({ ship_notice: s.shipment_id, sent: by(s.sent_at) ? fmtET(s.sent_at) : null, truck_left: by(s.shipped_at) ? fmtET(s.shipped_at) : null, cartons: s.cartons, ship_from: locName(s.ship_from), bill_of_lading: s.bol, seal: s.seal })),
+    receipts: db.prepare('SELECT receipt, received_at, line, qty, short FROM receipts WHERE po = ? ORDER BY received_at, line').all(po).filter((r) => by(r.received_at)).map((r) => ({ ...r, received_at: fmtET(r.received_at) })),
+    invoices: db.prepare('SELECT invoice, sent_at, total, status, replaces FROM invoices WHERE po = ? ORDER BY sent_at').all(po).filter((i) => by(i.sent_at)).map((i) => ({ ...i, status: invStatus(i), sent_at: fmtET(i.sent_at) })),
+    payments: db.prepare('SELECT * FROM remittance_items WHERE po = ? ORDER BY paid_at').all(po).filter((p) => by(p.paid_at)).map((p) => ({ payment: p.payment, paid: fmtET(p.paid_at), invoice: p.invoice, amount: p.paid, invoice_amount: p.invoice_amount })),
+    charges: db.prepare('SELECT * FROM adjustments WHERE po = ? ORDER BY paid_at').all(po).filter((a) => by(a.paid_at)).map((a) => ({ payment: a.payment, at: fmtET(a.paid_at), amount: a.amount, reference: a.reference, note: a.note })),
+    documents: docs.map((d) => ({ ...docRow(db, d), status: statusThen(d) })),
+    rejections: errs.map((e) => ({ cause: e.cause, status: until && !by(e.corrected_at) ? 'Open' : e.status, reference: e.reference })),
+    other_records: db.prepare('SELECT at, kind, system, channel, data FROM events WHERE po = ? ORDER BY at').all(po).filter((e) => by(e.at)).map((e) => ({ at: fmtET(e.at), record: e.kind, system: e.system, channel: e.channel, ...J(e.data) })),
     link: `order/${encodeURIComponent(po)}`,
   };
 }

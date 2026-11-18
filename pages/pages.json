@@ -1,0 +1,81 @@
+{
+ "note": "Prototype pages hosted at /p/<id>. Each token answers Aviator only at /aviator/<token> and is bound here to its prototype, the sides the page shows and its story window: from the calendar moment of `calendar` through `through` (US Eastern). The server refuses a side or as_of outside that binding. Tokens sit in the pages, so they are public by design. artifact is the claude.ai build copy; sync only when Mandip says a page is ready: npm run sync -- <id> <file> <sha256 of the published artifact>. _test is the route's own test page, linked nowhere.",
+ "pages": {
+  "p5": {
+   "calendar": "P5",
+   "artifact": "https://claude.ai/artifact/2Erv5An571ZHnR3WoUY5sf",
+   "sides": [
+    "ashby"
+   ],
+   "token": "p5-sXJmoirADPo3",
+   "through": "2026-12-10T23:59:00-05:00"
+  },
+  "p9": {
+   "calendar": "P9",
+   "artifact": "https://claude.ai/artifact/3D2tsVjwvnmMtPEoRKSpVe",
+   "sides": [
+    "ashby",
+    "northfield"
+   ],
+   "token": "p9-g0NeF0VsCC6O",
+   "through": "2026-11-02T23:59:00-05:00"
+  },
+  "p13": {
+   "calendar": "P13",
+   "artifact": "https://claude.ai/artifact/MGDhE28iCZ1bdb4he73uup",
+   "sides": [
+    "ashby"
+   ],
+   "token": "p13-h2EnVwiaXtHn",
+   "through": "2026-11-19T23:59:00-05:00"
+  },
+  "p14": {
+   "calendar": "P14",
+   "artifact": "https://claude.ai/artifact/2xeimvMs5c3aYV6aw1Zz9W",
+   "sides": [
+    "northfield"
+   ],
+   "token": "p14-iX-L7USIYgkd",
+   "through": "2026-12-01T23:59:00-05:00"
+  },
+  "p15": {
+   "calendar": "P15",
+   "artifact": "https://claude.ai/artifact/6ytUrUPw3susuHkoDmA7Xr",
+   "sides": [
+    "northfield"
+   ],
+   "token": "p15-Qob8xZlf5xo_",
+   "through": "2026-12-28T23:59:00-05:00"
+  },
+  "p20": {
+   "calendar": "P20",
+   "artifact": "https://claude.ai/artifact/MErufiHTVVVgeobiZPctXB",
+   "sides": [
+    "ashby",
+    "northfield"
+   ],
+   "token": "p20-g_h_3dl8b_zp",
+   "through": "2027-01-09T23:59:00-05:00"
+  },
+  "p21": {
+   "calendar": "P21",
+   "artifact": "https://claude.ai/artifact/XvERP9L3d3QAMyUZvgvMZB",
+   "sides": [
+    "ashby",
+    "northfield"
+   ],
+   "token": "p21-ieks0rMbY9Jb",
+   "through": "2026-11-17T23:59:00-05:00"
+  },
+  "_test": {
+   "calendar": "P9",
+   "artifact": null,
+   "sides": [
+    "ashby",
+    "northfield"
+   ],
+   "token": "test-C3PPJLhbsFo1",
+   "through": "2026-11-02T23:59:00-05:00"
+  }
+ }
+}

@@ -103,6 +103,8 @@ export function buildFindingLog(db) {
         decision_needed: side === 'Ashby' && approval ? 1 : 0, proposed_by: 'Rule', proposal: side === 'Ashby' && approval ? 'Send the corrected document' : null, amount: null });
       f.act('Raised', e.reported_at, side === 'Ashby' ? 'Northfield' : 'Northfield rule check', e.reported_ref, e.channel);
       if (side === 'Ashby' && approval) f.act('Decided', approval.at, 'Priya Raman', `Approval, ${fmtET(approval.at)}`, 'Approval', { decision: 'Approved as proposed', detail: J(approval.data).what });
+      // A held invoice line closed by a shortage deduction on a remittance was not corrected by its owner: no stage is added.
+      if (e.corrected_at && /^820:/.test(e.corrected_by)) continue;
       if (e.corrected_at) { f.act('Owner fixed', e.corrected_at, side === 'Ashby' ? 'Supplier ERP' : name(e.supplier_id), e.corrected_ref, `Corrected document (${e.doc_type})`);
         if (e.doc_type === '856') confirmReceipt(f, e.po, e.corrected_at); else confirm997(f, e.corrected_by); }
     }

@@ -35,3 +35,11 @@ The story calendar (`CALENDAR` in `world/build.js`) mirrors the "Story calendar"
 ## What is invented
 
 The rule catalogue (`world/ref.js`) marks each rule public, adapted or invented and carries its sources. The validator schemas (`validator/make-schemas.js`) take element types and lengths from X12 004010; which segments are mandatory is the invented Northfield guide. `validator/staedi.jar` is StAEDI 1.26.7 from Maven Central (Apache 2.0).
+
+## Hosted pages, Aviator for pages and the public read route (0.4.0)
+
+- `/p/<id>` serves `pages/<id>.html` (noindex; `robots.txt` disallows `/p/`). A claude.ai artifact cannot call this server, so the hosted copy is the link shared with viewers. Sync one page with `npm run sync -- <id> <file> <sha256>` after reading its published artifact; the routine refuses a file whose hash is not the artifact's (see `scripts/pages.mjs`).
+- `POST /aviator/<page token>` takes `question`, `side`, `as_of`, `context`, `history`. `pages/pages.json` binds each token to its prototype, sides and story window; anything outside is refused. With no `as_of` the page's calendar moment is used, never the story clock. Replies carry the answer in plain words and the records read by business name. A page token opens nothing else.
+- Limits (`src/limits.js`, env `AVIATOR_PER_MINUTE` 6, `AVIATOR_PER_ADDRESS_DAY` 60, `PUBLIC_PER_MINUTE` 120, `MODEL_DAILY_CAP` 600): per-address rate limits and one daily cap on every model call, each with a plain message. Questions are capped at 500 characters and history at 10 turns.
+- `/public/<side>/tools/<name>`: read tools only, with that side's scopes and refusals, logged as `public-<side>`. Writes, governance, sessions, SQL and the access log are refused.
+- `npm run hosted` tests all of this from `pages/_test.html` in Chrome with a local stand-in model.

@@ -154,6 +154,14 @@ const st = D.lifecycle(ash, 'NR-450118');
   // INV-7731 before its correction: held, not yet replaced; its rejection open.
   const u2 = new Date('2026-11-10T09:10:00-05:00'); const c2 = D.lifecycle(ash, 'NR-450118', u2, { until: u2 });
   eq('order.as_of_status_as_it_stood', [c2.invoices.map((i) => [i.invoice, i.status]), [...new Set(c2.rejections.filter((r) => r.reference === 'INV-7731').map((r) => r.status))]], [[['INV-7731', 'Held by Northfield']], ['Open']]); }
+// 18 November 2026: INV-7731 line 2 stays open until remittance PMT-990412 (1 December) deducts it as a shortage under case DC-40877; then it is closed by that deduction, not corrected.
+{ const st2 = (at) => { const u = new Date(at); return D.lifecycle(ash, 'NR-450118', u, { until: u }).rejections.filter((r) => r.reference === 'INV-7731').map((r) => r.status).sort(); };
+  const e = db.prepare("SELECT status, corrected_by FROM errors WHERE doc_id = '810:INV-7731' AND allowed LIKE '%line 2%'").get();
+  eq('invoice.line2_closed_by_shortage_deduction', [e.status, e.corrected_by, st2('2026-11-30T09:00:00-05:00'), st2('2026-12-01T09:00:00-05:00'), db.prepare("SELECT count(*) n FROM errors WHERE status = 'Open' AND doc_id LIKE '810:INV-7731%'").get().n],
+    ['Closed by deduction', '820:PMT-990412', ['Corrected', 'Open'], ['Closed by deduction', 'Corrected'], 0]); }
+// Ashby is counted in cases and every other supplier in its own unit (Each); at 28 December Ashby ranks 17 of 23, rates 79.5% to 100.0%.
+{ const rk = SC.supplierRanking(db, T('2026-12-28T09:00:00-05:00')).ranking; const a = rk.find((r) => r.supplier_id === 'ASHBY'); const sc = rk.map((r) => parseFloat(r.score));
+  eq('scorecard.ashby_rank_and_rate_range', [rk.length, a.rank, a.score, a.counting_unit, [...new Set(rk.filter((r) => r.supplier_id !== 'ASHBY').map((r) => r.counting_unit))], Math.min(...sc), Math.max(...sc)], [23, 17, '91.0%', 'Cases', ['Each'], 79.5, 100]); }
 eq('story.two_shipments', st.shipments.map((s) => [s.ship_notice, s.cartons]), [['ASN-450118-1', 350], ['ASN-450118-2', 120]]);
 // 17 November 2026 (P23): the first ship notice leaves after the load scan that corrected it and within NF-4.2's hour of the 18:00 departure; its 997 follows it and the receiving advice comes next morning. The hold is released by Priya Raman (AP-1.3).
 { const one = (sql, ...a) => db.prepare(sql).get(...a); const asn = one("SELECT doc_id, sent_at FROM documents WHERE doc_type = '856' AND reference = 'ASN-450118-1'"); const fa = one("SELECT sent_at FROM documents WHERE doc_type = '997' AND answers_doc_id = ?", asn.doc_id); const rcv = one("SELECT sent_at FROM documents WHERE reference = 'RCV-DC2-77290'");

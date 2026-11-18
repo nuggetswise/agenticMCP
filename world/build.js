@@ -134,7 +134,16 @@ function derive(files, events) {
     if (fix) { t.status = t.held ? `Held, then replaced by ${fix.ref}` : 'Corrected and resent'; fix.answers = t.doc_id; }
     // A replacing invoice corrects a quantity error only on a line whose quantity it changed: a line it bills as before stays open.
     if (fix && t.type === '810' && x.code === 'QTY') { const ln = Number((String(x.allowed).match(/line (\d+)/) || [])[1]); const l = (fix.lines || []).find((y) => y.line === ln); if (l && String(l.qty) === String(x.sent_value)) fix = null; }
-    T.errors.push({ error_id: `E${String(++errSeq).padStart(5, '0')}`, doc_id: t.doc_id, reported_by: x.by.doc_id, channel: x.channel, code: x.code, cause: x.cause, field: x.field, sent_value: x.sent_value, allowed: x.allowed, rule_id: x.rule_id, status: fix ? 'Corrected' : 'Open', corrected_by: fix ? fix.doc_id : null, _fixAt: fix ? fix.at : null });
+    // That line closes when a later remittance deducts it as a shortage: the receiving advice stands and Northfield's
+    // accounts payable settles the line by deduction (18 November 2026: INV-7731 line 2, deduction DM-55102 on
+    // remittance PMT-990412, case DC-40877). The error is closed, not corrected: Ashby sent no corrected line.
+    let closedBy = null;
+    if (!fix && t.type === '810' && x.code === 'QTY') {
+      const ln = Number((String(x.allowed).match(/line (\d+)/) || [])[1]); const repl = docs.find((o) => o.type === '810' && o.replaces === t.ref && !o.rejected);
+      const names = (a) => a.amount < 0 && /shortage/i.test(a.note || '') && new RegExp(`PO ${t.po} line ${ln}\\b`).test(a.note || '');
+      closedBy = docs.find((o) => o.type === '820' && o.at > t.at && (o.items || []).some((i) => (i.invoice === t.ref || (repl && i.invoice === repl.ref)) && (i.adjustments || []).some(names))) || null;
+    }
+    T.errors.push({ error_id: `E${String(++errSeq).padStart(5, '0')}`, doc_id: t.doc_id, reported_by: x.by.doc_id, channel: x.channel, code: x.code, cause: x.cause, field: x.field, sent_value: x.sent_value, allowed: x.allowed, rule_id: x.rule_id, status: fix ? 'Corrected' : closedBy ? 'Closed by deduction' : 'Open', corrected_by: fix ? fix.doc_id : closedBy ? closedBy.doc_id : null, _fixAt: fix ? fix.at : closedBy ? closedBy.at : null });
   }
   // Order changes: an earlier change is superseded by a later one.
   const lastChange = new Map(); for (const d of docs) if (d.type === '860' && !d.rejected) lastChange.set(d.po, d.seq);

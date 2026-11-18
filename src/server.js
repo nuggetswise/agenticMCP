@@ -3,7 +3,7 @@
 // Every call is checked against the connection's scopes and logged. Read-only unless WRITES=on.
 import express from 'express';
 import { existsSync, readFileSync } from 'node:fs';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, createHash } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -27,6 +27,7 @@ import { Chase } from './chase.js';
 import * as G from './governance.js';
 import { JOBS } from './agents.js';
 import { present, ruleSet, RULE_SETS } from './credit.js';
+import { LIMITS, MESSAGES, windowLimit, modelBudget } from './limits.js';
 
 const PORT = Number(process.env.PORT || 3000);
 const TOKEN = process.env.MCP_TOKEN || randomBytes(18).toString('base64url');
@@ -62,8 +63,12 @@ function linkify(obj, side) {
 const refsOf = (obj) => { const out = new Set(); const walk = (v) => { if (Array.isArray(v)) v.forEach(walk); else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) { if (['po', 'reference', 'case', 'record', 'invoice', 'proposal'].includes(k) && typeof x === 'string') out.add(x); walk(x); } }; walk(obj); return [...out].slice(0, 50); };
 /** Every call is logged. A write also carries `w`: the agent or person who proposed it, the authority it ran under
  *  (rule id and mode: suggest, approve, policy, or person when a person acted directly), who approved and the outcome (T2.3 story 1). */
+// A call made for a public page (the read route or a hosted page's Aviator) runs with the side's own connection, so its
+// scopes and refusals are that connection's, and is logged under public-<side> with who asked. Set only while one call runs.
+let VIA = null;
+const withVia = (via, fn) => { const prev = VIA; VIA = via; try { return fn(); } finally { VIA = prev; } };
 function log(cid, tool, scopesUsed, args, result, records, w) {
-  db.prepare('INSERT INTO access_log (at, connection_id, user_name, tool, scopes_used, arguments, result, records, agent, authority_rule, authority_mode, approver, outcome) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)').run(new Date().toISOString(), cid, conn(cid).user_name, tool, JSON.stringify(scopesUsed), JSON.stringify(args || {}), result, JSON.stringify(records || []),
+  db.prepare('INSERT INTO access_log (at, connection_id, user_name, tool, scopes_used, arguments, result, records, agent, authority_rule, authority_mode, approver, outcome) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)').run(new Date().toISOString(), VIA ? VIA.id : cid, VIA ? VIA.user : conn(cid).user_name, tool, JSON.stringify(scopesUsed), JSON.stringify(args || {}), result, JSON.stringify(records || []),
     w ? w.agent : null, w ? w.rule || null : null, w ? w.mode : null, w ? w.approver : null, w ? w.outcome || result : null);
 }
 /** A write that lands in a shared record is logged on the other company's connection too, with the same attribution. */
@@ -149,7 +154,7 @@ export function call(cid, name, args = {}) {
     if (name === 'recommend_next_step' && out && out.found !== false && G.isPaused(db, G.agentOfJob(args.job))) out = G.plainTask(db, out, G.agentOfJob(args.job));
     if (name === 'three_way_match' && out && out.found && G.isPaused(db, 'Match Agent')) out = { ...out, next_step: null, agent_state: 'Paused', task: `${ruleSet('Match Agent')} are paused; work this variance by hand` };
     if (name === 'review_deduction_case' && out && out.found && G.isPaused(db, 'Review Agent')) out = { ...out, review_agent: { agent_state: 'Paused', proposal: null, task: `Review ${out.case} by hand`, message: `${ruleSet('Review Agent')} are paused, so the case arrives with no recommendation.` } };
-    if (tool.records_replay && out && out.found && out.draft) db.prepare('INSERT INTO rule_replays (draft_id, at, by_connection, result) VALUES (?,?,?,?)').run(out.draft.id, new Date().toISOString(), cid, JSON.stringify({ failing_with_draft: out.failing_with_draft, added_exposure: out.added_exposure }));
+    if (tool.records_replay && !VIA && out && out.found && out.draft) db.prepare('INSERT INTO rule_replays (draft_id, at, by_connection, result) VALUES (?,?,?,?)').run(out.draft.id, new Date().toISOString(), cid, JSON.stringify({ failing_with_draft: out.failing_with_draft, added_exposure: out.added_exposure }));
     const result = out && out.not_available ? side.notAvailable : 'Answered';
     const body = linkify(cid === AS ? mask(out, has) : out, side); body.read_at = new Date().toISOString();
     log(cid, name, [...tool.required, ...tool.optional.filter(has)], args, result, refsOf(out));
@@ -427,7 +432,7 @@ for (const t of [...SCOUT_TOOLS, ...WATCH_TOOLS, ...MATCH_TOOLS, ...RUNTIME_TOOL
 const SESSION_TOOLS = (cid) => cid === AS ? [...SCOUT_TOOLS, ...WATCH_TOOLS, ...RUNTIME_TOOLS[AS]] : [...MATCH_TOOLS, ...RUNTIME_TOOLS[NF]];
 async function runSessionTool(cid, t, args) { let out; try { out = await t.run(args); if (cid === NF) out = linkify(out, SIDE[NF]); } catch (e) { out = { result: 'Invalid request', error: e.message }; } log(cid, t.name, [], args, out.result || out.status || 'Answered', []); return out; }
 function makeServer(cid) {
-  const server = new McpServer({ name: cid === AS ? 'trading-grid-ashby' : 'trading-grid-northfield', title: cid === AS ? 'Trading Grid · Ashby Supplier' : 'Trading Grid · Northfield Retailer', version: '0.3.3' }, { instructions: INSTRUCTIONS[cid]() });
+  const server = new McpServer({ name: cid === AS ? 'trading-grid-ashby' : 'trading-grid-northfield', title: cid === AS ? 'Trading Grid · Ashby Supplier' : 'Trading Grid · Northfield Retailer', version: '0.4.0' }, { instructions: INSTRUCTIONS[cid]() });
   // Every tool on the connection answers through `present` (src/credit.js): no result, title or description names an agent.
   const register = server.registerTool.bind(server);
   server.registerTool = (name, meta, handler) => register(name, { ...meta, title: present(meta.title), description: present(meta.description) }, async (args) => {
@@ -464,12 +469,14 @@ function makeServer(cid) {
 
 // ---------- HTTP ----------
 const app = express();
+// Render terminates TLS in front of the server: the viewer's address is the first forwarded one.
+app.set('trust proxy', 1);
 // REST, sessions and jobs answer through `present` too, as the MCP tools do.
 app.use((req, res, next) => { const json = res.json.bind(res); res.json = (body) => json(present(body)); next(); });
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false }));
 app.get('/', (req, res) => res.type('html').send(homePage()));
-app.get('/healthz', (req, res) => res.json({ status: 'ok', version: '0.3.3', writes: WRITES, connections: [AS, NF], aviator: !!process.env.GEMINI_API_KEY, model_routes: Aviator.modelRoutes().map((r) => `${r.route} · ${r.model}`) }));
+app.get('/healthz', (req, res) => res.json({ status: 'ok', version: '0.4.0', writes: WRITES, connections: [AS, NF], aviator: !!process.env.GEMINI_API_KEY, model_routes: Aviator.modelRoutes().map((r) => `${r.route} · ${r.model}`) }));
 const cidOf = (req, res) => { const c = BY_TOKEN[req.params.token]; if (!c) { res.status(404).send('Not found'); return null; } return c; };
 
 app.post('/mcp/:token', async (req, res) => {
@@ -518,6 +525,7 @@ const adminData = (cid, token) => ({ connection: conn(cid), side: SIDE[cid], row
 const cors = (res) => res.set({ 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'content-type' });
 app.options('/aviator/:token', (req, res) => { cors(res).status(204).end(); });
 app.post('/aviator/:token', async (req, res) => {
+  const page = BY_PAGE_TOKEN[req.params.token]; if (page) return pageAviator(page, req, res);
   const cid = aviatorCid(req, res); if (!cid) return; cors(res);
   const tools = cid === AS ? TOOLS : NF_TOOLS; const side = SIDE[cid]; const q = req.body?.question;
   try {
@@ -526,6 +534,132 @@ app.post('/aviator/:token', async (req, res) => {
     res.status(out.ok ? 200 : out.status).json(out);
   } catch (e) { console.error(e); res.status(500).json({ ok: false, message: 'Aviator failed.' }); }
 });
+// ---------- Hosted prototype pages (/p/<id>) ----------
+// A claude.ai artifact cannot call this server, so each prototype is also served here from pages/<id>.html, and that copy
+// is the link shared with viewers. Its Aviator chat posts to /aviator/<page token> on the same origin. pages/pages.json
+// names each page's calendar moment, the sides it shows and its token. A page token answers Aviator only: it opens no MCP,
+// REST, admin or public data route, and no model key reaches a page.
+const PAGES_DIR = process.env.PAGES_DIR ? new URL(`file://${process.env.PAGES_DIR.replace(/\/?$/, '/')}`) : new URL('../pages/', import.meta.url);
+const PAGES_JSON = new URL('../pages/pages.json', import.meta.url);
+const PAGES = existsSync(PAGES_JSON) ? JSON.parse(readFileSync(PAGES_JSON, 'utf8')).pages : {};
+const BY_PAGE_TOKEN = Object.fromEntries(Object.entries(PAGES).map(([id, p]) => [p.token, { id, ...p }]));
+const SIDE_CID = { ashby: AS, northfield: NF };
+const pageMoment = (page) => { const m = db.prepare('SELECT as_of FROM calendar WHERE id = ?').get(page.calendar); return m ? m.as_of : null; };
+// The page may run at any origin a viewer opens it from; the hosted copy's own requests go only to this server.
+const PAGE_CSP = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
+const PAGE_HEADERS = { 'Content-Security-Policy': PAGE_CSP, 'X-Content-Type-Options': 'nosniff', 'X-Robots-Tag': 'noindex, nofollow', 'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-cache' };
+app.get('/p/:id', (req, res) => {
+  const id = String(req.params.id).toLowerCase(); const f = new URL(`${id}.html`, PAGES_DIR);
+  if (!PAGES[id] || !/^(p\d+|_test)$/.test(id) || !existsSync(f)) return res.status(404).set('X-Robots-Tag', 'noindex').type('text').send('No such page');
+  res.set(PAGE_HEADERS).type('html').send(readFileSync(f));
+});
+app.get('/robots.txt', (req, res) => res.type('text').send('User-agent: *\nDisallow: /p/\nDisallow: /aviator/\nDisallow: /public/\n'));
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+// The synced pages with their hashes, so a deploy can be checked against each published artifact. The test page is not listed.
+app.get('/p', (req, res) => res.set('X-Robots-Tag', 'noindex').json({ pages: Object.entries(PAGES).filter(([id]) => id !== '_test' && existsSync(new URL(`${id}.html`, PAGES_DIR))).map(([id, p]) => ({ page: `${BASE}/p/${id}`, prototype: p.calendar, sides: p.sides, sha256: createHash('sha256').update(readFileSync(new URL(`${id}.html`, PAGES_DIR))).digest('hex') })) }));
+
+// Plain words for an Aviator answer: no rule codes, charge codes, unit codes or field names in a sentence, and quantities in
+// the record's own unit. The codes stay on the server and in the records; the reader gets the business meaning.
+const OWNER_WORDS = { Northfield: 'Northfield’s rule', Ashby: 'Ashby’s rule', 'Ashby agreement': 'Ashby’s agreement with Northfield', 'Industry standard': 'the industry standard', 'US law': 'US law', Kinross: 'Kinross’s rule' };
+const RULE_WORDS = new Map(db.prepare('SELECT id, owner FROM rules').all().map((r) => [r.id, OWNER_WORDS[r.owner] || `${r.owner}’s rule`]));
+const CHARGE_WORDS = new Map(db.prepare('SELECT charge_code, topic FROM rules WHERE charge_code IS NOT NULL').all().map((r) => [r.charge_code, r.charge_code === 'SH01' ? 'shortage charge' : `${r.topic} charge`]));
+const KIND_WORDS = { wms: 'Kinross', carrier: 'Lakeline', erp: 'Supplier ERP', tg: 'Trading Grid', case: 'deduction case', rule: 'rule' };
+export function plainAnswer(text) {
+  let t = String(text || '');
+  t = t.replace(/\s*\((?:rule |under |per |see )?(?:[A-Z]{2,3}-\d+(?:\.\d+)?|[A-Z]{2}\d{2})(?:[,;/ ]+(?:and )?(?:[A-Z]{2,3}-\d+(?:\.\d+)?|[A-Z]{2}\d{2}))*\)/g, '');
+  t = t.replace(/\b(?:rule )?([A-Z]{2,3}-\d+(?:\.\d+)?)\b/g, (m, id) => RULE_WORDS.get(id) || m);
+  t = t.replace(/\b([A-Z]{2}\d{2})\b/g, (m, c) => CHARGE_WORDS.get(c) || m);
+  t = t.replace(/\b(\d[\d,]*(?:\.\d+)?)\s*CA\b/g, (m, n) => `${n} ${n === '1' ? 'case' : 'cases'}`).replace(/\b(\d[\d,]*(?:\.\d+)?)\s*EA\b/g, '$1 each').replace(/\b(?:in|of) (?:CA|EA)\b/g, (m) => m.replace('CA', 'cases').replace('EA', 'each'));
+  t = t.replace(/\b(wms|carrier|erp|tg|case|rule)\.([a-z]+(?:_[a-z]+)*)\b/g, (m, k, f) => `${KIND_WORDS[k]} ${f.replace(/_/g, ' ')}`);
+  t = t.replace(/`?\b([a-z]+(?:_[a-z]+)+)\b`?/g, (m, f) => f.replace(/_/g, ' '));
+  return t.replace(/\*\*|__/g, '').replace(/ {2,}/g, ' ').replace(/ ([.,;:])/g, '$1').trim();
+}
+/** The records an answer read, by their business names: those it names first, then the rest it read. */
+function recordsRead(text, results) {
+  const refs = []; const add = (r) => { if (r && !refs.includes(r)) refs.push(r); };
+  const all = []; for (const r of results) for (const x of refsOf(r)) if (!all.includes(x)) all.push(x);
+  for (const x of all) if (String(text).includes(x)) add(x); for (const x of all) if (refs.length < 8) add(x);
+  return refs.map((ref) => {
+    if (db.prepare('SELECT 1 FROM orders WHERE po = ?').get(ref)) return { record: ref, name: `Purchase order ${ref}` };
+    const d = db.prepare('SELECT name FROM documents WHERE reference = ? ORDER BY sent_at LIMIT 1').get(ref); if (d) return { record: ref, name: `${d.name} ${ref}` };
+    if (/^PMT-/.test(ref)) return { record: ref, name: `Remittance ${ref}` };
+    if (/^DC-/.test(ref)) return { record: ref, name: `Deduction case ${ref}` };
+    if (/^(DM|PD)-/.test(ref)) return { record: ref, name: `Deduction ${ref}` };
+    if (/^CI-/.test(ref)) return { record: ref, name: `Compliance invoice ${ref}` };
+    if (/^(SHP|SO)-/.test(ref)) return { record: ref, name: `Supplier ERP shipment ${ref}` };
+    if (/^NFD-/.test(ref)) return { record: ref, name: `Draft rule ${ref}` };
+    if (/^PR-/.test(ref)) return null;
+    if (/^[a-z]+\.[a-z_]+$/.test(ref)) { const n = plainAnswer(ref); return { record: n, name: n.charAt(0).toUpperCase() + n.slice(1) }; }
+    return { record: ref, name: ref };
+  }).filter((r, i, a) => r && a.findIndex((x) => x && x.name === r.name) === i);
+}
+const ipOf = (req) => req.ip || req.socket?.remoteAddress || 'unknown';
+const AV_MINUTE = windowLimit(LIMITS.aviator_per_minute, 60000), AV_DAY = windowLimit(LIMITS.aviator_per_day, 86400000), PUBLIC_MINUTE = windowLimit(LIMITS.public_per_minute, 60000);
+export const resetLimits = () => { AV_MINUTE.reset(); AV_DAY.reset(); PUBLIC_MINUTE.reset(); };
+const asOfIso = (v) => { if (!v) return null; try { return D.asOfDate(String(v)).toISOString(); } catch { return null; } };
+
+const REFUSALS = { side: 'This page does not show that workspace.', moment: 'This page answers only at its own moment in the story.', long: 'Shorten the question to 500 characters or fewer.', turns: 'Start a new conversation. This one has reached 10 turns.', empty: 'Type a question.' };
+const MAX_QUESTION = 500, MAX_TURNS = 10;
+/** One question from a hosted page. The token binds the prototype, the sides it shows and its story window; a side or
+ *  as_of outside that binding is refused and nothing is read. The model reads the side's own tools at the page's moment,
+ *  and the reply carries the answer in plain words and the records read: no action card. */
+async function pageAviator(page, req, res) {
+  const b = req.body || {}; const started = Date.now();
+  const side = b.side == null ? page.sides[0] : String(b.side).toLowerCase(); const cid = SIDE_CID[side];
+  const via = { id: `aviator-${page.id}-${cid && page.sides.includes(side) ? side : 'refused'}`, user: `Aviator on /p/${page.id}` };
+  const logCid = cid && page.sides.includes(side) ? cid : SIDE_CID[page.sides[0]];
+  const refuse = (status, message, extra = {}) => { withVia(via, () => log(logCid, 'aviator', [], { question_chars: String(b.question || '').length, tools: [], model_route: null, ms: Date.now() - started }, `Refused: ${message}`, [])); return res.status(status).json({ ok: false, ...extra, message }); };
+  if (!cid || !page.sides.includes(side)) return refuse(403, REFUSALS.side);
+  const addr = ipOf(req); const m = AV_MINUTE.hit(addr); const d = m.ok ? AV_DAY.hit(addr) : m;
+  if (!m.ok || !d.ok) { res.set('Retry-After', String((m.ok ? d : m).retry_after)); return refuse(429, m.ok ? MESSAGES.rate_day : MESSAGES.rate, { limited: true }); }
+  const question = String(b.question || '').trim(); if (!question) return refuse(400, REFUSALS.empty);
+  if (question.length > MAX_QUESTION) return refuse(400, REFUSALS.long);
+  const turns = Array.isArray(b.history) ? b.history : []; if (turns.length > MAX_TURNS) return refuse(400, REFUSALS.turns);
+  // The page's moment, never the story clock. An as_of from the page must fall inside the page's own story window.
+  const moment = pageMoment(page); const through = page.through ? new Date(page.through).toISOString() : moment;
+  let asOf = moment; if (b.as_of != null && b.as_of !== '') { const x = asOfIso(b.as_of); if (!x || x < moment || x > through) return refuse(403, REFUSALS.moment); asOf = x; }
+  const at = new Date(asOf);
+  const context = typeof b.context === 'string' ? b.context.slice(0, 300) : b.context ? JSON.stringify(b.context).slice(0, 300) : '';
+  const history = turns.filter((h) => h && typeof h.text === 'string').map((h) => ({ role: h.role === 'model' || h.role === 'aviator' ? 'model' : 'user', text: h.text.slice(0, 2000) }));
+  const tools = cid === AS ? TOOLS : NF_TOOLS; const S = SIDE[cid]; const results = [];
+  // Every tool that takes as_of reads at the page's moment or earlier, whatever the model passes.
+  const callTool = (name, args) => { const t = tools.find((x) => x.name === name); const a = { ...(args || {}) };
+    if (t && t.input && 'as_of' in t.input && (!a.as_of || !asOfIso(a.as_of) || new Date(asOfIso(a.as_of)) > at)) a.as_of = asOf;
+    const r = withVia(via, () => present(call(cid, name, a))); results.push(r); return r; };
+  const q = `${question}\n(As of ${fmtET(at)}.${context ? ` On screen: ${context}.` : ''})`;
+  let out; try { out = await Aviator.ask({ question: q, history, tools, callTool, side: { person: S.person, company: S.company, other: S.other }, clock: fmtET(at), routes: Aviator.modelRoutes() }); } catch (e) { console.error(e); out = { ok: false, status: 500, message: 'Aviator failed.' }; }
+  // The access log holds the question's length, the tools called, the model route and the time taken: never the question or the answer.
+  withVia(via, () => log(cid, 'aviator', [], { question_chars: question.length, tools: (out.tools_called || []).map((t) => t.tool), model_route: out.model ? `${out.route || 'primary'} · ${out.model}` : null, ms: Date.now() - started, as_of: asOf }, out.ok ? `Answered from ${out.tools_called.length} tool call(s)` : out.capped ? 'Daily model cap reached' : 'No answer', []));
+  if (!out.ok) return res.status(out.capped ? 429 : 503).json({ ok: false, limited: !!out.capped, message: out.capped ? MESSAGES.cap : /no model key/.test(out.message || '') ? 'Aviator is not available on this server.' : 'Ask again in a moment. Aviator did not receive an answer.' });
+  res.json({ ok: true, answer: plainAnswer(out.answer), read: recordsRead(out.answer, results), side, as_of: asOf, as_of_eastern: fmtET(at) });
+}
+
+// ---------- Public read route (/public/<side>/tools/<name>) ----------
+// No token: a hosted page reads its side's records here. Only read tools and the side's refusals answer, with that side's
+// own scopes and refusals; every write is refused; each call is logged under public-<side>; a per-address limit applies.
+const PUBLIC_READ = { [AS]: new Set([...TOOLS, ...BOUNDARY.filter((t) => !WRITE_NAMES.has(t.name)), ...ASHBY_REFUSALS].map((t) => t.name)), [NF]: new Set([...NF_TOOLS, ...NF_REFUSALS].map((t) => t.name)) };
+const PUBLIC_REFUSED = new Set([...WRITE_NAMES, ...GOV_TOOLS[AS].map((t) => t.name), ...GOV_TOOLS[NF].map((t) => t.name), 'run_readonly_sql', 'get_access_log', 'ask_aviator']);
+const publicCors = (res) => res.set({ 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'content-type', 'Access-Control-Max-Age': '600' });
+app.options('/public/:side/tools/:name', (req, res) => publicCors(res).status(204).end());
+app.options('/public/:side/tools', (req, res) => publicCors(res).status(204).end());
+app.get('/public/:side/tools', (req, res) => { publicCors(res); const cid = SIDE_CID[String(req.params.side).toLowerCase()]; if (!cid) return res.status(404).json({ result: 'Not found', message: 'Side is ashby or northfield.' });
+  res.json({ side: req.params.side, reads: [...(cid === AS ? ALL_TOOLS : ALL_NF_TOOLS)].filter((t) => PUBLIC_READ[cid].has(t.name)).map((t) => ({ name: t.name, description: t.description })) }); });
+app.all('/public/:side/tools/:name', (req, res) => {
+  publicCors(res); const side = String(req.params.side).toLowerCase(); const cid = SIDE_CID[side]; const name = String(req.params.name);
+  if (!cid) return res.status(404).json({ result: 'Not found', message: 'Side is ashby or northfield.' });
+  const hit = PUBLIC_MINUTE.hit(ipOf(req)); if (!hit.ok) return res.status(429).set('Retry-After', String(hit.retry_after)).json({ result: 'Rate limited', message: MESSAGES.public_rate });
+  const via = { id: `public-${side}`, user: 'Public read route' }; const args = { ...req.query, ...(req.body && typeof req.body === 'object' ? req.body : {}) };
+  if (!PUBLIC_READ[cid].has(name)) {
+    const known = PUBLIC_REFUSED.has(name) || [...SESSION_TOOLS(cid)].some((t) => t.name === name);
+    withVia(via, () => log(cid, name, [], args, known ? 'Refused: not a public read' : 'Not found', []));
+    return res.status(known ? 403 : 404).json({ result: known ? 'Refused' : 'Not found', message: known ? `${name} is not available on the public read route. It changes records or reads beyond a page's view; ${SIDE[cid].person} does it in Trading Grid.` : `No read tool ${name} for ${SIDE[cid].company}.` });
+  }
+  for (const k of ['days', 'limit']) if (typeof args[k] === 'string' && args[k] !== '' && !Number.isNaN(Number(args[k]))) args[k] = Number(args[k]);
+  for (const k of ['include_warehouse', 'lines', 'list']) if (typeof args[k] === 'string') args[k] = args[k] === 'true';
+  if (typeof args.pos === 'string') args.pos = args.pos.split(',');
+  res.json(withVia(via, () => call(cid, name, args)));
+});
+app.get('/limits', (req, res) => res.json({ aviator_per_address_per_minute: LIMITS.aviator_per_minute, aviator_per_address_per_day: LIMITS.aviator_per_day, public_reads_per_address_per_minute: LIMITS.public_per_minute, model_calls: modelBudget() }));
 app.get('/openapi.json', (req, res) => { const f = new URL('../openapi/openapi.json', import.meta.url); if (existsSync(f)) res.type('json').send(readFileSync(f)); else res.status(404).send('Not built'); });
 app.get('/admin/:token', (req, res) => { const cid = cidOf(req, res); if (cid) res.type('html').send(adminPage(adminData(cid, req.params.token))); });
 app.post('/admin/:token/scopes', (req, res) => {

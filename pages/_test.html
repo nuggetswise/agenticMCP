@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aviator route test</title>
+<style>body{font:14px/1.5 system-ui,sans-serif;max-width:640px;margin:32px auto;padding:0 16px;color:#0f1b2d}textarea{width:100%;min-height:60px;font:inherit}button,select{font:inherit;height:36px}#log div{margin:8px 0;padding:8px 12px;border:1px solid #e7e9ec;border-radius:10px}.q{background:#e8f0ff}.r{font-size:12px;color:#66677b}</style></head>
+<body>
+<h1>Aviator route test</h1>
+<p>Server test page for POST /aviator/&lt;page token&gt;. Fictional data. Not a prototype.</p>
+<label>Side <select id="side"><option value="ashby">Ashby</option><option value="northfield">Northfield</option></select></label>
+<form id="f"><textarea id="q" aria-label="Question"></textarea><button id="send" type="submit">Ask</button></form>
+<div id="log" role="log" aria-live="polite"></div>
+<script>
+(function () {
+  "use strict";
+  var TOKEN = "test-C3PPJLhbsFo1", hist = { ashby: [], northfield: [] };
+  var $ = function (i) { return document.getElementById(i); };
+  var add = function (cls, text, read) { var d = document.createElement("div"); d.className = cls; d.textContent = text;
+    if (read && read.length) { var r = document.createElement("p"); r.className = "r"; r.textContent = "Read: " + read.map(function (x) { return x.name; }).join(", "); d.appendChild(r); }
+    $("log").appendChild(d); };
+  $("f").addEventListener("submit", function (e) {
+    e.preventDefault(); var q = $("q").value.trim(), side = $("side").value; if (!q) return;
+    add("q", q); $("q").value = ""; $("send").disabled = true;
+    fetch("/aviator/" + encodeURIComponent(TOKEN), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question: q, side: side, context: "Aviator route test", history: hist[side].slice(-10) }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { if (j.ok) { hist[side].push({ role: "user", text: q }, { role: "model", text: j.answer }); add("a", j.answer, j.read); } else add("a", j.message || "No answer."); })
+      .catch(function () { add("a", "The server did not answer."); })
+      .then(function () { $("send").disabled = false; });
+  });
+})();
+</script>
+</body></html>

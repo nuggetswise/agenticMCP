@@ -4,8 +4,10 @@
 // so the key never reaches a page. Nothing here knows any record: every fact in an answer comes from a tool result.
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
+import { takeModelCall, MESSAGES } from './limits.js';
 
-const API = 'https://generativelanguage.googleapis.com/v1beta/models';
+// GEMINI_API_BASE points a local test at a stand-in model; the server uses Google's endpoint.
+export const modelApi = () => (process.env.GEMINI_API_BASE || 'https://generativelanguage.googleapis.com/v1beta/models').replace(/\/$/, '');
 // Model routes in order: the primary key with its models, then the secondary key with its model. A quota (429) or busy (503)
 // answer moves to the next route, so a spent primary key falls back to the secondary. Keys never leave the server.
 export const modelRoutes = (env = process.env) => [
@@ -97,7 +99,8 @@ export async function ask({ question, history = [], tools, callTool, side, clock
   const body = (last) => ({ systemInstruction: { parts: [{ text: instruction({ ...side, clock }) }] }, contents, tools: [{ functionDeclarations: declarations(tools) }], toolConfig: { functionCallingConfig: { mode: last ? 'NONE' : force ? 'ANY' : 'AUTO' } }, generationConfig: { temperature: 0 } });
   const called = []; let model = null; let force = false;
   // A busy (503) or rate-limited (429) answer on every route is retried twice after a short wait; one model call never waits past 60 seconds.
-  const post = async (rt, last) => { try { return await fetchImpl(`${API}/${rt.model}:generateContent`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': rt.key }, body: JSON.stringify(body(last)), signal: AbortSignal.timeout(60000) }); } catch (e) { return { ok: false, status: 503, text: async () => `No answer from the model in time (${e.name})` }; } };
+  // Every model call counts against the daily cap; once it is reached the question gets the cap's plain message.
+  const post = async (rt, last) => { if (!takeModelCall()) return { ok: false, status: 429, capped: true, text: async () => MESSAGES.cap }; try { return await fetchImpl(`${modelApi()}/${rt.model}:generateContent`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': rt.key }, body: JSON.stringify(body(last)), signal: AbortSignal.timeout(60000) }); } catch (e) { return { ok: false, status: 503, text: async () => `No answer from the model in time (${e.name})` }; } };
   for (let turn = 0; turn < maxTurns; turn++) {
     let data = null, err = null;
     for (let round = 0; round < 3 && !data; round++) {
@@ -105,6 +108,7 @@ export async function ask({ question, history = [], tools, callTool, side, clock
     for (const rt of model ? [model, ...routes.filter((x) => x !== model)] : routes) {
       const r = await post(rt, turn === maxTurns - 1);
       if (r.ok) { data = await r.json(); model = rt; break; }
+      if (r.capped) return { ok: false, status: 429, capped: true, message: MESSAGES.cap, tools_called: called };
       err = { status: r.status, text: (await r.text()).slice(0, 300) }; if (![404, 429, 500, 503].includes(r.status)) break; // unknown or busy model: try the next one
     }
     if (err && ![429, 503].includes(err.status)) break;

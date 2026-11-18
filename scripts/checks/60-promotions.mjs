@@ -46,7 +46,7 @@ export default function ({ db, ash, nf, ok, eq, none, n, ROOT }) {
     'No product activity (#) on record for # to #', 'Rate # per CA is above the # agreed on deal NFP#', 'Order NR# was placed on #']);
   // Scan-based: units recomputed from Northfield's 852 store sales; only the two reported weeks (18 to 31 October) exist.
   eq('promotions.scan_units_from_852', [rows[0].recomputed_qty, rows[1].recomputed_qty], [n("SELECT sum(sold) n FROM store_activity WHERE sku = 'ASH-TRL-09' AND period_start >= '2026-10-18' AND period_end <= '2026-10-31'"), 0]);
-  eq('promotions.852_weeks_on_record', db.prepare("SELECT DISTINCT period_start FROM store_activity WHERE sku = 'ASH-TRL-09' ORDER BY 1").all().map((r) => r.period_start), ['2026-10-18', '2026-10-25']);
+  eq('promotions.852_weeks_on_record', db.prepare("SELECT DISTINCT period_start FROM store_activity WHERE sku = 'ASH-TRL-09' ORDER BY 1").all().map((r) => r.period_start), ['2026-09-20', '2026-09-27', '2026-10-04', '2026-10-11', '2026-10-18', '2026-10-25']); // four prior weeks added on 18 November 2026 for P9's 4-week averages
   // Bill-back: cases shipped on Ashby's ship notices in the promoted period (Eastern ship date).
   {
     const shipped = (sku, from, to) => db.prepare("SELECT s.shipped_at, l.qty FROM shipment_lines l JOIN shipments s ON s.shipment_id = l.shipment_id JOIN orders o ON o.po = l.po WHERE o.supplier_id = 'ASHBY' AND l.sku = ? AND l.uom = 'CA'").all(sku)

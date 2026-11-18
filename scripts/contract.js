@@ -85,7 +85,10 @@ for (const [id, c] of Object.entries(CLAIMS)) {
     if (at >= 0) { const st = src.indexOf('{', at); let d = 0, i = st, q = false; for (; i < src.length; i++) { const ch = src[i]; if (q) { if (ch === '\\') i++; else if (ch === '"') q = false; } else if (ch === '"') q = true; else if (ch === '{') d++; else if (ch === '}' && --d === 0) break; } m = [null, src.slice(st, i + 1)]; }
     if (!m) r.numbers.push({ claim: 'fixture', on_screen: 'fixture not found in source', world: '' });
     else { const fx = JSON.parse(m[1]);
-      const mine = buyerFixture(db, fx.pos.map((p) => p.id), c.today); const norm = normOrder; const diff = fx.pos.filter((p, i) => norm(p) !== norm(mine[i])).map((p) => p.id);
+      const mine = buyerFixture(db, fx.pos.map((p) => p.id), c.today); const norm = normOrder;
+      // A screen built before 17 November 2026 holds the fixture without the ship notices and receiving advice added that day (world/data/buyer-shipments.json).
+      const later = JSON.parse(readFileSync(join(ROOT, 'world', 'data', 'buyer-shipments.json'), 'utf8')).ev; const whole = (p) => ({ ...p, ev: [...p.ev, ...(later[p.id] || [])] });
+      const diff = fx.pos.filter((p, i) => norm(p) !== norm(mine[i]) && norm(whole(p)) !== norm(mine[i])).map((p) => p.id);
       r.engine = { orders: fx.pos.length, identical_to_world: fx.pos.length - diff.length, differ: diff.slice(0, 12) }; if (diff.length) r.numbers.push({ claim: 'order records', on_screen: `${diff.length} orders differ`, world: diff.slice(0, 6).join(', ') }); }
   }
   const srcLines = src.replace(/<style[\s\S]*?<\/style>/g, ' ').replace(/<[^>]+>/g, '\n').split(/\n|(?<=['"`]),(?=\s*['"`\[])/).map((x) => x.trim().replace(/^[\[\('"`]+|[\]\)'"`,;]+$/g, '')).filter(Boolean);

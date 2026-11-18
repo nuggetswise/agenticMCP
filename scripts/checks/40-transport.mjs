@@ -23,11 +23,14 @@ export default function ({ db, ash, nf, ok, eq, none, n, ROOT }) {
   const collect = `SELECT s.shipment_id, s.po FROM shipments s JOIN orders o ON o.po = s.po JOIN shipment_plans p ON p.po = s.po
     WHERE o.stream = 'replenishment' AND s.ship_from IN ('KIN-GRV','KIN-JOL') AND p.planned_departure >= '${new Date(`${COLLECT_FROM}T05:00:00Z`).toISOString()}'`;
   none('transport.routing_request_per_collect_shipment', `SELECT c.po FROM (${collect}) c WHERE (SELECT count(*) FROM routing_requests r WHERE r.po = c.po AND r.shipment_id = c.shipment_id AND r.status = 'Routed') <> 1`);
-  none('transport.routing_only_for_collect_shipments', `SELECT request_id FROM routing_requests WHERE po NOT IN (SELECT po FROM (${collect}))`);
+  none('transport.routing_only_for_collect_shipments', `SELECT request_id FROM routing_requests WHERE po NOT IN (SELECT po FROM (${collect})) AND request_id <> 'RR-460241'`); // RR-460241 is P5's wholesale collect order, routed on Priya Raman's approval (18 November 2026)
   none('transport.routing_requested_before_due', 'SELECT request_id, sent_at, due_by FROM routing_requests WHERE sent_at >= due_by');
   none('transport.instructions_follow_request_and_precede_pickup', 'SELECT request_id FROM routing_requests WHERE routed_at <= sent_at OR routed_at >= pickup_from OR pickup_from <> ready_at OR scac <> \'LKLF\' OR carrier_id <> \'LAKELINE\'');
-  // P5 shows NR-460241's routing request as missing at its clock; the world holds none.
-  eq('transport.p5_routing_request_still_missing', n("SELECT count(*) n FROM documents WHERE doc_type = '753' AND po = 'NR-460241'"), 0);
+  // P5 shows NR-460241's routing request as missing at its clock (17:12 ET, 8 December). Priya Raman approves it at 17:18; Trading Grid
+  // sends it at 17:19, Northfield acknowledges it and answers with routing instructions before its 10:00 deadline next morning.
+  { const g = (sql) => db.prepare(sql).get(); const rr = g("SELECT doc_id, sent_at FROM documents WHERE doc_type = '753' AND po = 'NR-460241'"); const fa = g(`SELECT sent_at, sender_id FROM documents WHERE doc_type = '997' AND answers_doc_id = '${rr.doc_id}'`); const ri = g("SELECT sent_at, sender_id FROM documents WHERE doc_type = '754' AND po = 'NR-460241'"); const ap = g("SELECT at, json_extract(data, '$.released_by') by FROM events WHERE kind = 'tg.release' AND po = 'NR-460241'"); const r = g("SELECT status, load_id, due_by, pickup_from FROM routing_requests WHERE request_id = 'RR-460241'");
+    eq('transport.p5_routing_request_sent_on_approval_and_answered', [n("SELECT count(*) n FROM documents WHERE doc_type = '753' AND po = 'NR-460241' AND sent_at <= '2026-12-08T22:12:00.000Z'"), ap.by, ap.at < rr.sent_at, rr.sent_at, rr.sent_at < fa.sent_at, fa.sender_id, fa.sent_at < ri.sent_at, ri.sender_id, ri.sent_at < '2026-12-09T15:00:00.000Z', r.status, r.load_id, rr.sent_at < r.due_by, r.pickup_from],
+      [0, 'Priya Raman', true, '2026-12-08T22:19:00.000Z', true, 'NORTHFIELD', true, 'NORTHFIELD', true, 'Routed', 'NRL-460241', true, '2026-12-10T20:00:00.000Z']); }
   // The assigned pickup on the 754 is the one Lakeline's pickup_missed record names, for all 18 cases.
   const missed = db.prepare("SELECT c.po, c.at, c.assigned_pickup FROM carrier_events c WHERE c.kind = 'pickup_missed' ORDER BY c.po").all();
   eq('transport.assigned_pickup_matches_carrier_record', [missed.length, missed.filter((m) => n('SELECT count(*) n FROM routing_requests WHERE po = ? AND pickup_from = ?', m.po, m.assigned_pickup) === 1).length], [18, 18]);
@@ -41,9 +44,9 @@ export default function ({ db, ash, nf, ok, eq, none, n, ROOT }) {
 
   // Milestones agree with the warehouse departure scan and the 856, Lakeline's delivery receipt and the 861.
   none('transport.departure_milestone_is_the_departure_scan_and_856', `SELECT l.load_id FROM loads l JOIN shipments s ON s.shipment_id = l.shipment_id
-    WHERE (SELECT count(*) FROM shipment_status m WHERE m.load_id = l.load_id AND m.status_code = 'AF') <> 1
+    WHERE l.load_id <> 'NRL-460241' AND ((SELECT count(*) FROM shipment_status m WHERE m.load_id = l.load_id AND m.status_code = 'AF') <> 1
        OR (SELECT at FROM shipment_status m WHERE m.load_id = l.load_id AND m.status_code = 'AF') <> s.shipped_at
-       OR NOT EXISTS (SELECT 1 FROM warehouse_scans w WHERE w.po = l.po AND w.kind = 'departure_scan' AND w.at = s.shipped_at)`);
+       OR NOT EXISTS (SELECT 1 FROM warehouse_scans w WHERE w.po = l.po AND w.kind = 'departure_scan' AND w.at = s.shipped_at))`); // NRL-460241 (P5) has routing instructions only: no carrier status was asked for or added
   none('transport.delivery_milestone_is_the_delivery_receipt_before_861', `SELECT l.load_id FROM loads l
     WHERE (SELECT at FROM shipment_status m WHERE m.load_id = l.load_id AND m.status_code = 'D1') IS NOT (SELECT max(c.at) FROM carrier_events c WHERE c.po = l.po AND c.kind = 'delivery_receipt')
        OR (SELECT at FROM shipment_status m WHERE m.load_id = l.load_id AND m.status_code = 'D1') >= (SELECT min(r.received_at) FROM receipts r WHERE r.shipment_id = l.shipment_id)`);

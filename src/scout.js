@@ -11,7 +11,7 @@ import { createHash } from 'node:crypto';
 import { P5, VARIATION_FIELDS } from '../world/p5-physical.js';
 import { fmtET } from '../world/lib.js';
 import * as D from './domain.js';
-import { declarations, modelRoutes } from './aviator.js';
+import { declarations, modelArgs, modelRoutes } from './aviator.js';
 
 const MIN = 60000;
 const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -19,7 +19,7 @@ const iso = (ms) => new Date(ms).toISOString();
 const SESSIONS = new Map(); const MAX_SESSIONS = 60;
 
 // ---------- Policy: what each action needs, and what no one may change ----------
-// mode: 'suggest' (Scout may only suggest; a person does it by hand), 'approve' (Priya approves each), 'policy' (runs under her standing policy).
+// mode: 'suggest' (the model may only suggest; a person does it by hand), 'approve' (Priya approves each), 'policy' (runs under her standing policy).
 export const ACTIONS = {
   kinross_load:       { label: 'Ask Kinross to load a staged carton', actor: 'Kinross', rule: 'AP-3.2', mode: 'approve', editable: true },
   kinross_relabel:    { label: 'Ask Kinross to relabel a carton with a new SSCC', actor: 'Kinross', rule: 'AP-3.2', mode: 'approve', editable: true },
@@ -42,7 +42,7 @@ const HERO_ACTIONS = ['kinross_load', 'kinross_relabel', 'kinross_overpack', 'ki
 const QUEUE_ACTIONS = ['erp_correct_invoice', 'send_routing_request', 'kinross_relabel_cartons', 'ask_order_desk_shortage'];
 export const GUARDRAILS = [
   { id: 'AP-1.4', owner: 'Administrator', text: 'Never edit a ship notice to match the order; a ship notice is built only from the confirmed load scan.' },
-  { id: 'AP-7.1', owner: 'Administrator', text: 'Never change a Kinross record without Kinross accepting the change; Scout sends tasks, Kinross confirms.' },
+  { id: 'AP-7.1', owner: 'Administrator', text: 'Never change a Kinross record without Kinross accepting the change; the session sends tasks, Kinross confirms.' },
   { id: 'AP-3.3', owner: 'Administrator', text: 'Never report a charge as avoided unless Northfield’s own record confirms it.' },
 ];
 
@@ -77,7 +77,7 @@ function trace(s, actor, type, what, detail = {}) {
 }
 // Write attribution (T2.3 story 1): every proposal state change records who proposed, the authority (rule and mode),
 // who approved and the outcome. The server copies these into the access log.
-const MODE_APPROVER = { policy: 'Standing policy, set by Priya Raman', suggest: 'None: Scout may only suggest' };
+const MODE_APPROVER = { policy: 'Standing policy, set by Priya Raman', suggest: 'None: the model may only suggest' };
 function audit(s, p, outcome) {
   const approver = p.taken_over_by || p.approved_by || (p.needs === 'approve' ? (p.state === 'Awaiting approval' ? 'Priya Raman (awaiting)' : p.rejected_by || 'Priya Raman') : MODE_APPROVER[p.needs]);
   s.audit.push({ session: s.id, proposal: p.id, action: p.action, agent: p.by, authority_rule: ACTIONS[p.action].rule, authority_mode: p.needs, approver, outcome, clock: fmtET(iso(s.clock)) });
@@ -111,7 +111,7 @@ function ruleQueue(db, s) {
   const inv = one('erp.invoice_draft'), route = one('routing.request'), stock = one('wms.inventory'), label = one('wms.label_scan');
   s.queue = [];
   const row = (po, r, action, args) => { s.queue.push({ po, ...r }); if (action) propose(db, s, 'Rule engine', action, args, { rationale: r.problem }); };
-  if (inv) row(inv.po, { kind: 'invoice', problem: `Invoice draft ${inv.d.invoice} line ${inv.d.line} bills ${inv.d.billed} cases; ${inv.d.shipped} shipped; $${inv.d.over_value.toFixed(2)} over`, consequence: `the invoice batch sends ${inv.d.billed} cases billed against ${inv.d.shipped} shipped`, cutoff_minutes: inv.d.batch_sends_in_minutes, cutoff: 'Invoice batch', source: 'Supplier ERP · API', now: `${inv.d.billed} cases`, after: `${inv.d.shipped} cases`, what: `Invoice ${inv.d.invoice} line ${inv.d.line}`, goes_to: 'Supplier ERP · API' }, 'erp_correct_invoice', { po: inv.po, invoice: inv.d.invoice, line: inv.d.line, qty: inv.d.shipped });
+  if (inv) row(inv.po, { kind: 'invoice', problem: `Invoice draft ${inv.d.invoice} line ${inv.d.line} bills ${inv.d.billed} cases; ${inv.d.to_ship} allocated to ship; $${inv.d.over_value.toFixed(2)} over`, consequence: `the invoice batch sends ${inv.d.billed} cases billed against ${inv.d.to_ship} allocated to ship`, cutoff_minutes: inv.d.batch_sends_in_minutes, cutoff: 'Invoice batch', source: 'Supplier ERP · API', now: `${inv.d.billed} cases`, after: `${inv.d.to_ship} cases`, what: `Invoice ${inv.d.invoice} line ${inv.d.line}`, goes_to: 'Supplier ERP · API' }, 'erp_correct_invoice', { po: inv.po, invoice: inv.d.invoice, line: inv.d.line, qty: inv.d.to_ship });
   if (route) row(route.po, { kind: 'routing', problem: `Collect freight, ${route.d.cases} cases from Kinross Joliet; no routing request sent`, consequence: `Northfield books no pickup for the ${route.d.cases} cases`, cutoff_minutes: route.d.due_in_minutes, cutoff: 'Routing request due', source: 'EDI 753', now: 'Not sent', after: `Sent for ${route.d.cases} cases`, what: 'Routing request', goes_to: 'Northfield transportation · EDI 753' }, 'send_routing_request', { po: route.po, cases: route.d.cases });
   if (stock) { s.grove = { po: stock.po, sku: stock.d.sku, ordered: stock.d.ordered_across_orders, orders: stock.d.order_list || [], cutoff_minutes: stock.d.change_cutoff_in_minutes, };
     row(stock.po, { kind: 'stock', cutoff_minutes: stock.d.change_cutoff_in_minutes, cutoff: 'Order-change cutoff', source: 'Kinross inventory · API', what: 'Which order ships short', goes_to: 'Ashby order desk · Task' }, 'ask_order_desk_shortage', { po: stock.po, sku: stock.d.sku }); }
@@ -156,8 +156,8 @@ export const READS = {
     run: (db, s) => ({ tasks: s.tasks }) },
   read_rules: { description: 'Rules from the catalogue by id (for example NF-2.1, NF-4.1, AP-2.2, AP-5.1) or by topic words.', input: { ids: z.array(z.string()).optional(), topic: z.string().optional() },
     run: (db, s, a) => a.ids?.length ? { rules: a.ids.map((id) => D.rule(db, id)).filter(Boolean) } : D.rules(db, { topic: a.topic || '' }) },
-  read_policy: { description: 'What each action needs (Scout may only suggest, Priya approves, or it runs under her standing policy), the rule behind it, and the administrator guardrails no one may change.', input: {},
-    run: (db, s) => ({ actions: Object.fromEntries(Object.entries(ACTIONS).map(([k, a]) => [k, { does: a.label, done_by: a.actor, rule: a.rule, needs: s.modes[k] === 'policy' ? 'Runs under Priya’s standing policy' : s.modes[k] === 'approve' ? 'Priya approves' : 'Scout may only suggest; Priya does it by hand' }])), guardrails: GUARDRAILS }) },
+  read_policy: { description: 'What each action needs (the model may only suggest, Priya approves, or it runs under her standing policy), the rule behind it, and the administrator guardrails no one may change.', input: {},
+    run: (db, s) => ({ actions: Object.fromEntries(Object.entries(ACTIONS).map(([k, a]) => [k, { does: a.label, done_by: a.actor, rule: a.rule, needs: s.modes[k] === 'policy' ? 'Runs under Priya’s standing policy' : s.modes[k] === 'approve' ? 'Priya approves' : 'The model may only suggest; Priya does it by hand' }])), guardrails: GUARDRAILS }) },
   read_findings: { description: 'Rule risks the rule engine currently reports on NR-460207 (Northfield and Ashby rules), with the minutes left before the trailer seal.', input: {},
     run: (db, s) => ({ findings: ruleDetect(db, s, true), minutes_to_seal: Math.max(0, Math.round((Date.parse(s.world.seal_at) - s.clock) / MIN)) }) },
   read_proposals: { description: 'Every action proposed in this session, with its state (awaiting approval, approved, rejected, executed, failed, refused) and its result.', input: {},
@@ -175,8 +175,8 @@ export function propose(db, s, by, action, args = {}, why = {}) {
   const bad = validate(s, action, args); if (bad) { trace(s, 'Trading Grid', 'rule', `Refused ${action}`, { by, reason: bad }); return { state: 'Refused', message: bad }; }
   const p = { id: `SP-${s.proposals.length + 1}`, key, action, args, by, po: args.po || s.world.po, queue: by === 'Rule engine', rationale: why.rationale || null, alternatives: why.alternatives || [], state: 'Awaiting approval', needs: s.modes[action], at: fmtET(iso(s.clock)) };
   s.proposals.push(p);
-  trace(s, by, by === 'Scout' ? 'ai' : 'rule', `Proposed: ${def.label}`, { proposal: p.id, po: p.po, args, rationale: p.rationale, alternatives: p.alternatives, needs: p.needs });
-  if (p.needs === 'suggest') { p.state = 'Suggested'; audit(s, p, 'Suggested; Priya does it by hand'); return { state: 'Suggested', proposal: p.id, message: 'Scout may only suggest this action; Priya does it by hand.' }; }
+  trace(s, by, by === 'Model' ? 'ai' : 'rule', `Proposed: ${def.label}`, { proposal: p.id, po: p.po, args, rationale: p.rationale, alternatives: p.alternatives, needs: p.needs });
+  if (p.needs === 'suggest') { p.state = 'Suggested'; audit(s, p, 'Suggested; Priya does it by hand'); return { state: 'Suggested', proposal: p.id, message: 'The model may only suggest this action; Priya does it by hand.' }; }
   if (p.needs === 'policy') return execute(db, s, p, 'Standing policy');
   audit(s, p, 'Awaiting approval');
   return { state: 'Awaiting approval', proposal: p.id, approver: 'Priya Raman', rule: def.rule };
@@ -203,7 +203,7 @@ export function decide(db, s, proposalId, decision, by = 'Priya Raman', note, ch
   const p = s.proposals.find((x) => x.id === proposalId);
   if (!p) return { state: 'Refused', message: `No proposal ${proposalId}` };
   if (p.state !== 'Awaiting approval') return { state: 'Refused', message: `${proposalId} is ${p.state.toLowerCase()}; an approval cannot be replayed.` };
-  // Edit suggestion (R15): the person sets this proposal aside and does the case by hand. Scout stops proposing in this session.
+  // Edit suggestion (R15): the person sets this proposal aside and does the case by hand. The model stops proposing in this session.
   if (decision === 'edit' && p.po !== s.world.po) { p.state = 'Taken over'; p.taken_over_by = by; p.note = note || null;
     trace(s, by, 'human', `Edit suggestion: ${by} set ${p.id} aside and does ${p.po} by hand`, { action: p.action, po: p.po, note: p.note }); audit(s, p, `Taken over by ${by}; done by hand${p.note ? `: ${p.note}` : ''}`); return { state: 'Taken over', proposal: p.id, by }; }
   if (decision === 'edit') { p.state = 'Taken over'; p.taken_over_by = by; p.note = note || null; s.handed_over = { by, proposal: p.id, note: p.note, at: fmtET(iso(s.clock)) }; s.agent.status = 'handed_to_person';
@@ -304,7 +304,8 @@ export function runBaseline(db, s, approve = (p) => decide(db, s, p, 'approve', 
 }
 
 // ---------- Scout: a model choosing reads and proposing actions ----------
-const AGENT_TOOLS = [
+// Exported so the model-schema check can read every declaration the model is sent.
+export const AGENT_TOOLS = [
   ...Object.entries(READS).map(([name, r]) => ({ name, description: r.description, input: r.input })),
   { name: 'propose_action', description: `Propose one action. The server decides whether it runs under policy or waits for Priya Raman, and refuses anything a rule or guardrail forbids. Actions: ${Object.entries(ACTIONS).map(([k, a]) => `${k} (${a.label})`).join('; ')}. Give the arguments the action needs (sscc for carton tasks; sku and cases for replacements; line and shipped for notify_buyer_short), a short rationale grounded in records you read, and the alternatives you considered with why you did not choose them.`,
     input: { action: z.enum(Object.keys(ACTIONS).filter((k) => !QUEUE_ACTIONS.includes(k))), sscc: z.string().optional(), sku: z.string().optional(), cases: z.number().int().optional(), line: z.number().int().optional(), shipped: z.number().int().optional(), rationale: z.string().describe('One or two sentences citing the records read'), alternatives: z.array(z.string()).optional().describe('Options considered and why not chosen') } },
@@ -325,13 +326,13 @@ function waitAtLimit(s, ag, t0) {
   const aw = s.proposals.filter((p) => p.state === 'Awaiting approval' && !p.queue);
   ag.status = 'waiting_for_priya';
   const what = aw.length ? `${aw.map((p) => p.id).join(', ')} waits for Priya Raman` : 'nothing left it may do; Priya Raman decides what is open';
-  trace(s, 'Scout', 'system', `At its limit; waiting: ${what}`, { tool_calls: ag.tool_calls, ms: Date.now() - t0 });
+  trace(s, 'Model', 'system', `At its limit; waiting: ${what}`, { tool_calls: ag.tool_calls, ms: Date.now() - t0 });
 }
 export async function runScout(db, s, { callModel, maxSteps = 12, maxToolCalls = 16, maxSessionCalls = 64, maxMs = 90000, event, paused = () => false } = {}) {
   // Pause and override are enforced here, before any model call: a paused Scout, or a case a person took over, gets no model turn.
   if (s.handed_over) return { ok: true, status: 'handed_to_person', awaiting: [] };
   if (paused()) { s.agent.status = 'paused'; trace(s, 'Trading Grid', 'system', 'Scout Agent is paused by the administrator; the event stays a plain task with no proposal', {}); return { ok: true, status: 'paused', awaiting: [] }; }
-  if (!callModel) return { ok: false, blocked: 'No model is configured on this server; Scout cannot run. Nothing was simulated in its place.' };
+  if (!callModel) return { ok: false, blocked: 'No model is configured on this server, so only the rule baseline runs. Nothing was simulated in its place.' };
   const ag = s.agent; const t0 = Date.now(); const turnStart = ag.tool_calls; ag.status = 'running';
   if (!ag.history.length) ag.history.push({ role: 'user', parts: [{ text: `Business event: Kinross load scan for shipment SHP-460207 shows ${s.load.base_loaded} of ${s.load.expected} cartons loaded. The rule engine reports: ${ruleDetect(null, s, true).map((f) => `${f.rule}: ${f.finding}`).join('; ')}. Clock: ${fmtET(iso(s.clock))}.` }] });
   else if (event) ag.history.push({ role: 'user', parts: [{ text: `New evidence at ${fmtET(iso(s.clock))}: ${event}` }] });
@@ -340,26 +341,26 @@ export async function runScout(db, s, { callModel, maxSteps = 12, maxToolCalls =
     if (paused()) { ag.status = 'paused'; trace(s, 'Trading Grid', 'system', 'Scout Agent paused by the administrator; stopped before its next step', {}); break; }
     if (Date.now() - t0 > maxMs || ag.tool_calls - turnStart >= maxToolCalls || ag.tool_calls >= maxSessionCalls) { waitAtLimit(s, ag, t0); break; }
     let data; try { data = await callModel({ systemInstruction: { parts: [{ text: INSTRUCTION(s) }] }, contents: ag.history, tools: [{ functionDeclarations: decl }], toolConfig: { functionCallingConfig: { mode: 'AUTO' } }, generationConfig: { temperature: 0 } }); ag.calls++; if (data?._route) (ag.routes ||= {})[data._route] = (ag.routes[data._route] || 0) + 1; }
-    catch (e) { ag.status = 'model_failed'; trace(s, 'Scout', 'system', 'Model call failed; no state was changed', { error: String(e.message || e).slice(0, 200) }); return { ok: false, status: ag.status }; }
+    catch (e) { ag.status = 'model_failed'; trace(s, 'Model', 'system', 'Model call failed; no state was changed', { error: String(e.message || e).slice(0, 200) }); return { ok: false, status: ag.status }; }
     // A pause that lands while the model is answering: nothing it returned is applied.
     if (paused()) { ag.status = 'paused'; trace(s, 'Trading Grid', 'system', 'Scout Agent paused by the administrator; the model’s last answer was not applied', {}); break; }
     const content = data?.candidates?.[0]?.content; const parts = content?.parts || []; const calls = parts.filter((p) => p.functionCall);
     const text = parts.map((p) => p.text || '').join('').trim();
     if (content) ag.history.push(content);
-    if (text) trace(s, 'Scout', 'ai', 'Scout said', { text: text.slice(0, 600) });
+    if (text) trace(s, 'Model', 'ai', 'Model said', { text: text.slice(0, 600) });
     if (!calls.length) { ag.status = s.proposals.some((p) => p.state === 'Awaiting approval' && !p.queue) ? 'waiting_for_priya' : 'done'; break; }
     const responses = []; let waiting = false; let blocked = null;
     for (const { functionCall: f } of calls) {
-      ag.tool_calls++; const args = f.args || {}; let result;
-      if (f.name === 'propose_action') { const { action, rationale, alternatives, ...rest } = args; result = propose(db, s, 'Scout', action, rest, { rationale, alternatives }); if (result.state === 'Awaiting approval') waiting = true; 
+      ag.tool_calls++; const args = { ...modelArgs(AGENT_TOOLS, f.name, f.args) }; let result;
+      if (f.name === 'propose_action') { const { action, rationale, alternatives, ...rest } = args; result = propose(db, s, 'Model', action, rest, { rationale, alternatives }); if (result.state === 'Awaiting approval') waiting = true; 
         if (result.state === 'Refused') { ag.refused = ag.refused || {}; ag.refused[action] = (ag.refused[action] || 0) + 1; if (ag.refused[action] >= 2) { blocked = result.message; result = { ...result, message: `${result.message} Refused twice: stop proposing ${action}; Priya Raman is told what is waiting.` }; } } }
-      else if (READS[f.name]) { result = read(db, s, f.name, args); trace(s, 'Scout', 'tool', `Read ${f.name}`, { args }); }
+      else if (READS[f.name]) { result = read(db, s, f.name, args); trace(s, 'Model', 'tool', `Read ${f.name}`, { args }); }
       else result = { result: 'Refused', message: `No tool ${f.name}` };
       responses.push({ functionResponse: { name: f.name, ...(f.id ? { id: f.id } : {}), response: { result } } });
     }
     ag.history.push({ role: 'user', parts: responses });
     if (waiting) { ag.status = 'waiting_for_priya'; }
-    if (blocked) { ag.status = 'waiting_for_priya'; trace(s, 'Scout', 'system', `Waiting for Priya Raman: ${blocked}`, { refused: ag.refused }); break; }
+    if (blocked) { ag.status = 'waiting_for_priya'; trace(s, 'Model', 'system', `Waiting for Priya Raman: ${blocked}`, { refused: ag.refused }); break; }
   }
   ag.ms += Date.now() - t0;
   return { ok: true, status: ag.status, awaiting: s.proposals.filter((p) => p.state === 'Awaiting approval' && !p.queue).map((p) => ({ id: p.id, action: p.action, args: p.args, rationale: p.rationale, alternatives: p.alternatives })) };
@@ -420,7 +421,7 @@ export async function replay(db, { variation = {}, policy = {}, callModel, appro
     trial = { asked, refused: asked.filter((a) => !a.applied).map((a) => `${a.action}: ${!ACTIONS[a.action] ? 'no such action' : a.from === a.to ? 'already in force' : `${a.rule} is locked (${a.from})`}`),
       in_force: { session: inForce.id, outcome: bf }, with_change: { session: base.id, outcome: b },
       differs: [...new Set([...pick(inForce), ...pick(base)])].filter((k) => pick(inForce).includes(k) !== pick(base).includes(k)).map((k) => { const [action, needs, state] = k.split('|'); return { action, needs, state, under: pick(base).includes(k) ? 'change' : 'rule in force' }; }) }; }
-  const sc = startSession(db, { variation, policy, label: 'Replay · Scout' });
+  const sc = startSession(db, { variation, policy, label: 'Replay · model run' });
   let run = await runScout(db, sc, { callModel, paused }); let rounds = 0;
   while (run.ok && run.status === 'waiting_for_priya' && approveAll && rounds++ < 8) { const p = sc.proposals.find((x) => x.state === 'Awaiting approval' && !x.queue); if (!p) break; const r = await decideAndResume(db, sc, p.id, 'approve', 'Test approver (replay)', { callModel, paused }); run = r.run; }
   return { variation: base.changes, evidence_cutoff: fmtET(P5.branch_at), ...(trial ? { policy_trial: trial } : {}), baseline: { session: base.id, outcome: b, trace: base.trace }, scout: run.status === 'paused' ? { session: sc.id, blocked: 'Scout Agent is paused; the model did not run', trace: sc.trace } : run.ok ? { session: sc.id, status: run.status, outcome: outcome(sc), overhead: { model_calls: sc.agent.calls, tool_calls: sc.agent.tool_calls, ms: sc.agent.ms, model_routes: sc.agent.routes || {} }, trace: sc.trace } : { session: sc.id, blocked: run.blocked || run.status, trace: sc.trace } };

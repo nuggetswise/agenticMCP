@@ -16,7 +16,7 @@
 import { z } from 'zod';
 import { createHash } from 'node:crypto';
 import { fmtET } from '../world/lib.js';
-import { declarations } from './aviator.js';
+import { declarations, modelArgs } from './aviator.js';
 
 export const MIN = 60000, H = 3600000;
 export const iso = (ms) => new Date(ms).toISOString();
@@ -195,7 +195,7 @@ When you are waiting for ${person} or another party, stop and say in one or two 
         break; }
       const responses = []; let waiting = false; let blocked = null;
       for (const { functionCall: f } of calls) {
-        ag.tool_calls++; const args = { ...(f.args || {}) }; let result;
+        ag.tool_calls++; const args = { ...modelArgs(AGENT_TOOLS, f.name, f.args) }; let result;
         if (f.name === 'propose_action') {
           const { action, rationale, alternatives, ...rest } = args;
           if (rest.record && s.handed?.[rest.record] && !s.handed[rest.record].reopened) result = { state: 'Refused', message: `${person} took ${rest.record} over; ${agent} proposes on it again only after a new business event.` };
@@ -260,7 +260,7 @@ When you are waiting for ${person} or another party, stop and say in one or two 
     outcome: spec.outcome(db, s, ctx), trace: s.trace, overhead: { model_calls: s.agent.calls, tool_calls: s.agent.tool_calls, ms: s.agent.ms, model_routes: s.agent.routes || {} }, ...extra })
     : { result: 'Invalid request', error: 'No such session; sessions live in memory and end when the server restarts.' };
 
-  return { spec, agent, prefix, ACTIONS, READS, TYPES, factsToVariation, branchWith, startSession, getSession, read, propose, decide, tick, advance, runBaseline, runAgent, decideAndResume, advanceAndResume, replay, compare, setup, view, outcome: (db, s) => spec.outcome(db, s, ctx), queue: (db, s) => spec.queue(db, s, ctx) };
+  return { spec, agent, prefix, ACTIONS, READS, TYPES, AGENT_TOOLS, factsToVariation, branchWith, startSession, getSession, read, propose, decide, tick, advance, runBaseline, runAgent, decideAndResume, advanceAndResume, replay, compare, setup, view, outcome: (db, s) => spec.outcome(db, s, ctx), queue: (db, s) => spec.queue(db, s, ctx) };
 }
 
 /** The six tools every runtime exposes on its connection, named <name>_start, _state, _decide, _setup, _baseline, _replay. */

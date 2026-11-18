@@ -3,6 +3,8 @@
 import { rng, et, addH, addD, etDay } from './lib.js';
 import { D, iso } from './log.js';
 import { ITEM, QUARTER } from './ref.js';
+/** Collect orders whose missed pickup is recorded from Lakeline's EDI 214 (P24, 18 November 2026): see world/stages/records.js. */
+export const PICKUP_FROM_214 = ['NR-46602', 'NR-46609', 'NR-46616'];
 
 export const CLOCK10 = et('2026-11-17', '11:00');
 export const CLOCK13 = et('2026-11-18', '09:00');
@@ -120,7 +122,10 @@ export function replenDocs(L, W, G) {
     if (!O.dep) continue;
     const cartons = []; for (const l of O.lines) for (let k = 0; k < ship[l.line]; k++) cartons.push({ sscc: sscc(serial++), line: l.line, qty: 1 });
     if (O.pattern === 'A') L.event({ at: addH(O.departed, -3), kind: 'wms.short_pick', po: O.po, system: 'Kinross warehouse system', party: 'KINROSS', channel: 'API', data: { line: 1, sku: O.lines[0].sku, ordered: O.lines[0].qty, picked: ship[1], site: O.site, note: 'Stock below the available-to-promise figure; remainder cancelled' } });
-    if (O.pattern === 'C') L.event({ at: O.dep, kind: 'carrier.pickup_missed', po: O.po, system: 'Lakeline Freight', party: 'LAKELINE', channel: 'Scanned document', data: { assigned_pickup: iso(O.dep), note: 'Collect freight not ready at the assigned pickup' } });
+    // 18 November 2026 (P24): for the three orders P24 opens on, Lakeline's missed pickup is recorded from its EDI 214 at 15:30
+    // with its 14:45 arrival, by the `records` stage. The record here is withdrawn in place, so no other event is renumbered.
+    if (O.pattern === 'C' && PICKUP_FROM_214.includes(O.po)) L.retireEvent(O.dep);
+    else if (O.pattern === 'C') L.event({ at: O.dep, kind: 'carrier.pickup_missed', po: O.po, system: 'Lakeline Freight', party: 'LAKELINE', channel: 'Scanned document', data: { assigned_pickup: iso(O.dep), note: 'Collect freight not ready at the assigned pickup' } });
     if (O.pattern === 'D') L.event({ at: O.ackAt, kind: 'erp.allocation', po: O.po, system: 'Supplier ERP', party: 'ASHBY', channel: 'API', data: { line: 1, ordered: O.lines[0].qty, allocated: ship[1], policy: 'Peak allocation policy' } });
     const shipId = `SHP-${id}`; const asnRef = `ASN-${id}`;
     L.event({ at: O.ackAt, kind: 'erp.shipment_planned', po: O.po, system: 'Supplier ERP', party: 'ASHBY', channel: 'API', data: { shipment: shipId, planned_departure: iso(O.dep), site: O.site, carrier: 'Lakeline Freight', cartons: cartons.length } });
@@ -195,7 +200,7 @@ export function replenDocs(L, W, G) {
     const qty = { ...ship }; const short = {}; const ns = {};
     for (const k of Object.keys(qty)) if (!qty[k]) delete qty[k];
     if (O.shortRcv) { const l = O.lines[0]; qty[l.line] = ship[l.line] - O.shortRcv; short[l.line] = O.shortRcv; ns[l.line] = cartons.filter((c) => c.line === l.line).slice(-O.shortRcv).map((c) => c.sscc); }
-    L.event({ at: addH(rcvAt, -0.6), kind: 'carrier.delivery_receipt', po: O.po, system: 'Lakeline Freight', party: 'LAKELINE', channel: 'Scanned document', data: { shipment: shipId, delivered: cartons.length, exceptions: 'None', seal: 'Intact' } });
+    L.event({ at: addH(rcvAt, -0.6), kind: 'carrier.delivery_receipt', po: O.po, system: 'Lakeline Freight', party: 'LAKELINE', channel: 'Portal API, image', data: { shipment: shipId, delivered: cartons.length, exceptions: 'None', seal: 'Intact' } });
     D.receipt(L, O, rcvAt, { ref: `RCV-${id}`, asnRef, qty, short, notScanned: ns, ...(s.rcvAt ? { numAt: rcvPlanned } : {}) });
     O.rcvAt = rcvAt; O.cartons = cartons;
   }

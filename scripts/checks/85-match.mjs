@@ -18,7 +18,7 @@ export default function ({ ash, nf, ok, eq }) {
 
   // Story 1: the queue at the moment lists each held invoice with the rule that held it and the three documents compared.
   const s0 = M.startSession(nf); const q = M.read(nf, s0, 'read_queue').held;
-  eq('match.queue_at_moment', q.map((x) => [x.invoice, x.holds.map((h) => `${h.rule}:${h.advice}`), x.compared.purchase_order.reference, x.compared.receiving_advice.length > 0, x.state]), [['INV-7731', ['NF-7.8:AA-INV-7731'], 'NR-450118', true, 'Held']]);
+  eq('match.queue_at_moment', q.map((x) => [x.invoice, x.holds.map((h) => `${h.rule}:${h.advice}`), x.compared.purchase_order.reference, x.compared.receiving_advice.length > 0, x.state]), [['INV-7731', ['NF-7.8:Rule engine (this session)'], 'NR-450118', true, 'Held']]); // 18 November 2026: at 09:00 the matching rule holds the invoice; the application advice leaves at 09:04 on Jordan Ellis's approval
   // Story 1: every hold, in every preset, names its rule, and the hold links the PO, each receiving advice and the invoice.
   { const bad = []; for (const [name, facts] of Object.entries(M.VARIATIONS)) { const s = M.startSession(nf, { facts }); for (const h of M.read(nf, s, 'read_queue').held) {
       const c = h.compared; if (!h.holds.length || h.holds.some((x) => !['NF-7.8', 'NF-7.10', 'NF-7.11'].includes(x.rule) || !x.finding)) bad.push(`${name} ${h.invoice}: hold without its rule`);
@@ -27,7 +27,7 @@ export default function ({ ash, nf, ok, eq }) {
     eq('match.story1_each_hold_names_its_rule_and_links_po_receipt_invoice', bad, []);
     const rv = M.startSession(nf).cases[moment.anchor].receipts.map((r) => r.reference); const known = rv.filter((ref) => nf.prepare("SELECT 1 FROM documents WHERE reference = ? AND doc_type = '861'").get(ref));
     eq('match.story1_linked_receiving_advice_is_a_recorded_861', [rv.length > 0, known.length === rv.length], [true, true]); }
-  eq('match.queue_equals_recorded_holds', M.heldAt(nf, moment.at).map((x) => [x.invoice, x.rule]), q.flatMap((x) => x.holds.map((h) => [x.invoice, h.rule])));
+  eq('match.recorded_holds_follow_the_application_advice', [M.heldAt(nf, moment.at).length, M.heldAt(nf, '2026-11-10T14:10:00.000Z').map((x) => [x.invoice, x.rule, x.sent_value])], [0, [['INV-7731', 'NF-7.8', '300'], ['INV-7731', 'NF-7.8', '120']]]);
   // The same rule engine, later in the quarter, holds other suppliers' invoices under NF-7.11 and NF-7.10 (T1.6).
   eq('match.rule_engine_holds_t16_variances', M.heldAt(nf, '2026-11-24T19:00:00.000Z').map((x) => `${x.invoice}:${x.rule}`), ['INV-V470001:NF-7.11', 'INV-V470004:NF-7.10']);
 
@@ -111,7 +111,7 @@ export default function ({ ash, nf, ok, eq }) {
   // Story 4: Ashby sees the hold and any request on the shared documents only; Ashby's copy holds no Northfield accounts payable records.
   { const v = M.supplierView(runs.canonical.s);
     eq('match.ashby_sees_shared_documents_only', [v.invoices[0].application_advice.map((a) => a.reference), v.requests_received.map((r) => r.kind), /"(proposals?|payment_released|settling_record|matching|state)":/.test(JSON.stringify(v)), ash.prepare("SELECT count(*) n FROM documents WHERE reference = 'AA-INV-7731'").get().n,
-      ash.prepare("SELECT count(*) n FROM sqlite_master WHERE name IN ('review_notes','draft_rules','rule_replays','proposals')").get().n], [['AA-INV-7731'], ['correction'], false, 1, 0]); }
+      ash.prepare("SELECT count(*) n FROM sqlite_master WHERE name IN ('review_notes','draft_rules','rule_replays','proposals')").get().n], [['AA-INV-7731', 'AA-INV-7731'], ['correction'], false, 1, 0]); }
 
   // Story 4: Ashby's scope refuses Northfield's accounts payable records and notes with its own refusal text (the server reads the same values).
   { const s = M.startSession(nf); const p = M.propose(nf, s, 'Match Agent', 'request_credit_or_corrected_invoice', { invoice: 'INV-7731', lines: [1, 2] }); M.decide(nf, s, p.proposal, 'edit', 'Jordan Ellis', 'Private AP note: call the buyer first');

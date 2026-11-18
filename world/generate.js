@@ -5,7 +5,7 @@ import { replen, replenDocs, CLOCK10 } from './replen.js';
 import { anchors, finishRisks } from './anchors.js';
 import { history } from './history.js';
 import { variance } from './variance.js';
-import { BUYER_FX, buyerSupplierId, PARTY, TED, QUARTER, ITEM } from './ref.js';
+import { BUYER_FX, BUYER_SHIP, BUYER_CASE_PACK, buyerSupplierId, PARTY, TED, QUARTER, ITEM } from './ref.js';
 import { STAGES } from './stages/index.js';
 
 export const T8 = '2026-11-08'; // Money in Motion's day 0
@@ -47,11 +47,29 @@ function buyerOrders(L, W) {
       const at = e[0] === 'rcv' && supplier !== 'ASHBY' ? dayAt(e[1], hm(base - 30)) : t(e[1]);
       if (e[0] === 'chg') D.change(L, O, at, ++seq, Object.entries(e[2]).map(([k, q]) => ({ line: ln(k).line, code: q === 0 ? 'DI' : q < ln(k).qty ? 'QD' : 'QI', qty: q, qty_left: q })));
       else if (e[0] === 'ack') D.ack(L, O, at, { ref: `ACK-${p.id.slice(3)}`, codes: Object.fromEntries(Object.entries(e[2]).map(([k, a]) => [ln(k).line, a[1]])), qty: Object.fromEntries(Object.entries(e[2]).map(([k, a]) => [ln(k).line, a[0]])), backorder: Object.fromEntries(Object.entries(e[2]).filter(([, a]) => a[2]).map(([k, a]) => [ln(k).line, a[2]])) });
-      else if (e[0] === 'asn' && asnQty.set(e[2], e[3])) D.asn(L, O, supplier !== 'ASHBY' && idx % 8 === 3 && at >= et('2026-09-27', '00:00') ? new Date(at.getTime() + (31 + idx % 8) * 60000) : at, { ref: e[2], shippedAt: at, deliveryDate: etDay(dayAt(e[1] + fx.transit, '12:00')), lines: Object.entries(e[3]).map(([k, q]) => ({ line: ln(k).line, sku: ln(k).sku, qty: q, uom: 'EA' })), cartonCount: Math.max(1, Math.ceil(Object.values(e[3]).reduce((a, b) => a + b, 0) / 24)), status: e[4] ? 'CC' : 'BP', shipFrom: { name: PARTY[supplier].name, gln: PARTY[supplier].gln }, scac: 'LKLF' });
+      else if (e[0] === 'asn' && asnQty.set(e[2], e[3])) D.asn(L, O, supplier !== 'ASHBY' && idx % 8 === 3 && at >= et('2026-09-27', '00:00') ? new Date(at.getTime() + (31 + idx % 8) * 60000) : at, { ref: e[2], shippedAt: at, deliveryDate: etDay(dayAt(e[1] + fx.transit, '12:00')), lines: Object.entries(e[3]).map(([k, q]) => ({ line: ln(k).line, sku: ln(k).sku, qty: q, uom: 'EA' })), cartonCount: Math.max(1, Math.ceil(Object.values(e[3]).reduce((a, b) => a + b, 0) / BUYER_CASE_PACK)), status: e[4] ? 'CC' : 'BP', shipFrom: { name: PARTY[supplier].name, gln: PARTY[supplier].gln }, scac: 'LKLF' });
       else if (e[0] === 'rcv') D.receipt(L, O, at, { ref: `RCV-${e[2]}`, asnRef: e[2], qty: Object.fromEntries(Object.entries(e[3]).map(([k, q]) => [ln(k).line, q])), short: Object.fromEntries(Object.entries(e[3]).map(([k, q]) => [ln(k).line, Math.max(0, (asnQty.get(e[2])?.[k] ?? q) - q)])) });
       else if (e[0] === 'inv') D.invoice(L, O, at, { ref: e[2], qty: Object.fromEntries(O.lines.map((l) => [l.line, e[3][l.k] || 0])), terms: fx.terms });
       else if (e[0] === 'pay') W.remit.push({ at, to: supplier, ref: `PMT-${p.id.slice(3)}-${e[2].slice(-3)}`, items: [{ invoice: e[2], po: p.id, paid: e[3] / 100, invoice_amount: (e[3] + e[4]) / 100, adjustments: e[4] ? [{ amount: -e[4] / 100, reason: '04', ref: `DM-${p.id.slice(3)}`, note: 'Deduction taken on remittance' }] : [] }] });
       else if (e[0] === 'rev') L.event({ at, kind: 'case.decision', po: p.id, system: 'Northfield deduction case', party: 'NORTHFIELD', channel: 'API', data: { decision: 'Reversed', amount: e[2] / 100 } });
+    }
+  });
+}
+
+/** The ship notices and receiving advice in world/data/buyer-shipments.json, for the other suppliers' buyer orders that
+ *  had neither. Called by the `records` stage, so they take numbers from that stage's ranges and move nothing else.
+ *  Times follow buyerOrders: the order's own slot for the ship notice, the DC dock's first hour for the receipt. */
+function buyerShipments(L, W) {
+  BUYER_FX.pos.forEach((p, idx) => {
+    const evs = BUYER_SHIP.ev[p.id]; if (!evs) return;
+    const supplier = buyerSupplierId(p.s); const fx = BUYER_FX.sup[p.s]; const O = W.buyer.find((o) => o.po === p.id);
+    if (!O || supplier === 'ASHBY') throw new Error(`buyer-shipments.json: ${p.id} is not another supplier's buyer order`);
+    const base = 8 * 60 + (idx % 7) * 11; const ln = (k) => O.lines.find((l) => l.k === k); const sent = new Map();
+    for (const e of evs) {
+      if (e[0] === 'asn') { const at = dayAt(e[1], hm(base)); sent.set(e[2], e[3]);
+        D.asn(L, O, idx % 8 === 3 ? new Date(at.getTime() + (31 + idx % 8) * 60000) : at, { ref: e[2], shippedAt: at, deliveryDate: etDay(dayAt(e[1] + fx.transit, '12:00')), lines: Object.entries(e[3]).map(([k, q]) => ({ line: ln(k).line, sku: ln(k).sku, qty: q, uom: 'EA' })), cartonCount: Math.max(1, Math.ceil(Object.values(e[3]).reduce((a, b) => a + b, 0) / BUYER_CASE_PACK)), status: e[4] ? 'CC' : 'BP', shipFrom: { name: PARTY[supplier].name, gln: PARTY[supplier].gln }, scac: 'LKLF' }); }
+      else if (e[0] === 'rcv') D.receipt(L, O, dayAt(e[1], hm(base - 30)), { ref: `RCV-${e[2]}`, asnRef: e[2], qty: Object.fromEntries(Object.entries(e[3]).map(([k, q]) => [ln(k).line, q])), short: Object.fromEntries(Object.entries(e[3]).map(([k, q]) => [ln(k).line, Math.max(0, (sent.get(e[2])?.[k] ?? q) - q)])) });
+      else throw new Error(`buyer-shipments.json: ${p.id} has a ${e[0]} record; only ship notices and receiving advice belong here`);
     }
   });
 }
@@ -119,7 +137,7 @@ export function build(nPre, jitter) {
   // ---------- stages added by world coverage (D60), after every existing stream so nothing above moves ----------
   for (const st of STAGES) {
     const d0 = L.docs.length, e0 = L.events.length;
-    L.aside(() => st.generate(L, { W, G, P10_WINDOW }));
+    L.aside(() => st.generate(L, { W, G, P10_WINDOW, buyerShipments }));
     for (const x of L.docs.slice(d0)) x.stage = st.id; for (const x of L.events.slice(e0)) x.stage = st.id;
   }
   const inWindow = L.docs.filter((d) => d.stage && d.stage !== 'records' && !d.test && P10_PAIR(d) && Date.parse(d.at) > P10_WINDOW.start && Date.parse(d.at) <= P10_WINDOW.end);
@@ -150,7 +168,7 @@ function remittances(L, W, G) {
   for (const c of W.claimCases) {
     const O = G.life.find((x) => x.po === c.po); const opened = addD(O.rcvAt, 9);
     L.event({ at: opened, kind: 'case.opened', po: O.po, system: 'Northfield deduction case', party: 'NORTHFIELD', channel: 'API', data: { case: c.case, charge: 'SH01', amount: c.amount, line: 1, cartons: 1, deduction: c.dm, evidence_state: c.evidence } });
-    L.event({ at: addH(O.departed, -0.3), kind: 'carrier.bill_of_lading', po: O.po, system: 'Lakeline Freight', party: 'LAKELINE', channel: 'Scanned document', data: { bol: `BOL-${O.n}`, seal: `SL-${O.n}77`, in_case: c.case } });
+    L.event({ at: addH(O.departed, -0.3), kind: 'carrier.bill_of_lading', po: O.po, system: 'Lakeline Freight', party: 'LAKELINE', channel: 'Portal API, image', data: { bol: `BOL-${O.n}`, seal: `SL-${O.n}77`, in_case: c.case } });
     if (c.evidence === 'tally_only') L.event({ at: addH(O.departed, -0.35), kind: 'wms.load_tally', po: O.po, system: 'Kinross warehouse system', party: 'KINROSS', channel: 'API', data: { shipment: `SHP-${O.n}`, cartons_loaded: O.cartons.length, by_sscc: true, signed: true, held_by: 'Kinross Logistics' } });
   }
 }

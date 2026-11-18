@@ -51,7 +51,9 @@ export class Log {
     // interchange. Their acknowledgments likewise. Ranges: business 700,000,000 up, acknowledgments 600,000,000 up.
     // Records added on 17 November 2026 (stage `records`) take a range of their own (800,000,000 up; acknowledgments
     // 900,000,000 up), so they renumber no earlier stage's interchanges either.
-    const nextCtl = (d, k, base) => (d.stage === 'records' ? next(`${k}:R`, /:FA/.test(k) ? 900000000 : 800000000) : d.stage ? next(`${k}:S`, k.endsWith(':FA') ? 600000000 : 700000000) : d.hist ? next(`${k}:H`, base - histN.get(k)) : next(k, base));
+    // Records added on 18 November 2026 (`batch: 2` in stage `records`) take a further range (850,000,000 up; acknowledgments
+    // 950,000,000 up): they are dated before records the stage already held, and would otherwise renumber them.
+    const nextCtl = (d, k, base) => (d.batch === 2 ? next(`${k}:R2`, /:FA/.test(k) ? 950000000 : 850000000) : d.stage === 'records' ? next(`${k}:R`, /:FA/.test(k) ? 900000000 : 800000000) : d.stage ? next(`${k}:S`, k.endsWith(':FA') ? 600000000 : 700000000) : d.hist ? next(`${k}:H`, base - histN.get(k)) : next(k, base));
     const out = []; const acks = [];
     for (const d of docs) {
       const from = PARTY[d.from], to = PARTY[d.to];

@@ -11,6 +11,16 @@
 //      Ashby's 997, not yet corrected. NR-462412: Kinross's system does not answer the status read.
 //   4. P20 (January 2027): Northfield's deduction cases for PD-2701-02, -04 and -05, Ashby's disputes, Jordan Ellis's
 //      reversals, the remittance that repays $677.20 and the Supplier ERP receivables match.
+//   6. P24 (9 December): for NR-46602, NR-46609 and NR-46616, Lakeline's arrival at 14:45 and its missed pickup at 15:30,
+//      both from its EDI 214 (the 15:00 records they replace are withdrawn in world/replen.js).
+//   7. P5 (8 December): NR-460241's routing request (753) sent on Priya Raman's approval, its 997 and Northfield's routing
+//      instructions (754); the Supplier ERP allocation the NR-460219 invoice draft is checked against; the Supplier ERP
+//      record correcting NR-460207's ship-to to DC 2.
+//   8. P9: store 207's finding on 26 October (it was recorded on 2 November), and four prior weekly store activity reports.
+//   9. P14: Jordan Ellis's approval of application advice AA-INV-7731 on 10 November.
+//   5. Other suppliers' buyer orders (9 November to 3 December): a ship notice and a receiving advice for each of the 37
+//      orders that were past their delivery dates with neither (world/data/buyer-shipments.json). Three arrive late and
+//      three short; the four orders Northfield cancelled with an order change get nothing.
 // No new X12 set and no new table: every row comes from the core derive and from the returns stage (deduction_repayments).
 import { et, addH, addD, etDay } from '../lib.js';
 import { D, iso } from '../log.js';
@@ -18,6 +28,8 @@ import { ITEM, PARTY, TED } from '../ref.js';
 import { REPLACEMENT_SSCC } from '../anchors.js';
 import { P5 } from '../p5-physical.js';
 import { parseClaim } from './promotions.js';
+import { PICKUP_FROM_214 } from '../replen.js';
+import { LOC, CARTON, WINDOW_H } from './transport.js';
 
 const r2 = (x) => Math.round(x * 100) / 100;
 const NF = PARTY.NORTHFIELD; const ASH = PARTY.ASHBY;
@@ -27,7 +39,7 @@ export const P13_ORDERS = { held: 'NR-462410', rejected: 'NR-462411', silent: 'N
 export const P20_CASES = { 'PD-2701-02': 'PC-27102', 'PD-2701-04': 'PC-27104', 'PD-2701-05': 'PC-27105' };
 export const P20_REPAYMENT = 'PMT-991307';
 
-function generate(L, { W }) {
+function generate(L, { W, buyerShipments }) {
   const ev = (at, kind, po, system, party, data) => L.event({ at, kind, po, system, party, channel: 'API', data });
   const KIN = ['Kinross warehouse system', 'KINROSS']; const ERP = ['Supplier ERP', 'ASHBY']; const TG = ['Trading Grid', 'ASHBY']; const CASE = ['Northfield deduction case'];
 
@@ -60,7 +72,7 @@ function generate(L, { W }) {
     const finish = (O, cartons, dep, invAt, rcvHm) => {
       D.invoice(L, O, invAt, { ref: `INV-${n(O)}` });
       const rcvAt = et('2026-11-19', rcvHm);
-      L.event({ at: addH(rcvAt, -0.6), kind: 'carrier.delivery_receipt', po: O.po, system: 'Lakeline Freight', party: 'LAKELINE', channel: 'Scanned document', data: { shipment: `SHP-${n(O)}`, delivered: cartons.length, exceptions: 'None', seal: 'Intact' } });
+      L.event({ at: addH(rcvAt, -0.6), kind: 'carrier.delivery_receipt', po: O.po, system: 'Lakeline Freight', party: 'LAKELINE', channel: 'Portal API, image', data: { shipment: `SHP-${n(O)}`, delivered: cartons.length, exceptions: 'None', seal: 'Intact' } });
       D.receipt(L, O, rcvAt, { ref: `RCV-${n(O)}`, asnRef: `ASN-${n(O)}`, qty: Object.fromEntries(O.lines.map((l) => [l.line, l.qty])) });
     };
     const asnBase = (O, cartons, dep) => ({ ref: `ASN-${n(O)}`, shippedAt: dep, deliveryDate: O.requested, cartons, qty: Object.fromEntries(O.lines.map((l) => [l.line, l.qty])) });
@@ -131,7 +143,7 @@ function generate(L, { W }) {
       const x = taken(k.ref); const c = x.c; const id = P20_CASES[k.ref]; const amount = k.unsupported(c); total = r2(total + amount);
       ev(paidAt, 'case.opened', x.i.po, ...CASE, 'NORTHFIELD', { case: id, charge: 'PROMO', kind: 'Promotion deduction', amount: c.amount, deduction: k.ref, deal: c.deal_id, payment: pay.ref, invoice: x.i.invoice, dispute_deadline: etDay(addD(paidAt, 60)) });
       ev(et('2027-01-06', ['09:20', '09:28', '09:36'][idx]), 'case.dispute', x.i.po, ...CASE, 'ASHBY', { case: id, charge: 'PROMO', amount, deduction: k.ref, deal: c.deal_id, stands: r2(c.amount - amount), vividly_match: k.match,
-        evidence: k.evidence(c, x), drafted_by: 'Claim Agent', approved_by: 'Priya Raman' });
+        evidence: k.evidence(c, x), drafted_by: 'Ashby’s promotion deduction rules', approved_by: 'Priya Raman' });
       ev(et('2027-01-07', ['10:00', '10:10', '10:20'][idx]), 'case.decision', x.i.po, ...CASE, 'NORTHFIELD', { case: id, charge: 'PROMO', amount, deduction: k.ref, decision: 'Reversed', decided_by: 'Jordan Ellis', reason: k.why(c),
         reviewer_note: `${k.why(c)}. Reverse $${amount.toFixed(2)}${c.amount > amount ? `; $${r2(c.amount - amount).toFixed(2)} stands` : ''}.` });
       items.push({ invoice: x.i.invoice, po: x.i.po, paid: amount, invoice_amount: 0, adjustments: [{ amount, reason: x.a.reason, ref: k.ref, note: `Reversal of promotion deduction ${k.ref}, case ${id}` }] });
@@ -142,6 +154,55 @@ function generate(L, { W }) {
     // after Jordan Ellis's decisions and before the 8 January payment run (PMT-990170).
     L.doc({ type: '820', from: 'NORTHFIELD', to: 'ASHBY', at: et('2027-01-07', '16:00'), ref: P20_REPAYMENT, amount: total, payer_name: NF.name, payer_gln: NF.gln, payee_name: ASH.name, payee_gln: ASH.gln, items });
   }
+  // ---------- 5. Other suppliers' buyer orders: the ship notices and receiving advice that were missing ----------
+  // 37 orders from 17 suppliers were past their delivery dates with neither (P24, P7). After sections 1 to 4, so nothing above moves.
+  buyerShipments(L, W);
+
+  // Records added on 18 November 2026 come after every earlier record and carry `batch: 2`, so they take their own id and
+  // control-number ranges and renumber nothing above (a document's place in this order also sets its acknowledgment delay).
+  const ev2 = (at, kind, po, system, party, data) => L.event({ batch: 2, at, kind, po, system, party, channel: 'API', data });
+  // ---------- 6. P24: Lakeline's arrival and missed pickup, from its EDI 214 ----------
+  // NR-46602, NR-46609 and NR-46616: Lakeline arrived at Kinross at 14:45 on 9 December (214 status X3) for the 15:00
+  // assigned pickup, and at 15:30 recorded the shipment held per shipper, freight not ready (SD, reason BB). The same
+  // 214 already carries both statuses; these are Trading Grid's records of them, on the time and channel the 214 gives.
+  for (const po of PICKUP_FROM_214) {
+    const n = po.slice(3); const edi = `214:PRO-${n} X3+SD`; const assigned = et('2026-12-09', '15:00');
+    L.event({ batch: 2, at: et('2026-12-09', '14:45'), kind: 'carrier.arrived_at_pickup', po, system: 'Lakeline Freight', party: 'LAKELINE', channel: 'EDI 214', data: { status: 'Arrived at pick-up location', status_code: 'X3', assigned_pickup: iso(assigned), edi } });
+    L.event({ batch: 2, at: et('2026-12-09', '15:30'), kind: 'carrier.pickup_missed', po, system: 'Lakeline Freight', party: 'LAKELINE', channel: 'EDI 214', data: { assigned_pickup: iso(assigned), arrived: iso(et('2026-12-09', '14:45')), status_code: 'SD', reason_code: 'BB', note: 'Collect freight not ready at the assigned pickup', edi } });
+  }
+
+  // ---------- 7. P5 (8 December): the outcome of each fix the page shows ----------
+  { // NR-460241: Priya Raman approves the routing request at 17:18; Trading Grid sends it (753) at 17:19, Northfield
+    // acknowledges it (997) and answers with routing instructions (754) that evening. Collect freight, 220 cases of
+    // ASH-MUG-12 from Kinross Joliet to DC 2, ready at its 15:00 departure on 10 December.
+    const po = 'NR-460241'; const dep = et('2026-12-10', '15:00'); const cartons = 220;
+    const base = { po, shipment: 'SHP-460241', from_loc: LOC['KIN-JOL'], to_loc: LOC.DC2, cartons, weight: Math.round(cartons * CARTON['ASH-MUG-12'][0]) };
+    ev2(et('2026-12-08', '17:18'), 'tg.release', po, ...TG, { document: 'RR-460241', state: 'Approved', rule: 'NF-3.2', released_by: 'Priya Raman', basis: 'Collect freight with no routing request; Northfield’s deadline is 10:00 on 9 December' });
+    L.doc({ batch: 2, type: '753', from: 'ASHBY', to: 'NORTHFIELD', at: et('2026-12-08', '17:19'), ref: 'RR-460241', ...base, ready_at: iso(dep), latest_at: iso(addH(dep, WINDOW_H)), cube: Math.round(cartons * CARTON['ASH-MUG-12'][1]) });
+    L.doc({ batch: 2, type: '754', from: 'NORTHFIELD', to: 'ASHBY', at: et('2026-12-08', '19:05'), ref: 'NRL-460241', request: 'RR-460241', ...base, pickup_from: iso(dep), pickup_to: iso(addH(dep, WINDOW_H)) });
+    // NR-460219: what the invoice draft is checked against a day before the order ships: the Supplier ERP allocated 176 of
+    // line 2's 180 cases to the 9 December shipment (the warehouse shipping order that evening asks Kinross for 176).
+    ev2(et('2026-12-08', '14:50'), 'erp.shipment_quantity', 'NR-460219', ...ERP, { line: 2, sku: 'ASH-NAP-4', ordered: 180, to_ship: 176, shipment: 'SHP-460219', note: 'Allocated to the 9 December shipment; 4 cases not allocated' });
+    // NR-460207: the Ashby order desk corrects the sales order's ship-to after Kinross loads the replacement case and
+    // before Priya releases the ship notice (ASN-460207 leaves at 18:06 for DC 2).
+    ev2(et('2026-12-08', '17:50'), 'erp.correction', 'NR-460207', ...ERP, { sales_order: 'SO-460207', field: 'Ship-to', from: 'DC 4', to: 'DC 2', rule: 'NF-4.7', owner: 'Ashby order desk', change: 'Ship-to corrected from DC 4 to DC 2, as order change 1 (EDI 860) set it' });
+  }
+
+  // ---------- 8. P9: store 207's finding on 26 October, and four prior weeks of store activity ----------
+  { // Store 207's slow sell-through was found on the same run as store 114's empty shelf (26 October, 08:07).
+    ev2(et('2026-10-26', '08:07'), 'rule.recommendation', null, ...TG, { found_by: 'Ashby replenishment rule AP-6.2', acting_for: 'Priya Raman', store: 207, finding: 'Slow sell-through', recommend: 'Transfer', pairs: 24, to_store: 118 });
+    // Four weekly store activity reports (852) before the 18 to 24 October week, so the 4-week averages compute from records:
+    // store 114 sold 44, 41, 43 and 40 pairs (average 42) as its stock ran down; store 207 sold 3, 4, 2 and 3 (average 3).
+    // Every other store sold its usual weekly figure give or take two pairs, and held the stock it holds on 24 October.
+    const WEEKS = [['2026-09-20', '2026-09-26', '2026-09-27'], ['2026-09-27', '2026-10-03', '2026-10-04'], ['2026-10-04', '2026-10-10', '2026-10-11'], ['2026-10-11', '2026-10-17', '2026-10-18']];
+    const S114 = [[44, 136], [41, 95], [43, 52], [40, 12]], S207 = [[3, 60], [4, 56], [2, 54], [3, 51]], SWING = [2, -1, 1, -2];
+    WEEKS.forEach(([from, to, sent], w) => L.doc({ batch: 2, type: '852', from: 'NORTHFIELD', to: 'ASHBY', at: et(sent, '06:10'), period_start: from, period_end: to, buyer_name: 'Northfield Retailer', buyer_gln: '0614141000050', vendor_name: 'Ashby Supplier', vendor_gln: '0614141002085',
+      items: [{ upc: '614141000166', sku: 'ASH-TRL-09', uom: 'EA', stores: W.storeWeeks.w1.map((r) => (r.n === 114 ? { store: '114', sold: S114[w][0], on_hand: S114[w][1] } : r.n === 207 ? { store: '207', sold: S207[w][0], on_hand: S207[w][1] } : { store: String(r.n), sold: r.avg + SWING[(w + r.n) % 4], on_hand: r.oh })) }] }));
+  }
+
+  // ---------- 9. P14 (10 November): Jordan Ellis approves the application advice ----------
+  ev2(et('2026-11-10', '09:03'), 'tg.release', 'NR-450118', 'Trading Grid', 'NORTHFIELD', { document: 'AA-INV-7731', state: 'Approved', rule: 'NF-7.8', released_by: 'Jordan Ellis', basis: 'Invoice INV-7731 held on lines 1 and 2: line 1 billed 300 against 270 shipped; line 2 billed 120 against 119 received' });
+
 }
 
 export default {

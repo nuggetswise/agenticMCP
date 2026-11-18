@@ -17,7 +17,7 @@ import { z } from 'zod';
 import { createHash } from 'node:crypto';
 import { fmtET, et } from '../world/lib.js';
 import * as D from './domain.js';
-import { declarations, modelRoutes } from './aviator.js';
+import { declarations, modelArgs, modelRoutes } from './aviator.js';
 
 const MIN = 60000, H = 3600000;
 const iso = (ms) => new Date(ms).toISOString();
@@ -463,7 +463,8 @@ export function runBaseline(db, s, approve = (id) => decide(db, s, id, 'approve'
 }
 
 // ---------- Watch Agent: a model choosing reads and proposing actions ----------
-const AGENT_TOOLS = [
+// Exported so the model-schema check can read every declaration the model is sent.
+export const AGENT_TOOLS = [
   ...Object.entries(READS).map(([name, r]) => ({ name, description: r.description, input: r.input })),
   { name: 'propose_action', description: `Propose one action. The server decides whether it runs under policy or waits for Priya Raman, and refuses anything a rule or guardrail forbids. Actions: ${Object.entries(ACTIONS).map(([k, a]) => `${k} (${a.label}; takes ${a.args.join(', ')})`).join('; ')}. Give a short rationale grounded in records you read, and the alternatives you considered with why you did not choose them.`,
     input: { action: z.enum(Object.keys(ACTIONS)), po: z.string().describe('PO number'), document: z.enum(['855', '856', '810']).optional().describe('With release_document: which drafted document to send'), note: z.string().optional().describe('With flag_erp_record'), message: z.string().optional().describe('With escalate_to_priya: what Priya needs to know'), rationale: z.string().describe('One or two sentences citing the records read'), alternatives: z.array(z.string()).optional().describe('Options considered and why not chosen') } },
@@ -504,7 +505,7 @@ export async function runWatch(db, s, { callModel, maxSteps = 14, maxToolCalls =
     if (!calls.length) { ag.status = s.proposals.some((p) => p.state === 'Awaiting approval') ? 'waiting_for_priya' : s.pending.length ? 'waiting_for_records' : 'done'; break; }
     const responses = []; let waiting = false; let blocked = null;
     for (const { functionCall: f } of calls) {
-      ag.tool_calls++; const args = f.args || {}; let result;
+      ag.tool_calls++; const args = { ...modelArgs(AGENT_TOOLS, f.name, f.args) }; let result;
       if (f.name === 'propose_action') { const { action, rationale, alternatives, ...rest } = args; for (const k of Object.keys(rest)) if (rest[k] === undefined || rest[k] === '') delete rest[k]; result = propose(db, s, 'Watch Agent', action, rest, { rationale, alternatives }); if (result.state === 'Awaiting approval') waiting = true; 
         if (result.state === 'Refused') { ag.refused = ag.refused || {}; ag.refused[action] = (ag.refused[action] || 0) + 1; if (ag.refused[action] >= 2) { blocked = result.message; result = { ...result, message: `${result.message} Refused twice: stop proposing ${action}; Priya Raman is told what is waiting.` }; } } }
       else if (READS[f.name]) { result = read(db, s, f.name, args); trace(s, 'Watch Agent', 'tool', `Read ${f.name}`, { args }); }

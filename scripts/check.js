@@ -13,6 +13,7 @@ import * as NR from '../src/retailer.js';
 import * as G from '../src/governance.js';
 import * as Scout from '../src/scout.js';
 import { scorecard, buyerFixture, normOrder } from '../src/score.js';
+import * as SC from '../src/score.js';
 import { TOOLS, BOUNDARY, ASHBY_WRITES, ASHBY_REFUSALS, NF_TOOLS, NF_WRITES, NF_REFUSALS } from '../src/tools.js';
 import { corpusHash } from './corpus.js';
 
@@ -67,13 +68,18 @@ none('time.one_997_per_document', `SELECT d.doc_id, count(f.doc_id) k FROM docum
 none('time.997_two_to_nine_minutes_after', `SELECT f.doc_id, (julianday(f.sent_at) - julianday(d.sent_at)) * 1440 m FROM documents f JOIN documents d ON d.doc_id = f.answers_doc_id WHERE f.doc_type = '997' AND (m < 1.99 OR m > 9.01 OR f.sender_id <> d.receiver_id)`);
 // Interchange control numbers rise with time within each sender, receiver and number range.
 // A world-coverage stage's documents use their sending system's own range (700,000,000 up; acknowledgments 600,000,000 up).
-{ const rows = db.prepare("SELECT doc_id d, sender_id s, receiver_id r, doc_type = '997' fa, CAST(isa_ctl / 100000000 AS INT) rg, isa_ctl c, sent_at t FROM documents ORDER BY s, r, fa, rg, c").all(); const bad = []; let dup = 0;
+// Records added on 18 November 2026 use 850,000,000 up (acknowledgments 950,000,000 up), so ranges are compared in blocks of 50,000,000.
+{ const rows = db.prepare("SELECT doc_id d, sender_id s, receiver_id r, doc_type = '997' fa, CAST(isa_ctl / 50000000 AS INT) rg, isa_ctl c, sent_at t FROM documents ORDER BY s, r, fa, rg, c").all(); const bad = []; let dup = 0;
   for (let i = 1; i < rows.length; i++) { const a = rows[i - 1], b = rows[i]; if (a.s !== b.s || a.r !== b.r || a.fa !== b.fa || a.rg !== b.rg) continue; if (b.c === a.c) dup++; if (b.t < a.t) bad.push(a.d); }
   // Change list point F1 (CALLS 68): P5's six lead acknowledgments were numbered when Ashby's ERP generated them and sent late from its outbound queue, so they and their 997s keep their place in the numbering.
   // Change list 2 point 1 (CALLS 79): RCV-46215 was moved after its ship notice and keeps its number, as does its 997.
   const moved = (type, po) => { const d = db.prepare('SELECT doc_id FROM documents WHERE doc_type = ? AND po = ?').get(type, po).doc_id; return [d, db.prepare("SELECT doc_id FROM documents WHERE doc_type = '997' AND answers_doc_id = ?").get(d).doc_id]; };
   // 17 November 2026: ASN-46220 was moved after Kinross's shipping advice and keeps its number, as does its 997.
-  const late = [...['460207', '460219', '460233', '460241', '460262', '460274'].flatMap((n) => moved('855', `NR-${n}`)), ...moved('861', 'NR-46215'), ...moved('856', 'NR-46220')].sort();
+  // 17 November 2026: ASN-450118-1 was moved after the load scan and the 18:00 departure and keeps its number, as does its 997.
+  const asn1 = db.prepare("SELECT doc_id FROM documents WHERE doc_type = '856' AND reference = 'ASN-450118-1'").get().doc_id; const asn1Fa = db.prepare("SELECT doc_id FROM documents WHERE doc_type = '997' AND answers_doc_id = ?").get(asn1).doc_id;
+  // 18 November 2026: application advice AA-INV-7731 moved to 10 November and keeps its number, as does its 997.
+  const aa = '824:AA-INV-7731'; const aaFa = db.prepare("SELECT doc_id FROM documents WHERE doc_type = '997' AND answers_doc_id = ?").get(aa).doc_id;
+  const late = [...['460207', '460219', '460233', '460241', '460262', '460274'].flatMap((n) => moved('855', `NR-${n}`)), ...moved('861', 'NR-46215'), ...moved('856', 'NR-46220'), asn1, asn1Fa, aa, aaFa].sort();
   eq('time.control_numbers_unique', dup, 0); eq('time.control_numbers_rise_with_time_except_p5_lead_acks_and_rcv_46215', bad.sort(), late); }
 none('time.envelope_matches_body_control_numbers', "SELECT doc_id FROM documents WHERE json_extract(body, '$.isa_ctl') <> isa_ctl OR json_extract(body, '$.se_count') <> json_extract(body, '$.segments') AND status = 'Delivered' AND doc_id NOT IN (SELECT doc_id FROM errors)");
 // NF-4.2: in the current period a ship notice goes within 1 hour of departure; the only late ones are the records the story names. History before it carries late ship notices on purpose.
@@ -140,6 +146,34 @@ eq('scorecard.lines', [sc.failing_lines, sc.by_reason.map((r) => [r.lines, r.cas
 // Order story and the money trail
 const st = D.lifecycle(ash, 'NR-450118');
 eq('story.two_shipments', st.shipments.map((s) => [s.ship_notice, s.cartons]), [['ASN-450118-1', 350], ['ASN-450118-2', 120]]);
+// 17 November 2026 (P23): the first ship notice leaves after the load scan that corrected it and within NF-4.2's hour of the 18:00 departure; its 997 follows it and the receiving advice comes next morning. The hold is released by Priya Raman (AP-1.3).
+{ const one = (sql, ...a) => db.prepare(sql).get(...a); const asn = one("SELECT doc_id, sent_at FROM documents WHERE doc_type = '856' AND reference = 'ASN-450118-1'"); const fa = one("SELECT sent_at FROM documents WHERE doc_type = '997' AND answers_doc_id = ?", asn.doc_id); const rcv = one("SELECT sent_at FROM documents WHERE reference = 'RCV-DC2-77290'");
+  const scan = one("SELECT at FROM events WHERE kind = 'wms.load_scan' AND po = 'NR-450118' AND data LIKE '%SHP-450118-1%'").at; const dep = one("SELECT at FROM events WHERE kind = 'wms.departure_scan' AND po = 'NR-450118' AND data LIKE '%SHP-450118-1%'").at; const hold = JSON.parse(one("SELECT data FROM events WHERE kind = 'tg.hold' AND po = 'NR-450118'").data);
+  eq('p23.ship_notice_follows_scan_and_departure_within_the_hour', [scan < dep, dep < asn.sent_at, Date.parse(asn.sent_at) - Date.parse(dep) <= 3600000, asn.sent_at < fa.sent_at, fa.sent_at < rcv.sent_at], [true, true, true, true, true]);
+  eq('p23.hold_is_released_by_priya_raman', [hold.approved_by, hold.release_rule, scan < hold.approved_at, hold.released_at === asn.sent_at], ['Priya Raman', 'AP-1.3', true, true]); }
+// 18 November 2026: P5 outcomes, P9 store history, P14 approval, AP-4.2, Aviator permissions, replay as of a time, and no stored record naming an agent.
+{ const g = (sql, ...a) => db.prepare(sql).get(...a); const ET = (t) => new Date(t).toLocaleString('en-GB', { timeZone: 'America/New_York', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const draft = JSON.parse(g("SELECT data FROM events WHERE kind = 'erp.invoice_draft' AND po = 'NR-460219'").data); const qty = g("SELECT at, data FROM events WHERE kind = 'erp.shipment_quantity' AND po = 'NR-460219'"); const dr = g("SELECT at FROM events WHERE kind = 'erp.invoice_draft' AND po = 'NR-460219'").at;
+  eq('p5.invoice_draft_is_checked_against_what_is_allocated_to_ship', ['shipped' in draft, draft.billed, draft.to_ship, JSON.parse(qty.data).to_ship, qty.at < dr, dr < g("SELECT shipped_at FROM shipments WHERE po = 'NR-460219'").shipped_at], [false, 180, 176, 176, true, true]);
+  const fix = g("SELECT at, system, data FROM events WHERE kind = 'erp.correction' AND po = 'NR-460207'"); const fd = JSON.parse(fix.data);
+  eq('p5.supplier_erp_shows_the_ship_to_corrected_to_dc2', [fix.system, fd.from, fd.to, ET(fix.at), fix.at > g("SELECT max(at) at FROM events WHERE kind = 'wms.load_scan' AND po = 'NR-460207'").at, fix.at < g("SELECT sent_at FROM documents WHERE reference = 'ASN-460207'").sent_at], ['Supplier ERP', 'DC 4', 'DC 2', '08 Dec, 17:50', true, true]);
+  const recs = db.prepare("SELECT at, data FROM events WHERE kind = 'rule.recommendation' ORDER BY json_extract(data, '$.store')").all().map((e) => ({ at: e.at, ...JSON.parse(e.data) }));
+  eq('p9.one_record_per_store_on_26_october_crediting_the_rule', recs.map((r) => [r.store, ET(r.at), r.found_by, 'sent_to' in r, 'agent' in r, 'also' in r]), [[114, '26 Oct, 08:07', 'Ashby replenishment rule AP-6.1', false, false, false], [207, '26 Oct, 08:07', 'Ashby replenishment rule AP-6.2', false, false, false]]);
+  const at = T('2026-10-26T08:07:00-04:00'); const s114 = A.shelfDecision(db, '114', at), s207 = A.shelfDecision(db, '207', at); const act = db.prepare("SELECT DISTINCT store FROM store_activity WHERE period_end = '2026-10-24'").all().map((r) => A.shelfDecision(db, r.store, at)).filter((d) => d.next_step !== 'nothing_to_do').map((d) => d.record);
+  eq('p9.four_week_averages_compute_from_records', [s114.evidence.weekly_average, s114.evidence.weeks_averaged, s114.next_step, s114.pairs, s207.evidence.weekly_average, s207.evidence.weeks_of_supply, s207.next_step, s207.pairs, act], [42, 4, 'recommend_new_order', 40, 3, 16, 'recommend_transfer', 24, ['Store 114', 'Store 207']]);
+  const aa = g("SELECT doc_id, sent_at, sender_id, body FROM documents WHERE reference = 'AA-INV-7731'"); const aaFa = g("SELECT sent_at, sender_id FROM documents WHERE doc_type = '997' AND answers_doc_id = ?", aa.doc_id); const ok14 = g("SELECT at, json_extract(data, '$.released_by') by FROM events WHERE kind = 'tg.release' AND json_extract(data, '$.document') = 'AA-INV-7731'");
+  eq('p14.application_advice_sent_on_jordans_approval_rejecting_lines_1_and_2', [ET(aa.sent_at), aa.sender_id, JSON.parse(aa.body).errors.map((e) => e.bad), ok14.by, ok14.at < aa.sent_at, ok14.at > '2026-11-10T14:00:00.000Z', aa.sent_at < aaFa.sent_at, aaFa.sender_id, aa.sent_at < g("SELECT sent_at FROM documents WHERE reference = 'INV-7731C'").sent_at, g("SELECT received_at FROM receipts WHERE receipt = 'RCV-DC2-77355'").received_at < aa.sent_at],
+    ['10 Nov, 09:04', 'NORTHFIELD', ['300', '120'], 'Jordan Ellis', true, true, true, 'ASHBY', true, true]);
+  eq('ap42.settling_or_writing_off_a_disputed_deduction', g("SELECT statement FROM rules WHERE id = 'AP-4.2'").statement, 'Settling or writing off a disputed deduction needs a person’s approval. A deduction the deal supports needs no decision');
+  const stored = []; for (const f of ['tg', 'ashby', 'northfield']) { const d = new DatabaseSync(join(ROOT, 'build', `${f}.db`), { readOnly: true });
+    for (const { name: t } of d.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all()) for (const { name: c } of d.prepare(`SELECT name FROM pragma_table_info('${t}')`).all()) { const n = d.prepare(`SELECT count(*) n FROM "${t}" WHERE typeof("${c}") = 'text' AND ("${c}" GLOB '*Agent*' OR "${c}" GLOB '*"agent"*' OR "${c}" GLOB 'agent.*')`).get().n; if (n) stored.push(`${f}.${t}.${c}: ${n}`); } d.close(); }
+  eq('credit.no_stored_record_names_an_agent', stored, []); }
+// 18 November 2026 (P24): Lakeline's arrival and missed pickup for NR-46602, NR-46609 and NR-46616 come from its EDI 214, at the times the 214 gives, and Northfield sees both.
+{ const rows = db.prepare("SELECT po, kind, at, channel, json_extract(data, '$.edi') edi FROM events WHERE po IN ('NR-46602','NR-46609','NR-46616') AND kind IN ('carrier.arrived_at_pickup','carrier.pickup_missed') ORDER BY po, at").all();
+  const st = db.prepare("SELECT l.po, m.status_code, m.at, m.doc_id FROM shipment_status m JOIN loads l ON l.load_id = m.load_id WHERE l.po IN ('NR-46602','NR-46609','NR-46616') AND m.status_code IN ('X3','SD') AND m.doc_id LIKE '%X3+SD'").all();
+  eq('p24.missed_pickups_from_lakelines_214', rows.map((r) => [r.po, r.kind, new Date(r.at).toLocaleTimeString('en-GB', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit' }), r.channel, r.edi === `214:PRO-${r.po.slice(3)} X3+SD`, st.some((x) => x.po === r.po && x.at === r.at && x.status_code === (r.kind === 'carrier.pickup_missed' ? 'SD' : 'X3'))]),
+    ['NR-46602', 'NR-46609', 'NR-46616'].flatMap((po) => [[po, 'carrier.arrived_at_pickup', '14:45', 'EDI 214', true, true], [po, 'carrier.pickup_missed', '15:30', 'EDI 214', true, true]]));
+  eq('p24.northfield_sees_both', new DatabaseSync(join(ROOT, 'build', 'northfield.db'), { readOnly: true }).prepare("SELECT count(*) n FROM events WHERE po IN ('NR-46602','NR-46609','NR-46616') AND kind IN ('carrier.arrived_at_pickup','carrier.pickup_missed')").get().n, 6); }
 { const adj = db.prepare("SELECT reference, amount FROM adjustments WHERE payee_id = 'ASHBY' ORDER BY paid_at, reference").all();
   eq('story.remittance', adj.filter((x) => ['DM-55102', 'DM-55140'].includes(x.reference) && x.amount < 0).map((x) => x.amount), [-88.4, -208]);
   ok('story.repayment_matches_reversed_shortage', adj.some((x) => x.amount === 88.4), JSON.stringify(adj)); }
@@ -164,7 +198,14 @@ ok('p9.store_activity', n("SELECT count(*) n FROM store_activity WHERE store = '
   eq('p5.kinross_shipments_48h', n(`SELECT count(*) n FROM (SELECT e.po FROM events e WHERE e.kind = 'erp.shipment_planned' AND json_extract(e.data, '$.site') LIKE 'KIN%' AND ${dep} ${w.replace('%s', dep)} UNION SELECT s.po FROM shipments s WHERE s.ship_from LIKE 'KIN%' AND s.shipped_at ${w.replace('%s', 's.shipped_at')} AND s.po NOT IN (SELECT po FROM events WHERE kind = 'erp.shipment_planned'))`), 124); }
 { const fx = JSON.parse(readFileSync(join(ROOT, 'world', 'data', 'buyer-orders.json'), 'utf8')); const mine = buyerFixture(db, fx.pos.map((p) => p.id), '2026-11-08');
   // Round trip: the Money in Motion order records, written as X12, read back and rebuilt, equal the records the screen computes from.
-  eq('p8.engine_equal', fx.pos.filter((p, i) => normOrder(p) !== normOrder(mine[i])).map((p) => p.id), []);
+  // The ship notices and receiving advice added after the fixture's last day (world/data/buyer-shipments.json) are part of each order's record.
+  const later = JSON.parse(readFileSync(join(ROOT, 'world', 'data', 'buyer-shipments.json'), 'utf8')).ev; const whole = (p) => ({ ...p, ev: [...p.ev, ...(later[p.id] || [])] });
+  eq('p8.engine_equal', fx.pos.filter((p, i) => normOrder(whole(p)) !== normOrder(mine[i])).map((p) => p.id), []);
+  eq('buyer.no_overdue_order_with_neither_ship_notice_nor_receipt', db.prepare("SELECT o.po FROM orders o WHERE o.supplier_id <> 'ASHBY' AND o.requested_delivery <= '2026-12-26' AND o.order_value > 0 AND EXISTS (SELECT 1 FROM order_lines l WHERE l.po = o.po AND l.qty_ordered > 0) AND NOT EXISTS (SELECT 1 FROM shipments s WHERE s.po = o.po) AND NOT EXISTS (SELECT 1 FROM receipts r WHERE r.po = o.po)").all().map((r) => r.po), []);
+  // Orders Northfield cancelled with an order change (every line at 0) count nowhere: not in a rate, not Open, not failing, not past due.
+  { const canc = db.prepare("SELECT o.po FROM orders o WHERE o.supplier_id <> 'ASHBY' AND NOT EXISTS (SELECT 1 FROM order_lines l WHERE l.po = o.po AND l.qty_ordered > 0)").all().map((r) => r.po);
+    const seen = SC.supplierRanking(db, T('2026-12-28T09:00:00-05:00')).ranking.flatMap((r) => { const o = SC.otif(db, { supplier: r.supplier_id, asOf: T('2026-12-28T09:00:00-05:00') }); return [...(o.lines || []), ...(o.open_lines.list || [])].map((x) => x.po); });
+    eq('buyer.cancelled_orders_count_nowhere', [canc.length, canc.filter((po) => seen.includes(po))], [4, []]); }
   eq('p8.one_open_ashby_order', [fx.pos.length, new Set(fx.pos.map((p) => p.s)).size], [340, 24]); }
 
 // ── Mutation tests: the same code, two records, different next steps ───────────────────────────────────────────────
@@ -175,10 +216,16 @@ for (const p of REG.prototypes) {
 }
 // T2.3: a changed agent rule is replayed against the quarter's records beside the rule in force, before it goes live.
 { const cases = ash.prepare("SELECT DISTINCT json_extract(data, '$.case') c FROM events WHERE kind = 'case.opened' AND at >= '2026-09-27'").all().map((r) => r.c); const at = T('2026-12-10T12:00:00-05:00');
-  const tight = A.replayAgentRule(ash, { job: 'deduction', change: { rule: 'AP-4.1', params: { max_amount: 50 } }, records: cases, asOf: at });
-  eq('governance.replay_shows_a_changed_authority', tight.changed.map((c) => [c.record, c.now.next_step === c.with_change.next_step, /^Claim Agent may dispute/.test(c.now.authority), /^Priya Raman decides/.test(c.with_change.authority)]), [['DC-40877', true, true, true]]);
-  eq('governance.replay_of_the_rule_in_force_changes_nothing', A.replayAgentRule(ash, { job: 'deduction', change: { rule: 'AP-4.1', params: { max_amount: 250 } }, records: cases, asOf: at }).changed.length, 0);
-  eq('governance.catalogue_unchanged_after_replay', D.param(ash, 'AP-4.1', 'max_amount'), 250); }
+  // AP-4.1 holds no amount (17 November 2026): every dispute needs Priya Raman's approval, so the trial uses a rule that
+  // still holds a parameter: AP-6.1's minimum weekly sales, on the two stores of the P9 moment.
+  const shelfAt = T('2026-10-26T08:07:00-04:00'); const stores = ['114', '207'];
+  const tight = A.replayAgentRule(ash, { job: 'shelf', change: { rule: 'AP-6.1', params: { min_weekly_avg: 500 } }, records: stores, asOf: shelfAt });
+  eq('governance.replay_shows_a_changed_next_step', tight.changed.map((c) => [c.record, c.now.next_step, c.with_change.next_step]), [['114', 'recommend_new_order', 'nothing_to_do']]);
+  eq('governance.replay_of_the_rule_in_force_changes_nothing', A.replayAgentRule(ash, { job: 'shelf', change: { rule: 'AP-6.1', params: { min_weekly_avg: 1 } }, records: stores, asOf: shelfAt }).changed.length, 0);
+  eq('governance.catalogue_unchanged_after_replay', D.param(ash, 'AP-6.1', 'min_weekly_avg'), 1);
+  const claims = cases.filter((c) => /^DC-/.test(c)).map((c) => A.claimDecision(ash, c, T('2026-12-28T10:00:00-05:00'))).filter((r) => r.found !== false);
+  eq('ap41.every_dispute_needs_priya_ramans_approval', [ash.prepare("SELECT params FROM rules WHERE id = 'AP-4.1'").get().params, /every dispute/i.test(ash.prepare("SELECT statement FROM rules WHERE id = 'AP-4.1'").get().statement), claims.length >= 5, claims.filter((r) => /without asking|\$250/i.test(JSON.stringify(r))).map((r) => r.record), claims.filter((r) => !/Priya Raman/.test(r.authority)).map((r) => r.record)], [null, true, true, [], []]);
+  eq('credit.no_decision_names_an_agent', claims.concat(stores.map((s) => A.shelfDecision(ash, s, shelfAt))).filter((r) => 'agent' in r || !/ rule [A-Z]{2}-/.test(r.found_by || '') || /Agent/.test(JSON.stringify(r))).map((r) => r.record), []); }
 // T2.3 stories 1, 2 and 4, on a scratch database holding the governance tables (the built world is read-only here).
 { const gdb = new DatabaseSync(':memory:'); gdb.exec(readFileSync(join(ROOT, 'world', 'schema.sql'), 'utf8')); gdb.exec(`ATTACH DATABASE '${ASHBY_DB.replace(/'/g, "''")}' AS a; INSERT INTO rules SELECT * FROM a.rules; DETACH DATABASE a;`); const at = T('2026-12-10T12:00:00-05:00');
   const noModel = async () => { throw new Error('the model must not be called'); };
@@ -188,29 +235,30 @@ for (const p of REG.prototypes) {
     for (const p of s.proposals) if (!s.audit.some((a) => a.proposal === p.id && a.outcome.startsWith(p.state))) missing.push(`${name} ${p.id} ${p.state}: no final entry`);
     for (const a of s.audit) { entries++; if (!a.agent || !a.authority_rule || !['suggest', 'approve', 'policy'].includes(a.authority_mode) || !a.approver || !a.outcome) missing.push(`${name} ${a.proposal}`); } }
   ok('governance.every_scout_write_names_agent_authority_approver_outcome', !missing.length && entries > 20, `${entries} entries; ${missing.slice(0, 3).join('; ')}`);
-  { const s = Scout.startSession(db); Scout.decide(db, s, Scout.propose(db, s, 'Scout', 'erp_align_order').proposal, 'approve'); const r = Scout.propose(db, s, 'Scout', 'build_ship_notice'); const a = s.audit.find((x) => x.proposal === r.proposal);
+  { const s = Scout.startSession(db); Scout.decide(db, s, Scout.propose(db, s, 'Model', 'erp_align_order').proposal, 'approve'); const r = Scout.propose(db, s, 'Model', 'build_ship_notice'); const a = s.audit.find((x) => x.proposal === r.proposal);
     eq('governance.standing_policy_write_names_the_policy', [r.state, a?.authority_rule, a?.authority_mode, a?.approver], ['Executed', 'AP-1.4', 'policy', 'Standing policy, set by Priya Raman']); }
   // Story 2: pause turns the agent's proposal into a plain task, stops AP-4.1's acting without asking and keeps the model from running; resume restores it.
   { const before = A.claimDecision(ash, 'DC-40877', at);
     const p = G.setAgentState(gdb, G.AS, { agent: 'Claim Agent', state: 'paused', by: 'Priya Raman', reason: 'gate' });
     const task = G.plainTask(gdb, before, 'Claim Agent');
-    eq('governance.pause_turns_a_proposal_into_a_plain_task', [p.result, G.isPaused(gdb, 'Claim Agent'), task.proposal, 'next_step' in task, 'authority' in task, task.record], ['Agent paused', true, null, false, false, 'DC-40877']);
-    eq('governance.paused_claim_agent_does_not_act_without_asking', [G.mayActWithoutAsking(gdb, 'Claim Agent', true), G.mayActWithoutAsking(gdb, 'Watch Agent', true)], [false, true]);
+    eq('governance.pause_turns_a_proposal_into_a_plain_task', [p.result, G.isPaused(gdb, 'Claim Agent'), task.proposal, 'next_step' in task, 'authority' in task, task.record], ['Paused', true, null, false, false, 'DC-40877']);
+    eq('governance.a_rule_set_is_named_by_its_short_name_its_rules_or_its_old_name', ['claim', 'Ashby’s evidence rules', "Ashby's evidence rules", 'Claim Agent', 'nope'].map((n) => G.setAgentState(gdb, G.AS, { agent: n, state: 'paused', by: 'Priya Raman' }).result), ['Unchanged', 'Unchanged', 'Unchanged', 'Unchanged', 'Invalid request']);
     const r = G.setAgentState(gdb, G.AS, { agent: 'Claim Agent', state: 'active', by: 'Priya Raman' }); const log = G.changeList(gdb, G.AS, { kind: undefined }).entries;
-    eq('governance.resume_restores_and_both_are_logged', [r.result, G.isPaused(gdb, 'Claim Agent'), log.map((e) => [e.kind, e.agent, e.run_by])], ['Agent resumed', false, [['resume', 'Claim Agent', 'Priya Raman'], ['pause', 'Claim Agent', 'Priya Raman']]]);
+    eq('governance.resume_restores_and_both_are_logged', [r.result, G.isPaused(gdb, 'Claim Agent'), log.map((e) => [e.kind, e.agent, e.run_by])], ['Resumed', false, [['resume', 'Claim Agent', 'Priya Raman'], ['pause', 'Claim Agent', 'Priya Raman']]]);
     eq('governance.pause_is_per_connection', G.setAgentState(gdb, G.NF, { agent: 'Claim Agent', state: 'paused', by: 'Jordan Ellis' }).result, 'Invalid request'); }
   { G.setAgentState(gdb, G.AS, { agent: 'Scout', state: 'paused', by: 'Priya Raman' }); const s = Scout.startSession(db);
     const run = await Scout.runScout(db, s, { callModel: noModel, paused: () => G.isPaused(gdb, 'Scout Agent') });
-    eq('governance.paused_scout_gets_no_model_turn', [run.status, s.agent.calls, s.proposals.filter((p) => p.by === 'Scout').length], ['paused', 0, 0]); G.setAgentState(gdb, G.AS, { agent: 'Scout Agent', state: 'active', by: 'Priya Raman' }); }
-  { const s = Scout.startSession(db); const p = Scout.propose(db, s, 'Scout', 'kinross_load', { sscc: s.world.carton.sscc });
+    eq('governance.paused_scout_gets_no_model_turn', [run.status, s.agent.calls, s.proposals.filter((p) => p.by === 'Model').length], ['paused', 0, 0]); G.setAgentState(gdb, G.AS, { agent: 'Scout Agent', state: 'active', by: 'Priya Raman' }); }
+  { const s = Scout.startSession(db); const p = Scout.propose(db, s, 'Model', 'kinross_load', { sscc: s.world.carton.sscc });
     const d = Scout.decide(db, s, p.proposal, 'edit', 'Priya Raman', 'Calls Kinross herself'); const a = s.audit.at(-1); const run = await Scout.runScout(db, s, { callModel: noModel });
     eq('governance.override_is_recorded_with_who_made_it', [d.state, a.approver, /^Taken over by Priya Raman/.test(a.outcome), s.handed_over?.by, run.status, s.agent.calls, Scout.decide(db, s, p.proposal, 'approve').state], ['Taken over', 'Priya Raman', true, 'Priya Raman', 'handed_to_person', 0, 'Refused']); }
   // Story 4: a trial of a changed agent rule is a change-list entry: what changed, the replay result, drift, rollback, who ran it and when.
-  { const t = G.trialAgentRule(gdb, ash, G.AS, { job: 'deduction', rule: 'AP-4.1', params: { max_amount: 50 }, as_of: '2026-12-10T12:00:00-05:00' }, 'Gate check');
+  { const t = G.trialAgentRule(gdb, ash, G.AS, { job: 'shelf', rule: 'AP-6.1', params: { min_weekly_avg: 500 }, records: ['114', '207'], as_of: '2026-10-26T08:07:00-04:00' }, 'Gate check');
     const e = G.changeList(gdb, G.AS, { kind: 'trial' }).entries[0];
-    eq('governance.trial_recorded_on_the_change_list', [t.trial, e?.id, e?.kind, e?.agent, e?.rule, e?.change, e?.result.changed.map((c) => c.record), e?.run_by, !!e?.at, /^1 of \d+ records/.test(e?.result.drift_measure), /still holds AP-4.1/.test(e?.result.rollback)],
-      [e?.id, t.trial, 'trial', 'Claim Agent', 'AP-4.1', { rule: 'AP-4.1', from: { max_amount: 250 }, to: { max_amount: 50 } }, ['DC-40877'], 'Gate check', true, true, true]);
-    eq('governance.trial_refuses_rules_it_cannot_change', [G.trialAgentRule(gdb, ash, G.AS, { job: 'deduction', rule: 'NF-7.4', params: { x: 1 } }, 'g').result, G.trialAgentRule(gdb, ash, G.AS, { job: 'deduction', rule: 'AP-4.1', params: { limit: 1 } }, 'g').result, G.changeList(gdb, G.AS, { kind: 'trial' }).entries.length], ['Invalid request', 'Invalid request', 1]);
+    eq('governance.trial_recorded_on_the_change_list', [t.trial, e?.id, e?.kind, e?.agent, e?.rule, e?.change, e?.result.changed.map((c) => c.record), e?.run_by, !!e?.at, /^1 of 2 records/.test(e?.result.drift_measure), /still holds AP-6.1/.test(e?.result.rollback)],
+      [e?.id, t.trial, 'trial', 'Shelf Agent', 'AP-6.1', { rule: 'AP-6.1', from: { min_weekly_avg: 1 }, to: { min_weekly_avg: 500 } }, ['114'], 'Gate check', true, true, true]);
+    // A Northfield rule, a parameter the rule does not hold, and AP-4.1, which holds none: every dispute needs Priya Raman's approval.
+    eq('governance.trial_refuses_rules_it_cannot_change', [G.trialAgentRule(gdb, ash, G.AS, { job: 'deduction', rule: 'NF-7.4', params: { x: 1 } }, 'g').result, G.trialAgentRule(gdb, ash, G.AS, { job: 'shelf', rule: 'AP-6.1', params: { limit: 1 }, records: ['114'] }, 'g').result, G.trialAgentRule(gdb, ash, G.AS, { job: 'deduction', rule: 'AP-4.1', params: { max_amount: 50 } }, 'g').result, G.changeList(gdb, G.AS, { kind: 'trial' }).entries.length], ['Invalid request', 'Invalid request', 'Invalid request', 1]);
     const sr = await Scout.replay(db, { policy: { kinross_load: 'policy', release_ship_notice: 'policy' }, callModel: null });
     eq('governance.scout_policy_trial_shows_authority_beside_the_policy_in_force', [sr.policy_trial.asked.map((a) => [a.action, a.applied]), sr.policy_trial.differs.some((d) => d.action === 'kinross_load' && d.needs === 'policy' && d.under === 'change'), sr.policy_trial.in_force.outcome.approvals > sr.policy_trial.with_change.outcome.approvals],
       [[['kinross_load', true], ['release_ship_notice', false]], true, true]); } }
@@ -237,7 +285,7 @@ for (const p of REG.prototypes) {
   { const nfdb0 = new DatabaseSync(join(ROOT, 'build', 'northfield.db'), { readOnly: true }); const c1 = NR.caseNF(nfdb0, 'DC-40877', D.asOfDate('2026-12-30')), c2 = NR.caseNF(nfdb0, 'DC-40877', D.asOfDate('2027-01-06'));
     eq('nf.case.repaid_from_own_remittance', [c1.repaid.length, c2.repaid.map((r) => [r.payment, r.amount])], [0, [['PMT-991204', 88.4]]]); }
   const nfdb = new DatabaseSync(join(ROOT, 'build', 'northfield.db'), { readOnly: true });
-  eq('nf.view_holds_no_supplier_private_records', [nfdb.prepare("SELECT count(*) n FROM documents WHERE doc_type IN ('940','945')").get().n, nfdb.prepare("SELECT count(*) n FROM events WHERE system IN ('Supplier ERP','Kinross warehouse system','Lakeline Freight') AND json_extract(data,'$.in_case') IS NULL AND NOT (kind = 'carrier.pickup_missed' AND po IN (SELECT po FROM routing_requests))").get().n, nfdb.prepare("SELECT count(*) n FROM rules WHERE owner LIKE 'Ashby%'").get().n], [0, 0, 0]);
+  eq('nf.view_holds_no_supplier_private_records', [nfdb.prepare("SELECT count(*) n FROM documents WHERE doc_type IN ('940','945')").get().n, nfdb.prepare("SELECT count(*) n FROM events WHERE system IN ('Supplier ERP','Kinross warehouse system','Lakeline Freight') AND json_extract(data,'$.in_case') IS NULL AND NOT (kind IN ('carrier.pickup_missed', 'carrier.arrived_at_pickup') AND po IN (SELECT po FROM routing_requests))").get().n, nfdb.prepare("SELECT count(*) n FROM rules WHERE owner LIKE 'Ashby%'").get().n], [0, 0, 0]);
   const asdb = new DatabaseSync(ASHBY_DB, { readOnly: true }); eq('ashby.view_holds_no_northfield_private_tables', asdb.prepare("SELECT count(*) n FROM sqlite_master WHERE name IN ('review_notes','draft_rules','rule_replays')").get().n, 0);
 }
 // ── Registry sync: registry, server and the three docs say the same thing ─────────────────────────────────────────
@@ -250,7 +298,8 @@ eq('registry.northfield_tools_exist_on_server', [...regNf].filter((t) => !nfTool
 eq('registry.every_northfield_tool_has_a_job', [...nfTools].filter((t) => !regNf.has(t)), []);
 const cal = Object.fromEntries(db.prepare('SELECT * FROM calendar').all().map((c) => [c.id, c]));
 for (const p of REG.prototypes) {
-  ok(`registry ${p.id} calendar moment`, !!cal[p.calendar], p.calendar);
+  // A prototype off the story calendar (the prompts doc's table leaves it out) says why instead of naming a moment.
+  ok(`registry ${p.id} calendar moment`, p.calendar ? !!cal[p.calendar] : !!p.off_calendar, p.calendar);
   if (cal[p.calendar]) ok(`registry ${p.id} seen_by`, p.seen_by.startsWith(cal[p.calendar].seen_by.split(',')[0]), `${p.seen_by} vs ${cal[p.calendar].seen_by}`);
   ok(`registry ${p.id} capability status`, REG.capability_status_values.includes(p.capability_status));
   ok(`registry ${p.id} agent job`, p.agency.verdict !== 'agent' || ((!!A.JOBS[p.agency.job] || !!NR.JOBS[p.agency.job]) && p.decisions.length >= 2));

@@ -19,24 +19,28 @@ export const ASHBY_DB = join(BUILD, 'ashby.db');
 export const NORTHFIELD_DB = join(BUILD, 'northfield.db');
 export const X12_DIR = join(BUILD, 'x12');
 
-/** The story calendar: each prototype is a moment on the one timeline, seen by one person. */
-export const CALENDAR = (A) => [
-  { id: 'P4', week: 1, moment: 'Marketplace seller invited to Wholesale; first Wholesale order', seen_by: 'Priya Raman', prototype: 'P4 Marketplace to Wholesale', as_of: '2026-09-28T12:05:00.000Z', anchor: A.p4 },
-  { id: 'P1', week: 1, moment: 'An emailed PDF order becomes EDI', seen_by: 'Priya Raman', prototype: 'P1 Long-tail', as_of: '2026-09-28T13:12:00.000Z', anchor: A.p1 },
-  { id: 'P2', week: 3, moment: 'Drop-ship and warehouse readiness', seen_by: 'Priya Raman', prototype: 'P2 Programme Readiness', as_of: '2026-10-12T13:00:00.000Z', anchor: 'Drop-ship programme' },
-  { id: 'P9', week: 5, moment: 'Store activity becomes a refill order', seen_by: 'Priya Raman', prototype: 'P9 Shelf Recovery', as_of: '2026-10-26T12:07:00.000Z', anchor: 'NR-451207' },
-  { id: 'STORY', week: 6, moment: 'Order changed; line 1 set to 270 on an order change', seen_by: 'Priya Raman', prototype: 'Order story (no screen)', as_of: '2026-11-02T21:40:00.000Z', anchor: 'NR-450118' },
-  { id: 'P8', week: 7, moment: 'Open-order value from purchase order to payment', seen_by: 'Jordan Ellis', prototype: 'P8 Money in Motion', as_of: '2026-11-09T04:59:00.000Z', anchor: '340 open orders' },
-  { id: 'P10', week: 8, moment: 'Four questions and the six-PO email', seen_by: 'Priya Raman', prototype: 'P10 Trading Grid in the customer’s AI', as_of: '2026-11-17T16:00:00.000Z', anchor: 'NR-46101 to NR-46156' },
-  { id: 'P13', week: 8, moment: 'Silent order watch', seen_by: 'Priya Raman', prototype: 'P13 Silent order watch', as_of: '2026-11-18T14:00:00.000Z', anchor: 'NR-46210 to NR-46231' },
-  { id: 'P11', week: 10, moment: 'A live ship notice held in NetSuite and corrected before it leaves', seen_by: 'Priya Raman', prototype: 'P11 NetSuite Chargeback Avoidance', as_of: '2026-11-30T15:25:00.000Z', anchor: 'ASN-78260' },
-  { id: 'P6', week: 10, moment: 'Deductions and an invoice exception', seen_by: 'Priya Raman, then Jordan Ellis', prototype: 'P6 Charge Resolution', as_of: '2026-12-01T14:00:00.000Z', anchor: 'NR-450118, NR-450390, NR-450415' },
-  { id: 'P5', week: 11, moment: 'Five fulfilment risks before departure', seen_by: 'Priya Raman', prototype: 'P5 Scout Shipment Watch', as_of: '2026-12-08T22:12:00.000Z', anchor: 'NR-460207 to NR-460274' },
-  { id: 'P14', week: 7, moment: 'An invoice that does not match its order and receipt', seen_by: 'Jordan Ellis', prototype: 'P14 Invoice Variance', as_of: '2026-11-10T14:00:00.000Z', anchor: 'INV-7731' },
-  { id: 'P15', week: 14, moment: 'A draft rule replayed against the quarter before publishing', seen_by: 'Jordan Ellis', prototype: 'P15 Rule Replay', as_of: '2026-12-28T16:00:00.000Z', anchor: 'NFD-1' },
-  { id: 'P22', week: 15, moment: 'What happened to the quarter’s findings', seen_by: 'Priya Raman, then Jordan Ellis', prototype: 'P22 Finding Outcomes', as_of: '2027-01-09T22:00:00.000Z', anchor: 'NR-46215' },
-  { id: 'P7', week: 14, moment: 'On-time, in-full 91.0%, calculated by Trading Grid', seen_by: 'Priya Raman, then Jordan Ellis', prototype: 'P7 Performance Improvement', as_of: '2026-12-28T14:00:00.000Z', anchor: '108 failing lines' },
-];
+/** The story calendar: each prototype is a moment on the one timeline, seen by one person. It mirrors the "Story calendar"
+ *  table in the Shared context of the prototype build prompts: the same rows in the same order (the supply chain stages,
+ *  not the dates), each with its stage, opening time, anchor and who sees it. `seq` is the row's place in that table. */
+export const STAGE = { req: 'Partner requirements', ful: 'Fulfillment', sell: 'Sell-through and replenishment', inv: 'Invoice and payment', ded: 'Deductions and recovery', perf: 'Performance' };
+const PRIYA = 'Priya Raman', JORDAN = 'Jordan Ellis', BOTH = 'Priya Raman, then Jordan Ellis';
+export const CALENDAR = () => [
+  { id: 'P2', stage: STAGE.req, week: 3, moment: 'Drop-ship and warehouse readiness', seen_by: PRIYA, prototype: 'P2 Programme Readiness', as_of: '2026-10-12T13:00:00.000Z', anchor: 'Drop-ship programme' },
+  { id: 'P21', stage: STAGE.req, week: 8, moment: 'Each company sets its own rules and sees the effect of a change before it applies', seen_by: BOTH, prototype: 'P21 Admin and rules', as_of: '2026-11-17T16:00:00.000Z', anchor: "Both companies' rules" },
+  { id: 'P15', stage: STAGE.req, week: 14, moment: 'A draft rule replayed against the quarter before publishing', seen_by: JORDAN, prototype: 'P15 Rule Replay', as_of: '2026-12-28T16:00:00.000Z', anchor: 'NFD-1' },
+  { id: 'P23', stage: STAGE.ful, week: 6, moment: 'Northfield changes an order twice before it ships; order change 3 arrives', seen_by: PRIYA, prototype: 'P23 Order change before shipment', as_of: '2026-11-02T18:05:00.000Z', anchor: 'NR-450118' },
+  { id: 'P13', stage: STAGE.ful, week: 8, moment: 'Silent order watch', seen_by: PRIYA, prototype: 'P13 Silent order watch', as_of: '2026-11-18T14:00:00.000Z', anchor: 'NR-46210 to NR-46231' },
+  { id: 'P5', stage: STAGE.ful, week: 11, moment: 'Five fulfilment risks before departure', seen_by: PRIYA, prototype: 'P5 Shipment Watch', as_of: '2026-12-08T22:12:00.000Z', anchor: 'NR-460207 to NR-460288' },
+  { id: 'P11', stage: STAGE.ful, week: 10, moment: 'A live ship notice held in NetSuite and corrected before it leaves', seen_by: PRIYA, prototype: 'P11 NetSuite Chargeback Avoidance', as_of: '2026-11-30T15:25:00.000Z', anchor: 'ASN-78260' },
+  { id: 'P24', stage: STAGE.ful, week: 11, moment: 'Inbound orders that will miss their delivery window, seen before receipt', seen_by: JORDAN, prototype: 'P24 Inbound order risk', as_of: '2026-12-09T22:30:00.000Z', anchor: 'NR-46539 to NR-46616' },
+  { id: 'P9', stage: STAGE.sell, week: 5, moment: 'Store activity becomes a refill order', seen_by: PRIYA, prototype: 'P9 Shelf Recovery', as_of: '2026-10-26T12:07:00.000Z', anchor: 'Store 114, NR-451207' },
+  { id: 'P14', stage: STAGE.inv, week: 7, moment: 'An invoice that does not match its order and receipt', seen_by: JORDAN, prototype: 'P14 Invoice Variance', as_of: '2026-11-10T14:00:00.000Z', anchor: 'INV-7731' },
+  { id: 'P8', stage: STAGE.inv, week: 7, moment: 'Open-order value from purchase order to payment', seen_by: JORDAN, prototype: 'P8 Money in Motion', as_of: '2026-11-09T04:59:00.000Z', anchor: 'NR-450118 and 339 other orders' },
+  { id: 'P6', stage: STAGE.ded, week: 10, moment: 'Deductions and an invoice exception', seen_by: BOTH, prototype: 'P6 Charge Resolution', as_of: '2026-12-01T14:00:00.000Z', anchor: 'DC-40877 on NR-450118' },
+  { id: 'P20', stage: STAGE.ded, week: 15, moment: 'A remittance takes five promotion deductions', seen_by: BOTH, prototype: 'P20 Promotion deductions', as_of: '2027-01-06T14:00:00.000Z', anchor: 'PMT-990168' },
+  { id: 'P7', stage: STAGE.perf, week: 14, moment: 'On-time, in-full 91.0%, calculated by Trading Grid', seen_by: BOTH, prototype: 'P7 Performance Improvement', as_of: '2026-12-28T14:00:00.000Z', anchor: '108 failing lines' },
+  { id: 'P22', stage: STAGE.perf, week: 15, moment: 'What happened to the quarter’s findings', seen_by: BOTH, prototype: 'P22 Finding Outcomes', as_of: '2027-01-09T22:00:00.000Z', anchor: 'NR-46215' },
+].map((m, i) => ({ seq: i + 1, ...m }));
 
 /** The schema: the core tables, then each stage's own. */
 export const SCHEMA = () => [readFileSync(join(ROOT, 'world', 'schema.sql'), 'utf8'), ...STAGES.map((s) => s.schema || ''), FINDINGS_SCHEMA].join('\n');
@@ -72,7 +76,10 @@ function syntaxCause(d) {
 }
 
 /** Reads the X12 files and derives the tables. */
-export function derive(files, events) {
+export /** Advices moved in time keep their errors' numbers: the time each was first reported at, and how many errors it then held. */
+const ERROR_NUMBERED_AT = { '824:AA-INV-7731': '2026-11-08T15:20:00.000Z' };
+const ERRORS_FIRST_REPORTED = { '824:AA-INV-7731': 1 };
+function derive(files, events) {
   const docs = [];
   for (const f of files) {
     const text = readFileSync(join(X12_DIR, f), 'utf8');
@@ -115,12 +122,18 @@ export function derive(files, events) {
       for (const e of d.errors) errs.push({ t, by: d, channel: 'Application advice (824)', code: e.code, cause: e.cause, field: fieldName(e.seg, e.elem), sent_value: e.bad, allowed: e.allowed, rule_id: ref.TED[e.code]?.rule || null });
     }
   }
+  // Error numbers follow the order the errors were first reported in. An advice moved in time keeps its place, and an error
+  // added to an existing advice takes a number after every other, so no existing error is renumbered (18 November 2026).
+  { const at = (x) => ERROR_NUMBERED_AT[x.by.doc_id] || x.by.at; const seen = new Map(); for (const x of errs) { const n = (seen.get(x.by.doc_id) || 0) + 1; seen.set(x.by.doc_id, n); x._late = n > (ERRORS_FIRST_REPORTED[x.by.doc_id] ?? Infinity); }
+    const order = new Map(errs.map((x, i) => [x, i])); errs.sort((a, b) => (a._late !== b._late ? a._late - b._late : at(a) < at(b) ? -1 : at(a) > at(b) ? 1 : order.get(a) - order.get(b))); }
   // Corrections: a later accepted document with the same reference, or an invoice that replaces a held one.
   for (const x of errs) {
     const t = x.t; const same = byRef.get(`${t.type}:${t.ref}:${t.sender}`) || [];
     let fix = same.find((o) => o.at > t.at && !o.rejected && !o.held);
     if (!fix && t.type === '810') fix = docs.find((o) => o.type === '810' && o.replaces === t.ref && !o.rejected);
     if (fix) { t.status = t.held ? `Held, then replaced by ${fix.ref}` : 'Corrected and resent'; fix.answers = t.doc_id; }
+    // A replacing invoice corrects a quantity error only on a line whose quantity it changed: a line it bills as before stays open.
+    if (fix && t.type === '810' && x.code === 'QTY') { const ln = Number((String(x.allowed).match(/line (\d+)/) || [])[1]); const l = (fix.lines || []).find((y) => y.line === ln); if (l && String(l.qty) === String(x.sent_value)) fix = null; }
     T.errors.push({ error_id: `E${String(++errSeq).padStart(5, '0')}`, doc_id: t.doc_id, reported_by: x.by.doc_id, channel: x.channel, code: x.code, cause: x.cause, field: x.field, sent_value: x.sent_value, allowed: x.allowed, rule_id: x.rule_id, status: fix ? 'Corrected' : 'Open', corrected_by: fix ? fix.doc_id : null, _fixAt: fix ? fix.at : null });
   }
   // Order changes: an earlier change is superseded by a later one.
@@ -189,9 +202,10 @@ export function buildWorld({ quiet = false } = {}) {
   const sorted = [...g.L.events].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
   // Event ids: existing records keep the ids they always had; records added by a stage take ids from a separate range.
   // Records added on 17 November 2026 (stage `records`) take a third range, so no earlier stage record is renumbered either.
+  // Records added on 18 November 2026 (`batch: 2`) take a fourth range: some are dated before records the third range already holds.
   // A withdrawn record keeps its place in the numbering and is not stored.
   const events = [...sorted.filter((e) => !e.stage).map((e, i) => ({ ...e, id: i + 1 })), ...sorted.filter((e) => e.stage && e.stage !== 'records').map((e, i) => ({ ...e, id: 1000001 + i })),
-    ...sorted.filter((e) => e.stage === 'records').map((e, i) => ({ ...e, id: 2000001 + i }))].filter((e) => !e.retired);
+    ...sorted.filter((e) => e.stage === 'records' && e.batch !== 2).map((e, i) => ({ ...e, id: 2000001 + i })), ...sorted.filter((e) => e.stage === 'records' && e.batch === 2).map((e, i) => ({ ...e, id: 3000001 + i }))].filter((e) => !e.retired);
   const T = derive(files, events);
   const db = new DatabaseSync(MAIN_DB);
   db.exec(SCHEMA());
@@ -203,7 +217,7 @@ export function buildWorld({ quiet = false } = {}) {
   const ir = itemRows(); insert(db, 'item_versions', ir.item_versions); insert(db, 'item_prices', ir.item_prices);
   for (const st of STAGES) for (const [t, rows] of Object.entries(st.masters ? st.masters() : {})) insert(db, t, rows);
   insert(db, 'rules', ref.rules.map((r) => ({ id: r.id, owner: r.owner, implements: r.implements, params: r.params ? JSON.stringify(r.params) : null, rule_set: r.rule_set, topic: r.topic, doc_type: r.doc_type, statement: r.statement, window_hours: r.window_hours, limit_value: r.limit_value, charge_code: r.charge_code, charge: r.charge, source: r.source, basis: r.basis, public_sources: r.public_sources })));
-  insert(db, 'calendar', CALENDAR(g.W.anchor));
+  insert(db, 'calendar', CALENDAR());
   for (const [t, rows] of Object.entries(T)) insert(db, t, rows);
   insert(db, 'connections', [{ id: 'ashby-assistant', company_id: 'ASHBY', user_name: 'Priya Raman', scopes: JSON.stringify(['orders', 'documents', 'errors', 'rules', 'deductions']), read_only: 1, configured_by: 'Priya Raman', configured_at: '2026-11-17T15:00:00.000Z' },
     { id: 'northfield-assistant', company_id: 'NORTHFIELD', user_name: 'Jordan Ellis', scopes: JSON.stringify(['suppliers', 'documents', 'errors', 'rules', 'deductions', 'payables', 'rule_drafts']), read_only: 1, configured_by: 'Jordan Ellis', configured_at: '2026-11-17T15:00:00.000Z' }]);
@@ -298,7 +312,7 @@ function buildNorthfieldView() {
     INSERT INTO remittance_items SELECT * FROM m.remittance_items; INSERT INTO adjustments SELECT * FROM m.adjustments;
     INSERT INTO errors SELECT * FROM m.errors; INSERT INTO store_activity SELECT * FROM m.store_activity;
     INSERT INTO events SELECT * FROM m.events WHERE party = 'NORTHFIELD' OR system = 'Northfield deduction case' OR json_extract(data, '$.in_case') IS NOT NULL
-      OR (kind = 'carrier.pickup_missed' AND po IN (SELECT po FROM m.routing_requests));
+      OR (kind IN ('carrier.pickup_missed', 'carrier.arrived_at_pickup') AND po IN (SELECT po FROM m.routing_requests));
     INSERT INTO review_notes SELECT * FROM m.review_notes; INSERT INTO draft_rules SELECT * FROM m.draft_rules;
     INSERT INTO rule_versions SELECT * FROM m.rule_versions WHERE rule_id IN (SELECT id FROM rules); INSERT INTO rule_sets SELECT * FROM m.rule_sets WHERE id IN (SELECT rule_set FROM rule_versions);
     INSERT INTO item_versions SELECT * FROM m.item_versions; INSERT INTO item_prices SELECT * FROM m.item_prices;

@@ -19,11 +19,18 @@ One fictional quarter of trade between Ashby Supplier and Northfield Retailer, b
 | `npm run validate` | Independent X12 check with StAEDI (needs Java). Records `validator/report.json` with a hash of the X12 files; the gate fails if the build's files do not match it. Run after any change to the world. |
 | `npm run contract` | Diffs built prototype screens against the world. Put screen sources in `contract/screens/<id>.html` or set `SCREENS`. |
 | `npm run smoke` | Starts the server and checks it through an MCP client |
+| `npm run names` | Starts the server, calls every tool on both connections and fails if any result, title, description or instruction names an agent |
 | `npm start` | Runs the server (`MCP_TOKEN`, `PORT`) |
 
 ## Files that must agree
 
 `registry/registry.json` lists each prototype's calendar moment, agent job, decision records, tools, anchor records, acceptance tests, capability status and owner. `docs/` holds text copies of the three working documents. The gate fails when the registry, the server's tools or a document copy disagree. After editing a working document, export it again into `docs/`.
+
+## Rules, not agents
+
+No tool response names an agent. A finding carries `found_by` with the rule that found it ("Northfield matching rule NF-7.8"), and a rule runtime is named by its rule set ("Ashby's evidence rules") and its short name (`claim`). The runtimes keep their internal names in code; `src/credit.js` turns them into what a connection reads and is applied to every result, description and REST answer. Tool names (`pause_agent`, `set_agent_mode`, `replay_agent_rule`) stay; their `agent` argument takes the short name, the rule set or the old name. Every dispute needs Priya Raman's approval (AP-4.1 holds no amount).
+
+The story calendar (`CALENDAR` in `world/build.js`) mirrors the "Story calendar" table in the Shared context of the prototype build prompts: same rows, same order (supply chain stage, not date).
 
 ## What is invented
 

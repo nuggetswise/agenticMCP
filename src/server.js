@@ -616,8 +616,8 @@ async function pageAviator(page, req, res) {
   if (question.length > MAX_QUESTION) return refuse(400, REFUSALS.long);
   const turns = Array.isArray(b.history) ? b.history : []; if (turns.length > MAX_TURNS) return refuse(400, REFUSALS.turns);
   // The page's moment, never the story clock. An as_of from the page must fall inside the page's own story window.
-  const moment = pageMoment(page); const through = page.through ? new Date(page.through).toISOString() : moment;
-  let asOf = moment; if (b.as_of != null && b.as_of !== '') { const x = asOfIso(b.as_of); if (!x || x < moment || x > through) return refuse(403, REFUSALS.moment); asOf = x; }
+  const moment = pageMoment(page); const through = page.through ? new Date(page.through).toISOString() : null; // null: window end not set yet, left open
+  let asOf = moment; if (b.as_of != null && b.as_of !== '') { const x = asOfIso(b.as_of); if (!x || x < moment || (through && x > through)) return refuse(403, REFUSALS.moment); asOf = x; }
   const at = new Date(asOf);
   const context = typeof b.context === 'string' ? b.context.slice(0, 300) : b.context ? JSON.stringify(b.context).slice(0, 300) : '';
   const history = turns.filter((h) => h && typeof h.text === 'string').map((h) => ({ role: h.role === 'model' || h.role === 'aviator' ? 'model' : 'user', text: h.text.slice(0, 2000) }));

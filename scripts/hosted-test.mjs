@@ -78,6 +78,8 @@ try {
   ok('as_of inside the page window is used', a2.ok && a2.as_of === '2026-10-27T15:00:00.000Z', JSON.stringify(a2).slice(0, 300));
   for (const [n, v] of [['after the window', '2026-12-28T14:00:00Z'], ['before the moment', '2026-10-01T14:00:00Z'], ['not a date', 'tomorrow']]) { const r = await av({ question: 'Where does NR-450118 stand?', side: 'ashby', as_of: v }); const j = await r.json();
     ok(`token with a moment outside its binding is refused (${n})`, r.status === 403 && j.ok === false && /own moment/.test(j.message), JSON.stringify(j)); }
+  { const r = await av({ question: 'Where does NR-450118 stand?', side: 'northfield', as_of: '2026-10-01T14:00:00Z' }, PORT, REG.p14.token); ok('a page with an open window end still refuses a moment before its opening', r.status === 403);
+    const r2 = await (await av({ question: 'Where does NR-450118 stand?', side: 'northfield' }, PORT, REG.p14.token)).json(); ok('a page with an open window end defaults to its opening moment', r2.ok && r2.as_of === '2026-11-10T14:00:00.000Z', JSON.stringify(r2).slice(0, 200)); }
   const a3 = await av({ question: 'Where does NR-450118 stand?', side: 'ashby' }, PORT, REG.p14.token); const a3j = await a3.json();
   ok('token with a side outside its binding is refused', a3.status === 403 && a3j.ok === false && /does not show/.test(a3j.message), JSON.stringify(a3j));
   const a3b = await av({ question: 'x', side: 'kinross' }); ok('unknown side is refused', a3b.status === 403);

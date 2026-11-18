@@ -1,5 +1,5 @@
 {
- "note": "Prototype pages hosted at /p/<id>. Each token answers Aviator only at /aviator/<token> and is bound here to its prototype, the sides the page shows and its story window: from the calendar moment of `calendar` through `through` (US Eastern). The server refuses a side or as_of outside that binding. Tokens sit in the pages, so they are public by design. artifact is the claude.ai build copy; sync only when Mandip says a page is ready: npm run sync -- <id> <file> <sha256 of the published artifact>. _test is the route's own test page, linked nowhere.",
+ "note": "Prototype pages hosted at /p/<id>. Each token answers Aviator only at /aviator/<token> and is bound here to its prototype, the sides the page shows and its opening moment (the calendar moment of `calendar`), the default when as_of is missing. `through` is the window end: the latest source time of any record the page shows, set from the build chat's result for that page. Until it is set the window end is open. The server refuses a side outside the binding, an as_of before the opening moment, and an as_of after `through` when set. Tokens sit in the pages, so they are public by design. artifact is the claude.ai build copy; sync only when Mandip says a page is ready: npm run sync -- <id> <file> <sha256 of the published artifact>. _test is the route's own test page, linked nowhere.",
  "pages": {
   "p5": {
    "calendar": "P5",
@@ -7,8 +7,7 @@
    "sides": [
     "ashby"
    ],
-   "token": "p5-sXJmoirADPo3",
-   "through": "2026-12-10T23:59:00-05:00"
+   "token": "p5-sXJmoirADPo3"
   },
   "p9": {
    "calendar": "P9",
@@ -17,8 +16,7 @@
     "ashby",
     "northfield"
    ],
-   "token": "p9-g0NeF0VsCC6O",
-   "through": "2026-11-02T23:59:00-05:00"
+   "token": "p9-g0NeF0VsCC6O"
   },
   "p13": {
    "calendar": "P13",
@@ -26,8 +24,7 @@
    "sides": [
     "ashby"
    ],
-   "token": "p13-h2EnVwiaXtHn",
-   "through": "2026-11-19T23:59:00-05:00"
+   "token": "p13-h2EnVwiaXtHn"
   },
   "p14": {
    "calendar": "P14",
@@ -35,8 +32,7 @@
    "sides": [
     "northfield"
    ],
-   "token": "p14-iX-L7USIYgkd",
-   "through": "2026-12-01T23:59:00-05:00"
+   "token": "p14-iX-L7USIYgkd"
   },
   "p15": {
    "calendar": "P15",
@@ -44,8 +40,7 @@
    "sides": [
     "northfield"
    ],
-   "token": "p15-Qob8xZlf5xo_",
-   "through": "2026-12-28T23:59:00-05:00"
+   "token": "p15-Qob8xZlf5xo_"
   },
   "p20": {
    "calendar": "P20",
@@ -54,8 +49,7 @@
     "ashby",
     "northfield"
    ],
-   "token": "p20-g_h_3dl8b_zp",
-   "through": "2027-01-09T23:59:00-05:00"
+   "token": "p20-g_h_3dl8b_zp"
   },
   "p21": {
    "calendar": "P21",
@@ -64,8 +58,7 @@
     "ashby",
     "northfield"
    ],
-   "token": "p21-ieks0rMbY9Jb",
-   "through": "2026-11-17T23:59:00-05:00"
+   "token": "p21-ieks0rMbY9Jb"
   },
   "_test": {
    "calendar": "P9",

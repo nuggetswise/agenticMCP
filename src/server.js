@@ -13,7 +13,7 @@ import { fmtET, etDay } from '../world/lib.js';
 import * as NR from './retailer.js';
 import * as D from './domain.js';
 import { TOOLS, BOUNDARY, SCOPES, ASHBY_WRITES, ASHBY_REFUSALS, NF_TOOLS, NF_WRITES, NF_REFUSALS, NF_SCOPES, ASHBY_PRIVATE, refusalText } from './tools.js';
-import { recordPage, documentPage, adminPage, homePage, nfOrderPage } from './pages.js';
+import { recordPage, documentPage, adminPage, nfOrderPage } from './pages.js';
 import * as Aviator from './aviator.js';
 import * as Scout from './scout.js';
 import * as Watch from './watch.js';
@@ -489,7 +489,6 @@ app.set('trust proxy', 1);
 app.use((req, res, next) => { const json = res.json.bind(res); res.json = (body) => json(present(body)); next(); });
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false }));
-app.get('/', (req, res) => res.type('html').send(homePage()));
 app.get('/healthz', (req, res) => res.json({ status: 'ok', version: '0.4.10', writes: WRITES, connections: [AS, NF], aviator: !!process.env.GEMINI_API_KEY, model_routes: Aviator.modelRoutes().map((r) => `${r.route} · ${r.model}`) }));
 const cidOf = (req, res) => { const c = BY_TOKEN[req.params.token]; if (!c) { res.status(404).send('Not found'); return null; } return c; };
 
@@ -567,6 +566,12 @@ app.get('/p/:id', (req, res) => {
   if (!PAGES[id] || !/^(p\d+|_test)$/.test(id) || !existsSync(f)) return res.status(404).set('X-Robots-Tag', 'noindex').type('text').send('No such page');
   res.set(PAGE_HEADERS).type('html').send(readFileSync(f));
 });
+// The overview page is the landing page: pages/index.html, linked to every hosted prototype. Same headers as the prototypes.
+const OVERVIEW = new URL('index.html', PAGES_DIR);
+app.get('/', (req, res) => { if (!existsSync(OVERVIEW)) return res.status(404).type('text').send('No overview page'); res.set(PAGE_HEADERS).type('html').send(readFileSync(OVERVIEW)); });
+// three.js for the overview's hero, served from this origin so the page policy allows it (pinned in package.json).
+const THREE_JS = new URL('../node_modules/three/build/three.module.min.js', import.meta.url);
+app.get('/vendor/three.module.min.js', (req, res) => { if (!existsSync(THREE_JS)) return res.status(404).type('text').send('Not found'); res.set({ 'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff' }).type('application/javascript').send(readFileSync(THREE_JS)); });
 app.get('/robots.txt', (req, res) => res.type('text').send('User-agent: *\nDisallow: /p/\nDisallow: /aviator/\nDisallow: /public/\n'));
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 // The hosted pages with the sha256 of each file, so a deploy can be checked against the page the build chat committed. The test page is not listed.

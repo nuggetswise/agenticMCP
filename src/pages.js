@@ -79,6 +79,3 @@ ${t.invoices.length ? `<div class="card"><h2>Invoices</h2>${tbl(['Invoice', 'Sen
 <p class="meta">${esc(t.not_shown)}</p>`, 'Northfield Retailer');
 }
 
-export function homePage() {
-  return shell('Trading Grid demo', `<h1>Trading Grid · Ashby Supplier</h1><p class="meta">Read-only demo connection for a company AI assistant. All data is fictional.</p>`);
-}

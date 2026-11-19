@@ -684,15 +684,15 @@ function tiles(){
     return [
       {k:"open", lab:"Not disputed", big:E.money(m.open), tone:m.open ? "amber" : "", body:m.open ? `${m.openRows.length} shortage deductions · dispute window ${esc(m.window || "")}` : "Every deduction was disputed or accepted", act:m.open ? `<button class="cnt" type="button" data-open="opended">Open the deductions</button> · ${pgLink("p6", "Dispute in Charge resolution")}` : ""},
       {k:"ded", lab:"Deductions", big:E.money(m.taken), body:`${E.money(m.waived)} waived and repaid · ${E.money(m.upheld)} upheld · ${E.money(m.accepted)} accepted`, act:cnt(m.cases, 'data-open="ded"') + " cases"},
-      {k:"svc", lab:"Fill rate", big:fl.rate || "Not calculated", body:`${ot ? `On time, in full ${esc(ot.score)}` : "On time, in full not calculated for this period"} · ship notices on time ${esc(tl.rate || "Unknown")}`, act:fl.short_lines ? cnt(fl.short_lines, 'data-open="short"') + ` short lines, ${n0(fl.short_cases)} cases` : "No short lines"},
+      {k:"svc", lab:"Fill rate", big:fl.rate || "Not calculated", body:`${ot ? `On time, in full ${esc(ot.score)}` : "On time, in full not calculated for this period"} · ship notices on time ${esc(tl.rate || "Unknown")}`, act:fl.short_lines ? cnt(fl.short_lines, 'data-open="short"') + ` lines shipped short, ${n0(fl.short_cases)} cases` : "No line shipped short"},
       {k:"held", lab:"Invoices held", big:E.money(sum(HELD(), "value")), tone:HELD().some(h => !h.released_by) ? "amber" : "", body:HELD().length ? `${HELD().length} invoices held for payment · ${HELD().filter(h => !h.released_by).length ? `${E.money(sum(HELD().filter(h => !h.released_by), "value"))} still held` : "all released"}` : "No invoice held in this period", act:HELD().length ? cnt(HELD().length, 'data-open="held"') + " invoices" : ""}];
   }
   const sup = x.suppliers; const low = sup.slice().sort((a, b) => parseFloat(a.fill) - parseFloat(b.fill))[0] || {};
   const rejBy = byKey(rejections(), "owner")[0]; const slow = (x.owner_response || []).filter(o => o.slowest && !/Northfield|Jordan/.test(o.owner)).sort((a, b) => b.with_a_record - a.with_a_record)[0];
   return [
     {k:"ded", lab:"Deductions taken", big:E.money(m.taken), body:`${E.money(m.waived)} waived · ${E.money(m.upheld)} upheld · ${E.money(m.taken - m.waived - m.upheld)} stand`, act:cnt(m.cases, 'data-open="ded"') + " cases"},
-    {k:"fill", lab:"Lowest fill rate", big:esc(low.fill || "Unknown"), body:`${esc(low.supplier || "")} · ${esc(low.fill_formula || "")} ${esc((low.unit || "").toLowerCase())}`, act:cnt(sup.length, 'data-open="rank"') + " suppliers ranked"},
-    {k:"rej", lab:"Documents rejected", big:n0(rejections().length), body:rejBy ? `${esc(rejBy[0])}: ${rejBy[1].length} · top cause ${esc(lc((topCause() || [""])[0]))}` : "None in this period", act:rejections().length ? cnt(rejections().length, 'data-open="rej"') + " documents" : ""},
+    {k:"fill", lab:"Lowest fill rate", big:esc(low.fill || "Unknown"), body:`${esc(low.supplier || "")} · ${esc(low.fill_formula || "")} ${esc((low.unit || "").toLowerCase())}`, act:cnt(Math.min(5, sup.length), 'data-open="rank"') + ` lowest fill rates of ${sup.length} suppliers`},
+    {k:"held", lab:"Invoices held", big:E.money(sum(HELD(), "value")), tone:HELD().some(h => !h.released_by) ? "amber" : "", body:HELD().length ? `${HELD().length} supplier invoices held for payment · ${HELD().filter(h => !h.released_by).length ? `${E.money(sum(HELD().filter(h => !h.released_by), "value"))} still held on ${HELD().filter(h => !h.released_by).length}` : "all released"}` : "No invoice held in this period", act:HELD().length ? cnt(HELD().length, 'data-open="held"') + " invoices" : ""},
     {k:"resp", lab:"Supplier fixes", big:esc(slow ? slow.median_response : "Unknown"), body:slow ? `Median time for ${esc(slow.owner)} to send the corrected record · ${slow.with_a_record} fixes` : "No supplier fix in this period", act:""}];
 }
 
@@ -709,7 +709,7 @@ function sections(){
       {id:"late", t:"Decided after the deadline", s:x.late.length ? x.late.map(l => `${l.record} by ${l.by.replace(" after its deadline", "")}`).join(" · ") : "None in this period", body:lateTable}];
   }
   return [
-    {id:"rank", t:"Supplier performance", s:`${x.suppliers.length} suppliers · fill rate, ship notices on time${V.per === "quarter" ? " and on time, in full" : ""}, each in its own counting unit`, body:rankTable},
+    {id:"rank", t:"Supplier performance", s:`5 lowest fill rates of ${x.suppliers.length} suppliers: ${x.suppliers.slice().sort((a, b) => parseFloat(a.fill) - parseFloat(b.fill)).slice(0, 5).map(r => `${r.supplier} ${r.fill}`).join(" · ")}`, body:rankTable},
     {id:"ded", t:"Deductions by supplier", s:`${E.money(m.taken)} taken in ${m.cases} cases · ${E.money(m.waived)} waived · ${E.money(m.upheld)} upheld`, body:dedTable},
     {id:"rej", t:"Rejected documents by supplier", s:rejections().length ? byKey(rejections(), "owner").slice(0, 3).map(c => `${c[0]} ${c[1].length}`).join(" · ") : "None in this period", body:rejTable},
     {id:"resp", t:"Supplier response", s:respSummary(), body:respTable},
@@ -723,14 +723,14 @@ function perfAshby(){
   const row = (name, rate, formula, recs) => `<tr><td><b>${esc(name)}</b></td><td><b>${esc(rate || "Not calculated")}</b></td><td>${esc(formula || "")}</td><td>${recs}</td></tr>`;
   return `<div class="tw"><table class="t"><thead><tr><th>Measure</th><th>Rate</th><th>Formula</th><th>Records</th></tr></thead><tbody>
     ${row("On time, in full", ot ? ot.score : null, ot ? `${ot.formula} cases received on time and in full, on Northfield's definition` : "Calculated by Trading Grid for this quarter only", ot ? `${cnt(ot.failing_lines, 'data-open="otif"')} failing lines · ${pgLink("p7", "Open in Performance")}` : "")}
-    ${row("Fill rate", fl.rate, fl.formula ? `${fl.formula} cases shipped against cases ordered after accepted changes` : "", `${cnt(fl.short_lines, 'data-open="short"')} short lines · invoiced ${n0(fl.invoiced)}`)}
+    ${row("Fill rate", fl.rate, fl.formula ? `${fl.formula} cases shipped against cases ordered after accepted changes` : "", `${cnt(fl.short_lines, 'data-open="short"')} lines shipped short · invoiced ${n0(fl.invoiced)}`)}
     ${row("Ship notices on time", tl.rate, tl.formula ? `${tl.formula} first sent within 1 hour of departure` : "", `${cnt(tl.late.length, 'data-open="lateasn"')} late`)}
     ${row("Deductions waived and repaid", E.money(md().waived), `${md().cases} cases · ${E.money(md().repaid)} repaid on Northfield's remittances`, cnt(DED().filter(d => d.waived).length, 'data-open="waived"'))}
   </tbody></table></div><p class="meta" style="margin-top:var(--space-2)">Calculated by Trading Grid from the documents both companies exchanged and Ashby's own records.</p>`;
 }
 function rankTable(){
-  const s = P().suppliers.slice().sort((a, b) => parseFloat(a.fill) - parseFloat(b.fill) || a.supplier.localeCompare(b.supplier));
-  return `<div class="tw"><table class="t"><thead><tr><th>Supplier</th><th>Fill rate</th><th>Ship notices on time</th>${V.per === "quarter" ? "<th>On time, in full</th>" : ""}<th>Short lines</th><th>Unit</th></tr></thead><tbody>${s.map(r => `<tr><td><b>${esc(r.supplier)}</b></td><td title="${esc(r.fill_formula)}">${esc(r.fill)}</td><td title="${esc(r.timely_formula || "")}">${esc(r.timely || "Unknown")}</td>${V.per === "quarter" ? `<td title="${esc(r.otif_formula || "")}">${esc(r.otif || "Not calculated")}</td>` : ""}<td>${r.short_lines ? cnt(r.short_lines, `data-open="supshort" data-sup="${esc(r.id)}"`) : 0}</td><td>${esc(r.unit)}</td></tr>`).join("")}</tbody></table></div>
+  const s = P().suppliers.slice().sort((a, b) => parseFloat(a.fill) - parseFloat(b.fill) || a.supplier.localeCompare(b.supplier)).slice(0, 5);
+  return `<div class="tw"><table class="t"><thead><tr><th>Supplier</th><th>Fill rate</th><th>Ship notices on time</th>${V.per === "quarter" ? "<th>On time, in full</th>" : ""}<th>Lines shipped short</th><th>Unit</th></tr></thead><tbody>${s.map(r => `<tr><td><b>${esc(r.supplier)}</b></td><td title="${esc(r.fill_formula)}">${esc(r.fill)}</td><td title="${esc(r.timely_formula || "")}">${esc(r.timely || "Unknown")}</td>${V.per === "quarter" ? `<td title="${esc(r.otif_formula || "")}">${esc(r.otif || "Not calculated")}</td>` : ""}<td>${r.short_lines ? cnt(r.short_lines, `data-open="supshort" data-sup="${esc(r.id)}"`) : 0}</td><td>${esc(r.unit)}</td></tr>`).join("")}</tbody></table></div>
   <p class="meta" style="margin-top:var(--space-2)">Calculated by Trading Grid from the purchase orders, order changes, ship notices and receiving advice each supplier exchanged with Northfield.</p>`;
 }
 function dedTable(){
@@ -758,12 +758,12 @@ function openRecords(k, el){
   const x = P(), ins = INS[V.side];
   if (k === "opended") return rowsDrawer("Deductions not disputed", ["Case", "Order", "Taken", "Dispute window"], md().openRows.map(r => [esc(r.case), esc(r.po), E.money(r.not_disputed), esc(r.window || "")]));
   if (k === "ded" || k === "waived") { const d = DED().filter(r => k === "ded" || r.waived); return rowsDrawer(k === "ded" ? "Deductions" : "Deductions waived and repaid", ["Case", "Type", "Taken", "Waived", "Repaid"], d.map(r => [esc(r.case), esc(r.type), E.money(r.taken), r.waived ? E.money(r.waived) : "None", r.repaid ? E.money(r.repaid) : "None"])); }
-  if (k === "short") return rowsDrawer("Short lines", ["Order", "Line", "Item", "Ordered", "Shipped", "Invoiced", "Short", "Why"], x.fill.lines.map(l => [esc(l.po), l.line, `<span class="mono">${esc(l.item)}</span>`, n0(l.ordered), n0(l.shipped), n0(l.invoiced), n0(l.short), esc(l.reason)]));
+  if (k === "short") return rowsDrawer("Lines shipped short", ["Order", "Line", "Item", "Ordered", "Shipped", "Invoiced", "Short", "Why"], x.fill.lines.map(l => [esc(l.po), l.line, `<span class="mono">${esc(l.item)}</span>`, n0(l.ordered), n0(l.shipped), n0(l.invoiced), n0(l.short), esc(l.reason)]));
   if (k === "held") return rowsDrawer("Invoices held", ["Invoice", "Order", "Value", "Why it was held", "Released by"], HELD().map(r => [esc(r.invoice), esc(r.po || ""), r.value != null ? E.money(r.value) : "Unknown", esc(r.cause), r.released_by ? esc(r.released_by) : `<span class="st-amber">Still held</span>`]));
   if (k === "lateasn") return rowsDrawer("Ship notices sent late", ["Ship notice", "Order", "First sent"], x.timely.late.map(l => [esc(l.ship_notice), esc(l.po), esc(l.after_departure) + " after departure"]));
   if (k === "otif") return rowsDrawer("Failing lines by reason", ["Reason", "Lines", "Cases"], x.otif.by_reason.map(r => [esc(r.reason), r.lines, n0(r.cases)]));
-  if (k === "rank") return E.openDrawer("Supplier performance", rankTable());
-  if (k === "supshort") { const s = x.suppliers.find(y => y.id === el.dataset.sup); return rowsDrawer(`${s.supplier}: short lines`, ["Short lines", "Fill rate", "Top reason"], [[s.short_lines, esc(s.fill_formula), esc(s.top_short ? `${s.top_short.reason}, ${s.top_short.lines} lines` : "")]]); }
+  if (k === "rank") return E.openDrawer("5 lowest fill rates", rankTable());
+  if (k === "supshort") { const s = x.suppliers.find(y => y.id === el.dataset.sup); return rowsDrawer(`${s.supplier}: lines shipped short`, ["Lines shipped short", "Fill rate", "Top reason"], [[s.short_lines, esc(s.fill_formula), esc(s.top_short ? `${s.top_short.reason}, ${s.top_short.lines} lines` : "")]]); }
   if (k === "rej" || k === "rejk") { const rows = rejections().filter(r => k === "rej" || (V.side === "ashby" ? r.cause : r.owner) === el.dataset.k);
     return rowsDrawer(k === "rej" ? "Rejected documents" : el.dataset.k, ["Document", "Order", "Cause", V.side === "ashby" ? "Where it is fixed" : "Supplier", "Corrected by"], rows.map(r => [findOf(r.record) ? `<button class="cnt" type="button" data-trail="${esc(r.record)}">${esc(r.record)}</button>` : esc(r.record), esc(r.po || ""), esc(r.cause), esc(team(r.owner)), r.confirmed_by ? esc(r.confirmed_by) : `<span class="st-muted">Unknown</span>`])); }
 }

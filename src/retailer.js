@@ -108,7 +108,22 @@ const caseOpened = (db, key) => db.prepare("SELECT * FROM events WHERE kind = 'c
 /** Deduction cases Northfield has opened, all suppliers. */
 export function casesNF(db, asOf = storyClock(), from = null) {
   const rows = db.prepare("SELECT * FROM events WHERE kind = 'case.opened' AND at <= ? AND at >= ? ORDER BY at").all(asOf.toISOString(), fromDate(from)).map((e) => ({ ...J(e.data), po: e.po, opened: fmtET(e.at), supplier: supplierName(db, db.prepare('SELECT supplier_id FROM orders WHERE po = ?').get(e.po)?.supplier_id) }));
-  return { as_of: fmtET(asOf), opened_from: fmtET(fromDate(from)), count: rows.length, total_amount: Math.round(rows.reduce((t, c) => t + c.amount, 0) * 100) / 100, cases: rows.map((c) => ({ case: c.case, supplier: c.supplier, po: c.po, charge: c.charge, amount: c.amount, opened: c.opened })) };
+  // Each case's charges as they stand: disputed or not, decided or not, and Northfield's evidence rules' recommendation on
+  // each open dispute, so a question about several disputes ("the disputes with a complete pack") is answered from one read.
+  const charges = (c) => { const x = caseNF(db, c.case, asOf); if (!x.found) return [];
+    const list = [...new Set([c.charge, ...x.disputes.map((d) => d.charge)])];
+    return list.map((ch) => { const d = x.disputes.filter((y) => y.charge === ch).at(-1); const dec = x.decisions.find((y) => y.charge === ch);
+      return { charge: ch, state: dec ? `${dec.decision} by ${dec.decided_by}` : d ? 'Disputed, awaiting decision' : 'Not disputed', ...(d ? { disputed: d.at, dispute_amount: d.amount, evidence: d.evidence } : {}), ...(d && !dec ? { recommendation: recommendationFor(db, x, ch) } : {}) }; }); };
+  return { as_of: fmtET(asOf), opened_from: fmtET(fromDate(from)), count: rows.length, total_amount: Math.round(rows.reduce((t, c) => t + c.amount, 0) * 100) / 100, cases: rows.map((c) => ({ case: c.case, supplier: c.supplier, po: c.po, charge: c.charge, amount: c.amount, opened: c.opened, charges: charges(c) })) };
+}
+
+const RECOMMENDS = { recommend_waive: 'Waived', recommend_uphold: 'Upheld', recommend_not_reviewed: 'Not reviewed' };
+/** Northfield's evidence rules on one disputed charge of a case read with caseNF: the next step, the decision it points to,
+ *  the reason and any evidence missing. Null when the charge has no open dispute. */
+export function recommendationFor(db, c, charge) {
+  const r = reviewRecommendation(db, { charge: c.charge, shared: c.evidence_in_case || [], disputes: (c.disputes || []).filter((d) => d.charge === charge), decided: c.decisions || [], promo: c.promotion || null });
+  if (!r || r.charge !== charge) return null;
+  return { next_step: r.next_step, decision: RECOMMENDS[r.next_step] || null, reason: r.reason || null, ...(r.missing ? { missing: r.missing } : {}), by: 'Northfield’s evidence rules' };
 }
 
 /** One case from Northfield's side: charges, what the supplier put in the case, what NF-7.4 needs, reviewer notes and decisions. */
@@ -138,10 +153,10 @@ export function caseNF(db, ref, asOf = storyClock()) {
     authority: 'Jordan Ellis decides each charge in the case (NF-7.7). Northfield’s evidence rules check the evidence and recommend; they decide nothing.', link: `order/${encodeURIComponent(po)}` };
 }
 
-/** Repayment of a reversed charge, read from Northfield's own remittance: a later payment line that pays more than its invoice by the reversed amount. */
+/** Repayment of a waived charge, read from Northfield's own remittance: a later payment line that pays more than its invoice by the waived amount. */
 function repaidOn(db, decided, c, T) {
-  const rev = decided.filter((d) => d.decision === 'Reversed' && d.charge === c.charge); if (!rev.length) return [];
-  // A repayment that names the deduction it reverses (NF-7.6) is read from the remittance itself.
+  const rev = decided.filter((d) => d.decision === 'Waived' && d.charge === c.charge); if (!rev.length) return [];
+  // A repayment that names the deduction it repays (NF-7.6) is read from the remittance itself.
   if (c.charge === 'PROMO') return db.prepare('SELECT * FROM deduction_repayments WHERE reference = ? AND repaid_at <= ? ORDER BY repaid_at').all(c.deduction, T).map((r) => ({ payment: r.repayment_payment, at: fmtET(r.repaid_at), amount: r.repaid_amount, carried_on: r.repayment_invoice, reference: r.reference }));
   const sid = db.prepare('SELECT supplier_id FROM orders WHERE po = ?').get(c.po)?.supplier_id;
   const rows = db.prepare('SELECT payment, paid_at, invoice, po, paid, invoice_amount FROM remittance_items WHERE payee_id = ? AND paid_at <= ? AND paid > invoice_amount ORDER BY paid_at').all(sid, T);
@@ -156,12 +171,12 @@ export function reviewRecommendation(db, { charge, shared, disputes, decided, pr
   const d = pending[0]; const has = (s) => d.evidence.concat(shared).some((x) => new RegExp(s, 'i').test(x));
   // A promotion deduction is checked against the deal Northfield announced and the records the claim rests on.
   if (d.charge === 'PROMO' && promo) return promo.unsupported_amount > 0 && Math.abs(promo.unsupported_amount - d.amount) < 0.005
-    ? { charge: d.charge, next_step: 'recommend_reverse', amount: promo.unsupported_amount, stands: promo.supported_amount, reason: promo.reason, records: promo.records, rule: rule(db, 'NF-7.6') }
+    ? { charge: d.charge, next_step: 'recommend_waive', amount: promo.unsupported_amount, stands: promo.supported_amount, reason: promo.reason, records: promo.records, rule: rule(db, 'NF-7.6') }
     : { charge: d.charge, next_step: 'recommend_uphold', reason: promo.unsupported_amount > 0 ? `The dispute asks for $${d.amount.toFixed(2)}; the records leave $${promo.unsupported_amount.toFixed(2)} unsupported` : 'The deduction matches its deal', records: promo.records };
   if (d.charge === 'SH01') {
     const seal = has('bill of lading'), pod = has('deliver'), proof = has('load scan|load tally');
     if (!(seal && pod && proof)) return { charge: d.charge, next_step: 'recommend_not_reviewed', missing: [!seal && 'Bill of lading with seal', !pod && 'Proof of delivery', !proof && 'Load scan or load tally by SSCC'].filter(Boolean), rule: rule(db, 'NF-7.5'), charge_if_not_reviewed: `ID01 $${chargeOf(db, 'ID01')}` };
-    return { charge: d.charge, next_step: 'recommend_reverse', reason: 'Seal intact, proof of delivery, and the carton loaded before the seal by SSCC', rules: [rule(db, 'NF-5.3'), rule(db, 'NF-7.4')], note: 'A reversal does not change the receipt (NF-5.5).' };
+    return { charge: d.charge, next_step: 'recommend_waive', reason: 'Seal intact, proof of delivery, and the carton loaded before the seal by SSCC', rules: [rule(db, 'NF-5.3'), rule(db, 'NF-7.4')], note: 'Waiving the charge does not change the receipt (NF-5.5).' };
   }
   if (d.charge === 'AS02') return { charge: d.charge, next_step: 'recommend_uphold', reason: 'The ship notice still differs from the receiving advice; the receipt changes only through a revised receiving advice', rule: rule(db, 'NF-5.5') };
   return { charge: d.charge, next_step: 'jordan_decides', reason: 'No review rule for this charge' };

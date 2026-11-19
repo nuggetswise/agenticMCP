@@ -1,11 +1,11 @@
 // T1.17 Adjustments and returns. Owner's test: "Both X12 checks pass, and every repayment points to the deduction it
-// reverses." The X12 checks run in npm run validate and botscheck.py; these checks hold every repayment to its original
+// repays." The X12 checks run in npm run validate and botscheck.py; these checks hold every repayment to its original
 // deduction, every return-to-vendor deduction to its 180, and every credit memo (812) to the invoice and deduction it adjusts.
 import { KNOWN_EARLY_REPAYMENTS, parseReturnDeduction } from '../../world/stages/returns.js';
 import { P10_WINDOW } from '../../world/generate.js';
 
 export default function ({ db, ash, nf, ok, eq, none, n }) {
-  // ---------- every repayment names the deduction it reverses ----------
+  // ---------- every repayment names the deduction it repays ----------
   const repayments = n('SELECT count(*) n FROM adjustments WHERE amount > 0');
   ok('returns.repayments_in_the_world', repayments >= 15, `${repayments}`);
   eq('returns.one_link_per_repayment', n('SELECT count(*) n FROM deduction_repayments'), repayments);
@@ -21,7 +21,7 @@ export default function ({ db, ash, nf, ok, eq, none, n }) {
   none('returns.dated_flag_matches_the_dates', 'SELECT reference FROM deduction_repayments WHERE dated_after_deduction <> (repaid_at > deducted_at)');
   // The repayment's remittance names the remittance that took the deduction, whenever that came first.
   none('returns.repayment_links_to_the_deduction_remittance', "SELECT r.reference FROM deduction_repayments r WHERE r.dated_after_deduction = 1 AND NOT EXISTS (SELECT 1 FROM document_links l WHERE l.doc_id = r.repayment_doc_id AND l.prev_doc_id = r.original_doc_id AND l.kind = 'repays deduction')");
-  // The existing P6 repayment and the new return reversal.
+  // The existing P6 repayment and the new return waiver.
   eq('returns.dc_40877_repayment_names_dm_55102', db.prepare("SELECT repayment_payment, original_payment, repaid_amount, original_amount, case_id FROM deduction_repayments WHERE reference = 'DM-55102'").all().map((r) => ({ ...r })),
     [{ repayment_payment: 'PMT-991204', original_payment: 'PMT-990412', repaid_amount: 88.4, original_amount: -88.4, case_id: 'DC-40877' }]);
 
@@ -53,15 +53,15 @@ export default function ({ db, ash, nf, ok, eq, none, n }) {
   none('returns.812_lines_from_the_original_invoice', `SELECT c.adjustment_id, c.line FROM credit_debit_lines c JOIN credit_debit_adjustments h ON h.adjustment_id = c.adjustment_id
     WHERE NOT EXISTS (SELECT 1 FROM invoice_lines i WHERE i.invoice = h.invoice AND i.line = c.line AND i.qty >= c.qty AND abs(i.price - c.price) < 0.005) OR abs(c.qty * c.price - c.amount) > 0.005`);
   none('returns.812_total_is_its_lines', 'SELECT h.adjustment_id FROM credit_debit_adjustments h WHERE abs(h.amount - (SELECT sum(amount) FROM credit_debit_lines l WHERE l.adjustment_id = h.adjustment_id)) > 0.005');
-  none('returns.credit_never_above_deduction_kept', `SELECT h.adjustment_id FROM credit_debit_adjustments h JOIN return_authorisations r ON r.rtv = h.return_ref WHERE h.amount > r.deducted_amount - r.reversed_amount + 0.005 OR h.issued_at <= r.deducted_at`);
+  none('returns.credit_never_above_deduction_kept', `SELECT h.adjustment_id FROM credit_debit_adjustments h JOIN return_authorisations r ON r.rtv = h.return_ref WHERE h.amount > r.deducted_amount - r.waived_amount + 0.005 OR h.issued_at <= r.deducted_at`);
   // The return dispute settled from the world's records: Ashby received 5 of the 6 cases (its receipt, shared into the
-  // case), so one case is reversed and repaid; the credit memo credits the five Northfield kept.
-  eq('returns.disputed_return_settled', db.prepare("SELECT rtv, status, deducted_amount, reversed_amount, credit_memo, credited_amount FROM return_authorisations ORDER BY rtv").all().map((r) => [r.rtv, r.status, r.deducted_amount, r.reversed_amount, r.credited_amount]),
+  // case), so one case is waived and repaid; the credit memo credits the five Northfield kept.
+  eq('returns.disputed_return_settled', db.prepare("SELECT rtv, status, deducted_amount, waived_amount, credit_memo, credited_amount FROM return_authorisations ORDER BY rtv").all().map((r) => [r.rtv, r.status, r.deducted_amount, r.waived_amount, r.credited_amount]),
     [['RTV-NF-26101', 'Credited', 216, 0, 216], ['RTV-NF-26102', 'Credited', 280.8, 46.8, 234], ['RTV-NF-26103', 'Deducted', 115.2, 0, null]]);
   { const rec = db.prepare("SELECT data FROM events WHERE kind = 'erp.return_received' AND json_extract(data, '$.rtv') = 'RTV-NF-26102'").get(); const d = JSON.parse(rec.data);
     const rep = db.prepare("SELECT repaid_amount, case_id FROM deduction_repayments WHERE reference = (SELECT deduction_ref FROM return_authorisations WHERE rtv = 'RTV-NF-26102')").get();
     const price = db.prepare("SELECT price FROM return_lines WHERE rtv = 'RTV-NF-26102'").get().price;
-    eq('returns.reversal_equals_cases_not_received', [rep.repaid_amount, rep.case_id], [Math.round((d.qty_expected - d.qty_received) * price * 100) / 100, d.in_case]); }
+    eq('returns.waiver_equals_cases_not_received', [rep.repaid_amount, rep.case_id], [Math.round((d.qty_expected - d.qty_received) * price * 100) / 100, d.in_case]); }
 
   // ---------- who sees what ----------
   eq('returns.ashby_sees_its_returns_credits_and_repayments', [ash.prepare('SELECT count(*) n FROM return_authorisations').get().n, ash.prepare('SELECT count(*) n FROM return_lines').get().n, ash.prepare('SELECT count(*) n FROM credit_debit_adjustments').get().n,

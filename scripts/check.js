@@ -94,7 +94,7 @@ none('money.invoice_price_is_order_price', "SELECT il.invoice FROM invoice_lines
 // The price variance records for P14 are the only delivered invoice lines priced off the order, and each stays inside NF-7.11's tolerance.
 none('money.price_variance_delivered_is_within_tolerance', "SELECT il.invoice FROM invoice_lines il JOIN invoices i ON i.invoice = il.invoice JOIN order_lines o ON o.po = il.po AND o.line = il.line WHERE i.status = 'Delivered' AND il.invoice LIKE 'INV-V47%' AND abs(il.price - o.price) / o.price > 0.005");
 none('money.paid_is_invoice_plus_adjustments', `SELECT r.payment, r.invoice, r.paid, r.invoice_amount, (SELECT coalesce(sum(a.amount), 0) FROM adjustments a WHERE a.payment = r.payment AND a.invoice = r.invoice) adj FROM remittance_items r WHERE abs(r.paid - r.invoice_amount - adj) > 0.005`);
-none('money.remitted_amount_is_invoice_total', "SELECT r.payment, r.invoice FROM remittance_items r JOIN invoices i ON i.invoice = r.invoice WHERE r.invoice_amount <> 0 AND abs(r.invoice_amount - i.total) > 0.005"); // a reversal-only line (P20's PMT-991307) pays no invoice amount
+none('money.remitted_amount_is_invoice_total', "SELECT r.payment, r.invoice FROM remittance_items r JOIN invoices i ON i.invoice = r.invoice WHERE r.invoice_amount <> 0 AND abs(r.invoice_amount - i.total) > 0.005"); // a repayment-only line (P20's PMT-991307) pays no invoice amount
 none('money.invoice_paid_once', 'SELECT invoice FROM remittance_items WHERE invoice_amount > 0 GROUP BY invoice HAVING count(*) > 1');
 { let bad = 0; for (const d of db.prepare("SELECT reference, body FROM documents WHERE doc_type = '820'").all()) { const b = JSON.parse(d.body); const sum = (b.items || []).reduce((s, i) => s + (i.paid ?? 0), 0); if (b.total != null && Math.abs(sum - b.total) > 0.005) bad++; } eq('money.remittance_header_is_item_sum', bad, 0); }
 
@@ -175,7 +175,7 @@ const st = D.lifecycle(ash, 'NR-450118');
   const oo = NR.openOrders(db, T(t8)); eq('open_orders.due_this_week', [due.n, due.v, due.o, oo.due_in_period.invoices, oo.due_in_period.value, oo.period_covered.from, oo.period_covered.to, oo.orders, oo.open_orders, oo.open_value, oo.unfilled_at_acknowledgment.orders, oo.unfilled_at_acknowledgment.value], [10, 1056413.3, 10, 10, 1056413.3, '2026-11-08', '2026-11-14', 342, 201, 28980937.9, 13, 199223.2]); }
 // 18 November 2026 (P6): at Tuesday 1 December 09:00 five deduction cases are open for Ashby, all five withheld on
 // remittance PMT-990412 that morning; the three one-carton cases opened that morning. No P6 record names an agent.
-{ const at = T('2026-12-01T09:00:00-05:00'); const d = D.deductions(db, at); const open = d.cases.filter((c) => { const x = D.deductionCase(db, c.case, at); return x.found && !/Settled|Repaid|Reversed|Upheld|Accepted/.test(String(x.state || x.status || '')); });
+{ const at = T('2026-12-01T09:00:00-05:00'); const d = D.deductions(db, at); const open = d.cases.filter((c) => { const x = D.deductionCase(db, c.case, at); return x.found && !/Settled|Repaid|Waived|Upheld|Accepted/.test(String(x.state || x.status || '')); });
   const adj = db.prepare("SELECT reference, amount FROM adjustments WHERE payment = 'PMT-990412' AND amount < 0 ORDER BY reference").all().map((a) => [a.reference, a.amount]);
   eq('p6.five_cases_open_at_1_december', [d.count, open.length, d.total_amount, d.cases.map((c) => c.case).sort(), adj, db.prepare("SELECT count(*) n FROM events WHERE kind = 'case.opened' AND at = '2026-12-01T13:30:00.000Z'").get().n],
     [5, 5, 586.8, ['DC-40877', 'DC-40931', 'DC-41102', 'DC-41118', 'DC-41131'], [['DM-55102', -88.4], ['DM-55140', -208], ['DM-55640', -96.8], ['DM-55655', -96.8], ['DM-55671', -96.8]], 3]);
@@ -212,7 +212,7 @@ eq('story.two_shipments', st.shipments.map((s) => [s.ship_notice, s.cartons]), [
   eq('p24.northfield_sees_both', new DatabaseSync(join(ROOT, 'build', 'northfield.db'), { readOnly: true }).prepare("SELECT count(*) n FROM events WHERE po IN ('NR-46602','NR-46609','NR-46616') AND kind IN ('carrier.arrived_at_pickup','carrier.pickup_missed')").get().n, 6); }
 { const adj = db.prepare("SELECT reference, amount FROM adjustments WHERE payee_id = 'ASHBY' ORDER BY paid_at, reference").all();
   eq('story.remittance', adj.filter((x) => ['DM-55102', 'DM-55140'].includes(x.reference) && x.amount < 0).map((x) => x.amount), [-88.4, -208]);
-  ok('story.repayment_matches_reversed_shortage', adj.some((x) => x.amount === 88.4), JSON.stringify(adj)); }
+  ok('story.repayment_matches_waived_shortage', adj.some((x) => x.amount === 88.4), JSON.stringify(adj)); }
 eq('p6.invoice_exception', db.prepare("SELECT invoice, status, replaces FROM invoices WHERE po = 'NR-450390' ORDER BY sent_at").all().map((r) => r.invoice), ['INV-7790', 'INV-7790C']);
 eq('p6.carton_case', D.deductionCase(ash, 'DC-40931', T('2026-12-01T09:00:00-05:00')).amount, 208);
 eq('p1.order_value', n("SELECT count(*) n FROM invoices WHERE invoice = 'INV-7702' AND po = ?", facts.anchor.p1), 1);

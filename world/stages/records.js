@@ -10,7 +10,7 @@
 //      no departure scan, ship notice held. NR-462411: ship notice rejected on an 824 for a substitute item, answered by
 //      Ashby's 997, not yet corrected. NR-462412: Kinross's system does not answer the status read.
 //   4. P20 (January 2027): Northfield's deduction cases for PD-2701-02, -04 and -05, Ashby's disputes, Jordan Ellis's
-//      reversals, the remittance that repays $677.20 and the Supplier ERP receivables match.
+//      waivers, the remittance that repays $677.20 and the Supplier ERP receivables match.
 //   6. P24 (9 December): for NR-46602, NR-46609 and NR-46616, Lakeline's arrival at 14:45 and its missed pickup at 15:30,
 //      both from its EDI 214 (the 15:00 records they replace are withdrawn in world/replen.js).
 //   7. P5 (8 December): NR-460241's routing request (753) sent on Priya Raman's approval, its 997 and Northfield's routing
@@ -144,13 +144,13 @@ function generate(L, { W, buyerShipments }) {
       ev(paidAt, 'case.opened', x.i.po, ...CASE, 'NORTHFIELD', { case: id, charge: 'PROMO', kind: 'Promotion deduction', amount: c.amount, deduction: k.ref, deal: c.deal_id, payment: pay.ref, invoice: x.i.invoice, dispute_deadline: etDay(addD(paidAt, 60)) });
       ev(et('2027-01-06', ['09:20', '09:28', '09:36'][idx]), 'case.dispute', x.i.po, ...CASE, 'ASHBY', { case: id, charge: 'PROMO', amount, deduction: k.ref, deal: c.deal_id, stands: r2(c.amount - amount), vividly_match: k.match,
         evidence: k.evidence(c, x), drafted_by: 'Ashby’s promotion deduction rules', approved_by: 'Priya Raman' });
-      ev(et('2027-01-07', ['10:00', '10:10', '10:20'][idx]), 'case.decision', x.i.po, ...CASE, 'NORTHFIELD', { case: id, charge: 'PROMO', amount, deduction: k.ref, decision: 'Reversed', decided_by: 'Jordan Ellis', reason: k.why(c),
-        reviewer_note: `${k.why(c)}. Reverse $${amount.toFixed(2)}${c.amount > amount ? `; $${r2(c.amount - amount).toFixed(2)} stands` : ''}.` });
-      items.push({ invoice: x.i.invoice, po: x.i.po, paid: amount, invoice_amount: 0, adjustments: [{ amount, reason: x.a.reason, ref: k.ref, note: `Reversal of promotion deduction ${k.ref}, case ${id}` }] });
+      ev(et('2027-01-07', ['10:00', '10:10', '10:20'][idx]), 'case.decision', x.i.po, ...CASE, 'NORTHFIELD', { case: id, charge: 'PROMO', amount, deduction: k.ref, decision: 'Waived', decided_by: 'Jordan Ellis', reason: k.why(c),
+        reviewer_note: `${k.why(c)}. Waive $${amount.toFixed(2)}${c.amount > amount ? `; $${r2(c.amount - amount).toFixed(2)} stands` : ''}.` });
+      items.push({ invoice: x.i.invoice, po: x.i.po, paid: amount, invoice_amount: 0, adjustments: [{ amount, reason: x.a.reason, ref: k.ref, note: `Waived promotion deduction ${k.ref}, case ${id}` }] });
       ev(et('2027-01-08', '09:00'), 'erp.receivables_match', x.i.po, ...ERP, { payment: P20_REPAYMENT, matched_to: k.ref, case: id, amount });
     });
     if (total !== 677.2) throw new Error(`records: the three disputed promotion amounts add to ${total}, expected 677.20`);
-    // NF-7.6: repaid on the next remittance after the decision. A reversal-only remittance the afternoon of 7 January,
+    // NF-7.6: repaid on the next remittance after the decision. A repayment-only remittance the afternoon of 7 January,
     // after Jordan Ellis's decisions and before the 8 January payment run (PMT-990170).
     L.doc({ type: '820', from: 'NORTHFIELD', to: 'ASHBY', at: et('2027-01-07', '16:00'), ref: P20_REPAYMENT, amount: total, payer_name: NF.name, payer_gln: NF.gln, payee_name: ASH.name, payee_gln: ASH.gln, items });
   }

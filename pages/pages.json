@@ -1,5 +1,5 @@
 {
- "note": "Prototype pages hosted at /p/<id>, served from pages/<id>.html, which the build chat owns. Each token answers Aviator only at /aviator/<token> (questions, and the Approve or Cancel of its own action cards) and is bound here to its prototype, the sides the page shows and its opening moment (the calendar moment of `calendar`), the default when as_of is missing. `through` is the window end: the latest source time of any record the page shows, set from the build chat's result for that page. Until it is set the window end is open. The server refuses a side outside the binding, an as_of before the opening moment, and an as_of after `through` when set. Tokens sit in the pages, so they are public by design. _test is the route's own test page, linked nowhere; its window runs to the end of the story so every card can be proved on it.",
+ "note": "Prototype pages hosted at /p/<id>, served from pages/<id>.html, which the build chat owns. Each token answers Aviator only at /aviator/<token> (questions, and the Approve or Cancel of its own action cards) and is bound here to its prototype, the sides the page shows and its opening moment (the calendar moment of `calendar`), the default when as_of is missing. `through` is the window end: the latest source time of any record the page shows, set from the build chat's result for that page. Until it is set the window end is open. The server refuses a side outside the binding, an as_of before the opening moment, and an as_of after `through` when set. Tokens sit in the pages, so they are public by design. _test is the route's own test page, linked nowhere; its window runs to the end of the story so every card can be proved on it. `cases` lists the deduction cases a page that shows Ashby may open a dispute on, at /aviator/<token>/writes.",
  "pages": {
   "p5": {
    "calendar": "P5",
@@ -74,7 +74,15 @@
     "ashby",
     "northfield"
    ],
-   "token": "p6-XrA32zu7UnKP"
+   "token": "p6-XrA32zu7UnKP",
+   "cases": [
+    "DC-40877",
+    "DC-41102",
+    "DC-41118",
+    "DC-41131",
+    "DC-40931"
+   ],
+   "through": "2027-01-06T14:00:00Z"
   },
   "p22": {
    "calendar": "P22",

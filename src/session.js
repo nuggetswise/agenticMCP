@@ -14,7 +14,7 @@ export const IDLE_MS = 30 * 60 * 1000;
 export const LIMITS = { per_address: 8, total: 2000, writes: 40, cards: 60 };
 let CURRENT = null;
 const SESSIONS = new Map();
-const SESSION_ID_BASE = 1e12; // session rows never collide with recorded ids
+export const SESSION_ID_BASE = 1e12; // session rows never collide with recorded ids
 let nextId = SESSION_ID_BASE;
 
 export const SHADOW = ['invoices', 'invoice_lines', 'errors', 'shipments', 'shipment_lines'];

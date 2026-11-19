@@ -35,6 +35,12 @@ const model = createServer((req, res) => { let raw = ''; req.on('data', (c) => (
   const outsideFact = q0.match(/The owner is ([^,]+), in ([^.]+)\. Tell/);
   if (fr.length || rechecked) { const name = lastFr.functionResponse.name; const r = lastFr.functionResponse.response.result; const txt = JSON.stringify(r);
     if (outsideFact) return say(`That is done outside Trading Grid, so I can't raise anything for it here. ${outsideFact[1]} owns it, in ${outsideFact[2]}.`);
+    // "Waive the disputes with a complete pack": the stand-in reads Northfield's case list and raises one card per charge the
+    // evidence rules recommend waiving, as several calls in one turn, as the model does.
+    if (name === 'list_deduction_cases' && /complete pack/.test(q0) && !rechecked) { const want = (r.cases || []).flatMap((c) => (c.charges || []).filter((x) => x.recommendation?.decision === 'Waived').map((x) => ({ action: 'decide_charge', case: c.case, charge: x.charge, decision: 'Waived' })));
+      return want.length ? res.end(JSON.stringify({ candidates: [{ content: { role: 'model', parts: want.map((a) => ({ functionCall: { name: 'propose_action', args: a } })) } }] })) : say('No dispute awaiting a decision has a complete pack.'); }
+    if (name === 'propose_action' && fr.length > 1) { const cs = fr.map((p) => p.functionResponse.response.result).filter((x) => x && x.card).map((x) => x.card);
+      return say(`Cards are ready to waive the shortage charge on ${cs.map((c) => c.record).join(' and ')}. Nothing happens until you press Approve on each.`); }
     if (name === 'propose_action') {
       // [lie]: the stand-in first describes the card wrongly, as Gemini did on 19 November; the server sends it back.
       if (/\[lie\]/.test(q0) && !rechecked) return say('I have sent the application advice to Ashby with your message "Please call us about this invoice" on line 4.');
@@ -55,6 +61,7 @@ const model = createServer((req, res) => { let raw = ''; req.on('data', (c) => (
       : `From ${refs.join(', ') || 'the records'}: 270 CA shipped under NF-7.8 (wms.load_scan). As of ${asOf}.`); }
   const q = last.map((p) => p.text || '').join(' '); const po = (q.match(/NR-\d{5,6}/) || [])[0];
   // The person asked for an action: the stand-in names it and its record, as the model does, and the server builds the card.
+  if (/complete pack/.test(q)) return callT('list_deduction_cases', {});
   const cardAsk = q.match(/\[card (\w+) (\{.*\})\]/); if (cardAsk) return callT('propose_action', { action: cardAsk[1], ...JSON.parse(cardAsk[2]) });
   const adv = q.match(/call propose_action with answer_application_advice(?: \(advice ([A-Z0-9-]+)\))?/); if (adv) return callT('propose_action', { action: 'answer_application_advice', ...(adv[1] ? { advice: adv[1] } : {}) });
   // Ordinary words that ask for the action the records call for on the record on screen, as the model reads them.
@@ -94,7 +101,7 @@ try {
   // ---- public read route ----
   const pub = await fetch(`${B}/public/ashby/tools/get_order?po=NR-450118`, { headers: { origin: 'https://example.org' } }); const pj = await pub.json();
   ok('public read with no token answers, with the CORS header', pub.status === 200 && pj.found === true && pub.headers.get('access-control-allow-origin') === '*', JSON.stringify(pj).slice(0, 200));
-  for (const [side, tool, b] of [['ashby', 'submit_dispute', { case: 'DC-40877' }], ['ashby', 'release_ship_notice', { document: 'ASN-46220' }], ['northfield', 'decide_charge', { case: 'DC-40877', charge: 'SH01', decision: 'Reversed' }], ['northfield', 'publish_rule', { draft: 'NFD-1' }], ['ashby', 'update_supplier_rule', { rule: 'AP-6.4', params: { carton: 80 }, apply: true }], ['ashby', 'pause_agent', { agent: 'claim' }], ['ashby', 'scout_start', {}], ['ashby', 'run_readonly_sql', { sql: 'select 1' }], ['ashby', 'get_access_log', {}]]) {
+  for (const [side, tool, b] of [['ashby', 'submit_dispute', { case: 'DC-40877' }], ['ashby', 'release_ship_notice', { document: 'ASN-46220' }], ['northfield', 'decide_charge', { case: 'DC-40877', charge: 'SH01', decision: 'Waived' }], ['northfield', 'publish_rule', { draft: 'NFD-1' }], ['ashby', 'update_supplier_rule', { rule: 'AP-6.4', params: { carton: 80 }, apply: true }], ['ashby', 'pause_agent', { agent: 'claim' }], ['ashby', 'scout_start', {}], ['ashby', 'run_readonly_sql', { sql: 'select 1' }], ['ashby', 'get_access_log', {}]]) {
     const r = await post(`/public/${side}/tools/${tool}`, b); ok(`public ${side} ${tool} is refused`, r.status === 403 && (await r.json()).result === 'Refused'); }
   // There is no general request tool: Trading Grid sends only business documents.
   for (const side of ['ashby', 'northfield']) { const r = await post(`/public/${side}/tools/request_change`, { action: 'x' }); ok(`public ${side} has no request_change`, r.status === 404 && (await r.json()).result === 'Not found'); }
@@ -205,7 +212,7 @@ try {
       ['send_document (855)', 'ashby', 'Send the acknowledgment for NR-46210 [card send_acknowledgment {"po":"NR-46210"}]', '2026-11-18T09:00:00-05:00', (r) => r.record?.found && r.record.reference === 'ACK-46210-S' && /BAK\*00\*AD\*NR-46210/.test(r.record.x12)],
       ['send_application_advice (824 with message)', 'northfield', 'Reject INV-7731 with an application advice [card send_application_advice {"document":"INV-7731","messages":[{"code":"QTY","message":"Billed more cases than shipped or received"}]}]', '2026-11-10T09:00:00-05:00',
         (r) => r.record?.found && /TED\*QTY\*Billed more cases than shipped or received\*IT1\*\*2\*\*300~/.test(r.record.x12) && /NTE\*GEN\*270 shipped on line 1/.test(r.record.x12)],
-      ['decide_charge', 'northfield', 'Reverse the shortage charge on DC-40877 [card decide_charge {"case":"DC-40877","charge":"SH01","decision":"Reversed"}]', '2026-12-03T09:00:00-05:00', (r) => r.record?.decisions?.some((d) => d.charge === 'SH01' && d.decision === 'Reversed' && d.decided_by === 'Jordan Ellis')],
+      ['decide_charge', 'northfield', 'Waive the shortage charge on DC-40877 [card decide_charge {"case":"DC-40877","charge":"SH01","decision":"Waived"}]', '2026-12-03T09:00:00-05:00', (r) => r.record?.decisions?.some((d) => d.charge === 'SH01' && d.decision === 'Waived' && d.decided_by === 'Jordan Ellis')],
       ['decide_chargeback', 'northfield', 'Apply the readiness chargeback on NR-46602 [card decide_chargeback {"po":"NR-46602","decision":"Apply"}]', '2026-12-09T17:30:00-05:00', (r) => r.record?.found && r.record.case === 'DC-R46602' && r.record.charge === 'RT01'],
       ['publish_rule', 'northfield', 'Publish NFD-1 [card publish_rule {"draft":"NFD-1"}]', '2026-12-28T11:00:00-05:00', (r) => !JSON.stringify(r.record).match(/"id":\s*"NFD-1"[^}]*"state":\s*"Draft"/)],
     ];
@@ -286,6 +293,45 @@ try {
     const logs = ldb.prepare("SELECT connection_id, user_name, tool, result FROM access_log WHERE tool LIKE 'card:%' ORDER BY id").all();
     ok('the access log records who pressed each card', logs.filter((l) => l.result === 'Approved').length >= 8 && logs.every((l) => /pressed on \/p\/_test \(viewer session VS-/.test(l.user_name)) && logs.some((l) => l.connection_id === 'aviator-_test-northfield' && /Jordan Ellis/.test(l.user_name)), JSON.stringify(logs.slice(0, 3)));
   }
+  // ---- P6: Open dispute pressed on the page, then Jordan decides through Aviator, one session, as_of 3 December 15:00 UTC ----
+  { const P6 = REG.p6.token; const AT = '2026-12-03T15:00:00Z'; const V4 = { 'cf-connecting-ip': '203.0.113.60' }, V5 = { 'cf-connecting-ip': '203.0.113.61' };
+    const write = async (body, h = V4, tok = P6) => { const r = await post(`/aviator/${tok}/writes`, { action: 'open_dispute', charge: 'SH01', as_of: AT, ...body }, PORT, h); return { status: r.status, ...(await r.json()) }; };
+    const read = async (side, tool, q, session, h = V4) => (await fetch(`${B}/public/${side}/tools/${tool}?${new URLSearchParams({ ...q, ...(session ? { session } : {}) })}`, { headers: h })).json();
+    const mainEvents = ldb.prepare('SELECT count(*) n FROM events').get().n;
+    const d1 = await write({ case: 'DC-41118' }); const S6 = d1.session;
+    ok('P6 Open dispute on DC-41118 succeeds: ok, session, case, state Disputed', d1.status === 200 && d1.ok === true && /^VS-/.test(S6) && d1.case === 'DC-41118' && d1.state === 'Disputed' && Object.keys(d1).filter((k) => k !== 'status').sort().join() === 'case,ok,session,state', JSON.stringify(d1));
+    const d2 = await write({ case: 'DC-41131', session: S6 }), d3 = await write({ case: 'DC-40931', session: S6 });
+    ok('P6 Open dispute on DC-41131 (no load proof) and DC-40931 (accepted by Ashby on 2 December) succeed in the same session', d2.ok && d2.state === 'Disputed' && d2.session === S6 && d3.ok && d3.state === 'Disputed' && d3.session === S6, `${JSON.stringify(d2)} ${JSON.stringify(d3)}`);
+    const again = await write({ case: 'DC-41118', session: S6 });
+    ok('a second dispute on DC-41118 is refused with already_disputed, and no sentence', again.status === 409 && again.ok === false && again.error === 'already_disputed' && !again.message, JSON.stringify(again));
+    for (const [n, body, tok, code] of [['a case not on the page', { case: 'DC-40999', session: S6 }, P6, 'not_on_page'], ['a page that does not show Ashby', { case: 'DC-41118' }, REG.p14.token, 'not_on_page'], ['as_of after the window end', { case: 'DC-41102', session: S6, as_of: '2027-01-07T15:00:00Z' }, P6, 'outside_window'], ['as_of before the page moment', { case: 'DC-41102', session: S6, as_of: '2026-11-30T15:00:00Z' }, P6, 'outside_window'], ['a session that is not live', { case: 'DC-41102', session: 'VS-000000000000' }, P6, 'session_expired']]) {
+      const r = await write(body, V4, tok); ok(`P6 Open dispute refused for ${n}: ${code}`, r.ok === false && r.error === code && !r.message, JSON.stringify(r)); }
+    const asCase = await read('ashby', 'get_deduction_case', { case: 'DC-41118', as_of: AT }, S6); const opened = (asCase.history || []).find((h) => h.record === 'case.dispute');
+    ok('Ashby’s side: the page dispute shows as opened by Priya Raman, with the evidence the case shows', opened && opened.approved_by === 'Priya Raman' && opened.charge === 'SH01' && opened.amount === 96.8 && ['Bill of lading with seal', 'Proof of delivery', 'Load tally by SSCC'].every((e) => opened.evidence.includes(e)) && !opened.evidence.includes('Load scan by SSCC'), JSON.stringify(opened));
+    const queue = await read('northfield', 'list_deduction_cases', { as_of: AT }, S6); const row = (k) => (queue.cases || []).find((c) => c.case === k)?.charges?.find((x) => x.charge === 'SH01');
+    ok('Northfield’s side: the disputes are in Jordan’s queue with the rules’ recommendation as data', ['DC-41118', 'DC-41131', 'DC-40931', 'DC-40877'].every((k) => row(k)?.state === 'Disputed, awaiting decision') && row('DC-41102')?.state === 'Not disputed'
+      && row('DC-41118').recommendation.decision === 'Waived' && row('DC-40877').recommendation.decision === 'Waived' && row('DC-41131').recommendation.decision === 'Not reviewed' && row('DC-41131').recommendation.missing.join() === 'Load scan or load tally by SSCC' && row('DC-40931').recommendation.decision === 'Not reviewed', JSON.stringify(queue.cases?.map((c) => [c.case, c.charges])));
+    const nfCase = await read('northfield', 'review_deduction_case', { case: 'DC-41118', as_of: AT }, S6);
+    ok('review_deduction_case on Northfield’s side shows the dispute from Priya Raman', (nfCase.disputes || []).some((d) => d.charge === 'SH01' && d.approved_by === 'Priya Raman'), JSON.stringify(nfCase.disputes));
+    const many = (await post(`/aviator/${P6}`, { question: 'Waive the disputes with a complete pack', side: 'northfield', as_of: AT, session: S6 }, PORT, V4).then((r) => r.json()));
+    const cards = many.cards || []; const byCase = Object.fromEntries(cards.map((c) => [c.record, c]));
+    ok('"Waive the disputes with a complete pack": cards for DC-41118 and DC-40877 only, each Waived', many.ok && many.session === S6 && cards.length === 2 && Object.keys(byCase).sort().join() === 'DC-40877,DC-41118' && cards.every((c) => c.action === 'decide_charge' && c.detail.decision === 'Waived'), JSON.stringify(many).slice(0, 600));
+    ok('each decision card carries case, charge, decision, amount and the rules’ recommendation as data', cards.every((c) => c.detail.case === c.record && c.detail.charge_code === 'SH01' && typeof c.detail.amount === 'number' && c.detail.recommendation?.decision === 'Waived' && c.detail.recommendation.by === 'Northfield’s evidence rules') && byCase['DC-41118']?.detail.amount === 96.8 && byCase['DC-40877']?.detail.amount === 88.4, JSON.stringify(cards.map((c) => c.detail)));
+    const p41118 = byCase['DC-41118'] ? await post(`/aviator/${P6}/cards/${byCase['DC-41118'].id}`, { session: S6, decision: 'approve' }, PORT, V4).then((r) => r.json()) : {};
+    ok('Approve on the DC-41118 card records Waived by Jordan Ellis', p41118.ok && p41118.card?.state === 'Approved' && (p41118.record?.decisions || []).some((d) => d.charge === 'SH01' && d.decision === 'Waived' && d.decided_by === 'Jordan Ellis'), JSON.stringify(p41118).slice(0, 400));
+    const nfAfter = await read('northfield', 'review_deduction_case', { case: 'DC-41118', as_of: AT }, S6); const asAfter = await read('ashby', 'get_deduction_case', { case: 'DC-41118', as_of: AT }, S6);
+    ok('DC-41118 reads Waived on both sides', (nfAfter.decisions || []).some((d) => d.decision === 'Waived' && d.decided_by === 'Jordan Ellis') && (asAfter.history || []).some((h) => h.record === 'case.decision' && h.decision === 'Waived' && h.decided_by === 'Jordan Ellis'), `${JSON.stringify(nfAfter.decisions)} ${JSON.stringify(asAfter.history)}`);
+    const second = await post(`/aviator/${P6}`, { question: 'Waive DC-41118 [card decide_charge {"case":"DC-41118","charge":"SH01","decision":"Waived"}]', side: 'northfield', as_of: AT, session: S6 }, PORT, V4).then((r) => r.json());
+    ok('a second decide_charge on DC-41118 is refused as already decided: no card', second.ok && !(second.cards || []).length && /already decided/.test(second.answer), JSON.stringify(second).slice(0, 300));
+    // A new session sees none of these writes, and nothing reached the recorded world.
+    const fresh = await write({ case: 'DC-41102' }, V5); const fresh18 = await read('ashby', 'get_deduction_case', { case: 'DC-41118', as_of: AT }, fresh.session, V5); const freshQ = await read('northfield', 'list_deduction_cases', { as_of: AT }, fresh.session, V5);
+    const fr = (k) => freshQ.cases?.find((c) => c.case === k)?.charges?.[0]?.state;
+    ok('a new session sees none of these writes', fresh.ok && fresh.session !== S6 && !(fresh18.history || []).some((h) => /case\.(dispute|decision)/.test(h.record)) && fr('DC-41118') === 'Not disputed' && fr('DC-41131') === 'Not disputed' && fr('DC-40931') === 'Not disputed' && fr('DC-41102') === 'Disputed, awaiting decision', `${JSON.stringify(fresh)} ${JSON.stringify(freshQ.cases?.map((c) => [c.case, c.charges?.[0]?.state]))}`);
+    ok('no page dispute or decision reached main.events', ldb.prepare('SELECT count(*) n FROM events').get().n === mainEvents);
+    const at6 = await read('northfield', 'review_deduction_case', { case: 'DC-40877', as_of: '2026-12-06T15:00:00Z' }, null, V5); const as6 = await read('ashby', 'get_deduction_case', { case: 'DC-40877', as_of: '2026-12-06T15:00:00Z' }, null, V5);
+    ok('at 6 December 15:00 UTC DC-40877 reads Waived by Jordan Ellis, on both sides', (at6.decisions || []).some((d) => d.charge === 'SH01' && d.decision === 'Waived' && d.decided_by === 'Jordan Ellis') && (as6.history || []).some((h) => h.record === 'case.decision' && h.charge === 'SH01' && h.decision === 'Waived'), `${JSON.stringify(at6.decisions)} ${JSON.stringify(as6.history)}`);
+    const plog = ldb.prepare("SELECT connection_id, tool, result, approver FROM access_log WHERE tool = 'page:open_dispute' ORDER BY id").all();
+    ok('page disputes are logged under aviator-p6-ashby, approved by Priya Raman, refusals by code', plog.length >= 9 && plog.every((l) => l.connection_id === 'aviator-p6-ashby' || l.connection_id === 'aviator-p14-refused') && plog.filter((l) => l.result === 'Disputed').length === 4 && plog.some((l) => l.result === 'Refused: already_disputed'), JSON.stringify(plog)); }
   ok('no record was written by any public or Aviator call', ldb.prepare('SELECT count(*) n FROM events').get().n === events0 && ldb.prepare('SELECT count(*) n FROM proposals').get().n === props0);
 } finally { srv.kill(); cap.kill(); model.close(); }
 console.log(`${fails ? 'FAILED' : 'All hosted checks passed'}: ${fails} failed`); process.exit(fails ? 1 : 0);

@@ -29,10 +29,10 @@ export default function ({ db, ok, eq }) {
   eq('findings.no_row_names_an_agent', [db.prepare("SELECT count(*) n FROM findings WHERE proposed_by LIKE '%Agent%' OR problem LIKE '%Agent%' OR coalesce(proposal, '') LIKE '%Agent%'").get().n, db.prepare("SELECT count(*) n FROM finding_actions WHERE actor LIKE '%Agent%' OR coalesce(change, '') LIKE '%Agent%' OR coalesce(detail, '') LIKE '%Agent%' OR actor LIKE 'Standing policy%'").get().n], [0, 0]);
   ok('findings.each_side_is_refused_the_other_sides_findings', findingOutcomes(db, 'Northfield', { asOf: T, finding: 'NR-46215' }).found === false && /Not available to Northfield/.test(findingOutcomes(db, 'Northfield', { asOf: T, finding: 'NR-46215' }).message)
     && /Not available to Ashby/.test(findingOutcomes(db, 'Ashby', { asOf: T, finding: 'NFD-1' }).message));
-  // Value is proven only by a record: every matched repayment is a receivables match, every repaid reversal a remittance adjustment.
-  const va = findingOutcomes(db, 'Ashby', { asOf: T }).value_proven.repayments_matched; const vn = findingOutcomes(db, 'Northfield', { asOf: T }).value_proven.charges_reversed_and_repaid;
+  // Value is proven only by a record: every matched repayment is a receivables match, every repaid waiver a remittance adjustment.
+  const va = findingOutcomes(db, 'Ashby', { asOf: T }).value_proven.repayments_matched; const vn = findingOutcomes(db, 'Northfield', { asOf: T }).value_proven.charges_waived_and_repaid;
   eq('findings.ashby_value_is_the_receivables_matches', [va.count, va.amount], [n("SELECT count(*) n FROM events WHERE kind = 'erp.receivables_match' AND at <= ?", T.toISOString()), db.prepare("SELECT round(sum(json_extract(data, '$.amount')), 2) n FROM events WHERE kind = 'erp.receivables_match' AND at <= ?").get(T.toISOString()).n]);
-  ok('findings.northfield_value_is_repaid_reversals', vn.records.every((r) => db.prepare('SELECT 1 x FROM deduction_repayments WHERE repayment_payment = ? AND abs(repaid_amount - ?) < 0.005').get(r.proof, r.amount)));
+  ok('findings.northfield_value_is_repaid_waivers', vn.records.every((r) => db.prepare('SELECT 1 x FROM deduction_repayments WHERE repayment_payment = ? AND abs(repaid_amount - ?) < 0.005').get(r.proof, r.amount)));
   ok('findings.written_history_is_only_opened_and_approvals', n("SELECT count(*) n FROM finding_actions WHERE written = 1 AND stage NOT IN ('Opened','Decided','Confirmed')") === 0 && n("SELECT count(*) n FROM finding_actions WHERE written = 1 AND stage = 'Confirmed' AND record_kind <> 'Trading Grid deductions'") === 0);
   ash.close(); nf.close();
 }

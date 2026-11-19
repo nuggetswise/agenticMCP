@@ -73,8 +73,8 @@ export function history(L, W, { ashbyOrders = 300, otherOrders = 150 } = {}) {
     if (c.state === 'scan' || c.state === 'tally' || (c.state === 'held' && R() < 0.5)) {
       if (c.state === 'held') ev(addH(act, -4), 'wms.load_scan', c.po, 'Kinross warehouse system', 'KINROSS', 'API', { shipment: `SHP-${c.po.slice(3)}`, by_sscc: true, shared_by: 'Kinross Logistics', requested_by: 'Priya Raman', in_case: c.case });
       nf(act, 'case.dispute', 'ASHBY', { ...base, approved_by: 'Priya Raman', evidence: ['Bill of lading with seal', 'Proof of delivery', proof] });
-      outcome = 'Reversed';
-      nf(addD(act, U(2, 6)), 'case.decision', 'NORTHFIELD', { ...base, decision: 'Reversed', decided_by: 'Jordan Ellis', reason: `${proof} shows the carton loaded before the seal (NF-5.3)` });
+      outcome = 'Waived';
+      nf(addD(act, U(2, 6)), 'case.decision', 'NORTHFIELD', { ...base, decision: 'Waived', decided_by: 'Jordan Ellis', reason: `${proof} shows the carton loaded before the seal (NF-5.3)` });
       repay.push({ c, at: addD(act, 7) });
     } else if (c.state === 'none' && R() < 0.35) {
       nf(act, 'case.dispute', 'ASHBY', { ...base, approved_by: 'Priya Raman', evidence: ['Bill of lading with seal', 'Proof of delivery'] });
@@ -83,7 +83,7 @@ export function history(L, W, { ashbyOrders = 300, otherOrders = 150 } = {}) {
     } else { outcome = 'Accepted'; nf(act, 'case.accepted', 'ASHBY', { ...base, approved_by: 'Priya Raman', reason: c.state === 'held' ? 'Written off; the load scan was not requested from the warehouse' : 'Written off; no load scan or load tally exists' }); }
     c.outcome = outcome; stats.cases++;
   }
-  for (const { c, at } of repay) { const day = [...payDays.keys()].sort().find((k) => k >= etDay(at)) || lastPay; const items = payDays.get(day); const it = items.reduce((a, b) => (b.paid > a.paid ? b : a)); it.adjustments = [...it.adjustments, { amount: c.amount, reason: '04', ref: c.dm, note: `Reversal of SH01, case ${c.case}` }]; it.paid = money(it.paid + c.amount); }
+  for (const { c, at } of repay) { const day = [...payDays.keys()].sort().find((k) => k >= etDay(at)) || lastPay; const items = payDays.get(day); const it = items.reduce((a, b) => (b.paid > a.paid ? b : a)); it.adjustments = [...it.adjustments, { amount: c.amount, reason: '04', ref: c.dm, note: `Waived SH01, case ${c.case}` }]; it.paid = money(it.paid + c.amount); }
   let pm = 980001; for (const k of [...payDays.keys()].sort()) D.remit(L, 'ASHBY', et(k, '08:00'), `PMT-${pm++}`, payDays.get(k).sort((a, b) => b.paid - a.paid));
 
   // ---------- Other suppliers: ten of Northfield's suppliers, with their own shortage cases ----------
@@ -113,7 +113,7 @@ export function history(L, W, { ashbyOrders = 300, otherOrders = 150 } = {}) {
       const act = addD(opened, U(3, 8)); const hasScan = R() < (sealBroken ? 0.8 : 0.5);
       if (hasScan || sealBroken) {
         nf(act, 'case.dispute', supplier, { ...base, evidence: hasScan ? ['Bill of lading with seal', 'Proof of delivery', 'Load scan by SSCC'] : ['Bill of lading with seal', 'Proof of delivery'] });
-        const rev = hasScan; nf(addD(act, U(2, 6)), 'case.decision', 'NORTHFIELD', { ...base, decision: rev ? 'Reversed' : 'Upheld', decided_by: 'Jordan Ellis', reason: rev ? 'Load scan by SSCC shows the units loaded before the seal (NF-5.3)' : 'No load scan or load tally by SSCC in the case; the receiving count stands (NF-7.4, NF-5.3)' });
+        const rev = hasScan; nf(addD(act, U(2, 6)), 'case.decision', 'NORTHFIELD', { ...base, decision: rev ? 'Waived' : 'Upheld', decided_by: 'Jordan Ellis', reason: rev ? 'Load scan by SSCC shows the units loaded before the seal (NF-5.3)' : 'No load scan or load tally by SSCC in the case; the receiving count stands (NF-7.4, NF-5.3)' });
       } else nf(act, 'case.accepted', supplier, { ...base, reason: 'Not disputed' });
       stats.otherCases++; if (sealBroken) stats.sealCluster++;
     }

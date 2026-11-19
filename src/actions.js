@@ -36,7 +36,7 @@ export const CARD_ACTIONS = {
   },
   northfield: {
     send_application_advice: { write: 'send_application_advice', permission: 'send_application_advice', rule: 'NF-7.8', takes: 'document (an 810 or 856 Northfield received), optional messages per error code', does: 'Reject a document with an application advice (824)' },
-    decide_charge: { write: 'decide_charge', permission: 'decide_charge', rule: 'NF-7.7', takes: 'case, charge, decision (Reversed or Upheld), reason', does: 'Reverse or uphold a disputed deduction' },
+    decide_charge: { write: 'decide_charge', permission: 'decide_charge', rule: 'NF-7.7', takes: 'case, charge, decision (Waived or Upheld), reason', does: 'Waive or uphold a disputed deduction' },
     decide_chargeback: { write: 'decide_chargeback', permission: 'decide_chargeback', rule: 'NF-3.6', takes: 'po, decision (Apply or Waive)', does: 'Apply or waive a readiness chargeback' },
     publish_rule: { write: 'publish_rule', permission: 'publish_rule', rule: 'NF-11.1', takes: 'draft (NFD-…)', does: 'Publish a draft rule to suppliers after its replay' },
   },
@@ -270,14 +270,17 @@ function buildAdvice(db, side, a, T) {
 }
 function buildDecision(db, side, a, T) {
   const c = NR.caseNF(db, String(a.case || a.record || ''), new Date(T)); if (!c.found) return { ok: false, message: c.message };
-  const charge = String(a.charge || c.charge).toUpperCase(); const decision = /uphold/i.test(a.decision || '') ? 'Upheld' : /revers/i.test(a.decision || '') ? 'Reversed' : null;
-  if (!decision) return { ok: false, message: 'Say whether to reverse or uphold the charge.' };
+  const charge = String(a.charge || c.charge).toUpperCase(); const decision = /uphold/i.test(a.decision || '') ? 'Upheld' : /waiv|revers/i.test(a.decision || '') ? 'Waived' : null; // "reverse" is taken as waive
+  if (!decision) return { ok: false, message: 'Say whether to waive or uphold the charge.' };
   if (!c.disputes.some((d) => d.charge === charge)) return { ok: false, message: `The ${chargeName(charge)} on ${c.case} has not been disputed; Jordan Ellis decides a charge once it is disputed (NF-7.7).` };
   if (c.decisions.some((d) => d.charge === charge)) return { ok: false, message: `The ${chargeName(charge)} on ${c.case} is already decided.` };
-  const amount = c.disputes.filter((d) => d.charge === charge).at(-1).amount; const rec = c.review_agent?.charge === charge ? c.review_agent : null;
+  const amount = c.disputes.filter((d) => d.charge === charge).at(-1).amount;
+  // Northfield's evidence rules on this charge's dispute, as data on the card: what they recommend, why, and any evidence
+  // missing. A gap shows here; it never stops Jordan deciding.
+  const rec = NR.recommendationFor(db, c, charge);
   const reason = String(a.reason || rec?.reason || '').slice(0, 300) || null;
   return { ok: true, card: { record: c.case, po: c.po, to: `${c.supplier} (deduction case)`, args: { case: c.case, po: c.po, charge, decision, amount, reason, recommended: rec?.next_step || null },
-    detail: { case: c.case, po: c.po, charge: chargeName(charge), amount, decision, reason, repayment_on_next_remittance: decision === 'Reversed' } } };
+    detail: { case: c.case, po: c.po, charge: chargeName(charge), charge_code: charge, amount, decision, reason, recommendation: rec, repayment_on_next_remittance: decision === 'Waived' } } };
 }
 function buildChargeback(db, side, a, T) {
   const po = D.normPo(String(a.po || a.record || '')); const miss = evsOf(db, po, 'carrier.pickup_missed', T).pop();
@@ -321,7 +324,7 @@ export const REF_RE = /\b[A-Z]{2,5}(?:-[A-Z0-9]+)*-\d[A-Z0-9]*(?:-[A-Z0-9]+)*\b(
  *  given word for word) · no_message (claims a message the card does not carry) · refused_line (does not say which lines
  *  the rules found when the person named another) · approve (does not say nothing happens until Approve) · no_card
  *  (describes a card that was not raised) · owner, outside (an outside-Trading-Grid reply without the owner or the words)
- *  · expected (the records call for a card the model did not raise). */
+ *  · expected (the records call for a card the model did not raise) · waive (calls a charge decision anything but waive or uphold). */
 export function checkAnswer(answer, { cards = [], results = [], outside = null, expect = null, codes = [], question = '' } = {}) {
   const text = String(answer || ''); const out = []; const fail = (id, t) => { if (!out.some((x) => x.id === id && x.text === t)) out.push({ id, text: t }); };
   if (!text.trim() || text.trim() === 'No answer.') return [{ id: 'empty', text: 'The answer is empty. Answer the question from the tool results.' }];
@@ -332,12 +335,14 @@ export function checkAnswer(answer, { cards = [], results = [], outside = null, 
   const code = text.match(/\b(?:NF|AP|AM|KX)-\d+(?:\.\d+)?\b|\b[A-Z]{2}\d{2}\b(?!-)|\b\d[\d,]*\s*(?:CA|EA)\b|\b[a-z]+_[a-z_]+\b|\b(?:wms|carrier|erp|tg|case|rule)\.[a-z_]+\b/);
   if (code && !codes.includes(code[0])) fail('code', `It contains "${code[0]}". Write plain words: say whose rule it is, the charge by name, cases or each, and records by their reference and what they are; no codes or field names.`);
   if (/\*\*|^#+ |^\s*[-*] /m.test(text)) fail('markdown', 'It uses markdown. Write plain sentences.');
+  // A charge decision is Waived or Upheld. The model's own word for it is checked here (the one place the old word is named).
+  if (/\brevers/i.test(text)) fail('waive', 'Northfield decides a disputed charge by waiving or upholding it. Write waive or waived.');
   for (const m of text.matchAll(/["“]([^"”]{3,})["”]/g)) if (!hay.includes(m[1].toLowerCase().replace(/\s+/g, ' ').replace(/[.]$/, ''))) fail('quote', `It quotes "${m[1]}", which is on no card, in no tool result and not in the question. Quote only what the card or the records hold.`);
   // Every record it names must have been returned by a tool call in this turn: no reference is made up or recalled.
   const returned = `${cards.map(fieldsOf).join(' ')} ${JSON.stringify(results)}`; for (const m of new Set(text.match(REF_RE) || [])) if (!returned.includes(m)) fail('reference', `It names ${m}, which no tool returned in this turn. Name only records the tools returned; read the record first if you need it.`);
   for (const m of text.matchAll(/\$\s?(\d[\d,]*(?:\.\d\d)?)/g)) { const n = m[1].replace(/,/g, ''); const v = Number(n);
     if (!hay.includes(n) && !hay.includes(v.toFixed(2)) && !hay.includes(String(v)) && !hay.includes(m[1])) fail('amount', `It gives $${m[1]}, which is on no card and in no tool result. Give amounts as the records state them.`); }
-  if (new RegExp(`\\b(?:${cards.length ? '(?:has|have) been (?:sent|released|published|submitted|approved)|is now (?:sent|released|published)|' : ''}I(?:'ve| have)? (?:sent|rejected|released|published|opened|applied|waived|reversed|upheld|submitted|disputed|filed|issued)|we(?:'ve| have)? (?:sent|released|published|submitted))\\b`, 'i').test(text)) fail('done', 'It says an action is done. Nothing happens until the person presses Approve on the card; say the card is ready.');
+  if (new RegExp(`\\b(?:${cards.length ? '(?:has|have) been (?:sent|released|published|submitted|approved)|is now (?:sent|released|published)|' : ''}I(?:'ve| have)? (?:sent|rejected|released|published|opened|applied|waived|upheld|submitted|disputed|filed|issued)|we(?:'ve| have)? (?:sent|released|published|submitted))\\b`, 'i').test(text)) fail('done', 'It says an action is done. Nothing happens until the person presses Approve on the card; say the card is ready.');
   for (const m of text.matchAll(/\bline (\d+)\b/gi)) if (!new RegExp(`"line":${m[1]}\\b|line ${m[1]}\\b|"asked_lines?":\\[?[\\d,]*\\b${m[1]}\\b`).test(hay)) fail('line', `It names line ${m[1]}, which is on no card and in no tool result.`);
   if (cards.length) {
     for (const c of cards) {
@@ -357,7 +362,7 @@ export function applyCard(db, card, by) {
   const a = card.args; const T = card.at; const side = card.side; const party = SIDE_PARTY[side];
   const ev = (kind, po, data, system = 'Trading Grid') => appendEvent(db, { at: T, kind, po, system, party, channel: 'Trading Grid', data: JSON.stringify({ ...data, via: 'action card', card: card.id, pressed_by: by }) });
   switch (card.action) {
-    case 'open_dispute': return { event: ev('case.dispute', card.po, { case: a.case, charge: a.charge, amount: a.amount, evidence: a.evidence, ...(a.note ? { note: a.note } : {}), approved_by: by, rule: 'AP-4.1' }, 'Northfield deduction case') };
+    case 'open_dispute': return { event: ev('case.dispute', card.po, { case: a.case, charge: a.charge, amount: a.amount, evidence: a.evidence, ...(a.evidence_held ? { evidence_held: a.evidence_held } : {}), ...(a.note ? { note: a.note } : {}), approved_by: by, rule: 'AP-4.1' }, 'Northfield deduction case') };
     case 'release_held_ship_notice': return { event: ev('tg.release', a.po, { document: a.document, state: 'Released', rule: 'AP-1.3', released_by: by }) };
     case 'send_acknowledgment': case 'answer_order_change': case 'send_ship_notice': case 'send_invoice': {
       const doc = x12Doc(db, { type: a.document, ref: a.ref, po: a.po, from: 'ASHBY', to: 'NORTHFIELD', T, body: a.body, name: { 855: 'Order acknowledgment', 865: 'Change acknowledgment', 856: 'Ship notice', 810: 'Invoice' }[a.document] });

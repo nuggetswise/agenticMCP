@@ -685,7 +685,7 @@ async function pageAviator(page, req, res) {
   const carried = outside ? null : Cards.carriedMessage(question, sideName);
   const actions = Object.keys(Cards.CARD_ACTIONS[sideName]);
   const PROPOSE = { name: 'propose_action', description: `Raise an action card for ${SD.person} when asked to do something Trading Grid does. The server builds the card from ${SD.company}’s rules and the records and returns it as data; nothing happens until ${SD.person} presses Approve. Explain the card from its fields. Actions: ${actions.map((k) => `${k} (${Cards.CARD_ACTIONS[sideName][k].does}; takes ${Cards.CARD_ACTIONS[sideName][k].takes})`).join('; ')}.`,
-    input: { action: z.enum(actions), lines: z.array(z.number()).optional().describe('Lines the person named, when they named any'), note: z.string().optional().describe('The person’s own words to the other company, when the record carries them: an application advice’s message, or a dispute’s note'), case: z.string().optional(), charge: z.string().optional(), decision: z.string().optional().describe('Reversed or Upheld; Apply or Waive'), reason: z.string().optional(), po: z.string().optional(), document: z.string().optional(), draft: z.string().optional(), advice: z.string().optional(),
+    input: { action: z.enum(actions), lines: z.array(z.number()).optional().describe('Lines the person named, when they named any'), note: z.string().optional().describe('The person’s own words to the other company, when the record carries them: an application advice’s message, or a dispute’s note'), case: z.string().optional(), charge: z.string().optional(), decision: z.string().optional().describe('Waived or Upheld; Apply or Waive'), reason: z.string().optional(), po: z.string().optional(), document: z.string().optional(), draft: z.string().optional(), advice: z.string().optional(),
       messages: z.array(z.object({ code: z.string(), message: z.string() })).optional().describe('With send_application_advice: a plain message per error code, at most 60 characters') } };
   const tools = outside ? [...readTools] : [...readTools, PROPOSE];
   const perms = Object.fromEntries(G.aviatorPermissions(db, cid).actions.map((x) => [x.action, x.permission])); let runCards = []; let lastRefusal = null;
@@ -787,6 +787,44 @@ app.post('/aviator/:token/cards/:card', (req, res) => {
   withVia(via, () => log(cid, `card:${card.write}`, [], { session: s.id, card: card.id, action: card.action }, 'Approved', [card.record, result.document].filter(Boolean), w(`Approved by ${person}; ${Cards.CARD_ACTIONS[card.side]?.[card.action]?.does || card.action} ${card.record}`)));
   res.json({ ok: true, card: publicCard(card), result, record: card.reread, session: s.id });
 });
+// ---------- Page writes: Open dispute pressed on a hosted page ----------
+// A page that shows Ashby opens a dispute on one of its own cases (pages.json `cases`) when Priya presses Open dispute. It is
+// recorded in the viewer's session through the same write as an approved open_dispute card (Cards.applyCard, by Priya
+// Raman), carrying the evidence the case shows at the page moment: each record in the case or held by its owner, never one
+// that does not exist. The route applies no evidence-completeness check and does not refuse a case Ashby accepted earlier:
+// an evidence gap shows in Northfield's evidence rules' recommendation, not as a refusal. Nothing reaches main.events.
+// Refusals are error codes only. Same per-address rate and session write limit as a card press; logged as aviator-<page>-ashby.
+const PAGE_WRITES = { open_dispute: true };
+app.options('/aviator/:token/writes', (req, res) => { cors(res).status(204).end(); });
+app.post('/aviator/:token/writes', (req, res) => {
+  cors(res); const page = BY_PAGE_TOKEN[req.params.token]; if (!page) return res.status(404).json({ ok: false, error: 'not_found' });
+  const b = req.body || {}; const onPage = page.sides.includes('ashby'); const logCid = onPage ? AS : SIDE_CID[page.sides[0]];
+  const via = { id: `aviator-${page.id}-${onPage ? 'ashby' : 'refused'}`, user: `Priya Raman, pressed on /p/${page.id}` };
+  const caseId = String(b.case || '').trim().toUpperCase(); const charge = String(b.charge || 'SH01').trim().toUpperCase(); const action = String(b.action || '');
+  const refuse = (status, error, extra = {}) => { withVia(via, () => log(logCid, 'page:open_dispute', [], { session: b.session || null, case: caseId || null, charge, as_of: b.as_of || null }, `Refused: ${error}`, caseId ? [caseId] : [], refusedW(logCid, 'AP-4.1', `Refused: ${error}`))); return res.status(status).json({ ok: false, error, ...extra }); };
+  const hit = PUBLIC_MINUTE.hit(ipOf(req)); if (!hit.ok) { res.set('Retry-After', String(hit.retry_after)); return refuse(429, 'rate_limited', { retry_after: hit.retry_after }); }
+  if (!PAGE_WRITES[action] || !onPage || !(page.cases || []).includes(caseId)) return refuse(403, 'not_on_page');
+  // The page moment, inside the page window, as the Aviator route reads it.
+  const moment = pageMoment(page); const through = page.through ? new Date(page.through).toISOString() : null;
+  let asOf = moment; if (b.as_of != null && b.as_of !== '') { const x = asOfIso(b.as_of); if (!x || x < moment || (through && x > through)) return refuse(403, 'outside_window', { from: moment, through }); asOf = x; }
+  // A session named but no longer live (ended idle, or bound to another page) is expired; with none named a new one starts.
+  let session; if (b.session) { session = S.getSession(b.session); if (!session || session.page !== page.id) return refuse(410, 'session_expired'); session.last = Date.now(); }
+  else session = S.sessionFor({ page: page.id, address: ipOf(req) }).session;
+  if (session.writes.length >= S.LIMITS.writes) return refuse(429, 'session_write_limit', { session: session.id });
+  const c = S.withSession(session.id, () => D.deductionCase(db, caseId, new Date(asOf)));
+  if (!c.found) return refuse(403, 'outside_window', { from: moment, through, session: session.id });
+  if (charge !== c.charge) return refuse(403, 'not_on_page', { session: session.id });
+  // One dispute per charge (NF-7.3): a recorded dispute by the page moment, or any this session already opened.
+  const disputed = S.withSession(session.id, () => db.prepare("SELECT 1 FROM events WHERE kind = 'case.dispute' AND json_extract(data,'$.case') = ? AND json_extract(data,'$.charge') = ? AND (at <= ? OR id > ?)").get(c.case, charge, asOf, S.SESSION_ID_BASE)); // session rows: any time
+  if (disputed) return refuse(409, 'already_disputed', { session: session.id });
+  const evidence = (c.evidence || []).filter((e) => e.state !== 'Not found');
+  const card = { id: `page-dispute-${randomBytes(5).toString('hex')}`, action: 'open_dispute', side: 'ashby', at: asOf, po: c.po, record: c.case,
+    args: { case: c.case, charge, amount: c.dispute_amount ?? c.amount, evidence: evidence.map((e) => e.evidence), evidence_held: Object.fromEntries(evidence.map((e) => [e.evidence, e.state === 'In the case' ? 'In the case' : e.holder])) } };
+  S.withSession(session.id, () => Cards.applyCard(db, card, 'Priya Raman'));
+  withVia(via, () => log(AS, 'page:open_dispute', [], { session: session.id, case: c.case, charge, as_of: asOf }, 'Disputed', [c.case], { agent: 'Priya Raman', rule: 'AP-4.1', mode: 'person', approver: 'Priya Raman', outcome: `Dispute opened on ${c.case} ${charge}` }));
+  res.json({ ok: true, session: session.id, case: c.case, state: 'Disputed' });
+});
+
 // The session's own cards and writes, for a page that reopens.
 app.get('/aviator/:token/session/:session', (req, res) => { cors(res); const page = BY_PAGE_TOKEN[req.params.token]; const s = page && S.getSession(req.params.session);
   if (!s || s.page !== page.id) return res.status(404).json({ ok: false, error: 'no_session' });

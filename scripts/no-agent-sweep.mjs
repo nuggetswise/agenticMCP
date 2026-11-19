@@ -101,7 +101,7 @@ await side('NF', process.env.TOK_NF || 'b', async (call) => {
   { const ids = [...new Set((JSON.stringify(fo).match(/"(?:id|finding)":\s*"(F[A-Z]*-[^"]+)"/g) || []).map((x) => x.split('"')[3]))]; if (verbose) console.log('finding ids', ids.length, ids.slice(0, 3)); for (const id of ids.slice(0, 300)) await call('finding_outcomes', { finding: id, as_of: '2027-01-09T17:00:00-05:00' }); }
   for (const r of ['ASN-450118-1', 'INV-7731', 'RCV-DC2-77355', 'PMT-990168']) await call('get_document', { reference: r });
   await call('replay_draft_rule', { draft: 'NFD-1' }); await call('replay_draft_rule', { draft: 'NFD-2' }); await call('publish_rule', { draft: 'NFD-1' });
-  await call('decide_charge', { case: 'DC-40877', charge: 'SH01', decision: 'Reversed', reason: 'sweep', as_of: '2026-12-02T09:00:00-05:00' });
+  await call('decide_charge', { case: 'DC-40877', charge: 'SH01', decision: 'Waived', reason: 'sweep', as_of: '2026-12-02T09:00:00-05:00' });
   await call('open_order_value', { period: 'this_week', as_of: '2026-11-08T23:59:00-05:00' });
   await call('send_application_advice', { document: 'INV-7731', as_of: '2026-11-10T09:00:00-05:00' }); await call('decide_chargeback', { po: 'NR-46602', decision: 'Apply', as_of: '2026-12-09T17:30:00-05:00' });
   await call('read_supplier_records', { question: 'warehouse' });

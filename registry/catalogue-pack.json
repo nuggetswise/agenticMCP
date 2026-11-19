@@ -369,7 +369,7 @@
   {
    "id": "NF-5.5",
    "owner": "Northfield",
-   "statement": "A receipt changes only through a revised receiving advice; a deduction reversal alone does not change it",
+   "statement": "A receipt changes only through a revised receiving advice; waiving a deduction alone does not change it",
    "implements": [],
    "charge": "",
    "basis": "Invented",
@@ -438,7 +438,7 @@
   {
    "id": "NF-7.6",
    "owner": "Northfield",
-   "statement": "A reversed deduction is repaid on a later remittance, referencing the original deduction",
+   "statement": "A waived deduction is repaid on a later remittance, referencing the original deduction",
    "implements": [],
    "charge": "",
    "basis": "Invented",

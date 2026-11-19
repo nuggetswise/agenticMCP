@@ -47,7 +47,7 @@ const PROMO_MOMENT = '2027-01-06 09:00 ET';
 const PROMO_INSTRUCTION = `Northfield's remittance PMT-990168 took five promotion deductions. Vividly, the partner that owns the promotion terms, matches each one to the deal Ashby agreed. For every deduction in the queue: read_promotion_deduction, then vividly_match. Then exactly one of:
 - Vividly matched it to its deal: propose ashby_accepts_charge.
 - Vividly found it not supported (a rate above the deal, no store activity report for the claimed period, or outside the deal's order window): propose submit_dispute. It disputes only the unsupported amount, with the record that contradicts it; the supported part stands. Never accept a deduction Vividly found unsupported, and never dispute one it matched.
-Never decide a deduction; Northfield's reviewer does. A reversal is not money until the repayment arrives: when it does, propose ashby_matches_repayment.`;
+Never decide a deduction; Northfield's reviewer does. A waived charge is not money until the repayment arrives: when it does, propose ashby_matches_repayment.`;
 const isPromo = (s) => s.moment === PROMO_MOMENT;
 const promoRows = (db) => db.prepare("SELECT * FROM deal_settlements WHERE supplier_id = 'ASHBY' ORDER BY deduction_ref").all();
 function promoView(db, s, ref) {
@@ -72,7 +72,7 @@ const spec = {
   moments: { '2026-12-01 09:00 ET': '2026-12-01T14:00:00.000Z', '2026-12-28 10:00 ET': '2026-12-28T15:00:00.000Z', [PROMO_MOMENT]: '2027-01-06T14:00:00.000Z' }, defaultMoment: '2026-12-01 09:00 ET',
   horizonHours: 24 * 40, queueNoun: 'open deductions',
   goal: 'Resolve each Northfield charge on Northfield’s evidence rules 2026.2: recover what the proof supports, accept what it does not, and close a case only when the repayment matches in Ashby’s receivables.',
-  instruction: (s) => isPromo(s) ? PROMO_INSTRUCTION : `Work Ashby's open Northfield deductions. For each case, read the evidence and where each piece sits. NF-7.4 needs a bill of lading with seal, proof of delivery, and a load scan or load tally by SSCC (NF-5.3 accepts the tally). If a piece is held by Kinross or Lakeline, show who holds it and wait until it is shared into the case before disputing; Trading Grid sends them nothing. If no load scan or tally exists anywhere, a dispute would not be reviewed and draws ID01 $150: recommend accepting. Damage noted on the delivery receipt on prepaid freight is a carrier matter (NF-10.2): accept the charge and show that Ashby files the carrier claim with Lakeline. Never decide a charge; Northfield's reviewer does (NF-7.7). A reversal is not money until the repayment arrives and is matched.`,
+  instruction: (s) => isPromo(s) ? PROMO_INSTRUCTION : `Work Ashby's open Northfield deductions. For each case, read the evidence and where each piece sits. NF-7.4 needs a bill of lading with seal, proof of delivery, and a load scan or load tally by SSCC (NF-5.3 accepts the tally). If a piece is held by Kinross or Lakeline, show who holds it and wait until it is shared into the case before disputing; Trading Grid sends them nothing. If no load scan or tally exists anywhere, a dispute would not be reviewed and draws ID01 $150: recommend accepting. Damage noted on the delivery receipt on prepaid freight is a carrier matter (NF-10.2): accept the charge and show that Ashby files the carrier claim with Lakeline. Never decide a charge; Northfield's reviewer does (NF-7.7). A waived charge is not money until the repayment arrives and is matched.`,
   opening: (s) => isPromo(s) ? `Northfield remittance PMT-990168 arrived with five promotion deductions; they are due for review at ${s.moment}.` : `Ashby’s open Northfield deductions are due for review at ${s.moment}.`,
   facts: {
     moment: { values: ['2026-12-01 09:00 ET', '2026-12-28 10:00 ET', PROMO_MOMENT], recorded: '2026-12-01 09:00 ET', owner: 'Presenter', says: 'Story moment: 1 December (DC-40877, DC-40931), 28 December (DC-41102, DC-41118, DC-41131), or 6 January 2027 (remittance PMT-990168 with five promotion deductions, P20)' },
@@ -93,7 +93,7 @@ const spec = {
   guardrails: [
     { id: 'NF-7.7', owner: 'Administrator', text: 'Never decide a charge; Northfield’s reviewer does.' },
     { id: 'NF-7.4', owner: 'Administrator', text: 'Never dispute without the NF-7.4 evidence in the case.' },
-    { id: 'NF-7.6', owner: 'Administrator', text: 'Never show a reversal as resolved before the repayment matches in receivables.' },
+    { id: 'NF-7.6', owner: 'Administrator', text: 'Never show a waived charge as resolved before the repayment matches in receivables.' },
     { id: 'NF-7.3', owner: 'Administrator', text: 'One dispute per deduction, within 60 days of the remittance.' },
   ],
   // AP-4.1 (17 November 2026): every dispute needs Priya Raman's approval. No amount or evidence state lets one go without asking.
@@ -119,7 +119,7 @@ const spec = {
         case 'submit_dispute': if (st.disputed) return `NF-7.3: ${v.case} was already disputed once.`; if (st.accepted) return `${v.case} was accepted.`;
           if (!st.vividly) return `Read Vividly’s match for ${v.case} first: a promotion deduction is disputed only with the record that contradicts it.`;
           if (r.decision === 'Matched') return `Vividly matched ${v.case} to deal ${r.deal_id}; a matched deduction is not disputed.`; return null;
-        case 'ashby_matches_repayment': if (!st.repaid) return `No repayment for ${v.case} has arrived; a reversal is not money until it is repaid (NF-7.6).`; if (st.matched) return 'Already matched.'; return null;
+        case 'ashby_matches_repayment': if (!st.repaid) return `No repayment for ${v.case} has arrived; a waived charge is not money until it is repaid (NF-7.6).`; if (st.matched) return 'Already matched.'; return null;
         default: return `${action} does not apply to a promotion deduction.`;
       }
     }
@@ -135,7 +135,7 @@ const spec = {
         if (v.delivery_exception && v.delivery_exception !== 'None') return `The delivery receipt notes "${v.delivery_exception}": damage in transit is a carrier matter (NF-10.2), not a dispute.`; return null;
       case 'ashby_accepts_charge': if (st.disputed) return `${v.case} is disputed; Northfield decides it.`; if (st.accepted) return `${v.case} is already accepted.`; return null;
       case 'ashby_files_carrier_claim': if (!v.delivery_exception || v.delivery_exception === 'None') return `No damage is noted on the delivery receipt for ${v.case}.`; if (!/prepaid/i.test(v.freight_terms || '')) return 'On collect freight Northfield files with its own carrier; Ashby files only on prepaid freight (NF-10.2).'; if (st.carrier_claim) return 'A carrier claim is already filed.'; return null;
-      case 'ashby_matches_repayment': if (!st.repaid) return `No repayment for ${v.case} has arrived; a reversal is not money until it is repaid (NF-7.6).`; if (st.matched) return 'Already matched.'; return null;
+      case 'ashby_matches_repayment': if (!st.repaid) return `No repayment for ${v.case} has arrived; a waived charge is not money until it is repaid (NF-7.6).`; if (st.matched) return 'Already matched.'; return null;
     }
     return null;
   },
@@ -146,10 +146,10 @@ const spec = {
       if (p.action === 'submit_dispute') {
         s.clock += 3 * MIN; const amt = r.unauthorised_amount; const evidence = [`889 ${r.claimed_deal}`, ...(r.reason.match(/852/) ? ['852 history: no report for the claimed week'] : []), ...(r.reason.match(/order window/) ? [`810 ${r.invoice}`] : []), ...(r.reason.match(/Rate/) ? ['856 ship notices in the promoted period'] : []), 'Vividly match'];
         st.disputed = { at: fmtET(iso(s.clock)), by, amount: amt, evidence };
-        const decision = s.facts.northfield_decision === 'uphold' ? 'Upheld' : 'Reversed'; const at = iso(s.clock + 2 * 24 * H);
+        const decision = s.facts.northfield_decision === 'uphold' ? 'Upheld' : 'Waived'; const at = iso(s.clock + 2 * 24 * H);
         ctx.schedule(s, { key: `dec:${v.case}`, at, record: v.case, actor: 'Northfield (synthetic)', synthetic: true, what: `Jordan Ellis ${decision.toLowerCase()} $${amt.toFixed(2)} of ${v.case}`,
           on: (ss) => { st.decision = { decision, at: fmtET(at), by: 'Jordan Ellis', amount: amt };
-            if (decision === 'Reversed') { const ref = `PMT-S${ss.id.slice(3, 7).toUpperCase()}`; ctx.schedule(ss, { key: `pay:${v.case}`, at: iso(Date.parse(at) + 10 * 24 * H), record: v.case, actor: 'Northfield remittance (synthetic)', synthetic: true, reference: ref, what: `Remittance ${ref} repays $${amt.toFixed(2)} referencing ${v.case}`, on: () => { st.repaid = { payment: ref, at: fmtET(iso(Date.parse(at) + 10 * 24 * H)), amount: amt }; } }); } } });
+            if (decision === 'Waived') { const ref = `PMT-S${ss.id.slice(3, 7).toUpperCase()}`; ctx.schedule(ss, { key: `pay:${v.case}`, at: iso(Date.parse(at) + 10 * 24 * H), record: v.case, actor: 'Northfield remittance (synthetic)', synthetic: true, reference: ref, what: `Remittance ${ref} repays $${amt.toFixed(2)} referencing ${v.case}`, on: () => { st.repaid = { payment: ref, at: fmtET(iso(Date.parse(at) + 10 * 24 * H)), amount: amt }; } }); } } });
         return { state: 'Completed', response: `Dispute of $${amt.toFixed(2)} of ${v.case} submitted to Northfield with ${evidence.join(', ')}; $${r.authorised_amount.toFixed(2)} stands` }; }
       if (p.action === 'ashby_matches_repayment') { s.clock += MIN; st.matched = { at: fmtET(iso(s.clock)), payment: st.repaid.payment, amount: st.repaid.amount }; return { state: 'Completed', response: `${st.repaid.payment} matched to ${v.case} in receivables; ${v.case} closed` }; }
       return { state: 'Refused', response: 'Unknown action' };
@@ -167,11 +167,11 @@ const spec = {
       case 'submit_dispute': {
         s.clock += 3 * MIN; st.disputed = { at: fmtET(iso(s.clock)), by, evidence: v.evidence.filter((e) => e.state === 'In the case').map((e) => e.evidence) };
         const rec = db.prepare("SELECT at, data FROM events WHERE kind = 'case.decision' AND po = ? AND at > ? AND data LIKE ? ORDER BY at").get(v.po, iso(s.branch), `%"charge":"${v.charge}"%`);
-        const decision = s.facts.northfield_decision === 'uphold' ? 'Upheld' : rec ? J(rec.data).decision : 'Reversed';
+        const decision = s.facts.northfield_decision === 'uphold' ? 'Upheld' : rec ? J(rec.data).decision : 'Waived';
         const at = rec && s.facts.northfield_decision !== 'uphold' ? iso(Math.max(Date.parse(rec.at), s.clock + 60 * MIN)) : iso(s.clock + 2 * 24 * H);
         ctx.schedule(s, { key: `dec:${v.case}`, at, record: v.case, actor: rec && s.facts.northfield_decision !== 'uphold' ? 'Northfield (recorded decision)' : 'Northfield (synthetic)', synthetic: !rec || s.facts.northfield_decision === 'uphold', what: `Jordan Ellis ${decision.toLowerCase()} ${v.charge} $${v.amount.toFixed(2)} on ${v.case}`,
           on: (ss) => { st.decision = { decision, at: fmtET(at), by: 'Jordan Ellis' };
-            if (decision === 'Reversed') { const pay = v.case === 'DC-40877' ? { ref: 'PMT-991204', at: '2027-01-05T13:00:00.000Z', recorded: true } : { ref: `PMT-S${ss.id.slice(3, 7).toUpperCase()}`, at: iso(Date.parse(at) + 10 * 24 * H), recorded: false };
+            if (decision === 'Waived') { const pay = v.case === 'DC-40877' ? { ref: 'PMT-991204', at: '2027-01-05T13:00:00.000Z', recorded: true } : { ref: `PMT-S${ss.id.slice(3, 7).toUpperCase()}`, at: iso(Date.parse(at) + 10 * 24 * H), recorded: false };
               ctx.schedule(ss, { key: `pay:${v.case}`, at: pay.at, record: v.case, actor: pay.recorded ? 'Northfield remittance (recorded)' : 'Northfield remittance (synthetic)', synthetic: !pay.recorded, reference: pay.ref, what: `Remittance ${pay.ref} repays $${v.amount.toFixed(2)} referencing ${v.deduction}`, on: () => { st.repaid = { payment: pay.ref, at: fmtET(pay.at), amount: v.amount }; } }); } } });
         return { state: 'Completed', response: `Dispute of ${v.charge} $${v.amount.toFixed(2)} submitted to ${v.case} with ${st.disputed.evidence.join(', ')}` }; }
       case 'ashby_accepts_charge': s.clock += MIN; st.accepted = { at: fmtET(iso(s.clock)), by, amount: v.amount }; return { state: 'Shown', response: `Shown to Priya Raman: ${v.charge} $${v.amount.toFixed(2)} on ${v.case} is not disputed; Ashby clears it in the Supplier ERP. Nothing is written there` };
@@ -194,7 +194,7 @@ const spec = {
       const tot = (pick) => Math.round(rows.reduce((t, r) => t + (pick(r) || 0), 0) * 100) / 100;
       return { as_of: fmtET(iso(s.clock)), payment: 'PMT-990168', deductions: rows.map((r) => promoRow(db, s, r)).map((r) => ({ deduction: r.record, deal: r.deal, amount: r.amount, state: r.state })),
         disputed: rows.filter((r) => cs[r.deduction_ref]?.disputed).map((r) => r.deduction_ref), accepted: rows.filter((r) => cs[r.deduction_ref]?.accepted).map((r) => r.deduction_ref),
-        recovered_and_matched: tot((r) => cs[r.deduction_ref]?.matched ? cs[r.deduction_ref].matched.amount : 0), reversed_not_yet_repaid: tot((r) => cs[r.deduction_ref]?.decision?.decision === 'Reversed' && !cs[r.deduction_ref]?.matched ? cs[r.deduction_ref].decision.amount : 0),
+        recovered_and_matched: tot((r) => cs[r.deduction_ref]?.matched ? cs[r.deduction_ref].matched.amount : 0), waived_not_yet_repaid: tot((r) => cs[r.deduction_ref]?.decision?.decision === 'Waived' && !cs[r.deduction_ref]?.matched ? cs[r.deduction_ref].decision.amount : 0),
         accepted_amount: tot((r) => cs[r.deduction_ref]?.accepted ? r.claimed_amount : 0), unsupported_on_record: tot((r) => r.unauthorised_amount), violations,
         synthetic: 'Vividly matches, Northfield decisions and repayments at the promotion moment are synthetic, from the world’s deal settlement and the rules in src/claim.js.' };
     }
@@ -203,7 +203,7 @@ const spec = {
     const sum = (f) => Math.round(rows.filter(f).reduce((t, r) => t + r.amount, 0) * 100) / 100;
     return { as_of: fmtET(iso(s.clock)), cases: rows.map((r) => ({ case: r.record, charge: r.charge, amount: r.amount, state: r.state })),
       disputed: Object.keys(cs).filter((k) => cs[k].disputed), accepted: Object.keys(cs).filter((k) => cs[k].accepted), carrier_claims: Object.entries(cs).filter(([, v]) => v.carrier_claim).map(([k, v]) => ({ case: k, ...v.carrier_claim })),
-      recovered_and_matched: sum((r) => cs[r.record]?.matched), reversed_not_yet_repaid: sum((r) => cs[r.record]?.decision?.decision === 'Reversed' && !cs[r.record]?.matched), accepted_amount: sum((r) => cs[r.record]?.accepted),
+      recovered_and_matched: sum((r) => cs[r.record]?.matched), waived_not_yet_repaid: sum((r) => cs[r.record]?.decision?.decision === 'Waived' && !cs[r.record]?.matched), accepted_amount: sum((r) => cs[r.record]?.accepted),
       evidence_requested: Object.entries(cs).flatMap(([k, v]) => v.requested.map((r) => `${k} ${r.evidence} from ${r.holder}: ${r.answered || 'awaiting'}`)), violations,
       synthetic: 'Kinross and Lakeline answers, and Northfield decisions with no recorded decision, are synthetic from the rules in src/claim.js; DC-40877’s decision and repayment are recorded records revealed at their time.' };
   },

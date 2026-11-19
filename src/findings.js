@@ -168,7 +168,7 @@ export function buildFindingLog(db) {
       const ded = main ? c.d.deduction : null; const tk = ded ? taken.get(ded) : null; const reps = ded ? repay.all(ded) : []; const amount = dis ? dis.d.amount : c.d.amount;
       const settle = (f, actor) => { for (const r of reps.slice(0, 1)) { f.act(actor === 'Ashby' ? 'Confirmed' : 'Owner fixed', r.repaid_at, 'Northfield accounts payable', r.repayment_payment, 'Remittance (820)', { detail: `Repaid $${r.repaid_amount.toFixed(2)}`, amount: r.repaid_amount });
         if (actor === 'Ashby') { const m = matchOf.get(ded); if (m) f.act('Money settled', m.at, 'Supplier ERP', `Receivables match of ${J(m.data).payment}`, 'Supplier ERP', { detail: 'Repayment matched in receivables', amount: J(m.data).amount }); }
-        else { const pd = q("SELECT doc_id FROM documents WHERE doc_type = '820' AND reference = ?").get(r.repayment_payment); const a = pd && faOf.get(pd.doc_id); if (a) f.act('Confirmed', a.sent_at, name(supplier), a.reference, 'Technical acknowledgment (997)', { detail: 'Remittance acknowledged' }); f.act('Money settled', r.repaid_at, 'Northfield accounts payable', r.repayment_payment, 'Remittance (820)', { detail: 'Charge reversed and repaid', amount: r.repaid_amount }); } } };
+        else { const pd = q("SELECT doc_id FROM documents WHERE doc_type = '820' AND reference = ?").get(r.repayment_payment); const a = pd && faOf.get(pd.doc_id); if (a) f.act('Confirmed', a.sent_at, name(supplier), a.reference, 'Technical acknowledgment (997)', { detail: 'Remittance acknowledged' }); f.act('Money settled', r.repaid_at, 'Northfield accounts payable', r.repayment_payment, 'Remittance (820)', { detail: 'Charge waived and repaid', amount: r.repaid_amount }); } } };
       if (supplier === 'ASHBY') {
         const at = main ? c.at : dis.at; const before = new Date(Date.parse((dis || acc || { at: iso(Date.parse(c.at) + MIN) }).at) - 1000);
         let sug = null, base = null; if (main) { try { const x = claimDecision(db, c.d.case, before); if (x && x.next_step) { sug = /^recommend_accept|^accept$/.test(x.next_step) ? 'Accept the charge' : promo ? `Dispute $${(x.dispute_amount ?? amount).toFixed(2)}` : 'Dispute the charge'; base = x.rule_baseline || null; } } catch { sug = null; } }
@@ -179,18 +179,18 @@ export function buildFindingLog(db) {
         if (dis) f.act('Decided', dis.at, dis.d.approved_by || 'Priya Raman', `Dispute in ${c.d.case}`, 'Northfield deduction case', { decision: !sug ? null : same ? 'Approved as proposed' : 'Declined', change: sug && !same ? `Proposed: ${sug.toLowerCase()}; Priya Raman disputed` : null, detail: `Disputed $${dis.d.amount.toFixed(2)}`, amount: dis.d.amount });
         else if (acc) f.act('Decided', acc.at, 'Priya Raman', `Acceptance in ${c.d.case}`, 'Northfield deduction case', { decision: !sug ? null : same ? 'Approved as proposed' : 'Declined', change: sug && !same ? `Proposed: ${sug.toLowerCase()}; Priya Raman accepted` : null, detail: acc.d.reason || 'Accepted' });
         if (dec) { f.act('Owner fixed', dec.at, dec.d.decided_by || 'Jordan Ellis', `Decision in ${c.d.case}: ${dec.d.decision}`, 'Northfield deduction case', { detail: dec.d.decision, amount: dec.d.amount ?? null });
-          if (dec.d.decision === 'Reversed') settle(f, 'Ashby'); else f.act('Confirmed', dec.at, dec.d.decided_by || 'Jordan Ellis', `Decision in ${c.d.case}: ${dec.d.decision}`, 'Northfield deduction case', { detail: 'Charge stands' }); }
+          if (dec.d.decision === 'Waived') settle(f, 'Ashby'); else f.act('Confirmed', dec.at, dec.d.decided_by || 'Jordan Ellis', `Decision in ${c.d.case}: ${dec.d.decision}`, 'Northfield deduction case', { detail: 'Charge stands' }); }
         else if (acc) f.act('Confirmed', acc.at, 'Priya Raman', `Acceptance in ${c.d.case}`, 'Northfield deduction case', { detail: 'Charge accepted' });
       }
       if (dis) {
         let rec = null; try { rec = caseNF(db, c.d.case, new Date(Date.parse((dec || { at: iso(Date.parse(dis.at) + MIN) }).at) - 1000)).review_agent; } catch { rec = null; }
-        const step = rec && rec.charge === charge ? rec.next_step : null; const sug = { recommend_reverse: 'Reverse the charge', recommend_uphold: 'Uphold the charge', recommend_not_reviewed: 'Record the dispute as not reviewed' }[step] || null;
+        const step = rec && rec.charge === charge ? rec.next_step : null; const sug = { recommend_waive: 'Waive the charge', recommend_uphold: 'Uphold the charge', recommend_not_reviewed: 'Record the dispute as not reviewed' }[step] || null;
         const f = add({ side: 'Northfield', use_case: promo ? 'Promotions' : 'Deductions', rule: 'NF-7.7', record: main ? c.d.case : `${c.d.case} ${charge}`, po: c.po, problem: `${name(supplier)} disputes ${promo ? `promotion deduction ${c.d.deduction}` : `${charge}`}: $${dis.d.amount.toFixed(2)} in case ${c.d.case}`, owner: 'Northfield accounts payable',
           raised_at: dis.at, deadline: null, decision_needed: 1, proposed_by: sug ? ruleSet('Review Agent') : 'Rule', proposal: sug, rule_baseline: null, amount: dis.d.amount });
         f.act('Raised', dis.at, name(supplier), `Dispute in ${c.d.case}`, 'Northfield deduction case');
-        if (dec) { const did = dec.d.decision === 'Reversed' ? 'Reverse the charge' : 'Uphold the charge'; const same = sug === did;
+        if (dec) { const did = dec.d.decision === 'Waived' ? 'Waive the charge' : 'Uphold the charge'; const same = sug === did;
           f.act('Decided', dec.at, dec.d.decided_by || 'Jordan Ellis', `Decision in ${c.d.case}: ${dec.d.decision}`, 'Northfield deduction case', { decision: !sug ? null : same ? 'Approved as proposed' : 'Declined', change: sug && !same ? `Proposed: ${sug.toLowerCase()}; Jordan Ellis decided ${dec.d.decision.toLowerCase()}` : null, detail: dec.d.reason || dec.d.decision, amount: dec.d.amount ?? null });
-          if (dec.d.decision === 'Reversed') settle(f, 'Northfield'); else f.act('Confirmed', dec.at, dec.d.decided_by || 'Jordan Ellis', `Decision in ${c.d.case}: ${dec.d.decision}`, 'Northfield deduction case', { detail: 'Charge stands' }); }
+          if (dec.d.decision === 'Waived') settle(f, 'Northfield'); else f.act('Confirmed', dec.at, dec.d.decided_by || 'Jordan Ellis', `Decision in ${c.d.case}: ${dec.d.decision}`, 'Northfield deduction case', { detail: 'Charge stands' }); }
       }
     }
   }
@@ -210,7 +210,7 @@ export function buildFindingLog(db) {
     if (dec) { fa.act('Owner fixed', dec.at, dec.d.decided_by, `Decision in ${d.case}: ${dec.d.decision}`, 'Northfield deduction case', { detail: dec.d.decision, amount: dec.d.amount });
       fn.act('Decided', dec.at, dec.d.decided_by, `Decision in ${d.case}: ${dec.d.decision}`, 'Northfield deduction case', { detail: dec.d.reason, amount: dec.d.amount });
       for (const r of reps.slice(0, 1)) { fa.act('Confirmed', r.repaid_at, 'Northfield accounts payable', r.repayment_payment, 'Remittance (820)', { detail: `Repaid $${r.repaid_amount.toFixed(2)}`, amount: r.repaid_amount });
-        fn.act('Owner fixed', r.repaid_at, 'Northfield accounts payable', r.repayment_payment, 'Remittance (820)', { detail: `Repaid $${r.repaid_amount.toFixed(2)}`, amount: r.repaid_amount }).act('Money settled', r.repaid_at, 'Northfield accounts payable', r.repayment_payment, 'Remittance (820)', { detail: 'Charge reversed and repaid', amount: r.repaid_amount }); } } }
+        fn.act('Owner fixed', r.repaid_at, 'Northfield accounts payable', r.repayment_payment, 'Remittance (820)', { detail: `Repaid $${r.repaid_amount.toFixed(2)}`, amount: r.repaid_amount }).act('Money settled', r.repaid_at, 'Northfield accounts payable', r.repayment_payment, 'Remittance (820)', { detail: 'Charge waived and repaid', amount: r.repaid_amount }); } } }
 
   // ───────── Ashby: store activity (the recorded recommendations of Ashby's replenishment rules) ─────────
   for (const e of q("SELECT id, at, data FROM events WHERE kind = 'rule.recommendation' ORDER BY at").all()) { const d = J(e.data); if (!/replenishment rule/.test(d.found_by || '')) continue;
@@ -291,13 +291,13 @@ export function findingOutcomes(db, side, { asOf, period = 'quarter', use_case =
       changes_people_made: xs.filter((v) => v.change).map((v) => ({ finding: v.finding, record: v.record, change: v.change })),
       against_rule_baseline: { proposal_differs_from_rule: differs.length, of_those_money_settled: r2(differs.reduce((t, v) => t + (v.money_settled?.amount || 0), 0)), findings: differs.map((v) => v.finding) },
       note: 'Every proposal waits for a person; nothing here changes an approval mode.' }; });
-  const settled = V.filter((v) => v.money_settled); const reversed = V.filter((v) => v._a.some((a) => (a.stage === 'Owner fixed' || a.stage === 'Decided') && /Reversed/.test(`${a.detail || ''} ${a.record}`)));
-  const amt = (v) => (v._a.find((a) => (a.stage === 'Owner fixed' || a.stage === 'Decided') && /Reversed/.test(`${a.detail || ''} ${a.record}`))?.amount ?? v.amount ?? 0);
+  const settled = V.filter((v) => v.money_settled); const waived = V.filter((v) => v._a.some((a) => (a.stage === 'Owner fixed' || a.stage === 'Decided') && /Waived/.test(`${a.detail || ''} ${a.record}`)));
+  const amt = (v) => (v._a.find((a) => (a.stage === 'Owner fixed' || a.stage === 'Decided') && /Waived/.test(`${a.detail || ''} ${a.record}`))?.amount ?? v.amount ?? 0);
   const value = side === 'Ashby'
     ? { repayments_matched: { count: settled.length, amount: r2(settled.reduce((t, v) => t + v.money_settled.amount, 0)), records: settled.map((v) => ({ finding: v.finding, record: v.record, amount: v.money_settled.amount, proof: v.money_settled.record })) },
-        charges_reversed: { count: reversed.length, amount: r2(reversed.reduce((t, v) => t + amt(v), 0)), findings: reversed.map((v) => v.finding) }, prevented: 'No figure: no record shows a charge prevented' }
-    : { charges_reversed_and_repaid: { count: settled.length, amount: r2(settled.reduce((t, v) => t + v.money_settled.amount, 0)), records: settled.map((v) => ({ finding: v.finding, record: v.record, amount: v.money_settled.amount, proof: v.money_settled.record })) },
-        charges_reversed: { count: reversed.length, amount: r2(reversed.reduce((t, v) => t + amt(v), 0)), findings: reversed.map((v) => v.finding) }, supplier_receivables_match: 'Not available to Northfield', prevented: 'No figure: no record shows a charge prevented' };
+        charges_waived: { count: waived.length, amount: r2(waived.reduce((t, v) => t + amt(v), 0)), findings: waived.map((v) => v.finding) }, prevented: 'No figure: no record shows a charge prevented' }
+    : { charges_waived_and_repaid: { count: settled.length, amount: r2(settled.reduce((t, v) => t + v.money_settled.amount, 0)), records: settled.map((v) => ({ finding: v.finding, record: v.record, amount: v.money_settled.amount, proof: v.money_settled.record })) },
+        charges_waived: { count: waived.length, amount: r2(waived.reduce((t, v) => t + amt(v), 0)), findings: waived.map((v) => v.finding) }, supplier_receivables_match: 'Not available to Northfield', prevented: 'No figure: no record shows a charge prevented' };
   const confirmed = count(V, (v) => has(v, 'Confirmed')); const late = count(V, (v) => v.decided_late);
   const out = { as_of: fmtET(asOf), side, person: side === 'Ashby' ? 'Priya Raman' : 'Jordan Ellis', period: per.join(' and '), calculated_by: 'Trading Grid',
     title: `${confirmed} of ${V.length} ${side} findings were confirmed${period === 'quarter' ? ' this quarter' : ''}; ${late} ${late === 1 ? 'was' : 'were'} decided after ${late === 1 ? 'its' : 'their'} deadline.`,

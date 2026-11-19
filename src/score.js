@@ -130,7 +130,7 @@ export function buyerFixture(db, pos, T = '2026-11-08') {
       else if (d.doc_type === '810') ev.push(['inv', dd, b.replaces || b.ref, Object.fromEntries(b.lines.map((l) => [k(l.line), l.qty]))]);
     }
     for (const p of db.prepare('SELECT * FROM remittance_items WHERE po = ? ORDER BY paid_at').all(po)) { const ded = db.prepare('SELECT coalesce(sum(amount),0) a FROM adjustments WHERE payment = ? AND invoice = ? AND po = ? AND amount < 0').get(p.payment, p.invoice, po).a; const rep = db.prepare('SELECT replaces FROM invoices WHERE invoice = ?').get(p.invoice)?.replaces; ev.push(['pay', day(p.paid_at), rep || p.invoice, Math.round(p.paid * 100), Math.round(-ded * 100)]); }
-    for (const e of db.prepare("SELECT at, data FROM events WHERE po = ? AND kind = 'case.decision' AND data LIKE '%Reversed%'").all(po)) ev.push(['rev', day(e.at), Math.round(J(e.data).amount * 100)]);
+    for (const e of db.prepare("SELECT at, data FROM events WHERE po = ? AND kind = 'case.decision' AND data LIKE '%Waived%'").all(po)) ev.push(['rev', day(e.at), Math.round(J(e.data).amount * 100)]);
     ev.sort((a, b) => a[1] - b[1]);
     return { id: po, d0: day(o.received_at), lines: lines.map((l) => ({ k: k(l.line), p: Math.round(l.price * 100), q: l.qty_original })), ev };
   });

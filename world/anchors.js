@@ -120,7 +120,7 @@ export function anchors(L, W) {
     D.invoice(L, O, day('2026-11-10', '15:30'), { ref: 'INV-7731C', replaces: 'INV-7731', qty: { 1: 270, 2: 120, 3: 80 } });
     ev(L, day('2026-11-20', '09:00'), 'case.opened', po, 'Northfield deduction case', 'NORTHFIELD', 'API', { case: 'DC-40877', charge: 'SH01', amount: 88.4, line: 2, cartons: 1, deduction: 'DM-55102', dispute_deadline: '2027-01-30' });
     ev(L, day('2026-12-02', '10:15'), 'case.dispute', po, 'Northfield deduction case', 'ASHBY', 'API', { case: 'DC-40877', charge: 'SH01', amount: 88.4, approved_by: 'Priya Raman', evidence: ['Bill of lading with seal', 'Proof of delivery', 'Load scan by SSCC'] });
-    ev(L, day('2026-12-05', '10:00'), 'case.decision', po, 'Northfield deduction case', 'NORTHFIELD', 'API', { case: 'DC-40877', charge: 'SH01', amount: 88.4, decision: 'Reversed', decided_by: 'Jordan Ellis', reason: 'Load scan shows carton 006141410000003006 loaded before the seal' });
+    ev(L, day('2026-12-05', '10:00'), 'case.decision', po, 'Northfield deduction case', 'NORTHFIELD', 'API', { case: 'DC-40877', charge: 'SH01', amount: 88.4, decision: 'Waived', decided_by: 'Jordan Ellis', reason: 'Load scan shows carton 006141410000003006 loaded before the seal' });
     ev(L, day('2026-12-16', '11:00'), 'case.dispute', po, 'Northfield deduction case', 'ASHBY', 'API', { case: 'DC-40877', charge: 'AS02', amount: 151, approved_by: 'Priya Raman', evidence: ['Ship notice transmission time', 'Load scan by SSCC'] });
     ev(L, day('2026-12-21', '14:00'), 'case.decision', po, 'Northfield deduction case', 'NORTHFIELD', 'API', { case: 'DC-40877', charge: 'AS02', amount: 151, decision: 'Upheld', decided_by: 'Jordan Ellis', reason: 'The receiving advice stands at 119 until revised (NF-5.5)' });
     ev(L, day('2027-01-06', '09:00'), 'erp.receivables_match', po, 'Supplier ERP', 'ASHBY', 'API', { payment: 'PMT-991204', matched_to: 'DM-55102', amount: 88.4 });
@@ -160,7 +160,7 @@ export function anchors(L, W) {
     { invoice: 'INV-7768', po: 'NR-450415', paid: 3032, invoice_amount: 3240, adjustments: [{ amount: -208, reason: '04', ref: 'DM-55140', note: 'SH01 shortage, PO NR-450415 line 1, 2 cartons, case DC-40931' }] },
   ] });
   W.compliance = [{ amount: -151, reason: '06', ref: 'CI-NF-2611-0418', note: 'AS02 ship notice does not match receipt, PO NR-450118, case DC-40877' }, { amount: -100, reason: '06', ref: 'CI-NF-2611-0418', note: 'IV01 invoice above shipped quantity, PO NR-450390, INV-7790' }];
-  W.repay = { at: day('2027-01-05', '08:00'), ref: 'PMT-991204', adjustments: [{ amount: 88.4, reason: '04', ref: 'DM-55102', note: 'Reversal of SH01, case DC-40877' }] };
+  W.repay = { at: day('2027-01-05', '08:00'), ref: 'PMT-991204', adjustments: [{ amount: 88.4, reason: '04', ref: 'DM-55102', note: 'Waived SH01, case DC-40877' }] };
 
   // ---------- Week 9: trade test for a new item in NetSuite ----------
   {

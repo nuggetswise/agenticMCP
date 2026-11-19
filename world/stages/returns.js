@@ -1,6 +1,6 @@
 // T1.17 Adjustments and returns: Northfield's return-to-vendor requests (180), the deductions it takes for them on its
-// remittance (820), Ashby's credit memos (812), and the repayment of a reversed deduction, each linked to what it adjusts.
-// Every repayment in the world, the ones already there and the new one, names the deduction it reverses.
+// remittance (820), Ashby's credit memos (812), and the repayment of a waived deduction, each linked to what it adjusts.
+// Every repayment in the world, the ones already there and the new one, names the deduction it repays.
 //
 // Borrowed (pages opened 15 Nov 2026):
 //  - ERPNext Credit Note: "a Sales Invoice marked as a return", created from the original submitted invoice with
@@ -36,7 +36,7 @@
 // PMT-990169 to PMT-990171 (7 to 9 January 2027), each paying the invoices due that day as every Northfield remittance
 // does; no existing remittance is edited.
 //
-// Existing repayments. The world already holds 14 repayments of reversed SH01 shortages (13 in the history period and
+// Existing repayments. The world already holds 14 repayments of waived SH01 shortages (13 in the history period and
 // DC-40877's on PMT-991204). Each names its deduction by the deduction reference in ADX04 and the case in its note, so
 // `deduction_repayments` links each to its original. Thirteen of the history repayments are dated before the remittance
 // that took their deduction (world/history.js schedules a repayment a week after the decision without waiting for the
@@ -49,7 +49,7 @@ const NF = PARTY.NORTHFIELD, ASH = PARTY.ASHBY; const LOC = Object.fromEntries(l
 const cents = (x) => String(Math.round(x * 100));
 const r2 = (x) => Math.round(x * 100) / 100;
 const RETURN_REASON = { DA: 'Damaged product on receipt', EI: 'Excess inventory' };
-/** The repayments already in the world dated before the deduction they reverse (history period); see the header. */
+/** The repayments already in the world dated before the deduction they repay (history period); see the header. */
 export const KNOWN_EARLY_REPAYMENTS = ['DM-41001', 'DM-41002', 'DM-41006', 'DM-41007', 'DM-41008', 'DM-41009', 'DM-41011', 'DM-41012', 'DM-41013', 'DM-41014', 'DM-41015', 'DM-41017', 'DM-41019'];
 
 // ---------- 180 ----------
@@ -133,14 +133,14 @@ function generate(L, { G }) {
   picked.forEach((p, k) => { p.ded = `RD-2701-0${k + 1}`; p.amount = r2(p.qty * p.price); big[k].adjustments.push({ amount: -p.amount, reason: '72', ref: p.ded, note: `Return ${p.ref} PO ${p.O.po} ${p.qty} CA ${p.sku} x ${money(p.price)}` }); });
   remit('2027-01-07', 'PMT-990169', d7);
   // The disputed return: Ashby received 5 of the 6 cases; it shares its receipt into the case and disputes one case.
-  // Jordan Ellis reverses one case (NF-7.7); the repayment follows on the next remittance after the decision (NF-7.6).
+  // Jordan Ellis waives one case (NF-7.7); the repayment follows on the next remittance after the decision (NF-7.6).
   const q = picked.find((p) => p.disputed); const caseId = `RC-${q.ref.slice(-5)}`; const back = r2((q.qty - q.received) * q.price);
   ev(et('2027-01-07', '14:00'), 'return.dispute', q.O.po, 'ASHBY', 'Northfield deduction case', { case: caseId, rtv: q.ref, deduction: q.ded, amount: back, approved_by: 'Priya Raman', evidence: ['Ashby return receipt: 5 of 6 cases'], in_case: caseId });
-  ev(et('2027-01-08', '10:00'), 'return.decision', q.O.po, 'NORTHFIELD', 'Northfield deduction case', { case: caseId, rtv: q.ref, deduction: q.ded, amount: back, decision: 'Reversed', decided_by: 'Jordan Ellis', reason: 'Return receipt shows one case short; one case reversed' });
+  ev(et('2027-01-08', '10:00'), 'return.decision', q.O.po, 'NORTHFIELD', 'Northfield deduction case', { case: caseId, rtv: q.ref, deduction: q.ded, amount: back, decision: 'Waived', decided_by: 'Jordan Ellis', reason: 'Return receipt shows one case short; one case waived' });
   remit('2027-01-08', 'PMT-990170', due('2027-01-08'));
-  const d9 = due('2027-01-09'); [...d9].sort((a, b) => b.paid - a.paid)[0].adjustments.push({ amount: back, reason: '72', ref: q.ded, note: `Reversal of ${q.qty - q.received} CA, ${q.ref}, case ${caseId}` });
+  const d9 = due('2027-01-09'); [...d9].sort((a, b) => b.paid - a.paid)[0].adjustments.push({ amount: back, reason: '72', ref: q.ded, note: `Waived ${q.qty - q.received} CA, ${q.ref}, case ${caseId}` });
   remit('2027-01-09', 'PMT-990171', d9);
-  // Ashby's credit memos (812) against the original invoice, for what Northfield kept: 4 mugs; 5 jars after the reversal.
+  // Ashby's credit memos (812) against the original invoice, for what Northfield kept: 4 mugs; 5 jars after the waiver.
   for (const p of picked.filter((x) => x.credit)) {
     const qty = p.received; const amount = r2(qty * p.price);
     L.doc({ type: '812', from: 'ASHBY', to: 'NORTHFIELD', at: et(...p.credit), ref: `CM-ASH-${p.ref.slice(-5)}`, flag: 'C', amount, invoice: p.inv.ref, po: p.O.po, return_ref: p.ref, deduction: p.ded,
@@ -154,7 +154,7 @@ function derive(d, T, ctx) {
   if (d.type === '180') {
     const inv = ctx.T.invoices.find((i) => i.invoice === d.invoice);
     T.return_authorisations.push({ rtv: d.ref, doc_id: d.doc_id, supplier_id: d.receiver, po: d.po, receipt: d.receipt, invoice: d.invoice, invoice_doc_id: inv?.doc_id ?? null, requested_at: d.at, return_on: d.return_on,
-      return_from: ctx.loc(d.parties.SF.gln), return_to: ctx.loc(d.parties.ST.gln), status: 'Requested', deduction_ref: null, deduction_payment: null, deducted_at: null, deducted_amount: null, reversed_amount: 0, credit_memo: null, credited_amount: null });
+      return_from: ctx.loc(d.parties.SF.gln), return_to: ctx.loc(d.parties.ST.gln), status: 'Requested', deduction_ref: null, deduction_payment: null, deducted_at: null, deducted_amount: null, waived_amount: 0, credit_memo: null, credited_amount: null });
     for (const l of d.lines) T.return_lines.push({ rtv: d.ref, line: l.line, po: d.po, sku: l.sku, gtin: l.gtin, qty: l.qty, uom: l.uom, price: l.price, amount: r2(l.qty * l.price), reason_code: l.reason, reason: RETURN_REASON[l.reason] || l.reason });
   } else if (d.type === '812') {
     T.credit_debit_adjustments.push({ adjustment_id: d.ref, doc_id: d.doc_id, issued_by: d.sender, issued_to: d.receiver, issued_at: d.at, credit_debit: d.flag === 'C' ? 'Credit' : 'Debit', handling_code: d.handling, amount: d.amount,
@@ -169,7 +169,7 @@ const CASE = /case ([A-Z]{2}-\d+)/;
 function finish(T, ctx) {
   for (const t of ['return_authorisations', 'return_lines', 'credit_debit_adjustments', 'credit_debit_lines']) T[t] ||= [];
   const docOf = new Map(ctx.docs.filter((d) => d.type === '820').map((d) => [d.ref, d.doc_id]));
-  // Every repayment (a positive adjustment) and the deduction it reverses: the negative adjustment with the same deduction
+  // Every repayment (a positive adjustment) and the deduction it repays: the negative adjustment with the same deduction
   // reference to the same payee (NF-7.6: repaid on a later remittance, referencing the original deduction).
   T.deduction_repayments = T.adjustments.filter((a) => a.amount > 0).map((a) => {
     const o = T.adjustments.filter((x) => x.amount < 0 && x.reference === a.reference && x.payee_id === a.payee_id);
@@ -179,12 +179,12 @@ function finish(T, ctx) {
       original_payment: orig.payment, original_doc_id: docOf.get(orig.payment), original_invoice: orig.invoice, original_amount: orig.amount, deducted_at: orig.paid_at,
       case_id: (a.note || '').match(CASE)?.[1] ?? (orig.note || '').match(CASE)?.[1] ?? null, payee_id: a.payee_id, dated_after_deduction: a.paid_at > orig.paid_at ? 1 : 0 };
   });
-  // Return status from what followed the 180: the deduction that names it, any reversal, and Ashby's credit memo.
+  // Return status from what followed the 180: the deduction that names it, any waiver, and Ashby's credit memo.
   for (const r of T.return_authorisations) {
     const ded = T.adjustments.find((a) => a.amount < 0 && parseReturnDeduction(a)?.rtv === r.rtv);
     if (ded) Object.assign(r, { deduction_ref: ded.reference, deduction_payment: ded.payment, deducted_at: ded.paid_at, deducted_amount: -ded.amount, status: 'Deducted' });
     const rep = ded ? T.deduction_repayments.filter((x) => x.reference === ded.reference) : [];
-    if (rep.length) { r.reversed_amount = r2(rep.reduce((s, x) => s + x.repaid_amount, 0)); r.status = 'Partly reversed'; }
+    if (rep.length) { r.waived_amount = r2(rep.reduce((s, x) => s + x.repaid_amount, 0)); r.status = 'Partly waived'; }
     const cm = T.credit_debit_adjustments.find((c) => c.return_ref === r.rtv);
     if (cm) { r.credit_memo = cm.adjustment_id; r.credited_amount = cm.amount; r.status = 'Credited'; }
   }
@@ -224,12 +224,12 @@ export default {
   },
   schema: `
 -- T1.17: return authorisations (180) and their lines, credit and debit adjustments (812) and their lines, and every
--- repayment linked to the deduction it reverses.
+-- repayment linked to the deduction it repays.
 CREATE TABLE return_authorisations (rtv TEXT PRIMARY KEY, doc_id TEXT NOT NULL REFERENCES documents(doc_id), supplier_id TEXT NOT NULL REFERENCES parties(id), po TEXT NOT NULL REFERENCES orders(po),
   receipt TEXT NOT NULL, invoice TEXT NOT NULL REFERENCES invoices(invoice), invoice_doc_id TEXT REFERENCES documents(doc_id), requested_at TEXT NOT NULL, return_on TEXT,
   return_from TEXT NOT NULL REFERENCES locations(id), return_to TEXT NOT NULL REFERENCES locations(id),
-  status TEXT NOT NULL CHECK (status IN ('Requested','Deducted','Partly reversed','Credited')), deduction_ref TEXT, deduction_payment TEXT, deducted_at TEXT, deducted_amount REAL,
-  reversed_amount REAL NOT NULL, credit_memo TEXT, credited_amount REAL);
+  status TEXT NOT NULL CHECK (status IN ('Requested','Deducted','Partly waived','Credited')), deduction_ref TEXT, deduction_payment TEXT, deducted_at TEXT, deducted_amount REAL,
+  waived_amount REAL NOT NULL, credit_memo TEXT, credited_amount REAL);
 CREATE TABLE return_lines (rtv TEXT NOT NULL REFERENCES return_authorisations(rtv), line INTEGER NOT NULL, po TEXT NOT NULL, sku TEXT NOT NULL REFERENCES items(sku), gtin TEXT, qty INTEGER NOT NULL CHECK (qty > 0), uom TEXT NOT NULL,
   price REAL NOT NULL, amount REAL NOT NULL, reason_code TEXT NOT NULL, reason TEXT NOT NULL, PRIMARY KEY (rtv, line), FOREIGN KEY (po, line) REFERENCES order_lines(po, line));
 CREATE TABLE credit_debit_adjustments (adjustment_id TEXT PRIMARY KEY, doc_id TEXT NOT NULL REFERENCES documents(doc_id), issued_by TEXT NOT NULL REFERENCES parties(id), issued_to TEXT NOT NULL REFERENCES parties(id), issued_at TEXT NOT NULL,

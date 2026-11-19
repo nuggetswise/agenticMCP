@@ -51,7 +51,7 @@ function buyerOrders(L, W) {
       else if (e[0] === 'rcv') D.receipt(L, O, at, { ref: `RCV-${e[2]}`, asnRef: e[2], qty: Object.fromEntries(Object.entries(e[3]).map(([k, q]) => [ln(k).line, q])), short: Object.fromEntries(Object.entries(e[3]).map(([k, q]) => [ln(k).line, Math.max(0, (asnQty.get(e[2])?.[k] ?? q) - q)])) });
       else if (e[0] === 'inv') D.invoice(L, O, at, { ref: e[2], qty: Object.fromEntries(O.lines.map((l) => [l.line, e[3][l.k] || 0])), terms: fx.terms });
       else if (e[0] === 'pay') W.remit.push({ at, to: supplier, ref: `PMT-${p.id.slice(3)}-${e[2].slice(-3)}`, items: [{ invoice: e[2], po: p.id, paid: e[3] / 100, invoice_amount: (e[3] + e[4]) / 100, adjustments: e[4] ? [{ amount: -e[4] / 100, reason: '04', ref: `DM-${p.id.slice(3)}`, note: 'Deduction taken on remittance' }] : [] }] });
-      else if (e[0] === 'rev') L.event({ at, kind: 'case.decision', po: p.id, system: 'Northfield deduction case', party: 'NORTHFIELD', channel: 'API', data: { decision: 'Reversed', amount: e[2] / 100 } });
+      else if (e[0] === 'rev') L.event({ at, kind: 'case.decision', po: p.id, system: 'Northfield deduction case', party: 'NORTHFIELD', channel: 'API', data: { decision: 'Waived', amount: e[2] / 100 } });
     }
   });
 }

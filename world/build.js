@@ -233,7 +233,7 @@ export function buildWorld({ quiet = false } = {}) {
   // Northfield's private records: the claims reviewer's notes on decided charges, and two draft rules not yet published.
   const dec = T.events.filter((e) => e.kind === 'case.decision');
   insert(db, 'review_notes', dec.map((e) => { const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; return { case_id: d.case, charge: d.charge, at: new Date(Date.parse(e.at) - 3600000).toISOString(), author: 'Jordan Ellis',
-    note: d.reviewer_note ? d.reviewer_note : d.decision === 'Reversed' ? 'Load scan time is before the seal time on the bill of lading; seal intact at DC 2. Reverse the shortage. Receipt stays as recorded until receiving revises it.' : 'Ship notice still differs from the receiving advice on record. No revised receiving advice. Uphold.' }; }));
+    note: d.reviewer_note ? d.reviewer_note : d.decision === 'Waived' ? 'Load scan time is before the seal time on the bill of lading; seal intact at DC 2. Waive the shortage. Receipt stays as recorded until receiving revises it.' : 'Ship notice still differs from the receiving advice on record. No revised receiving advice. Uphold.' }; }));
   const IN_FORCE_FROM = '2027-01-04T05:00:00.000Z'; // Monday 4 January 2027, 00:00 Eastern (D72)
   insert(db, 'draft_rules', [
     { id: 'NFD-1', in_force_from: null, created_at: '2026-11-10T15:00:00.000Z', author: 'Jordan Ellis', statement: 'Send the ship notice within 30 minutes of departure', check_kind: 'ship_notice_minutes', value: 30, charge: 150, state: 'Draft', charge_basis: 'per document', basis: 'Northfield' },

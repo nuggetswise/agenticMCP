@@ -167,7 +167,7 @@ export const AVIATOR_ACTIONS = {
   },
   [NF]: {
     send_application_advice: { label: 'Reject a document with an application advice (EDI 824)', editable: true, starts: 'propose_action_card', approver: 'Jordan Ellis', rule: 'NF-7.8' },
-    decide_charge: { label: 'Reverse or uphold a disputed deduction', editable: false, starts: 'propose_action_card', approver: 'Jordan Ellis', rule: 'NF-7.7', locked: 'Locked to the card: Jordan Ellis decides every charge by pressing Approve' },
+    decide_charge: { label: 'Waive or uphold a disputed deduction', editable: false, starts: 'propose_action_card', approver: 'Jordan Ellis', rule: 'NF-7.7', locked: 'Locked to the card: Jordan Ellis decides every charge by pressing Approve' },
     decide_chargeback: { label: 'Apply or waive a readiness chargeback', editable: true, starts: 'propose_action_card', approver: 'Jordan Ellis', rule: 'NF-3.6' },
     publish_rule: { label: 'Publish a rule after its replay', editable: true, starts: 'propose_action_card', approver: 'Jordan Ellis', rule: 'NF-11.1' },
   },

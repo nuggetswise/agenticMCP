@@ -51,11 +51,11 @@ const act = (rt, d, s, by = 'Test agent') => (action, args) => { const r = rt.pr
 
 // ---------- Review ----------
 { const b = Review.startSession(nf, { variation: Review.branchWith('tally_count_only') }); Review.runBaseline(nf, b);
-  ok(Review.outcome(nf, b).charges[0].state === 'Reversed by Jordan Ellis', 'review baseline reverses on the label "load tally"');
+  ok(Review.outcome(nf, b).charges[0].state === 'Waived by Jordan Ellis', 'review baseline waives on the label "load tally"');
   const a = Review.startSession(nf, { variation: Review.branchWith('tally_count_only') }); const ev = Review.read(nf, a, 'read_evidence', { record: 'DC-41118', charge: 'SH01' });
   ok(ev.evidence['Load tally by SSCC'].by_sscc === false, 'review: the tally read shows no SSCCs');
   act(Review, nf, a)('mark_not_reviewed', { record: 'DC-41118', charge: 'SH01' }); ok(Review.outcome(nf, a).charges[0].state === 'Not reviewed by Jordan Ellis', 'review agent path: count-only tally not reviewed (NF-5.3, NF-7.5)');
-  const c = Review.startSession(nf, {}); const p = Review.propose(nf, c, 'Review Agent', 'reverse_charge', { record: 'DC-40877', charge: 'SH01' }); ok(p.state === 'Awaiting approval', 'review: every decision waits for Jordan');
+  const c = Review.startSession(nf, {}); const p = Review.propose(nf, c, 'Review Agent', 'waive_charge', { record: 'DC-40877', charge: 'SH01' }); ok(p.state === 'Awaiting approval', 'review: every decision waits for Jordan');
   Review.decide(nf, c, p.proposal, 'approve'); Review.advance(nf, c, { minutes: 60 * 24 * 40 }); ok(Review.outcome(nf, c).repaid[0]?.payment === 'PMT-991204', 'review: recorded repayment PMT-991204 revealed');
   const s2 = Review.startSession(nf, { variation: Review.branchWith('as02') }); Review.runBaseline(nf, s2); ok(Review.outcome(nf, s2).charges[0].state === 'Upheld by Jordan Ellis', 'review: AS02 upheld (NF-5.5)'); }
 

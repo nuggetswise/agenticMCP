@@ -40,7 +40,7 @@ const model = createServer((req, res) => { let raw = ''; req.on('data', (c) => (
       if (/\[lie\]/.test(q0) && !rechecked) return say('I have sent the application advice to Ashby with your message "Please call us about this invoice" on line 4.');
       if (!r.card) return say(`There is no card for that. ${r.facts || r.reason || ''}`);
       const c = r.card; const ls = (c.lines || []).filter((l) => l.line).map((l) => `line ${l.line}`);
-      if (r.refused_line) return say(`Northfield's rules find no error on line ${r.refused_line.asked_line}; they find it on line ${r.refused_line.line}. The card is for line ${r.refused_line.line} and carries no message until you give one. Nothing happens until you press Approve.`);
+      if (r.refused_line) { const f = r.refused_line; return say(`Northfield's rules find no error on line ${f.asked_lines.join(' or ')}${f.missing.length ? `, which the invoice does not have` : ''}; they find errors on ${f.lines.map((l) => `line ${l}`).join(' and ')}. The card is for ${f.lines.map((l) => `line ${l}`).join(' and ')} and carries no message until you give one. Nothing happens until you press Approve.`); }
       return say(`The card is ready: ${c.label.toLowerCase()} to ${c.to}, on ${c.record}${ls.length ? ` for ${ls.join(' and ')}` : ''}${c.message ? `, with the message "${c.message.text}"` : ''}. Nothing happens until you press Approve.`); }
     if (/Not available to/.test(r.result || '')) return say(`${r.result}. ${r.message || ''}`);
     const pc = r.period_covered || r['period covered'];
@@ -48,9 +48,11 @@ const model = createServer((req, res) => { let raw = ''; req.on('data', (c) => (
     if (name === 'get_scorecard' || name === 'supplier_scorecard') return say(`${r.failing_lines} order lines failed from ${pc.from} to ${pc.to}; rate ${r.score}. ${(r.by_warehouse || []).map((w) => `${w.warehouse}: ${w.lines} lines, ${w.cases} cases (${w.by_reason.map((x) => `${x.reason} ${x.lines} lines ${x.cases} cases`).join('; ')})`).join('. ')}.`);
     if (name === 'open_order_value') return say(`${r.due_in_period.invoices} invoices fall due from ${pc.from} to ${pc.to}, $${r.due_in_period.value.toLocaleString('en-US', { minimumFractionDigits: 2 })} on ${r.due_in_period.orders} open orders: ${r.due_in_period.list.map((d) => `${d.invoice} on ${d.po}`).join(', ')}.`);
     const refs = [...new Set(txt.match(REFS) || [])].slice(0, 3); const asOf = r.as_of || r.as_of_eastern || '';
+    if (/\[invent\]/.test(q0) && !rechecked) return say(`INV-7731 is held: receiving advice REC-450118 shows 119 cases on line 2 against 120 billed.`);
+    if (/\[none\]/.test(q0) && !rechecked) return say('All recent rejections have been fixed and confirmed, so nothing needs action.');
     // First the stand-in writes codes, as the model sometimes does; sent back with the reason, it writes plain words.
-    return say(rechecked ? `From ${refs.join(', ') || 'the records'}: line 1 shipped 270 cases under Northfield’s matching rule, from the Kinross load scan. As of ${asOf}.`
-      : `From ${refs.join(', ') || 'the records'}: line 1 shipped 270 CA under NF-7.8 (wms.load_scan). As of ${asOf}.`); }
+    return say(rechecked ? `From ${refs.join(', ') || 'the records'}: 270 cases shipped under Northfield’s matching rule, from the Kinross load scan. As of ${asOf}.`
+      : `From ${refs.join(', ') || 'the records'}: 270 CA shipped under NF-7.8 (wms.load_scan). As of ${asOf}.`); }
   const q = last.map((p) => p.text || '').join(' '); const po = (q.match(/NR-\d{5,6}/) || [])[0];
   // The person asked for an action: the stand-in names it and its record, as the model does, and the server builds the card.
   const cardAsk = q.match(/\[card (\w+) (\{.*\})\]/); if (cardAsk) return callT('propose_action', { action: cardAsk[1], ...JSON.parse(cardAsk[2]) });
@@ -130,7 +132,7 @@ try {
   const rows = ldb.prepare("SELECT connection_id, tool, arguments, result FROM access_log WHERE connection_id LIKE 'aviator-%'").all();
   const avRow = rows.filter((r) => r.connection_id === 'aviator-_test-ashby' && r.tool === 'aviator' && /^Answered/.test(r.result)).map((r) => JSON.parse(r.arguments))[0];
   ok('Aviator calls are logged as aviator-<prototype>-<side> with question length, tools, model route and time', !!avRow && avRow.question_chars === 27 && avRow.tools.join() === 'get_order' && /stand-in-model/.test(avRow.model_route) && typeof avRow.ms === 'number', JSON.stringify(avRow));
-  ok('the log holds no question or answer text', !rows.some((r) => /Where does|line 1 shipped|270/.test(r.arguments + r.result)), '');
+  ok('the log holds no question or answer text', !rows.some((r) => /Where does|270 cases|270 CA/.test(r.arguments + r.result)), '');
   ok('tool calls ran at the page moment', rows.some((r) => r.tool === 'get_order' && JSON.parse(r.arguments).as_of === MOMENT));
 
   // ---- periods: "this week" and named weeks resolve from as_of; a wrong-period answer is retried on the secondary model ----
@@ -232,7 +234,7 @@ try {
       // The person's words to the other company go into the record Trading Grid carries: Northfield's 824 message.
       const s3a = s3; s3 = null;
       const rj = await ask3('northfield', 'Reject INV-7790 and tell Ashby line 3 is overbilled', '2026-11-18T15:00:00-05:00'); const rc = rj.cards?.[0];
-      ok('"…line 3 is overbilled" is refused for line 3 (no such error); the card for line 1 is raised with no message and the person’s words unchanged', rc && rc.action === 'send_application_advice' && rc.offered_instead?.asked_line === 3 && rc.offered_instead.line === 1 && !rc.message && /TED\*QTY\*Invoice quantity above accepted quantity\*/.test(rc.x12 || '') && !/overbilled/i.test(rc.x12 || '') && /line 1/.test(rj.answer) && /line 3/.test(rj.answer) && /no message/.test(rj.answer) && rj.answer_from === 'model', JSON.stringify(rj).slice(0, 600));
+      ok('"…line 3 is overbilled" is refused for line 3 (no such error); the card for line 1 is raised with no message and the person’s words unchanged', rc && rc.action === 'send_application_advice' && rc.offered_instead?.asked_lines?.[0] === 3 && rc.offered_instead.lines.join() === '1' && rc.offered_instead.missing.join() === '3' && !rc.message && /TED\*QTY\*Invoice quantity above accepted quantity\*/.test(rc.x12 || '') && !/overbilled/i.test(rc.x12 || '') && /line 1/.test(rj.answer) && /line 3/.test(rj.answer) && /no message/.test(rj.answer) && rj.answer_from === 'model', JSON.stringify(rj).slice(0, 600));
       const rp = rc ? await press(V3, rc.id, s3) : null;
       ok('its Approve sends the 824 for line 1 with the rule cause in TED02', rp?.ok && /TED\*QTY\*Invoice quantity above accepted quantity\*IT1\*\*2\*\*264~\s*NTE\*GEN\*240/.test(rp.record?.x12 || ''), JSON.stringify(rp).slice(0, 400));
       // Every calculated view sees the session's own documents: the three-way match lists the 824 in this session only.
@@ -254,6 +256,17 @@ try {
       const lie = await ask3('northfield', 'Reject INV-7731 and tell Ashby they billed more cases than received [lie]', '2026-11-10T09:00:00-05:00');
       ok('an answer that describes the card wrongly is sent back to the model, which answers again from the card; the server writes nothing', lie.cards?.length === 1 && lie.answer_from === 'model' && !('answer_replaced_because' in lie) && !/line 4|Please call/.test(lie.answer) && /They billed more cases than received/.test(lie.answer) && /Approve/.test(lie.answer), JSON.stringify(lie).slice(0, 500));
       s3 = s3b;
+      // A line the invoice has but the rules find no error on: refused; the card is for the lines the rules found, with no message.
+      s3 = null; const l3 = await ask3('northfield', 'Reject INV-7731 line 3 and tell Ashby it is overbilled', '2026-11-10T09:00:00-05:00'); const l3c = l3.cards?.[0];
+      ok('"Reject INV-7731 line 3 and tell Ashby it is overbilled": line 3 has no error, so no card carries the message; the card is for lines 1 and 2', l3c && l3c.offered_instead?.asked_lines?.join() === '3' && l3c.offered_instead.lines.join() === '1,2' && !l3c.offered_instead.missing.length && !l3c.message && !/overbilled/i.test(l3c.x12 || '') && /line 3/.test(l3.answer) && /line 1/.test(l3.answer) && /line 2/.test(l3.answer), JSON.stringify(l3).slice(0, 500));
+      const l5 = await ask3('northfield', 'Reject INV-7731 line 5 and tell Ashby it is overbilled', '2026-11-10T09:00:00-05:00'); const l5c = l5.cards?.[0];
+      ok('"…line 5…": a line the invoice does not have is refused the same way, and the answer says so', l5c && l5c.offered_instead?.missing?.join() === '5' && !l5c.message && /does not have/.test(l5.answer), JSON.stringify(l5).slice(0, 400));
+      // An invented record is sent back: every record the answer names was returned by a tool this turn, and is in read.
+      const inv = await ask3('northfield', 'Why is INV-7731 held? [invent]', '2026-11-10T09:00:00-05:00');
+      const cited = inv.answer?.match(/\b[A-Z]{2,5}(?:-[A-Z0-9]+)*-\d[A-Z0-9]*(?:-[A-Z0-9]+)*\b/g) || [];
+      ok('an answer naming a record no tool returned is sent back; the answer cites only returned records, all listed in read', inv.ok && inv.answer_from === 'model' && !/REC-450118/.test(inv.answer) && cited.every((x) => inv.read.some((r) => r.record === x)), JSON.stringify(inv).slice(0, 400));
+      { const rows = ldb.prepare("SELECT arguments FROM access_log WHERE tool = 'aviator' ORDER BY id DESC LIMIT 4").all().map((r) => JSON.parse(r.arguments));
+        ok('the access log records the checks that sent each answer back', rows.some((a) => a.rechecks >= 1), JSON.stringify(rows.map((a) => a.rechecks))); }
       const kin = await ask3('northfield', 'tell Kinross to repick', '2026-11-18T15:00:00-05:00');
       ok('"tell Kinross to repick" is refused: Kinross owns it', !kin.cards?.length && /outside Trading Grid/.test(kin.answer) && kin.outside_trading_grid?.owner === 'Kinross', JSON.stringify(kin).slice(0, 300));
       const jor = await ask3('ashby', 'message Jordan that the ship notice is late', '2026-11-18T15:00:00-05:00');

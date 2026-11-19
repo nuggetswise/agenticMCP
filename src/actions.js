@@ -67,7 +67,10 @@ export function carriedMessage(q, side) {
   const t = String(q || ''); const c = CARRIERS[side]; if (!c || !c.names.test(t) || NOT_CARRIED.test(t)) return null;
   const ref = t.match(c.ref)?.[0]; const m = t.match(MESSAGE_WORDS);
   const note = m ? m[1].replace(/[*~>\n\r]/g, ' ').replace(/\s+/g, ' ').replace(/[.!\s]+$/, '').trim() : null;
-  return { action: c.action, args: ref ? { [c.arg]: ref.toUpperCase() } : {}, note: note ? note[0].toUpperCase() + note.slice(1) : null };
+  // Lines the person names anywhere in the request ("reject INV-7731 line 3 and tell Ashby it is overbilled"): the message
+  // belongs to those lines only.
+  const lm = t.match(/\blines?\s+(\d+(?:\s*(?:,|and|&)\s*\d+)*)/i); const lines = lm ? [...new Set(lm[1].match(/\d+/g).map(Number))] : [];
+  return { action: c.action, args: ref ? { [c.arg]: ref.toUpperCase() } : {}, note: note ? note[0].toUpperCase() + note.slice(1) : null, lines };
 }
 /** A request Trading Grid does not carry: an email, call or instruction to someone, or a change in another company's system. */
 export function outsideTradingGrid(q, side) {
@@ -207,9 +210,9 @@ function buildAdvice(db, side, a, T) {
   const d = db.prepare("SELECT * FROM documents WHERE upper(reference) = ? AND receiver_id = 'NORTHFIELD' AND doc_type IN ('810','856') AND sent_at <= ? ORDER BY sent_at DESC").get(ref, T);
   if (!d) return { ok: false, message: `No invoice or ship notice ${ref} received by Northfield at this moment.` };
   if (db.prepare("SELECT 1 FROM documents WHERE doc_type = '824' AND answers_doc_id = ? AND sent_at <= ?").get(d.doc_id, T)) return { ok: false, message: `${ref} is already rejected with an application advice.` };
-  const errors = [];
+  const errors = []; let docLines = [];
   if (d.doc_type === '810') {
-    const m = NR.threeWayMatch(db, ref, new Date(T)); if (!m.found) return { ok: false, message: m.message };
+    const m = NR.threeWayMatch(db, ref, new Date(T)); if (!m.found) return { ok: false, message: m.message }; docLines = m.lines.filter((l) => l.billed > 0).map((l) => l.line);
     for (const l of m.lines) {
       if (/^quantity/.test(l.origin)) errors.push({ code: 'QTY', seg: 'IT1', elem: '2', bad: String(l.billed), allowed: `${Math.min(l.shipped, l.received)} ${l.received < l.shipped ? 'received' : 'shipped'} on line ${l.line}; held value ${money(l.amount_at_issue)}`, line: l.line,
         billed: l.billed, shipped: l.shipped, received: l.received, held: l.amount_at_issue, plain: `billed ${l.billed} cases; ${l.shipped} shipped and ${l.received} received, ${money(l.amount_at_issue)} held` });
@@ -230,10 +233,17 @@ function buildAdvice(db, side, a, T) {
   // note of at most 80 characters instead; longer is refused. A line the words name that the rules do not find is refused.
   const drafted = Object.fromEntries((Array.isArray(a.messages) ? a.messages : []).map((x) => [String(x.code || '').toUpperCase(), String(x.message || '').replace(/[*~>\n\r]/g, ' ').trim()]));
   const note = a.note ? String(a.note).replace(/[*~>\n\r]/g, ' ').replace(/\s+/g, ' ').trim() : null; let noteIn = null; let targets = [];
+  // Lines the person named, in the request or in the words: the message belongs to those lines only. A named line the rules
+  // find no error on (one the document has, or one it does not have) is refused: no card carries the message.
+  const named = [...new Set([...(Array.isArray(a.lines) ? a.lines.map(Number) : []), ...(note && note.match(/\bline\s+(\d+)/i) ? [Number(note.match(/\bline\s+(\d+)/i)[1])] : [])])].filter(Boolean);
+  const linesFound = [...new Set(errors.map((e) => e.line).filter(Boolean))];
+  if (named.length && note) {
+    const bad = named.filter((l) => !linesFound.includes(l));
+    if (bad.length) return { ok: false, wrong_line: { said: bad, found: linesFound, missing: bad.filter((l) => !docLines.includes(l)), no_error: bad.filter((l) => docLines.includes(l)) },
+      message: `Northfield’s rules find no error on line ${bad.join(' or ')} of ${DOC_NAMES[d.doc_type]} ${ref}${bad.some((l) => !docLines.includes(l)) ? ` (it has no line ${bad.filter((l) => !docLines.includes(l)).join(' or ')})` : ''}. They find errors on line ${linesFound.join(' and ') || 'none'}.` };
+  }
   if (note) {
-    const lineSaid = Number(note.match(/\bline\s+(\d+)/i)?.[1] || 0); const linesFound = [...new Set(errors.map((e) => e.line).filter(Boolean))];
-    if (lineSaid && !linesFound.includes(lineSaid)) return { ok: false, wrong_line: { said: lineSaid, found: linesFound }, message: `Northfield’s rules find no error on line ${lineSaid} of ${DOC_NAMES[d.doc_type]} ${ref}. They find it on line ${linesFound.join(' and ') || 'none'}.` };
-    targets = lineSaid ? errors.filter((e) => e.line === lineSaid)
+    targets = named.length ? errors.filter((e) => named.includes(e.line))
       : /\breceiv/i.test(note) ? errors.filter((e) => e.billed != null && e.billed > e.received)
       : /\bship/i.test(note) && d.doc_type === '810' ? errors.filter((e) => e.billed != null && e.billed > e.shipped)
       : /\bprice/i.test(note) ? errors.filter((e) => e.code === 'PRC') : /\btotal/i.test(note) ? errors.filter((e) => e.code === 'TOT') : [];
@@ -299,38 +309,47 @@ export function buildCard(db, side, action, args = {}, T) {
   return { ok: true, card: { action, write: def.write, side, rule: def.rule, approver: PERSON[side], buttons: ['Approve', 'Cancel'], at: at(T), ...r.card } };
 }
 
-/** Checks Aviator's answer, which the model writes, against the cards it raised and the records it read. Returns the reasons
- *  it does not hold (empty when it does); the server sends them back to the model to answer again, and never rewrites it.
- *  - no rule codes, charge codes, unit codes, field names or record kinds in a sentence;
- *  - every quoted phrase, line number and amount it names is on a card or in a tool result;
- *  - it never says an action is done; a card's message is given exactly, and no message is claimed where a card has none;
- *  - a line the person named that the rules refused is explained with the line the rules found;
- *  - the facts the server set for the turn (an owner outside Trading Grid, a card the records call for) are respected. */
-export function checkAnswer(answer, { cards = [], results = [], outside = null, expect = null, codes = [] } = {}) {
-  const text = String(answer || ''); const reasons = [];
-  if (!text.trim() || text.trim() === 'No answer.') return ['The answer is empty. Answer the question from the tool results.'];
+// A reference to a record: letters, then parts, with a number (NR-450118, INV-7731C, RCV-DC2-77290, AA-INV-7731, PMT-990412).
+// A rule code (NF-7.8) is caught by the code check instead.
+export const REF_RE = /\b[A-Z]{2,5}(?:-[A-Z0-9]+)*-\d[A-Z0-9]*(?:-[A-Z0-9]+)*\b(?!\.\d)/g;
+/** Checks Aviator's answer, which the model writes, against the cards it raised and the records it read this turn. Returns
+ *  the failures as { id, text }, empty when it holds; the server sends the texts back to the model to answer again and
+ *  never rewrites the answer. Checks, by id:
+ *  empty · code (rule, charge or unit code, field name, record kind) · markdown · quote (a quoted phrase on no card, in no
+ *  tool result and not in the question) · reference (a record reference no tool returned this turn) · amount (a dollar
+ *  amount on no card and in no tool result) · done (says an action is done) · line (a line on no card and in no tool result) · message (a card's message not
+ *  given word for word) · no_message (claims a message the card does not carry) · refused_line (does not say which lines
+ *  the rules found when the person named another) · approve (does not say nothing happens until Approve) · no_card
+ *  (describes a card that was not raised) · owner, outside (an outside-Trading-Grid reply without the owner or the words)
+ *  · expected (the records call for a card the model did not raise). */
+export function checkAnswer(answer, { cards = [], results = [], outside = null, expect = null, codes = [], question = '' } = {}) {
+  const text = String(answer || ''); const out = []; const fail = (id, t) => { if (!out.some((x) => x.id === id && x.text === t)) out.push({ id, text: t }); };
+  if (!text.trim() || text.trim() === 'No answer.') return [{ id: 'empty', text: 'The answer is empty. Answer the question from the tool results.' }];
   const fieldsOf = (c) => JSON.stringify({ to: c.to, record: c.record, detail: c.detail, message: c.message, rule: c.rule_text, offered: c.offered, x12: c.x12_preview });
-  const hay = `${cards.map(fieldsOf).join(' ')} ${JSON.stringify(results)}`.toLowerCase().replace(/\\[nrt]|\s+/g, ' ');
+  const raw = `${cards.map(fieldsOf).join(' ')} ${JSON.stringify(results)} ${question}`;
+  const hay = raw.toLowerCase().replace(/\\[nrt]|\s+/g, ' ');
   const cardHay = cards.map(fieldsOf).join(' ').toLowerCase().replace(/\s+/g, ' ');
   const code = text.match(/\b(?:NF|AP|AM|KX)-\d+(?:\.\d+)?\b|\b[A-Z]{2}\d{2}\b(?!-)|\b\d[\d,]*\s*(?:CA|EA)\b|\b[a-z]+_[a-z_]+\b|\b(?:wms|carrier|erp|tg|case|rule)\.[a-z_]+\b/);
-  if (code && !codes.includes(code[0])) reasons.push(`It contains "${code[0]}". Write plain words: say whose rule it is, the charge by name, cases or each, and records by their reference and what they are; no codes or field names.`);
-  if (/\*\*|^#+ |^\s*[-*] /m.test(text)) reasons.push('It uses markdown. Write plain sentences.');
-  for (const m of text.matchAll(/["“]([^"”]{3,})["”]/g)) if (!hay.includes(m[1].toLowerCase().replace(/\s+/g, ' ').replace(/[.]$/, ''))) reasons.push(`It quotes "${m[1]}", which is on no card and in no tool result. Quote only what the card or the records hold.`);
+  if (code && !codes.includes(code[0])) fail('code', `It contains "${code[0]}". Write plain words: say whose rule it is, the charge by name, cases or each, and records by their reference and what they are; no codes or field names.`);
+  if (/\*\*|^#+ |^\s*[-*] /m.test(text)) fail('markdown', 'It uses markdown. Write plain sentences.');
+  for (const m of text.matchAll(/["“]([^"”]{3,})["”]/g)) if (!hay.includes(m[1].toLowerCase().replace(/\s+/g, ' ').replace(/[.]$/, ''))) fail('quote', `It quotes "${m[1]}", which is on no card, in no tool result and not in the question. Quote only what the card or the records hold.`);
+  // Every record it names must have been returned by a tool call in this turn: no reference is made up or recalled.
+  const returned = `${cards.map(fieldsOf).join(' ')} ${JSON.stringify(results)}`; for (const m of new Set(text.match(REF_RE) || [])) if (!returned.includes(m)) fail('reference', `It names ${m}, which no tool returned in this turn. Name only records the tools returned; read the record first if you need it.`);
   for (const m of text.matchAll(/\$\s?(\d[\d,]*(?:\.\d\d)?)/g)) { const n = m[1].replace(/,/g, ''); const v = Number(n);
-    if (!hay.includes(n) && !hay.includes(v.toFixed(2)) && !hay.includes(String(v)) && !hay.includes(m[1])) reasons.push(`It gives $${m[1]}, which is on no card and in no tool result.`); }
-  if (new RegExp(`\\b(?:${cards.length ? 'has been|have been|is now|' : ''}I(?:'ve| have)?|we(?:'ve| have)?) (?:sent|rejected|released|published|opened|applied|waived|reversed|upheld|submitted|disputed|filed|issued)\\b`, 'i').test(text)) reasons.push('It says an action is done. Nothing happens until the person presses Approve on the card; say the card is ready.');
+    if (!hay.includes(n) && !hay.includes(v.toFixed(2)) && !hay.includes(String(v)) && !hay.includes(m[1])) fail('amount', `It gives $${m[1]}, which is on no card and in no tool result. Give amounts as the records state them.`); }
+  if (new RegExp(`\\b(?:${cards.length ? '(?:has|have) been (?:sent|released|published|submitted|approved)|is now (?:sent|released|published)|' : ''}I(?:'ve| have)? (?:sent|rejected|released|published|opened|applied|waived|reversed|upheld|submitted|disputed|filed|issued)|we(?:'ve| have)? (?:sent|released|published|submitted))\\b`, 'i').test(text)) fail('done', 'It says an action is done. Nothing happens until the person presses Approve on the card; say the card is ready.');
+  for (const m of text.matchAll(/\bline (\d+)\b/gi)) if (!new RegExp(`"line":${m[1]}\\b|line ${m[1]}\\b|"asked_lines?":\\[?[\\d,]*\\b${m[1]}\\b`).test(hay)) fail('line', `It names line ${m[1]}, which is on no card and in no tool result.`);
   if (cards.length) {
-    for (const m of text.matchAll(/\bline (\d+)\b/gi)) if (!new RegExp(`"line":${m[1]}\\b|line ${m[1]}\\b|"asked_line":${m[1]}\\b`).test(cardHay)) reasons.push(`It names line ${m[1]}, which is on no card.`);
     for (const c of cards) {
-      if (c.message && !text.toLowerCase().includes(c.message.text.toLowerCase())) reasons.push(`The card carries the message "${c.message.text}" exactly; give it word for word.`);
-      if (!c.message && /\b(?:with|includes?|including|carries|carrying|adds?) (?:your|the) (?:message|note|words)\b|\b(?:your|the) (?:message|note) (?:is|was) (?:included|added|in)\b/i.test(text)) reasons.push('It says the card carries a message; this card carries none.');
-      if (c.offered && !new RegExp(`\\bline ${c.offered.line}\\b`, 'i').test(text)) reasons.push(`The rules found no error on line ${c.offered.asked_line}; they found it on line ${c.offered.line}. Say so, and that the card is for line ${c.offered.line} and carries no message until the person gives one.`);
+      if (c.message && !text.toLowerCase().includes(c.message.text.toLowerCase())) fail('message', `The card carries the message "${c.message.text}" exactly; give it word for word.`);
+      if (!c.message && /\b(?:with|includes?|including|carries|carrying|adds?) (?:your|the) (?:message|note|words)\b|\b(?:your|the) (?:message|note) (?:is|was) (?:included|added|in)\b/i.test(text)) fail('no_message', 'It says the card carries a message; this card carries none.');
+      if (c.offered && !c.offered.lines.every((l) => new RegExp(`\\bline ${l}\\b|\\blines?\\b[^.]*\\b${l}\\b`, 'i').test(text))) fail('refused_line', `The person named line ${c.offered.asked_lines.join(' and ')}, where the rules find no error${c.offered.missing.length ? ` (the invoice has no line ${c.offered.missing.join(' or ')})` : ''}. Say so, name the lines the rules found (${c.offered.lines.map((l) => `line ${l}`).join(' and ')}), and say the card is for those lines and carries no message until the person gives one.`);
     }
-    if (!/\bapprove/i.test(text)) reasons.push('Say that nothing happens until the person presses Approve on the card.');
-  } else if (/\b(?:card (?:is )?ready|the card below|press(?:es)? Approve)\b/i.test(text)) reasons.push('It describes a card, but no card was raised. Call propose_action, or say why there is no card.');
-  if (outside) { if (!text.includes(outside.owner)) reasons.push(`Name the owner: ${outside.owner}, in ${outside.where}.`); if (!/outside Trading Grid/i.test(text)) reasons.push('Say plainly that this is done outside Trading Grid.'); }
-  if (expect && !cards.some((c) => c.action === expect.action) && !expect.refused) reasons.push(expect.reason);
-  return [...new Set(reasons)];
+    if (!/\bapprove/i.test(text)) fail('approve', 'Say that nothing happens until the person presses Approve on the card.');
+  } else if (/\b(?:card (?:is )?ready|the card below|press(?:es)? Approve)\b/i.test(text)) fail('no_card', 'It describes a card, but no card was raised. Call propose_action, or say why there is no card.');
+  if (outside) { if (!text.includes(outside.owner)) fail('owner', `Name the owner: ${outside.owner}, in ${outside.where}.`); if (!/outside Trading Grid/i.test(text)) fail('outside', 'Say plainly that this is done outside Trading Grid.'); }
+  if (expect && !cards.some((c) => c.action === expect.action) && !expect.refused) fail('expected', expect.reason);
+  return out;
 }
 
 /** Makes the write a card describes, at the card's moment, in the session in force. Returns the record written. */

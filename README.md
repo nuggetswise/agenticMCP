@@ -100,3 +100,10 @@ The rule catalogue (`world/ref.js`) marks each rule public, adapted or invented 
 
 - Aviator's instruction names the action each side's ordinary requests call for (for Ashby, a rejected invoice is answered with the technical acknowledgment and the corrected invoice), and says never to answer a request to act with an explanation alone. Live on 0.4.6, Gemini explained instead of proposing for Ashby's "fix the invoice".
 - `scripts/live-proof.mjs` proves the per-minute limit over one kept-alive connection, because this workspace leaves through a large pool of rotating egress addresses (70 distinct in 150 requests).
+
+### 0.4.8
+
+- Invented records: the answer check refuses any record reference that no tool call returned in that turn (live on 0.4.7, "Why is INV-7731 held?" cited REC-450118 and REC-450118-1, which do not exist), and the model answers again with that reason. `read` lists every record the tools returned in the turn.
+- no_answer on "Reject INV-7731 line 3 and tell Ashby it is overbilled" (2 of 3 live on 0.4.7). The access log showed the cause: the check "It names line 3, which is on no card." The line was in the request, not in the message words, so the server built the card for lines 1 and 2 carrying the message and Gemini rightly said line 3 is not in error. Now a line the person names anywhere in the request is taken with the message: a named line the rules find no error on (or that the document does not have) is refused, the card is for the lines the rules found with no message, and the card's `offered_instead` gives `asked_lines`, `lines` and `missing`. The check is unchanged.
+- The access log records the cause of every no_answer (`cause`: check_failed, model_error, key_limit, timeout, too_many_steps) and the checks that failed, by id and text; the error response carries `cause` and the check ids.
+- `scripts/live-ten.mjs` proves both live, ten asks each.

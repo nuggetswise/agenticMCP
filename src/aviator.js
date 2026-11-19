@@ -80,7 +80,7 @@ export const declarations = (tools) => tools.map((t) => { const p = toModel(raw(
 
 export const instruction = ({ person, company, other, clock, cards = false }) => `You are Aviator, the assistant inside Trading Grid, acting for ${person} at ${company}. All data is fictional.
 Answer only from the results of the tools you call in this conversation. If the tools do not hold the answer, say so; never estimate, and never answer from general knowledge about a record.
-Name every record you used (PO number, document reference, case id). Unless the question gives a time, answer as of ${clock}.
+Name every record you used (PO number, document reference, case id), and name only records a tool returned to you: never build, guess or recall a reference (a receiving advice, a ship notice, a remittance); if you need a record you have not read, call the tool that returns it. Unless the question gives a time, answer as of ${clock}.
 When the question or its context gives a time (as_of, or "As of"), that is now: pass it as as_of to every tool that takes one, and never mention a record, a status or an outcome dated after it, even when a tool returns one.
 A technical acknowledgment (997) is not business acceptance. Records that belong to ${other}, or to any company other than ${company}, are not available to ${company}. If the question names another company, pass it to the tool's supplier field when the tool has one and give the tool's refusal as it reads; otherwise answer "Not available to ${company}" and stop. Never answer a question about another company with ${company}'s own records.
 An order or document that ${company} is itself a party to is ${company}'s own: look it up before answering, and answer from what the tools return. Only when the tools return nothing about the event asked about, because it happened inside ${other} before anything reached ${company} (a hold, a correction, an approval), say in one sentence that this part is not available to ${company}, then list what ${company}'s own records show for that order: each document it sent or received, with its reference and its date. Never say a part is not available when a tool returned it.
@@ -114,7 +114,7 @@ export async function ask({ question, history = [], tools, callTool, side, clock
     }
     if (err && ![429, 503].includes(err.status)) break;
     }
-    if (!data) return { ok: false, status: 502, message: `The model did not answer (${err?.status}).`, detail: err?.text, tools_called: called };
+    if (!data) return { ok: false, status: 502, cause: /abort|timeout/i.test(err?.text || '') ? 'timeout' : [429, 403].includes(err?.status) ? 'key_limit' : 'model_error', model_status: err?.status, message: `The model did not answer (${err?.status}).`, detail: err?.text, tools_called: called };
     const content = data.candidates?.[0]?.content; const parts = content?.parts || [];
     const calls = parts.filter((p) => p.functionCall);
     // An answer given before any record was read is not an answer from the records: ask once more, requiring a tool call.
@@ -122,14 +122,15 @@ export async function ask({ question, history = [], tools, callTool, side, clock
     force = false;
     if (!calls.length) { const text = parts.map((p) => p.text || '').join('').trim();
       // The server checks the answer against the cards and records; a mismatch goes back to the model with the reason.
-      reasons = check ? check(text) : (text ? [] : ['The answer is empty.']);
+      reasons = (check ? check(text) : (text ? [] : [{ id: 'empty', text: 'The answer is empty.' }])).map((r) => (typeof r === 'string' ? { id: 'check', text: r } : r));
       if (reasons.length && rechecks < maxRechecks && turn < maxTurns - 2) { rechecks += 1; contents.push({ role: 'model', parts: [{ text: text || '(no answer)' }] });
-        contents.push({ role: 'user', parts: [{ text: `The server checked that answer against the cards and the tool results, and it does not hold: ${reasons.join(' ')} Write the answer again; call tools if you need to.` }] }); continue; }
-      if (reasons.length) return { ok: false, status: 502, unchecked: true, reasons, rechecks, tools_called: called, model: model.model, route: model.route };
+        contents.push({ role: 'user', parts: [{ text: `The server checked that answer against the cards and the tool results, and it does not hold: ${reasons.map((r) => r.text).join(' ')} Write the answer again; call tools if you need to.` }] });
+        continue; }
+      if (reasons.length) return { ok: false, status: 502, unchecked: true, cause: 'check_failed', reasons: reasons.map((r) => r.id), reason_texts: reasons.map((r) => r.text), rechecks, tools_called: called, model: model.model, route: model.route };
       return { ok: true, answer: text, answered_from_tools: called.length > 0, tools_called: called, rechecks, model: model.model, route: model.route }; }
     contents.push(content);
     const known = new Set(tools.map((t) => t.name));
     contents.push({ role: 'user', parts: calls.map(({ functionCall: f }) => { const result = known.has(f.name) ? callTool(f.name, modelArgs(tools, f.name, f.args)) : { result: 'Refused', message: `Aviator has no tool ${f.name}` }; called.push({ tool: f.name, arguments: modelArgs(tools, f.name, f.args) }); return { functionResponse: { name: f.name, ...(f.id ? { id: f.id } : {}), response: { result } } }; }) });
   }
-  return { ok: false, status: 502, message: 'Aviator stopped after too many steps without an answer.', tools_called: called };
+  return { ok: false, status: 502, cause: 'too_many_steps', message: 'Aviator stopped after too many steps without an answer.', tools_called: called };
 }

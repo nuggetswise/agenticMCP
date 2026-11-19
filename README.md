@@ -73,3 +73,13 @@ The rule catalogue (`world/ref.js`) marks each rule public, adapted or invented 
 - A message to the other company that a Trading Grid record carries is not refused. Northfield's application advice carries it (TED02 up to 60 characters, else an NTE note up to 80); Ashby's dispute carries it as a note. "Tell", "message" or "ask" a party with no such record named is still answered as done outside Trading Grid, with the owner.
 - Session views: a card's 810, 856 or 824 adds its invoice, shipment and error rows to the viewer's session (TEMP tables shadowing `invoices`, `invoice_lines`, `shipments`, `shipment_lines`, `errors`), so every calculated view sees it in that session only. `three_way_match` lists the application advice sent against the order's invoices.
 - Rules: NF-1.8 records Northfield's 824 error codes (QTY, TTL, IID, LOC, CTN, TOT, UOM, DTE) as invented for this world, and the codes carry basis invented. NF-11.1 states that a draft rule is published only after its replay; the publish card cites it.
+
+### 0.4.5
+
+- An 824 carries the person's words. When a request gives a message ("tell Ashby they billed more cases than received"), it goes in TED02 of each error it concerns (the line it names, or the errors it describes: billed above received or shipped, price, total), and that error's rule cause moves to a note (NTE). Words over 60 characters go in a note of at most 80; longer is refused. The person's words win over any message the model drafts.
+- Words that name a line the rules do not find in error are refused; the card for the line the rules found is offered instead, with the line number corrected in the message (`offered_instead` on the card).
+- Aviator's answer is checked against the cards it raised before it is returned: quoted phrases and lines must be on a card, it may not say the action is done, and it may not claim a message the card does not carry. Otherwise the answer is the card's own description (`answer_from`: model, card or server).
+- A card's sentence names no error codes, rule codes, X12 set numbers or Trading Grid reference numbers (application advice, acknowledgment and draft ids).
+- PRC, STO and PCK are invented too; NF-1.8 lists all eleven 824 codes.
+- In a session, Ashby's corrected invoice marks the 824's open errors Corrected and the original invoice "Replaced by …", as session overlay rows; recorded rows and other viewers are unchanged.
+- Deleted: `ui/`, the kit and walk scripts, `scripts/page-build.mjs`, and the docs that described Take over or Edit suggestion. The build guide's R15 and D58 now read Approve or Reject, and Approve or Cancel for a card.

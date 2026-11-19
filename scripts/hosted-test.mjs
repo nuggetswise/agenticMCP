@@ -28,7 +28,10 @@ const model = createServer((req, res) => { let raw = ''; req.on('data', (c) => (
   const callT = (name, args) => res.end(JSON.stringify({ candidates: [{ content: { role: 'model', parts: [{ functionCall: { name, args } }] } }] }));
   res.setHeader('content-type', 'application/json');
   if (fr.length) { const name = fr[0].functionResponse.name; const r = fr[0].functionResponse.response.result; const txt = JSON.stringify(r);
-    if (name === 'propose_action') return say(r.result === 'Card ready' ? `The card is ready: ${r.card.says} Nothing happens until you press Approve.` : r.message);
+    if (name === 'propose_action') { const q0 = body.contents.map((c) => (c.parts || []).map((p) => p.text || '').join(' ')).join(' ');
+      // [lie]: the stand-in describes the card wrongly, as Gemini did on 19 November; the server must not pass it on.
+      if (/\[lie\]/.test(q0)) return say('I have sent the application advice to Ashby with your message "Please call us about this invoice" on line 4.');
+      return say(r.card ? `${r.offered ? `${r.message} ${r.offered}` : `The card is ready: ${r.card.says} Nothing happens until you press Approve.`}` : r.message); }
     if (/Not available to/.test(r.result || '')) return say(`${r.result}. ${r.message || ''}`);
     const pc = r.period_covered || r['period covered'];
     if (name === 'get_scorecard' && r.warehouse) return say(`${r.warehouse_failing_lines} order lines failed at ${r.warehouse}, ${r.warehouse_failing_cases} cases, from ${pc.from} to ${pc.to}. Orders: ${r.lines.map((l) => l.po).join(', ')}.`);
@@ -42,7 +45,8 @@ const model = createServer((req, res) => { let raw = ''; req.on('data', (c) => (
   // Ordinary words that ask for the action the records call for on the record on screen, as the model reads them.
   const screen = (q.match(/On screen: ((?:INV|ASN)-[A-Z0-9-]+)/) || [])[1];
   if (screen && /fix the invoice|sort this out|can you handle it/i.test(q)) return callT('propose_action', /^ASN-/.test(screen) ? { action: 'release_held_ship_notice', document: screen } : ashby ? { action: 'answer_application_advice', advice: `AA-${screen}` } : { action: 'send_application_advice', document: screen });
-  const rej = q.match(/\breject (INV-\d+)/i); if (rej && !ashby) return callT('propose_action', { action: 'send_application_advice', document: rej[1] });
+  // Like Gemini on 19 November, the stand-in drafts its own messages (the rule's cause); the person's words must win.
+  const rej = q.match(/\breject (INV-\d+)/i); if (rej && !ashby) return callT('propose_action', { action: 'send_application_advice', document: rej[1], messages: [{ code: 'QTY', message: 'Invoice quantity above accepted quantity' }] });
   const hint = q.match(/pass from (\d{4}-\d\d-\d\d) and to (\d{4}-\d\d-\d\d)/); const per = hint && !(lazy && which === 'primary') ? { from: hint[1], to: hint[2] } : {};
   if (/f[ae]ll(s)? due|open orders/i.test(q) && !ashby) return lazy && which === 'primary' ? callT('supplier_document_trail', { po: 'NR-450118' }) : callT('open_order_value', per);
   if (/Groveport/i.test(q) && ashby) return callT('get_scorecard', { warehouse: 'Kinross Groveport', ...per });
@@ -93,7 +97,7 @@ try {
   ok('no as_of: answered at the page moment, never the story clock', a1.ok && a1.as_of === MOMENT && /2026-10-26/.test(a1.answer), JSON.stringify(a1));
   ok('answer has no rule codes, unit codes or field names; quantities in cases', a1.ok && !/\bNF-\d|\bAP-\d|\bCA\b|\bEA\b|wms\.|load_scan|_/.test(a1.answer) && /270 cases/.test(a1.answer) && /Northfield’s rule/.test(a1.answer), a1.answer);
   ok('records read are listed by business name', a1.ok && a1.read.some((r) => r.name === 'Purchase order NR-451207'), JSON.stringify(a1.read));
-  ok('a question that asks for no action gets an answer and no card, in its own session', a1.ok && Object.keys(a1).sort().join() === 'answer,as_of,as_of_eastern,cards,ok,read,session,side' && a1.cards.length === 0 && /^VS-/.test(a1.session), Object.keys(a1).join());
+  ok('a question that asks for no action gets an answer and no card, in its own session', a1.ok && Object.keys(a1).sort().join() === 'answer,answer_from,as_of,as_of_eastern,cards,ok,read,session,side' && a1.cards.length === 0 && /^VS-/.test(a1.session), Object.keys(a1).join());
   const a2 = await (await av({ question: 'Where does NR-451207 stand?', side: 'ashby', as_of: '2026-10-27T15:00:00Z' })).json();
   ok('as_of inside the page window is used', a2.ok && a2.as_of === '2026-10-27T15:00:00.000Z', JSON.stringify(a2).slice(0, 300));
   for (const [n, v] of [['after the window', '2027-02-01T14:00:00Z'], ['before the moment', '2026-10-01T14:00:00Z'], ['not a date', 'tomorrow']]) { const r = await av({ question: 'Where does NR-450118 stand?', side: 'ashby', as_of: v }); const j = await r.json();
@@ -192,13 +196,13 @@ try {
     const pressed = {};
     for (const [tool, side, q, as_of, check] of steps) {
       const r = await card(side, q, as_of); const c = r.cards?.[0];
-      ok(`card raised for ${tool}: says what happens, to whom, under which rule, with Approve and Cancel`, c && c.state === 'Open' && c.says && c.to && c.buttons.join() === 'Approve,Cancel' && !/\b[A-Z]{2}-\d+\.\d+\b/.test(c.says), JSON.stringify(r).slice(0, 400));
+      ok(`card raised for ${tool}: says what happens, to whom, under which rule, with Approve and Cancel`, c && c.state === 'Open' && c.says && c.to && c.buttons.join() === 'Approve,Cancel' && !/\b[A-Z]{2}-\d+\.\d+\b|\b(QTY|PRC|TOT|STO|UOM|TED|NTE)\b|\bAA-|\bFA-|\bNFD-|\((8|9)\d\d\)/.test(c.says), JSON.stringify(r).slice(0, 400));
       if (!c) continue; const p = await press(V1, c.id, session); pressed[tool] = { card: c.id, p };
       ok(`Approve on ${tool} writes once and returns the record re-read`, p.ok && p.card.state === 'Approved' && check(p), JSON.stringify(p).slice(0, 500)); }
     const tooLong = await ask(V1, { side: 'northfield', as_of: '2026-11-10T09:00:00-05:00', question: 'Reject INV-7731 [card send_application_advice {"document":"INV-7731","messages":[{"code":"QTY","message":"This message is far longer than the sixty characters the guide allows"}]}]' }); // a fresh session
     ok('an 824 message over 60 characters is refused and raises no card', !tooLong.cards?.length && /60/.test(tooLong.answer || ''), JSON.stringify(tooLong).slice(0, 300));
     const a824 = await card('ashby', 'Send an 824 to Northfield for AA-INV-7731', '2026-11-10T09:05:00-05:00'); const ac = a824.cards?.[0];
-    ok('Ashby asked to send an 824 gets the 997 and the corrected resend instead', ac && /997/.test(ac.says) && /corrected invoice INV-7731C-S/.test(ac.says) && /does not send an application advice/.test(a824.answer), JSON.stringify(a824).slice(0, 400));
+    ok('Ashby asked to send an 824 gets the 997 and the corrected resend instead', ac && /technical acknowledgment/.test(ac.says) && !/\b(997|AA-|FA-)/.test(ac.says) && /corrected invoice INV-7731C-S/.test(ac.says) && /does not send an application advice/.test(a824.answer), JSON.stringify(a824).slice(0, 400));
     if (ac) { const p = await press(V1, ac.id, session); ok('its Approve sends the 997 and the corrected invoice', p.ok && p.result.acknowledgment === 'FA-AA-INV-7731' && p.result.document === 'INV-7731C-S' && /REF\*OI\*INV-7731/.test(p.record?.x12 || ''), JSON.stringify(p).slice(0, 400)); }
     const mail = await card('ashby', 'Can you email Kinross and ask them for the load scan?', '2026-12-01T09:00:00-05:00');
     ok('"send an email" is refused: done outside Trading Grid, owner and place named, no card', !mail.cards?.length && /outside Trading Grid/.test(mail.answer) && mail.outside_trading_grid?.owner === 'Kinross', JSON.stringify(mail).slice(0, 300));
@@ -214,14 +218,28 @@ try {
       // The person's words to the other company go into the record Trading Grid carries: Northfield's 824 message.
       const s3a = s3; s3 = null;
       const rj = await ask3('northfield', 'Reject INV-7790 and tell Ashby line 3 is overbilled', '2026-11-18T15:00:00-05:00'); const rc = rj.cards?.[0];
-      ok('"Reject INV-7790 and tell Ashby line 3 is overbilled" raises the 824 card with those words as its message', rc && rc.action === 'send_application_advice' && rc.message?.text === 'Line 3 is overbilled' && rc.message.in === 'TED02' && /TED\*QTY\*Line 3 is overbilled\*/.test(rc.x12 || '') && /not line 3/.test(rc.says) && !rj.outside_trading_grid, JSON.stringify(rj).slice(0, 500));
+      ok('"…line 3 is overbilled" is refused for line 3 (no such error) and the card for line 1 is offered with the message corrected', rc && rc.action === 'send_application_advice' && rc.offered_instead?.asked_line === 3 && rc.offered_instead.line === 1 && rc.message?.text === 'Line 1 is overbilled' && /TED\*QTY\*Line 1 is overbilled\*/.test(rc.x12 || '') && /line 1/i.test(rj.answer) && /line 3/i.test(rj.answer) && !rj.outside_trading_grid, JSON.stringify(rj).slice(0, 600));
       const rp = rc ? await press(V3, rc.id, s3) : null;
-      ok('its Approve sends the 824 with the message in TED02', rp?.ok && /TED\*QTY\*Line 3 is overbilled\*IT1/.test(rp.record?.x12 || ''), JSON.stringify(rp).slice(0, 300));
+      ok('its Approve sends the 824 with the message in TED02 and the rule cause in a note', rp?.ok && /TED\*QTY\*Line 1 is overbilled\*IT1\*\*2\*\*264~\s*NTE\*GEN\*Invoice quantity above accepted quantity~\s*NTE\*GEN\*240/.test(rp.record?.x12 || ''), JSON.stringify(rp).slice(0, 400));
       // Every calculated view sees the session's own documents: the three-way match lists the 824 in this session only.
       const m3 = await pub('northfield', 'three_way_match', { reference: 'INV-7790', as_of: '2026-11-18T15:30:00-05:00' }, s3);
       const mOther = await pub('northfield', 'three_way_match', { reference: 'INV-7790', as_of: '2026-11-18T15:30:00-05:00' }, s3a); const mNone = await pub('northfield', 'three_way_match', { reference: 'INV-7790', as_of: '2026-11-18T15:30:00-05:00' });
-      ok('three_way_match lists the 824 sent by card in the same session', (m3.application_advice || []).some((a) => a.advice === rp?.result?.document && a.errors.some((e) => e.message === 'Line 3 is overbilled')), JSON.stringify(m3.application_advice));
+      ok('three_way_match lists the 824 sent by card in the same session', (m3.application_advice || []).some((a) => a.advice === rp?.result?.document && a.errors.some((e) => e.message === 'Line 1 is overbilled' && e.state === 'Open')), JSON.stringify(m3.application_advice));
       ok('and not in another session or the recorded world', !(mOther.application_advice || []).length && !(mNone.application_advice || []).length, `${JSON.stringify(mOther.application_advice)} ${JSON.stringify(mNone.application_advice)}`);
+      // Ashby answers in the same session: the correction marks the 824's errors Corrected and the invoice Replaced, there only.
+      const fx = await ask3('ashby', `Answer it [card answer_application_advice {"advice":"${rp?.result?.document}"}]`, '2026-11-18T15:40:00-05:00'); const fc = fx.cards?.[0];
+      const fp = fc ? await press(V3, fc.id, s3) : null;
+      const m4 = await pub('northfield', 'three_way_match', { reference: 'INV-7790', as_of: '2026-11-18T16:00:00-05:00' }, s3); const m4o = await pub('northfield', 'three_way_match', { reference: 'INV-7790', as_of: '2026-11-18T16:00:00-05:00' }, s3a);
+      ok('a card correction marks the 824 errors Corrected and the original invoice Replaced, in that session', fp?.ok && (m4.application_advice || []).every((a) => a.errors.every((e) => e.state === 'Corrected')) && /^Replaced by INV-7790C/.test(m4.invoice_status || ''), `${JSON.stringify(fp).slice(0, 200)} ${JSON.stringify(m4.application_advice)} ${m4.invoice_status}`);
+      ok('another viewer still sees the invoice held, with no correction', m4o.invoice_status === 'Held' && !(m4o.corrections || []).some((c) => /-S$/.test(c.invoice)), `${m4o.invoice_status} ${JSON.stringify(m4o.corrections)}`);
+      // The person's words win over the model's own draft, go in TED02 of the errors they concern, and the rule cause moves to a note.
+      const s3b = s3; s3 = null;
+      const msg = await ask3('northfield', 'Reject INV-7731 and tell Ashby they billed more cases than received', '2026-11-10T09:00:00-05:00'); const mc = msg.cards?.[0];
+      const teds = (mc?.x12 || '').split('~').filter((x) => x.startsWith('TED'));
+      ok('"Reject INV-7731 and tell Ashby they billed more cases than received": the words are in TED02 of each error they concern, the cause in a note', mc && teds.length === 2 && teds.every((t) => t.split('*')[2] === 'They billed more cases than received') && /NTE\*GEN\*Invoice quantity above accepted quantity/.test(mc.x12) && /They billed more cases than received/.test(msg.answer), JSON.stringify(msg).slice(0, 600));
+      const lie = await ask3('northfield', 'Reject INV-7731 and tell Ashby they billed more cases than received [lie]', '2026-11-10T09:00:00-05:00');
+      ok('an answer that describes the card wrongly is replaced by what the card sends', lie.cards?.length === 1 && lie.answer_from === 'card' && !/line 4|Please call/.test(lie.answer) && /They billed more cases than received/.test(lie.answer) && /Nothing is sent until Jordan Ellis presses Approve/.test(lie.answer), JSON.stringify(lie).slice(0, 500));
+      s3 = s3b;
       const kin = await ask3('northfield', 'tell Kinross to repick', '2026-11-18T15:00:00-05:00');
       ok('"tell Kinross to repick" is refused: Kinross owns it', !kin.cards?.length && /outside Trading Grid/.test(kin.answer) && kin.outside_trading_grid?.owner === 'Kinross', JSON.stringify(kin).slice(0, 300));
       const jor = await ask3('ashby', 'message Jordan that the ship notice is late', '2026-11-18T15:00:00-05:00');

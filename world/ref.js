@@ -104,7 +104,7 @@ export const rules = [
   R('NF-1.4', 'acknowledgment', '855', 'Send the order acknowledgment within 24 hours of the purchase order', { window: 24 }),
   R('NF-1.7', 'acknowledgment', '855', 'The order acknowledgment carries the transaction totals segment (CTT) with the number of lines; the X12 standard leaves it optional'),
   R('NF-1.5', 'acceptance', '997', 'Northfield returns a technical acknowledgment (997) to an acknowledgment or change response and sends no business acceptance; a quantity change is accepted only on a matching order change'),
-  R('NF-1.8', 'application advice', '824', "Application advice (824) error codes in TED01, one per error: QTY quantity above accepted, TTL totals segment missing, IID item not on the item list, LOC ship-to not recognized, CTN carton count differs from cartons listed, TOT total differs from the lines, UOM quantity not in cases, DTE ship date after delivery date. X12 leaves TED01 codes to each guide; these are this world's own"),
+  R('NF-1.8', 'application advice', '824', "Application advice (824) error codes in TED01, one per error: QTY quantity above accepted, TTL totals segment missing, IID item not on the item list, LOC ship-to not recognized, CTN carton count differs from cartons listed, TOT total differs from the lines, UOM quantity not in cases, DTE ship date after delivery date, PRC price beyond tolerance of the order price, STO ship-to differs from the current order, PCK units per case differ from the item setup. X12 leaves TED01 codes to each guide; these are this world's own"),
   R('NF-1.6', 'orders', '860,865', 'Change requests go to the buyer, who issues the order change; answer an order change within 24 hours of the latest change', { window: 24 }),
   R('NF-2.1', 'fulfilment', '856', 'No backorders: a short line is cancelled and the shipped quantity reported', { code: 'OT01', charge: '3% of cost of goods, quarterly; months under $1,000 waived', basis: 'public', pub: [pub('walmart', 'In-full misses are charged about 3% of the cost of goods on the affected portion')] }),
   R('NF-2.2', 'fulfilment', '856', 'One PO ships from one location'),
@@ -171,9 +171,9 @@ export const TED = {
   UOM: { rule: 'NF-4.14', cause: 'Quantity not in cases', basis: 'invented' },
   DTE: { rule: 'NF-4.15', cause: 'Ship date after delivery date', basis: 'invented' },
   QTY: { rule: 'NF-7.8', cause: 'Invoice quantity above accepted quantity', basis: 'invented' },
-  PRC: { rule: 'NF-7.11', cause: 'Line price beyond tolerance of the order price' },
-  STO: { rule: 'NF-4.7', cause: 'Ship-to differs from the current PO' },
-  PCK: { rule: 'NF-4.9', cause: 'Units per case differ from Northfield item setup' },
+  PRC: { rule: 'NF-7.11', cause: 'Line price beyond tolerance of the order price', basis: 'invented' },
+  STO: { rule: 'NF-4.7', cause: 'Ship-to differs from the current PO', basis: 'invented' },
+  PCK: { rule: 'NF-4.9', cause: 'Units per case differ from Northfield item setup', basis: 'invented' },
 };
 /** 997 syntax error codes (AK3 segment, AK4 element) and how they read. */
 export const SYNTAX = {

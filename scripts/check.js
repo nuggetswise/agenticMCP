@@ -107,7 +107,10 @@ none('rules.every_error_points_at_documents', 'SELECT error_id FROM errors WHERE
     if (w.statement !== p.statement) diff.push(`${p.id} wording`); if (w.owner !== p.owner) diff.push(`${p.id} owner`); if (w.basis !== p.basis.split(',')[0].toLowerCase()) diff.push(`${p.id} basis`);
     if ((w.implements || '') !== p.implements.join(',')) diff.push(`${p.id} implements`); }
   for (const w of world) if (!pack.rules.some((p) => p.id === w.id)) diff.push(`${w.id} not in pack`);
-  eq('rules.catalogue_equals_review_pack', diff.slice(0, 8), []); eq('rules.count_equals_review_pack', world.length, pack.rules.length); }
+  eq('rules.catalogue_equals_review_pack', diff.slice(0, 8), []);
+  { const { TED } = await import('../world/ref.js'); const nf18 = db.prepare("SELECT statement, basis FROM rules WHERE id = 'NF-1.8'").get();
+    eq('rules.824_error_codes_invented_and_in_nf_1_8', [Object.keys(TED).filter((k) => TED[k].basis !== 'invented'), Object.keys(TED).filter((k) => !new RegExp(`\\b${k}\\b`).test(nf18?.statement || '')), nf18?.basis], [[], [], 'invented']);
+    eq('rules.publish_after_replay_rule', db.prepare("SELECT count(*) n FROM rules WHERE id = 'NF-11.1'").get().n, 1); } eq('rules.count_equals_review_pack', world.length, pack.rules.length); }
 { const src = readFileSync(join(ROOT, 'src', 'agents.js'), 'utf8').replace(/\/\/.*$|\/\*[\s\S]*?\*\//gm, '');
   eq('agents.thresholds_come_from_catalogue', (src.match(/\b(?:pairs|keep_weeks|exposure_estimate|max_amount|carton)\s*:\s*\d+/g) || []).concat(src.match(/>=\s*12\b|median\s*\/\s*2|\b8\s*\*|>\s*H\b|\bwk\.sold\s*[<\/]/g) || []).concat(['AP-6.4\', \'avg_weeks', "windowHours(db, 'NF-4.2')"].filter((k) => !src.includes(k)).map((k) => `missing ${k}`)), []); }
 none('rules.basis_declared', "SELECT id FROM rules WHERE basis NOT IN ('public', 'adapted', 'invented') OR (basis <> 'invented' AND public_sources IN ('', '[]'))");

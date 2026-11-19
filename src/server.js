@@ -446,7 +446,7 @@ for (const t of [...SCOUT_TOOLS, ...WATCH_TOOLS, ...MATCH_TOOLS, ...RUNTIME_TOOL
 const SESSION_TOOLS = (cid) => cid === AS ? [...SCOUT_TOOLS, ...WATCH_TOOLS, ...RUNTIME_TOOLS[AS]] : [...MATCH_TOOLS, ...RUNTIME_TOOLS[NF]];
 async function runSessionTool(cid, t, args) { let out; try { out = await t.run(args); if (cid === NF) out = linkify(out, SIDE[NF]); } catch (e) { out = { result: 'Invalid request', error: e.message }; } log(cid, t.name, [], args, out.result || out.status || 'Answered', []); return out; }
 function makeServer(cid) {
-  const server = new McpServer({ name: cid === AS ? 'trading-grid-ashby' : 'trading-grid-northfield', title: cid === AS ? 'Trading Grid · Ashby Supplier' : 'Trading Grid · Northfield Retailer', version: '0.4.4' }, { instructions: INSTRUCTIONS[cid]() });
+  const server = new McpServer({ name: cid === AS ? 'trading-grid-ashby' : 'trading-grid-northfield', title: cid === AS ? 'Trading Grid · Ashby Supplier' : 'Trading Grid · Northfield Retailer', version: '0.4.5' }, { instructions: INSTRUCTIONS[cid]() });
   // Every tool on the connection answers through `present` (src/credit.js): no result, title or description names an agent.
   const register = server.registerTool.bind(server);
   server.registerTool = (name, meta, handler) => register(name, { ...meta, title: present(meta.title), description: present(meta.description) }, async (args) => {
@@ -490,7 +490,7 @@ app.use((req, res, next) => { const json = res.json.bind(res); res.json = (body)
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false }));
 app.get('/', (req, res) => res.type('html').send(homePage()));
-app.get('/healthz', (req, res) => res.json({ status: 'ok', version: '0.4.4', writes: WRITES, connections: [AS, NF], aviator: !!process.env.GEMINI_API_KEY, model_routes: Aviator.modelRoutes().map((r) => `${r.route} · ${r.model}`) }));
+app.get('/healthz', (req, res) => res.json({ status: 'ok', version: '0.4.5', writes: WRITES, connections: [AS, NF], aviator: !!process.env.GEMINI_API_KEY, model_routes: Aviator.modelRoutes().map((r) => `${r.route} · ${r.model}`) }));
 const cidOf = (req, res) => { const c = BY_TOKEN[req.params.token]; if (!c) { res.status(404).send('Not found'); return null; } return c; };
 
 app.post('/mcp/:token', async (req, res) => {
@@ -681,22 +681,32 @@ async function pageAviator(page, req, res) {
   const PROPOSE = { name: 'propose_action', description: `Raise an action card for ${SD.person} when asked to do something Trading Grid does. The server builds the card from ${SD.company}’s rules and the records; nothing happens until ${SD.person} presses Approve. Actions: ${actions.map((k) => `${k} (${Cards.CARD_ACTIONS[sideName][k].does}; takes ${Cards.CARD_ACTIONS[sideName][k].takes})`).join('; ')}.`,
     input: { action: z.enum(actions), note: z.string().optional().describe('The person’s own words to the other company, when the record carries them: an application advice’s message, or a dispute’s note'), case: z.string().optional(), charge: z.string().optional(), decision: z.string().optional().describe('Reversed or Upheld; Apply or Waive'), reason: z.string().optional(), po: z.string().optional(), document: z.string().optional(), draft: z.string().optional(), advice: z.string().optional(),
       messages: z.array(z.object({ code: z.string(), message: z.string() })).optional().describe('With send_application_advice: a plain message per error code, at most 60 characters') } };
-  const tools = [...readTools, PROPOSE]; const carried = Cards.carriedMessage(question, sideName);
+  let lastRefusal = null; const tools = [...readTools, PROPOSE]; const carried = Cards.carriedMessage(question, sideName);
   const perms = Object.fromEntries(G.aviatorPermissions(db, cid).actions.map((x) => [x.action, x.permission])); let runCards = [];
   const proposeAction = (args) => {
     // The model decides whether the person asked for an action. The server still checks the permission, builds the card
     // from the rules and records, and writes nothing until the person presses Approve.
     const { action, ...rest } = args || {};
     // A message to the other company that this record carries: the person's own words go into it.
-    if (carried && action === carried.action && carried.note && !rest.note && !(Array.isArray(rest.messages) && rest.messages.length)) rest.note = carried.note; if (!Cards.CARD_ACTIONS[sideName][action]) return { result: 'Refused', message: `${action} is not something ${SD.company} does in Trading Grid.` };
+    // The person's own words win over anything the model drafted.
+    if (carried && action === carried.action && carried.note) rest.note = carried.note;
+    if (!Cards.CARD_ACTIONS[sideName][action]) return { result: 'Refused', message: `${action} is not something ${SD.company} does in Trading Grid.` };
     if (perms[Cards.CARD_ACTIONS[sideName][action].permission] !== 'propose_action_card') return { result: 'Refused', message: `Aviator is set to answer only for this action (P21); ${SD.person} does it on the screen.` };
     if (session.cards.size >= S.LIMITS.cards) return { result: 'Refused', message: 'This session has reached its limit of cards. Start a new session.' };
-    const r = S.withSession(session.id, () => Cards.buildCard(db, sideName, action, rest, at)); if (!r.ok) return { result: 'Not available', message: r.message };
+    const build = (x) => S.withSession(session.id, () => Cards.buildCard(db, sideName, action, x, at));
+    const r = build(rest);
+    // Words that name a line the rules do not find in error are refused; the card for the line the rules found is offered
+    // instead, with the person's words and the line number corrected.
+    if (!r.ok && r.wrong_line && r.wrong_line.found.length === 1 && rest.note) {
+      const fixed = rest.note.replace(new RegExp(`(\\bline\\s+)${r.wrong_line.said}\\b`, 'i'), `$1${r.wrong_line.found[0]}`); const r2 = build({ ...rest, note: fixed });
+      if (r2.ok) { const card = keepCard(session, { ...r2.card, offered: { asked_line: r.wrong_line.said, line: r.wrong_line.found[0], refused: r.message, message_as_sent: fixed } }, { ...rest, note: fixed }, page, sideName); runCards.push(card);
+        return { result: `Refused for line ${r.wrong_line.said}`, message: r.message, offered: `A card for line ${r.wrong_line.found[0]} is ready instead, with the message "${fixed}". Nothing happens until ${SD.person} presses Approve.`, card: publicCard(card) }; } }
+    if (!r.ok) { lastRefusal = r.message; return { result: 'Not available', message: r.message }; }
     const card = keepCard(session, r.card, rest, page, sideName); runCards.push(card); return { result: 'Card ready', card: publicCard(card), note: `Nothing happens until ${SD.person} presses Approve.` }; };
   const periodTools = new Set(tools.filter((t) => t.period).map((t) => t.name));
   // One run of the model: every tool that takes as_of reads at the page's moment or earlier, whatever the model passes.
   const run = async (routes, hint) => { const results = []; const periods = [];
-    runCards.forEach((c) => session.cards.delete(c.id)); runCards = [];
+    runCards.forEach((c) => session.cards.delete(c.id)); runCards = []; lastRefusal = null;
     const callTool = (name, args) => { if (name === 'propose_action') return proposeAction(args); const t = tools.find((x) => x.name === name); const a = { ...(args || {}) };
       if (t && t.input && 'as_of' in t.input && (!a.as_of || !asOfIso(a.as_of) || new Date(asOfIso(a.as_of)) > at)) a.as_of = asOf;
       const r = S.withSession(session.id, () => withVia(via, () => present(call(cid, name, a)))); results.push(r); if (periodTools.has(name)) periods.push(r && r.period_covered ? r.period_covered : null); return r; };
@@ -716,7 +726,10 @@ async function pageAviator(page, req, res) {
   withVia(via, () => log(cid, 'aviator', [], { question_chars: question.length, tools: (out.tools_called || []).map((t) => t.tool), model_route: out.model ? `${out.route || 'primary'} · ${out.model}` : null, ms: Date.now() - started, as_of: asOf, ...(asked ? { period: `${asked.from} to ${asked.to}` } : {}), ...(retried ? { retried_for_period_on: retried } : {}) }, out.ok ? `Answered from ${out.tools_called.length} tool call(s)` : out.capped ? 'Daily model cap reached' : out.wrong_period ? 'Refused: the answer read a different period' : 'No answer', []));
   if (out.wrong_period) return res.status(422).json({ ok: false, message: `Ask again with the dates. Aviator could not read ${asked.from} to ${asked.to} for this question.` });
   if (!out.ok) return res.status(out.capped ? 429 : 503).json({ ok: false, limited: !!out.capped, message: out.capped ? MESSAGES.cap : /no model key/.test(out.message || '') ? 'Aviator is not available on this server.' : 'Ask again in a moment. Aviator did not receive an answer.' });
-  res.json({ ok: true, answer: plainAnswer(out.answer), read: recordsRead(out.answer, results), side, as_of: asOf, as_of_eastern: fmtET(at), ...(asked ? { period: { from: asked.from, to: asked.to } } : {}), session: session.id, cards: runCards.map(publicCard) });
+  // Aviator never describes a card differently from what the card sends: the answer is checked against each card's words
+  // and X12 here, and replaced by the card's own description when it does not hold.
+  const checked = Cards.checkAnswer(plainAnswer(out.answer), runCards, { person: SD.person, refusal: lastRefusal });
+  res.json({ ok: true, answer: checked.answer, answer_from: checked.from, ...(checked.reason ? { answer_replaced_because: checked.reason } : {}), read: recordsRead(out.answer, results), side, as_of: asOf, as_of_eastern: fmtET(at), ...(asked ? { period: { from: asked.from, to: asked.to } } : {}), session: session.id, cards: runCards.map(publicCard) });
 }
 
 // ---------- Action cards on hosted pages ----------
@@ -727,7 +740,7 @@ function keepCard(session, card, input, page, side) {
   const id = `AC-${randomBytes(5).toString('hex')}`; const c = { ...card, id, input, page: page.id, session: session.id, side, state: 'Open', raised_at: new Date().toISOString() };
   session.cards.set(id, c); return c; }
 /** What a page shows on a card: what happens, to whom, under which rule, and Approve or Cancel. No codes in the sentence. */
-const publicCard = (c) => ({ id: c.id, action: c.action, says: plainAnswer(c.says), to: c.to, record: c.record, approver: c.approver, under: RULE_TEXT(c.rule), buttons: c.state === 'Open' ? ['Approve', 'Cancel'] : [], state: c.state,
+const publicCard = (c) => ({ id: c.id, action: c.action, says: plainAnswer(c.says), ...(c.offered ? { offered_instead: { asked_line: c.offered.asked_line, line: c.offered.line, refused: plainAnswer(c.offered.refused), message_as_sent: c.offered.message_as_sent } } : {}), to: c.to, record: c.record, approver: c.approver, under: RULE_TEXT(c.rule), buttons: c.state === 'Open' ? ['Approve', 'Cancel'] : [], state: c.state,
   ...(c.x12_preview ? { x12: c.x12_preview } : {}), ...(c.message ? { message: c.message } : {}), ...(c.decided_at ? { decided_at: c.decided_at, decided_by: c.decided_by } : {}) });
 app.options('/aviator/:token/cards/:card', (req, res) => { cors(res).status(204).end(); });
 app.post('/aviator/:token/cards/:card', (req, res) => {

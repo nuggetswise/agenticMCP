@@ -19,6 +19,8 @@ let nextId = SESSION_ID_BASE;
 
 export const SHADOW = ['invoices', 'invoice_lines', 'errors', 'shipments', 'shipment_lines'];
 const COLS = {};
+// Keyed tables take session overlay rows: a session row with a recorded row's key replaces it for that session only.
+const KEY = { invoices: 'invoice', errors: 'error_id' };
 const EVENT_COLS = ['id', 'at', 'kind', 'po', 'system', 'party', 'channel', 'data'];
 const DOC_COLS = ['doc_id', 'reference', 'po', 'doc_type', 'name', 'sender_id', 'receiver_id', 'supplier_id', 'partner_id', 'sent_at', 'isa_ctl', 'gs_ctl', 'st_ctl', 'status', 'answers_doc_id', 'test', 'file', 'body', 'raw'];
 
@@ -30,7 +32,9 @@ export function installSessions(db) {
   // rejections) sees the session's own documents: invoices and their lines, shipments and their lines, and 824 errors.
   for (const t of SHADOW) { const cols = db.prepare(`SELECT name, type FROM pragma_table_info('${t}')`).all(); COLS[t] = cols.map((c) => c.name);
     db.exec(`CREATE TEMP TABLE IF NOT EXISTS session_${t} (${cols.map((c) => `${c.name} ${c.type || 'TEXT'}`).join(', ')}, session_id TEXT NOT NULL);
-      CREATE TEMP VIEW IF NOT EXISTS ${t} AS SELECT ${COLS[t].join(', ')} FROM main.${t} UNION ALL SELECT ${COLS[t].join(', ')} FROM temp.session_${t} WHERE session_id = tg_session();`); }
+      ${KEY[t] ? `CREATE INDEX IF NOT EXISTS temp.session_${t}_k ON session_${t} (session_id, ${KEY[t]});` : ''}
+      CREATE TEMP VIEW IF NOT EXISTS ${t} AS SELECT ${COLS[t].join(', ')} FROM main.${t} m${KEY[t] ? ` WHERE NOT EXISTS (SELECT 1 FROM temp.session_${t} o WHERE o.session_id = tg_session() AND o.${KEY[t]} = m.${KEY[t]})` : ''}
+        UNION ALL SELECT ${COLS[t].join(', ')} FROM temp.session_${t} WHERE session_id = tg_session();`); }
   db.exec(`
     CREATE TEMP TABLE IF NOT EXISTS session_events (${EVENT_COLS.map((c) => (c === 'id' ? 'id INTEGER PRIMARY KEY' : `${c} TEXT`)).join(', ')}, session_id TEXT NOT NULL);
     CREATE INDEX IF NOT EXISTS temp.session_events_s ON session_events (session_id, po);
@@ -68,6 +72,16 @@ export function appendRow(db, table, row) {
   if (!SHADOW.includes(table)) throw new Error(`No derived table ${table}`); const cols = COLS[table];
   if (!CURRENT) { db.prepare(`INSERT INTO main.${table} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(',')})`).run(...cols.map((c) => row[c] ?? null)); return; }
   db.prepare(`INSERT INTO temp.session_${table} (${cols.join(', ')}, session_id) VALUES (${cols.map(() => '?').join(',')},?)`).run(...cols.map((c) => row[c] ?? null), CURRENT);
+}
+
+/** Changes a keyed row (an invoice's status, an 824 error's status) for the session in force only: a session row is updated
+ *  in place, a recorded row is overlaid by a session copy. With no session in force nothing changes. Returns whether it did. */
+export function overlayRow(db, table, key, changes) {
+  const k = KEY[table]; if (!k || !CURRENT) return false; const cols = COLS[table];
+  const own = db.prepare(`SELECT 1 FROM temp.session_${table} WHERE session_id = ? AND ${k} = ?`).get(CURRENT, key);
+  if (own) { const set = Object.keys(changes); db.prepare(`UPDATE temp.session_${table} SET ${set.map((c) => `${c} = ?`).join(', ')} WHERE session_id = ? AND ${k} = ?`).run(...set.map((c) => changes[c]), CURRENT, key); return true; }
+  const row = db.prepare(`SELECT * FROM main.${table} WHERE ${k} = ?`).get(key); if (!row) return false;
+  const merged = { ...row, ...changes }; db.prepare(`INSERT INTO temp.session_${table} (${cols.join(', ')}, session_id) VALUES (${cols.map(() => '?').join(',')},?)`).run(...cols.map((c) => merged[c] ?? null), CURRENT); return true;
 }
 
 // ---------- The session store ----------

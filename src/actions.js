@@ -11,7 +11,7 @@ import { TED } from '../world/ref.js';
 import { fmtET } from '../world/lib.js';
 import * as D from './domain.js';
 import * as NR from './retailer.js';
-import { appendEvent, appendDocument, appendRow, currentSession } from './session.js';
+import { appendEvent, appendDocument, appendRow, overlayRow, currentSession } from './session.js';
 
 const J = (s) => { try { return s ? JSON.parse(s) : {}; } catch { return {}; } };
 const money = (n) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -199,7 +199,7 @@ function buildAnswerAdvice(db, side, a, T) {
   const total = Math.round(ls.reduce((s, l) => s + l.qty * l.price, 0) * 100) / 100; const ref = refFree(db, `${rejected.reference}C`);
   const body = { po_ref: adv.po, po_date: rb.po_date || null, replaces: rejected.reference, buyer_name: rb.parties?.BY?.name, buyer_gln: rb.parties?.BY?.gln, vendor_name: rb.parties?.VN?.name, vendor_gln: rb.parties?.VN?.gln, terms_days: rb.terms_days ?? 30, lines: ls, total };
   return { ok: true, card: { record: ref, po: adv.po, to: 'Northfield Retailer', args: { advice: adv.reference, po: adv.po, document: '997+810', ref, ack_needed: !ack, body },
-    says: `Ashby does not send an application advice here: Northfield’s ${adv.reference} rejects invoice ${rejected.reference}. Send ${ack ? '' : `the technical acknowledgment (997) of ${adv.reference} and `}corrected invoice ${ref} replacing ${rejected.reference}: ${ls.map((l) => `line ${l.line} at ${l.qty} cases`).join(', ')}, ${money(total)} (NF-7.2).` } };
+    says: `Ashby does not send an application advice here: Northfield’s application advice rejects invoice ${rejected.reference}. Send ${ack ? '' : 'the technical acknowledgment of that advice and '}corrected invoice ${ref} replacing ${rejected.reference}: ${ls.map((l) => `line ${l.line} at ${l.qty} cases`).join(', ')}, ${money(total)} (NF-7.2).` } };
 }
 /** Northfield's 824 against a document it received: each error coded from its guide, with a plain message in TED02. */
 function buildAdvice(db, side, a, T) {
@@ -211,36 +211,53 @@ function buildAdvice(db, side, a, T) {
   if (d.doc_type === '810') {
     const m = NR.threeWayMatch(db, ref, new Date(T)); if (!m.found) return { ok: false, message: m.message };
     for (const l of m.lines) {
-      if (/^quantity/.test(l.origin)) errors.push({ code: 'QTY', seg: 'IT1', elem: '2', bad: String(l.billed), allowed: `${Math.min(l.shipped, l.received)} ${l.received < l.shipped ? 'received' : 'shipped'} on line ${l.line}; held value ${money(l.amount_at_issue)}`, line: l.line });
-      else if (/^price/.test(l.origin)) errors.push({ code: 'PRC', seg: 'IT1', elem: '4', bad: String(l.invoice_price), allowed: `Order price ${money(l.po_price)} on line ${l.line}`, line: l.line });
+      if (/^quantity/.test(l.origin)) errors.push({ code: 'QTY', seg: 'IT1', elem: '2', bad: String(l.billed), allowed: `${Math.min(l.shipped, l.received)} ${l.received < l.shipped ? 'received' : 'shipped'} on line ${l.line}; held value ${money(l.amount_at_issue)}`, line: l.line,
+        billed: l.billed, shipped: l.shipped, received: l.received, plain: `billed ${l.billed} cases; ${l.shipped} shipped and ${l.received} received, ${money(l.amount_at_issue)} held` });
+      else if (/^price/.test(l.origin)) errors.push({ code: 'PRC', seg: 'IT1', elem: '4', bad: String(l.invoice_price), allowed: `Order price ${money(l.po_price)} on line ${l.line}`, line: l.line, plain: `billed at ${money(l.invoice_price)} against the order price of ${money(l.po_price)}` });
     }
     const sum = Math.round(m.lines.reduce((s, l) => s + l.billed * (l.invoice_price ?? 0), 0) * 100) / 100;
-    if (Math.abs(sum - m.invoice_total) > 0.005) errors.push({ code: 'TOT', seg: 'TDS', elem: '1', bad: String(Math.round(m.invoice_total * 100)), allowed: `Lines add to ${money(sum)}` });
+    if (Math.abs(sum - m.invoice_total) > 0.005) errors.push({ code: 'TOT', seg: 'TDS', elem: '1', bad: String(Math.round(m.invoice_total * 100)), allowed: `Lines add to ${money(sum)}`, plain: `the invoice total of ${money(m.invoice_total)} differs from its lines, which add to ${money(sum)}` });
   } else {
     const o = ordersOf(db, d.po); const b = J(d.body); const st = b.parties?.ST?.name || '';
     const loc = db.prepare('SELECT * FROM locations WHERE id = ?').get(o?.ship_to);
-    if (loc && st && !st.includes(String(loc.name || '').replace(/^Northfield /, ''))) errors.push({ code: 'STO', seg: 'N1', elem: '2', bad: st, allowed: `Current order ships to ${loc.name}` });
-    if ((b.lines || []).some((l) => l.uom && l.uom !== 'CA')) errors.push({ code: 'UOM', seg: 'SN1', elem: '3', bad: (b.lines.find((l) => l.uom !== 'CA') || {}).uom, allowed: 'Quantities in cases (CA)' });
+    if (loc && st && !st.includes(String(loc.name || '').replace(/^Northfield /, ''))) errors.push({ code: 'STO', seg: 'N1', elem: '2', bad: st, allowed: `Current order ships to ${loc.name}`, plain: `it ships to ${st}; the current order ships to ${loc.name}` });
+    if ((b.lines || []).some((l) => l.uom && l.uom !== 'CA')) errors.push({ code: 'UOM', seg: 'SN1', elem: '3', bad: (b.lines.find((l) => l.uom !== 'CA') || {}).uom, allowed: 'Quantities in cases (CA)', plain: 'quantities are not in cases' });
   }
   if (!errors.length) return { ok: false, message: `Northfield’s rules find no error in ${ref} at this moment, so there is nothing to reject.` };
-  // TED02: the plain message. The guide's cause by default; a message drafted for the person must stay plain and within 60 characters.
+  // TED02 carries the plain message for each error: the guide's cause by default, a message the model drafted for a code,
+  // or, above both, the person's own words ("tell Ashby they billed more cases than received"). The person's words go in
+  // TED02 of the error they concern, and that error's rule cause moves to a note (NTE). Words over 60 characters go in a
+  // note of at most 80 characters instead; longer is refused. A line the words name that the rules do not find is refused.
   const drafted = Object.fromEntries((Array.isArray(a.messages) ? a.messages : []).map((x) => [String(x.code || '').toUpperCase(), String(x.message || '').replace(/[*~>\n\r]/g, ' ').trim()]));
-  // A message the person gave in words ("tell Ashby line 3 is overbilled") goes on the first error: in TED02 when it fits
-  // 60 characters, else as a note (NTE) of at most 80 characters, which Northfield's guide allows.
-  const note = a.note ? String(a.note).replace(/[*~>\n\r]/g, ' ').trim() : null; let noteIn = null;
-  if (note && !Object.keys(drafted).length) { if (note.length <= GUIDE_824.ted02_max) { drafted[errors[0].code] = note; noteIn = 'TED02'; }
-    else if (GUIDE_824.nte_allowed && note.length <= GUIDE_824.nte_max) { errors[0].note = note; noteIn = 'NTE'; }
-    else return { ok: false, message: `The message is ${note.length} characters; the application advice carries at most ${GUIDE_824.ted02_max} in the error (TED02) or ${GUIDE_824.nte_max} in a note (NTE).` }; }
-  for (const e of errors) { const msg = drafted[e.code] || TED[e.code].cause; if (msg.length > GUIDE_824.ted02_max) return { ok: false, message: `The message for ${e.code} is ${msg.length} characters; the application advice allows ${GUIDE_824.ted02_max} (TED02).` }; e.cause = msg; e.rule = TED[e.code].rule; if (!GUIDE_824.nte_allowed) e.allowed = null; }
-  const b = J(d.body); const aref = refFree(db, `AA-${ref}`);
-  const body = { action: 'TE', answers_ref: ref, answers_gs: d.gs_ctl, answers_st: d.st_ctl, answers_set: d.doc_type, errors: errors.map(({ code, cause, seg, elem, bad, allowed, note: n }) => ({ code, cause, seg, elem, bad, allowed, ...(n ? { note: n } : {}) })) };
-  // Where the person's words name a line the rules do not find in error, the card says so beside the message.
-  const lineSaid = note && note.match(/\bline\s+(\d+)/i)?.[1]; const linesFound = errors.map((e) => e.line).filter(Boolean);
-  const mismatch = lineSaid && linesFound.length && !linesFound.includes(Number(lineSaid)) ? ` Northfield’s rules find the error on line ${linesFound.join(', ')}, not line ${lineSaid}.` : '';
-  return { ok: true, card: { record: aref, po: d.po, to: NAME[d.sender_id] || d.sender_id, args: { document: ref, answers: d.doc_id, ref: aref, body, supplier: d.sender_id },
-    says: `Send application advice ${aref} to ${NAME[d.sender_id] || d.sender_id}, rejecting ${DOC_NAMES[d.doc_type]} ${ref}: ${errors.map((e) => `${e.code} "${e.cause}"${e.allowed ? ` (${e.allowed})` : ''}${e.note ? `, note "${e.note}"` : ''}`).join('; ')}.${mismatch} ${NAME[d.sender_id] || 'The supplier'} answers with a 997 and the corrected document (${[...new Set(errors.map((e) => e.rule))].join(', ')}).`,
-    message: note ? { text: note, in: noteIn } : null,
-    x12_preview: errors.map((e) => `TED*${e.code}*${e.cause}*${e.seg}**${e.elem}**${e.bad}${e.allowed ? `~NTE*GEN*${String(e.allowed).slice(0, GUIDE_824.nte_max)}` : ''}${e.note ? `~NTE*GEN*${e.note}` : ''}`).join('~') } };
+  const note = a.note ? String(a.note).replace(/[*~>\n\r]/g, ' ').replace(/\s+/g, ' ').trim() : null; let noteIn = null; let targets = [];
+  if (note) {
+    const lineSaid = Number(note.match(/\bline\s+(\d+)/i)?.[1] || 0); const linesFound = [...new Set(errors.map((e) => e.line).filter(Boolean))];
+    if (lineSaid && !linesFound.includes(lineSaid)) return { ok: false, wrong_line: { said: lineSaid, found: linesFound }, message: `Northfield’s rules find no error on line ${lineSaid} of ${DOC_NAMES[d.doc_type]} ${ref}. They find it on line ${linesFound.join(' and ') || 'none'}.` };
+    targets = lineSaid ? errors.filter((e) => e.line === lineSaid)
+      : /\breceiv/i.test(note) ? errors.filter((e) => e.billed != null && e.billed > e.received)
+      : /\bship/i.test(note) && d.doc_type === '810' ? errors.filter((e) => e.billed != null && e.billed > e.shipped)
+      : /\bprice/i.test(note) ? errors.filter((e) => e.code === 'PRC') : /\btotal/i.test(note) ? errors.filter((e) => e.code === 'TOT') : [];
+    if (!targets.length) targets = errors; // words that name no line or kind concern every error
+    if (note.length > GUIDE_824.nte_max) return { ok: false, message: `The message is ${note.length} characters. The application advice carries at most ${GUIDE_824.ted02_max} in the error message or ${GUIDE_824.nte_max} in a note.` };
+    noteIn = note.length <= GUIDE_824.ted02_max ? 'TED02' : 'NTE';
+  }
+  for (const [code, msg] of Object.entries(drafted)) if (msg.length > GUIDE_824.ted02_max && !(note && errors.filter((e) => e.code === code).every((e) => targets.includes(e)))) return { ok: false, message: `The message for this error is ${msg.length} characters; the application advice allows ${GUIDE_824.ted02_max} in the error message.` };
+  for (const e of errors) {
+    const cause = drafted[e.code] || TED[e.code].cause; e.rule = TED[e.code].rule; e.notes = [];
+    if (targets.includes(e) && noteIn === 'TED02') { e.cause = note; e.notes.push(TED[e.code].cause); }
+    else { e.cause = cause; if (targets.includes(e)) e.notes.push(note); }
+    if (GUIDE_824.nte_allowed && e.allowed) e.notes.push(e.allowed); else if (!GUIDE_824.nte_allowed) e.notes = [];
+    e.notes = e.notes.map((n) => String(n).slice(0, GUIDE_824.nte_max)); }
+  const aref = refFree(db, `AA-${ref}`); const who = NAME[d.sender_id] || d.sender_id;
+  const body = { action: 'TE', answers_ref: ref, answers_gs: d.gs_ctl, answers_st: d.st_ctl, answers_set: d.doc_type, errors: errors.map(({ code, cause, seg, elem, bad, allowed, notes }) => ({ code, cause, seg, elem, bad, allowed, notes })) };
+  const x12 = errors.map((e) => [`TED*${e.code}*${e.cause}*${e.seg}**${e.elem}**${e.bad}`, ...e.notes.map((n) => `NTE*GEN*${n}`)].join('~')).join('~');
+  // What the card says is what the 824 carries, in plain words: no error codes, no Trading Grid reference numbers.
+  const plainErr = (e) => `${e.line ? `line ${e.line}: ` : ''}${e.plain || TED[e.code].cause.toLowerCase()}`;
+  const says = `Send an application advice to ${who} rejecting ${DOC_NAMES[d.doc_type]} ${ref}. ${errors.map((e) => `${plainErr(e)[0].toUpperCase()}${plainErr(e).slice(1)}`).join('. ')}.`
+    + (note ? ` ${noteIn === 'TED02' ? 'Your message' : 'Your note'} to ${who}, "${note}", goes with ${targets.length === errors.length && errors.length > 1 ? 'each error' : targets.map((e) => (e.line ? `line ${e.line}` : 'the error')).join(' and ')}.` : '')
+    + ` ${who} answers with a technical acknowledgment and the corrected document.`;
+  return { ok: true, card: { record: aref, po: d.po, to: who, args: { document: ref, answers: d.doc_id, ref: aref, body, supplier: d.sender_id },
+    says, message: note ? { text: note, in: noteIn, lines: targets.map((e) => e.line).filter(Boolean) } : null, x12_preview: x12 } };
 }
 function buildDecision(db, side, a, T) {
   const c = NR.caseNF(db, String(a.case || a.record || ''), new Date(T)); if (!c.found) return { ok: false, message: c.message };
@@ -269,7 +286,7 @@ function buildPublish(db, side, a, T) {
   const r = NR.replayRule(db, { draft: id, as_of: T }); if (!r || r.found === false) return { ok: false, message: r?.message || `${id} could not be replayed.` };
   const fails = r.failing_with_draft ?? r.failing ?? null; const exposure = r.added_exposure ?? null;
   return { ok: true, card: { record: id, po: null, to: 'Every Northfield supplier', args: { draft: id, replay: { failing_with_draft: fails, added_exposure: exposure } },
-    says: `Publish ${id} to suppliers: “${d.statement}”. Replayed against the quarter, it ${fails != null ? `fails ${typeof fails === 'object' ? JSON.stringify(fails) : fails} documents` : 'was checked'}${exposure != null ? ` and adds ${typeof exposure === 'number' ? money(exposure) : JSON.stringify(exposure)} in exposure` : ''}. A rule is published only after its replay (NF-11.1).` } };
+    says: `Publish the draft rule “${d.statement}” to suppliers. Replayed against the quarter, it ${fails != null ? `fails ${typeof fails === 'object' ? JSON.stringify(fails) : fails} documents` : 'was checked'}${exposure != null ? ` and adds ${typeof exposure === 'number' ? money(exposure) : JSON.stringify(exposure)} in exposure` : ''}. A rule is published only after its replay (NF-11.1).` } };
 }
 const BUILD = { open_dispute: buildDispute, release_held_ship_notice: buildRelease, send_acknowledgment: (db, s, a, T) => buildDocument(db, s, a, T, '855'), answer_order_change: (db, s, a, T) => buildDocument(db, s, a, T, '865'),
   send_ship_notice: (db, s, a, T) => buildDocument(db, s, a, T, '856'), send_invoice: (db, s, a, T) => buildDocument(db, s, a, T, '810'), answer_application_advice: buildAnswerAdvice,
@@ -280,7 +297,30 @@ export function buildCard(db, side, action, args = {}, T) {
   const def = CARD_ACTIONS[side]?.[action]; if (!def) return { ok: false, message: `${action} is not something ${side === 'ashby' ? 'Ashby' : 'Northfield'} does in Trading Grid.` };
   let r; try { r = BUILD[action](db, side, args || {}, at(T)); } catch (e) { return { ok: false, message: `The records do not support this action: ${String(e.message).slice(0, 160)}` }; }
   if (!r.ok) return r;
-  return { ok: true, card: { action, write: def.write, side, rule: def.rule, approver: PERSON[side], buttons: ['Approve', 'Cancel'], at: at(T), ...r.card } };
+  return { ok: true, card: { action, write: def.write, side, rule: def.rule, approver: PERSON[side], buttons: ['Approve', 'Cancel'], at: at(T), ...r.card, says: plainSays(r.card.says) } };
+}
+
+/** A card's sentence in plain words: no rule codes and no X12 set numbers; the rule is shown beside it, by name. */
+export const plainSays = (t) => String(t || '').replace(/\s*\((?:(?:NF|AP|AM|KX)-[\d.]+(?:,\s*)?)+\)/g, '').replace(/\s*\((?:8|9)\d\d\)/g, '').replace(/\s+([.,;:])/g, '$1').trim();
+
+/** Checks Aviator's answer against the cards it raised: every quoted phrase and line it names must be on a card, it may
+ *  not say the action is done, and it may not claim a message the card does not carry. Where it does not hold, the
+ *  answer is the cards' own description. Without a card, an answer that describes one is replaced too. */
+export function checkAnswer(answer, cards, { person, refusal } = {}) {
+  const text = String(answer || ''); const reasons = [];
+  const describe = () => cards.map((c) => `${c.offered ? `${plainSays(c.offered.refused)} Instead, the card for line ${c.offered.line} is ready, with the message "${c.offered.message_as_sent}": ` : 'The card is ready: '}${c.says} Nothing is sent until ${person} presses Approve.`).join(' ');
+  if (!cards.length) {
+    if (/\b(card (is )?ready|cards? (below|above)|press(es)? Approve|I('ve| have) (raised|prepared|created) (a|the) card)\b/i.test(text)) return { answer: refusal || 'No card was raised for this request.', from: 'server', reason: 'the answer described a card that was not raised' };
+    return { answer: text, from: 'model' };
+  }
+  const hay = cards.map((c) => `${c.says} ${(c.x12_preview || '').replace(/[*~]/g, ' ')} ${c.message?.text || ''} ${c.offered ? `${c.offered.refused} ${c.offered.message_as_sent}` : ''}`).join(' ').toLowerCase().replace(/\s+/g, ' ');
+  for (const m of text.matchAll(/["“]([^"”]{3,})["”]/g)) if (!hay.includes(m[1].toLowerCase().replace(/\s+/g, ' ').replace(/[.]$/, ''))) reasons.push(`quotes "${m[1]}", which is not on the card`);
+  if (/\b(has been|have been|was|were|is now|I('ve| have)|I) (sent|rejected|released|published|opened|applied|waived|reversed|upheld|submitted|disputed)\b/i.test(text) && !/\b(until|once|when|after)\b[^.]*\bApprove/i.test(text)) reasons.push('says the action is done');
+  if (/\b(your (message|note|words)|the message|message (is|was) (included|added)|includ\w* (your|the) (message|note))\b/i.test(text) && !cards.some((c) => c.message)) reasons.push('claims a message the card does not carry');
+  for (const m of text.matchAll(/\bline (\d+)\b/gi)) if (!new RegExp(`\\bline ${m[1]}\\b`).test(hay)) reasons.push(`names line ${m[1]}, which is not on the card`);
+  for (const c of cards) if (c.offered && !new RegExp(`\\bline ${c.offered.line}\\b`, 'i').test(text)) reasons.push(`does not say the rules found line ${c.offered.line}`);
+  for (const c of cards) if (c.message && !text.toLowerCase().includes(c.message.text.toLowerCase())) reasons.push('does not give the message the card carries');
+  return reasons.length ? { answer: describe(), from: 'card', reason: [...new Set(reasons)].join('; ') } : { answer: text, from: 'model' };
 }
 
 /** Makes the write a card describes, at the card's moment, in the session in force. Returns the record written. */
@@ -297,7 +337,11 @@ export function applyCard(db, card, by) {
       const adv = db.prepare("SELECT * FROM documents WHERE doc_type = '824' AND reference = ?").get(a.advice); const out = {};
       if (a.ack_needed && adv) { const ack = x12Doc(db, { type: '997', ref: `FA-${adv.reference}`, po: a.po, from: 'ASHBY', to: 'NORTHFIELD', T, answers: adv.doc_id, name: 'Technical acknowledgment', body: { group_id: FUNC['824'], group_ctl: adv.gs_ctl, set_id: '824', set_ctl: adv.st_ctl, result: 'A' } }); appendDocument(db, ack); out.acknowledgment = ack.reference; }
       const inv = x12Doc(db, { type: '810', ref: a.ref, po: a.po, from: 'ASHBY', to: 'NORTHFIELD', T: new Date(Date.parse(T) + 60000).toISOString(), body: a.body, name: 'Invoice' });
-      appendDocument(db, inv); deriveRows(db, inv, a.body); out.document = inv.reference; out.event = ev('tg.sent', a.po, { document: inv.reference, set: '810', replaces: a.body.replaces, answers: a.advice, sent_by: by }); return out; }
+      appendDocument(db, inv); deriveRows(db, inv, a.body); out.document = inv.reference;
+      // In the viewer's session the correction closes the advice: its open errors read Corrected by this invoice, and the
+      // original invoice reads Replaced. Recorded rows and other viewers are unchanged.
+      if (adv) { for (const e of db.prepare("SELECT error_id FROM errors WHERE reported_by = ? AND status = 'Open'").all(adv.doc_id)) overlayRow(db, 'errors', e.error_id, { status: 'Corrected', corrected_by: inv.doc_id });
+        overlayRow(db, 'invoices', a.body.replaces, { status: `Replaced by ${inv.reference}` }); } out.event = ev('tg.sent', a.po, { document: inv.reference, set: '810', replaces: a.body.replaces, answers: a.advice, sent_by: by }); return out; }
     case 'send_application_advice': {
       const doc = x12Doc(db, { type: '824', ref: a.ref, po: card.po, from: 'NORTHFIELD', to: a.supplier, T, answers: a.answers, body: a.body, name: 'Application advice' });
       appendDocument(db, doc); deriveRows(db, doc, a.body); return { document: doc.reference, event: ev('tg.sent', card.po, { document: doc.reference, set: '824', rejects: a.document, approved_by: by }) }; }

@@ -605,7 +605,7 @@ const nd0 = s => s == null ? s : String(s).replace(/(\d{4})-(\d\d)-(\d\d) (\d\d:
 const nd = s => pw(nd0(s));
 const money = E.money;
 /* charge and draft-rule codes read in plain words */
-const pw = s => s == null ? s : String(s).replace(/Draft rule NFD-\d+: /g, "Draft rule: ").replace(/\bNFD-\d+\b/g, "draft rule").replace(/\bSH01 charge\b/g, "shortage charge").replace(/\bAS02 charge\b/g, "receipt mismatch charge").replace(/\bSH01\b/g, "shortage").replace(/\bAS02\b/g, "receipt mismatch").replace(/ \((\d{3})\)/g, "").replace(/\$(\d{1,3})(\d{3})\.(\d\d)/g, "$$$1,$2.$3");
+const pw = s => s == null ? s : String(s).replace(/\s*\((?:NF|AP|AM|KX)-[\d.]+\)/g, "").replace(/Northfield item list/g, "Northfield's item list").replace(/Draft rule NFD-\d+: /g, "Draft rule: ").replace(/\bNFD-\d+\b/g, "draft rule").replace(/\bSH01 charge\b/g, "shortage charge").replace(/\bAS02 charge\b/g, "receipt mismatch charge").replace(/\bSH01\b/g, "shortage").replace(/\bAS02\b/g, "receipt mismatch").replace(/ \((\d{3})\)/g, "").replace(/\$(\d{1,3})(\d{3})\.(\d\d)/g, "$$$1,$2.$3");
 const kindTag = k => String(k || "").replace(/^.*\((\d{3})\)$/, "EDI $1");
 const recName = f => /^NFD-/.test(f.record) ? "Draft rule" : f.record === "AS02" ? "Receipt mismatch charge" : (f.po || f.record);
 
@@ -652,12 +652,14 @@ const HELD = () => HOLDS[V.side][V.per];
 const DED = () => INS[V.side].deductions.filter(inPer);
 const sum = (rows, k) => rows.reduce((a, r) => a + (r[k] || 0), 0);
 const n0 = E.int;
+const cz = s => String(s || "").replace("Northfield item list", "Northfield's item list");
 const lc = s => s ? s.charAt(0).toLowerCase() + s.slice(1) : s;
+const parts = a => a.filter(x => x[1]).map(x => x[0]).join(" · ");
 const team = o => o === "Supplier ERP" ? "Ashby, in the Supplier ERP" : o === "Jordan Ellis" ? "Northfield supplier operations" : o === "Priya Raman" ? "Ashby operations" : o;
 const perName = () => PERIODS.find(p => p[0] === V.per)[1].toLowerCase();
 const byKey = (rows, k) => { const m = {}; rows.forEach(r => { (m[r[k]] = m[r[k]] || []).push(r); }); return Object.entries(m).sort((a, b) => b[1].length - a[1].length); };
 const cnt = (n, attrs) => n ? `<button class="cnt" type="button" ${attrs}>${n0(n)}</button>` : `<span class="st-muted">0</span>`;
-const pgLink = (key, label) => PG[key] ? `<a class="ext" href="https://claude.ai/artifact/${PG[key][1]}" target="_blank" rel="noopener">${esc(label || "Open in " + PG[key][0])}</a>` : "";
+const pgLink = () => "";
 if (!PG.p7) PG.p7 = ["Performance", "9F1PiXsrUJ54AJq1dSJMbu"];
 const findOf = rec => SIDE[V.side].findings.find(f => f.record === rec || f.po === rec);
 
@@ -671,9 +673,9 @@ const topCause = () => byKey(rejections(), "cause")[0];
 
 function titleText(){
   const m = md();
-  if (V.side === "ashby") return m.open ? `Ashby is about to lose ${E.money(m.open)} in deductions it has not disputed` : `Northfield took ${E.money(m.taken)} in deductions from Ashby; ${E.money(m.waived)} came back`;
+  if (V.side === "ashby") return m.open ? `${E.money(m.open)} in deductions not disputed; dispute window closes in ${String(m.window || "").replace(/ left$/, "")}` : `Northfield deducted ${E.money(m.taken)} from Ashby; ${E.money(m.waived)} waived after dispute`;
   const low = P().suppliers.slice().reverse().find(s => s.fill) || {};
-  return `Northfield took ${E.money(m.taken)} in deductions; ${E.money(m.waived)} was waived after suppliers disputed it`;
+  return `Northfield deducted ${E.money(m.taken)}; ${E.money(m.waived)} waived after supplier disputes`;
 }
 
 /* ---------- first row ---------- */
@@ -682,18 +684,18 @@ function tiles(){
   if (V.side === "ashby") {
     const tc = topCause(); const fl = x.fill, tl = x.timely, ot = x.otif;
     return [
-      {k:"open", lab:"Not disputed", big:E.money(m.open), tone:m.open ? "amber" : "", body:m.open ? `${m.openRows.length} shortage deductions · dispute window ${esc(m.window || "")}` : "Every deduction was disputed or accepted", act:m.open ? `<button class="cnt" type="button" data-open="opended">Open the deductions</button> · ${pgLink("p6", "Dispute in Charge resolution")}` : ""},
-      {k:"ded", lab:"Deductions", big:E.money(m.taken), body:`${E.money(m.waived)} waived and repaid · ${E.money(m.upheld)} upheld · ${E.money(m.accepted)} accepted`, act:cnt(m.cases, 'data-open="ded"') + " cases"},
+      {k:"open", lab:"Not disputed", big:E.money(m.open), tone:m.open ? "amber" : "", body:m.open ? `${m.openRows.length} shortage deductions · dispute window ${esc(m.window || "")}` : "Every deduction was disputed or accepted", act:m.open ? `<button class="cnt" type="button" data-open="opended">Open the deductions</button>` : ""},
+      {k:"ded", lab:"Deductions", big:E.money(m.taken), body:parts([[`${E.money(m.waived)} waived and repaid`, m.waived], [`${E.money(m.upheld)} upheld`, m.upheld], [`${E.money(m.accepted)} accepted`, m.accepted]]) || "None waived, upheld or accepted", act:cnt(m.cases, 'data-open="ded"') + " cases"},
       {k:"svc", lab:"Fill rate", big:fl.rate || "Not calculated", body:`${ot ? `On time, in full ${esc(ot.score)}` : "On time, in full not calculated for this period"} · ship notices on time ${esc(tl.rate || "Unknown")}`, act:fl.short_lines ? cnt(fl.short_lines, 'data-open="short"') + ` lines shipped short, ${n0(fl.short_cases)} cases` : "No line shipped short"},
       {k:"held", lab:"Invoices held", big:E.money(sum(HELD(), "value")), tone:HELD().some(h => !h.released_by) ? "amber" : "", body:HELD().length ? `${HELD().length} invoices held for payment · ${HELD().filter(h => !h.released_by).length ? `${E.money(sum(HELD().filter(h => !h.released_by), "value"))} still held` : "all released"}` : "No invoice held in this period", act:HELD().length ? cnt(HELD().length, 'data-open="held"') + " invoices" : ""}];
   }
   const sup = x.suppliers; const low = sup.slice().sort((a, b) => parseFloat(a.fill) - parseFloat(b.fill))[0] || {};
   const rejBy = byKey(rejections(), "owner")[0]; const slow = (x.owner_response || []).filter(o => o.slowest && !/Northfield|Jordan/.test(o.owner)).sort((a, b) => b.with_a_record - a.with_a_record)[0];
   return [
-    {k:"ded", lab:"Deductions taken", big:E.money(m.taken), body:`${E.money(m.waived)} waived · ${E.money(m.upheld)} upheld · ${E.money(m.taken - m.waived - m.upheld)} stand`, act:cnt(m.cases, 'data-open="ded"') + " cases"},
-    {k:"fill", lab:"Lowest fill rate", big:esc(low.fill || "Unknown"), body:`${esc(low.supplier || "")} · ${esc(low.fill_formula || "")} ${esc((low.unit || "").toLowerCase())}`, act:cnt(Math.min(5, sup.length), 'data-open="rank"') + ` lowest fill rates of ${sup.length} suppliers`},
+    {k:"ded", lab:"Deductions taken", big:E.money(m.taken), body:parts([[`${E.money(m.waived)} waived`, m.waived], [`${E.money(m.upheld)} upheld`, m.upheld], [`${E.money(m.taken - m.waived - m.upheld)} stands`, m.taken - m.waived - m.upheld]]), act:cnt(m.cases, 'data-open="ded"') + " cases"},
+    {k:"fill", lab:"Lowest fill rate", big:esc(low.fill || "Unknown"), body:`${esc(low.supplier || "")} · ${esc(((low.fill_formula || "").split(" = ")[0]).replace(" ÷ ", " of "))} ${low.unit === "Cases" ? "cases" : "units"} shipped`, act:cnt(Math.min(5, sup.length), 'data-open="rank"') + ` lowest fill rates of ${sup.length} suppliers`},
     {k:"held", lab:"Invoices held", big:E.money(sum(HELD(), "value")), tone:HELD().some(h => !h.released_by) ? "amber" : "", body:HELD().length ? `${HELD().length} supplier invoices held for payment · ${HELD().filter(h => !h.released_by).length ? `${E.money(sum(HELD().filter(h => !h.released_by), "value"))} still held on ${HELD().filter(h => !h.released_by).length}` : "all released"}` : "No invoice held in this period", act:HELD().length ? cnt(HELD().length, 'data-open="held"') + " invoices" : ""},
-    {k:"resp", lab:"Supplier fixes", big:esc(slow ? slow.median_response : "Unknown"), body:slow ? `Median time for ${esc(slow.owner)} to send the corrected record · ${slow.with_a_record} fixes` : "No supplier fix in this period", act:""}];
+    {k:"resp", lab:"Supplier fix time", big:esc(slow ? slow.median_response : "Unknown"), body:slow ? `Median time for ${esc(slow.owner)} to send the corrected record · ${slow.with_a_record} fixes` : "No supplier fix in this period", act:""}];
 }
 
 /* ---------- sections: each opens with a one-line summary ---------- */
@@ -703,14 +705,14 @@ function sections(){
     const fl = x.fill, tl = x.timely, ot = x.otif;
     return [
       {id:"perf", t:"Performance", s:`Fill rate ${fl.rate || "not calculated"} · on time, in full ${ot ? ot.score : "not calculated for this period"} · ship notices on time ${tl.rate || "Unknown"}`, body:perfAshby},
-      {id:"ded", t:"Deductions", s:`${E.money(m.taken)} taken in ${m.cases} cases · ${E.money(m.waived)} waived · ${E.money(m.open)} not disputed`, body:dedTable},
-      {id:"rej", t:"Rejected documents", s:rejections().length ? `${rejections().length} rejected or held · ${byKey(rejections(), "cause").slice(0, 2).map(c => `${lc(c[0])} ${c[1].length}`).join(" · ")}` : "None in this period", body:rejTable},
+      {id:"ded", t:"Deductions", s:parts([[`${E.money(m.taken)} deducted in ${m.cases} cases`, m.cases], [`${E.money(m.waived)} waived`, m.waived], [`${E.money(m.open)} not disputed`, m.open]]) || "No deduction in this period", body:dedTable},
+      {id:"rej", t:"Rejected documents", s:rejections().length ? `${rejections().length} rejected or held · ${byKey(rejections(), "cause").slice(0, 2).map(c => `${lc(cz(c[0]))} (${c[1].length})`).join(" · ")}` : "None in this period", body:rejTable},
       {id:"resp", t:"Response by team and partner", s:respSummary(), body:respTable},
       {id:"late", t:"Decided after the deadline", s:x.late.length ? x.late.map(l => `${l.record} by ${l.by.replace(" after its deadline", "")}`).join(" · ") : "None in this period", body:lateTable}];
   }
   return [
-    {id:"rank", t:"Supplier performance", s:`5 lowest fill rates of ${x.suppliers.length} suppliers: ${x.suppliers.slice().sort((a, b) => parseFloat(a.fill) - parseFloat(b.fill)).slice(0, 5).map(r => `${r.supplier} ${r.fill}`).join(" · ")}`, body:rankTable},
-    {id:"ded", t:"Deductions by supplier", s:`${E.money(m.taken)} taken in ${m.cases} cases · ${E.money(m.waived)} waived · ${E.money(m.upheld)} upheld`, body:dedTable},
+    {id:"rank", t:"Supplier performance", s:`5 lowest fill rates of ${x.suppliers.length} suppliers`, body:rankTable},
+    {id:"ded", t:"Deductions by supplier", s:parts([[`${E.money(m.taken)} deducted in ${m.cases} cases`, m.cases], [`${E.money(m.waived)} waived`, m.waived], [`${E.money(m.upheld)} upheld`, m.upheld]]) || "No deduction in this period", body:dedTable},
     {id:"rej", t:"Rejected documents by supplier", s:rejections().length ? byKey(rejections(), "owner").slice(0, 3).map(c => `${c[0]} ${c[1].length}`).join(" · ") : "None in this period", body:rejTable},
     {id:"resp", t:"Supplier response", s:respSummary(), body:respTable},
     {id:"late", t:"Decided after the deadline", s:x.late.length ? `${x.late.length} findings` : "None in this period", body:lateTable}];
@@ -722,7 +724,7 @@ function perfAshby(){
   const fl = P().fill, tl = P().timely, ot = P().otif;
   const row = (name, rate, formula, recs) => `<tr><td><b>${esc(name)}</b></td><td><b>${esc(rate || "Not calculated")}</b></td><td>${esc(formula || "")}</td><td>${recs}</td></tr>`;
   return `<div class="tw"><table class="t"><thead><tr><th>Measure</th><th>Rate</th><th>Formula</th><th>Records</th></tr></thead><tbody>
-    ${row("On time, in full", ot ? ot.score : null, ot ? `${ot.formula} cases received on time and in full, on Northfield's definition` : "Calculated by Trading Grid for this quarter only", ot ? `${cnt(ot.failing_lines, 'data-open="otif"')} failing lines · ${pgLink("p7", "Open in Performance")}` : "")}
+    ${row("On time, in full", ot ? ot.score : null, ot ? `${ot.formula} cases received on time and in full, on Northfield's definition` : "Quarter only", ot ? `${cnt(ot.failing_lines, 'data-open="otif"')} failing lines` : "")}
     ${row("Fill rate", fl.rate, fl.formula ? `${fl.formula} cases shipped against cases ordered after accepted changes` : "", `${cnt(fl.short_lines, 'data-open="short"')} lines shipped short · invoiced ${n0(fl.invoiced)}`)}
     ${row("Ship notices on time", tl.rate, tl.formula ? `${tl.formula} first sent within 1 hour of departure` : "", `${cnt(tl.late.length, 'data-open="lateasn"')} late`)}
     ${row("Deductions waived and repaid", E.money(md().waived), `${md().cases} cases · ${E.money(md().repaid)} repaid on Northfield's remittances`, cnt(DED().filter(d => d.waived).length, 'data-open="waived"'))}
@@ -735,13 +737,13 @@ function rankTable(){
 }
 function dedTable(){
   const d = DED().slice().sort((a, b) => b.taken - a.taken);
-  const st = r => r.not_disputed ? `<span class="st-amber">Not disputed · ${esc(r.window || "")}</span>` : r.pending ? "Disputed, not decided" : [r.waived ? `Waived ${E.money(r.waived)}` : "", r.upheld ? `Upheld ${E.money(r.upheld)}` : "", r.accepted ? (V.side === "ashby" ? `Accepted ${E.money(r.accepted)}` : `Stands ${E.money(r.accepted)}`) : ""].filter(Boolean).join(" · ") || (V.side === "northfield" ? "Stands" : "");
+  const st = r => r.not_disputed ? (V.side === "ashby" ? `<span class="st-amber">Not disputed · ${esc(r.window || "")}</span>` : `Stands ${E.money(r.not_disputed)}`) : r.pending ? "Disputed, not decided" : [r.waived ? `Waived ${E.money(r.waived)}` : "", r.upheld ? `Upheld ${E.money(r.upheld)}` : "", r.accepted ? (V.side === "ashby" ? `Accepted ${E.money(r.accepted)}` : `Stands ${E.money(r.accepted)}`) : ""].filter(Boolean).join(" · ") || (V.side === "northfield" ? "Stands" : "");
   return `<div class="tw"><table class="t"><thead><tr><th>Case</th>${V.side === "northfield" ? "<th>Supplier</th>" : ""}<th>Type</th><th>Taken</th><th>Outcome</th><th>Repaid</th></tr></thead><tbody>${d.map(r => `<tr><td><button class="cnt" type="button" data-case="${esc(r.case)}">${esc(r.case)}</button></td>${V.side === "northfield" ? `<td>${esc(r.supplier)}</td>` : ""}<td>${esc(r.type)}</td><td>${E.money(r.taken)}</td><td>${st(r)}</td><td>${r.repaid ? E.money(r.repaid) : "None"}</td></tr>`).join("")}</tbody></table></div>`;
 }
 function rejTable(){
   const g = byKey(rejections(), V.side === "ashby" ? "cause" : "owner");
   if (!g.length) return `<p class="meta">None in this period.</p>`;
-  return `<div class="tw"><table class="t"><thead><tr><th>${V.side === "ashby" ? "Cause" : "Supplier"}</th><th>Documents</th><th>${V.side === "ashby" ? "Where it is fixed" : "Top cause"}</th><th>Corrected</th></tr></thead><tbody>${g.map(([k, rows]) => `<tr><td><b>${esc(k)}</b></td><td>${cnt(rows.length, `data-open="rejk" data-k="${esc(k)}"`)}</td><td>${esc(V.side === "ashby" ? team(rows[0].owner) : byKey(rows, "cause")[0][0])}</td><td>${rows.filter(r => r.confirmed).length} of ${rows.length}</td></tr>`).join("")}</tbody></table></div>`;
+  return `<div class="tw"><table class="t"><thead><tr><th>${V.side === "ashby" ? "Cause" : "Supplier"}</th><th>Documents</th><th>${V.side === "ashby" ? "Where it is fixed" : "Top cause"}</th><th>Corrected</th></tr></thead><tbody>${g.map(([k, rows]) => `<tr><td><b>${esc(cz(k))}</b></td><td>${cnt(rows.length, `data-open="rejk" data-k="${esc(k)}"`)}</td><td>${esc(V.side === "ashby" ? team(rows[0].owner) : cz(byKey(rows, "cause")[0][0]))}</td><td>${rows.filter(r => r.confirmed).length} of ${rows.length}</td></tr>`).join("")}</tbody></table></div>`;
 }
 function respTable(){
   const r = (P().owner_response || []).slice().sort((a, b) => b.findings - a.findings);
@@ -759,26 +761,26 @@ function openRecords(k, el){
   if (k === "opended") return rowsDrawer("Deductions not disputed", ["Case", "Order", "Taken", "Dispute window"], md().openRows.map(r => [esc(r.case), esc(r.po), E.money(r.not_disputed), esc(r.window || "")]));
   if (k === "ded" || k === "waived") { const d = DED().filter(r => k === "ded" || r.waived); return rowsDrawer(k === "ded" ? "Deductions" : "Deductions waived and repaid", ["Case", "Type", "Taken", "Waived", "Repaid"], d.map(r => [esc(r.case), esc(r.type), E.money(r.taken), r.waived ? E.money(r.waived) : "None", r.repaid ? E.money(r.repaid) : "None"])); }
   if (k === "short") return rowsDrawer("Lines shipped short", ["Order", "Line", "Item", "Ordered", "Shipped", "Invoiced", "Short", "Why"], x.fill.lines.map(l => [esc(l.po), l.line, `<span class="mono">${esc(l.item)}</span>`, n0(l.ordered), n0(l.shipped), n0(l.invoiced), n0(l.short), esc(l.reason)]));
-  if (k === "held") return rowsDrawer("Invoices held", ["Invoice", "Order", "Value", "Why it was held", "Released by"], HELD().map(r => [esc(r.invoice), esc(r.po || ""), r.value != null ? E.money(r.value) : "Unknown", esc(r.cause), r.released_by ? esc(r.released_by) : `<span class="st-amber">Still held</span>`]));
+  if (k === "held") return rowsDrawer("Invoices held", ["Invoice", "Order", "Value", "Why it was held", "Released by"], HELD().map(r => [esc(r.invoice), esc(r.po || ""), r.value != null ? E.money(r.value) : "Unknown", esc(cz(r.cause)), r.released_by ? esc(r.released_by) : `<span class="st-amber">Still held</span>`]));
   if (k === "lateasn") return rowsDrawer("Ship notices sent late", ["Ship notice", "Order", "First sent"], x.timely.late.map(l => [esc(l.ship_notice), esc(l.po), esc(l.after_departure) + " after departure"]));
   if (k === "otif") return rowsDrawer("Failing lines by reason", ["Reason", "Lines", "Cases"], x.otif.by_reason.map(r => [esc(r.reason), r.lines, n0(r.cases)]));
   if (k === "rank") return E.openDrawer("5 lowest fill rates", rankTable());
   if (k === "supshort") { const s = x.suppliers.find(y => y.id === el.dataset.sup); return rowsDrawer(`${s.supplier}: lines shipped short`, ["Lines shipped short", "Fill rate", "Top reason"], [[s.short_lines, esc(s.fill_formula), esc(s.top_short ? `${s.top_short.reason}, ${s.top_short.lines} lines` : "")]]); }
   if (k === "rej" || k === "rejk") { const rows = rejections().filter(r => k === "rej" || (V.side === "ashby" ? r.cause : r.owner) === el.dataset.k);
-    return rowsDrawer(k === "rej" ? "Rejected documents" : el.dataset.k, ["Document", "Order", "Cause", V.side === "ashby" ? "Where it is fixed" : "Supplier", "Corrected by"], rows.map(r => [findOf(r.record) ? `<button class="cnt" type="button" data-trail="${esc(r.record)}">${esc(r.record)}</button>` : esc(r.record), esc(r.po || ""), esc(r.cause), esc(team(r.owner)), r.confirmed_by ? esc(r.confirmed_by) : `<span class="st-muted">Unknown</span>`])); }
+    return rowsDrawer(k === "rej" ? "Rejected documents" : cz(el.dataset.k), ["Document", "Order", "Cause", V.side === "ashby" ? "Where it is fixed" : "Supplier", "Corrected by"], rows.map(r => [findOf(r.record) ? `<button class="cnt" type="button" data-trail="${esc(r.record)}">${esc(r.record)}</button>` : esc(r.record), esc(r.po || ""), esc(cz(r.cause)), esc(team(r.owner)), r.confirmed_by ? esc(r.confirmed_by) : `<span class="st-muted">Unknown</span>`])); }
 }
 function openCase(id){
   const r = INS[V.side].deductions.find(d => d.case === id); if (!r) return;
   const kv = [["Order", r.po], ["Type", r.type], ["Taken", E.money(r.taken)], ["Waived", r.waived ? E.money(r.waived) : "None"], ["Upheld", r.upheld ? E.money(r.upheld) : "None"], [V.side === "ashby" ? "Accepted" : "Stands", r.accepted ? E.money(r.accepted) : "None"], ["Not disputed", r.not_disputed ? `${E.money(r.not_disputed)} · ${r.window || ""}` : "None"], ["Repaid", r.repaid ? E.money(r.repaid) : "None"]];
   if (r.reason) kv.push(["Northfield's reason", pw(r.reason)]);
-  E.openDrawer(id, `<dl class="kv">${kv.map(k => `<dt>${esc(k[0])}</dt><dd>${esc(k[1])}</dd>`).join("")}</dl><p style="margin-top:var(--space-3)">${pgLink(/^P[CD]-/.test(id) ? "p20" : "p6")}</p>`);
+  E.openDrawer(id, `<dl class="kv">${kv.map(k => `<dt>${esc(k[0])}</dt><dd>${esc(k[1])}</dd>`).join("")}</dl>`);
 }
 function openTrail(rec){
   const f = findOf(rec); if (!f) return;
   const pg = pageOf(f); const r = ruleOf(f);
-  E.openDrawer(recName(f), `<p class="vals">${esc(nd(f.problem))}</p><p class="meta">Found by ${esc(r[0].toLowerCase() === "trading grid" ? "a Trading Grid rule" : "a " + r[0] + " rule")}: ${esc(r[1])} · owner ${esc(team(f.owner))}</p>
+  E.openDrawer(recName(f), `<p class="vals">${esc(nd(f.problem))}</p><p class="meta">Rule: ${esc(r[0])} · ${esc(r[1])} · owner ${esc(team(f.owner))}</p>
   <ol class="trail">${f.acts.map(a => `<li class="done"><div class="mk" aria-hidden="true"></div><span class="tm">${esc(wk(a.t))}</span><div><span class="sg">${esc(a.s)}</span> · ${esc(team(a.actor))}${a.dec ? " · " + esc(a.dec) : ""}<div class="x">${esc(a.rec)} <span class="tag" style="cursor:default;text-decoration:none">${esc(kindTag(a.kind))}</span></div>${a.d ? `<div class="z" style="color:var(--text-muted);font-size:var(--ui-fs-small)">${esc(a.d)}</div>` : ""}</div></li>`).join("")}</ol>
-  ${pg ? `<p style="margin-top:var(--space-2)">${pgLink(pg)}</p>` : ""}`);
+  `);
 }
 
 /* ---------- page ---------- */
@@ -818,7 +820,7 @@ const isOpen = id => V.open[V.side + id] != null ? V.open[V.side + id] : !!DEF_O
 E.page = {
   renderCustom(){
     const T = tiles(), SX = sections();
-    $("#custom").innerHTML = `<div class="ins-top"><span class="meta">${V.side === "ashby" ? "Ashby's trading with Northfield · Northfield's payables and review notes: Not available to Ashby" : "Northfield's trading with its suppliers · suppliers' ERP, warehouse and carrier records: Not available to Northfield"}</span>
+    $("#custom").innerHTML = `<div class="ins-top"><span></span>
       <div class="seg" role="group" aria-label="Period">${PERIODS.map(p => `<button type="button" data-per="${p[0]}" aria-pressed="${V.per === p[0]}">${esc(p[1])}</button>`).join("")}</div></div>
       <div class="tiles">${T.map(t => `<section class="card tile ${t.tone || ""}" aria-label="${esc(t.lab)}"><span class="lab">${esc(t.lab)}</span><div class="big">${t.big}</div><p>${t.body}</p>${t.act ? `<div class="act">${t.act}</div>` : ""}</section>`).join("")}</div>
       ${SX.map(s => { const o = isOpen(s.id); return `<section class="card sec" aria-label="${esc(s.t)}"><button class="sh" type="button" data-sec="${s.id}" aria-expanded="${o}"><span class="t">${esc(s.t)}</span><span class="s">${esc(s.s)}</span><span class="o">${o ? "Hide" : "Show"}</span></button><div class="sb ${o ? "" : "shut"}"><div><div>${o ? s.body() : ""}</div></div></div></section>`; }).join("")}`;
@@ -851,7 +853,7 @@ E.page = {
       {id:"n1", at:0, q:"Which suppliers ship the fewest cases they were ordered?"},
       {id:"n2", at:0, q:"What money moved because of findings?"}]}; }
 };
-function head(){ E.setHead(titleText(), `Calculated by Trading Grid from the documents both companies exchanged and each one's own records, ${perName()}. The page writes nothing.`, V.side === "ashby" ? "Show where trading with Northfield loses money and service, and who fixes it." : "Show where supplier trading loses money and service, and who fixes it."); }
+function head(){ E.setHead(titleText(), "Calculated by Trading Grid from shared documents and each company's own records.", V.side === "ashby" ? "Where trading with Northfield loses money and service, and who fixes it" : "Where supplier trading loses money and service, and who fixes it"); }
 function ws(){
   document.querySelectorAll("[data-ws]").forEach(b => b.setAttribute("aria-pressed", b.dataset.ws === V.side));
   $("#wslabel").textContent = V.side === "ashby" ? "Ashby Supplier · Operations" : "Northfield Retailer · Supplier operations";

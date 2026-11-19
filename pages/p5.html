@@ -243,7 +243,10 @@ span.now{color:var(--text-heading);font-weight:600}
 .fx td.nw{white-space:nowrap}
 .fx tr.ok td{background:var(--surface-subtle)}
 .fx .by{font-size:var(--ui-fs-small);color:var(--text-muted)}
-.btn2.sm{height:30px;padding:0 var(--space-3);font-size:var(--ui-fs-small)}
+.btn.sm{height:auto;padding:6px 12px;font-size:14px;line-height:1;font-weight:700;white-space:nowrap}
+.fx td.ac{width:132px}
+.fx td.ac .by{display:block}
+.fx td.ac .lnk{margin-top:2px;padding:0}
 </style>
 </head>
 <body>
@@ -586,35 +589,33 @@ document.getElementById("who").textContent = "Priya Raman";
 document.querySelector(".pagehead").insertAdjacentHTML("beforeend", `<div class="tiles" id="tiles" aria-label="Shipment check"></div>`);
 const S = E.S;
 /* one flag per finding: each button changes only its own finding and its own charge */
-const F = S.f = {dmg:false, c207load:false, c207ship:false, dep:false, rel207:"held", rcv207:false, c219:false, c262:false, c233:false, rr:"open", rrAt:null, rr997:false, nrl:false};
+const F = S.f = {dmg:false, c207load:false, c207ship:false, dep:false, rel207:"held", rcv207:false, c219:false, c262:false, c233:false};
 
 /* history before the moment, source time order */
 [[T(-4,9,0),"Purchase order NR-460207 received · 660 cases to DC 4","Northfield","850:NR-460207"],
- [T(-1,11,0),"Purchase order NR-460241 received · 220 cases","Northfield","850:NR-460241"],
  [T(-1,14,0),"Order change 1 on NR-460207 · ship-to DC 4 to DC 2","Northfield","860:NR-460207 Change 1"],
  [T(0,14,50),"Shipment quantity for NR-460219 · line 2: 176 of 180 allocated to ship","Supplier ERP","ERP-QTY-219"],
  [T(0,15,12),"Invoice draft INV-8012 · line 2 bills 180 · 176 allocated to ship","Supplier ERP","ERP-INV-8012"],
- [T(0,16,12),"Routing check on NR-460241 · no routing request","Rule"],
  [T(0,16,30),"Label scan on NR-460233 · 12 SSCCs used before","Kinross","LBL-233"],
  [T(0,16,42),"Inventory read at Kinross Groveport · 610 cases free","Kinross","INV-GRV"],
  [T(0,16,48),"Load scan on NR-460207 · 659 of 660 cartons","Kinross","SCAN-207-1"],
- [T(0,17,12),"Shipment check · 123 open orders read · 5 break a Northfield rule","Rule"]
+ [T(0,17,12),"Shipment check · 123 open orders read · 4 break a Northfield rule","Rule"]
 ].forEach(h => E.hist(h[0], h[1], h[2], h[3]));
 
 /* charges from Northfield's charge schedule, per finding */
-const CH = {load:104 + 151, ship:150, inv:100, rr:150, fill:48.6, sscc:162};
+const CH = {load:104 + 151, ship:150, inv:100, fill:48.6, sscc:162};
 const charge = id => ({
   "NR-460207":(F.c207load ? 0 : CH.load) + (F.c207ship ? 0 : CH.ship),
-  "NR-460219":F.c219 ? 0 : CH.inv, "NR-460241":F.rr === "sent" ? 0 : CH.rr,
+  "NR-460219":F.c219 ? 0 : CH.inv,
   "NR-460262":F.c262 ? 0 : CH.fill, "NR-460233":F.c233 ? 0 : CH.sscc})[id];
-const FULL = {"NR-460207":CH.load + CH.ship, "NR-460219":CH.inv, "NR-460241":CH.rr, "NR-460262":CH.fill, "NR-460233":CH.sscc};
-const CARRY = {"NR-460207":"receiving advice, remittance, Northfield's charge invoice", "NR-460219":"invoice held, Northfield's charge invoice", "NR-460241":"remittance, Northfield's charge invoice", "NR-460262":"quarterly fill-rate charge", "NR-460233":"remittance, Northfield's charge invoice"};
-const ORDER = ["NR-460207","NR-460219","NR-460241","NR-460262","NR-460233"];
+const FULL = {"NR-460207":CH.load + CH.ship, "NR-460219":CH.inv, "NR-460262":CH.fill, "NR-460233":CH.sscc};
+const CARRY = {"NR-460207":"receiving advice, remittance, Northfield's charge invoice", "NR-460219":"invoice held, Northfield's charge invoice", "NR-460262":"quarterly fill-rate charge", "NR-460233":"remittance, Northfield's charge invoice"};
+const ORDER = ["NR-460207","NR-460219","NR-460262","NR-460233"];
 const total = () => ORDER.reduce((s, id) => s + charge(id), 0);
-const done = id => ({"NR-460207":F.rel207 === "sent", "NR-460219":F.c219, "NR-460241":F.rr === "sent", "NR-460262":F.c262, "NR-460233":F.c233})[id];
+const done = id => ({"NR-460207":F.rel207 === "sent", "NR-460219":F.c219, "NR-460262":F.c262, "NR-460233":F.c233})[id];
 const openN = () => ORDER.filter(id => !done(id)).length;
 
-const DL = {"NR-460207":T(0,17,52), "NR-460219":T(0,18,0), "NR-460241":T(1,10,0), "NR-460262":T(1,13,30), "NR-460233":T(1,15,18)};
+const DL = {"NR-460207":T(0,17,52), "NR-460219":T(0,18,0), "NR-460262":T(1,13,30), "NR-460233":T(1,15,18)};
 const left = id => E.dur(DL[id] - S.clock);
 const strike = (a, b) => `<s class="was">${a}</s> <span class="now">${b}</span>`;
 
@@ -622,7 +623,6 @@ function chip(id){
   switch(id){
     case "NR-460207": return F.rcv207 ? ["Received at DC 2","brand"] : F.rel207 === "sent" ? ["Ship notice sent",""] : F.dep ? ["Ready for review","amber"] : F.c207load && F.c207ship ? ["Waiting on departure",""] : F.dmg && !F.c207load ? ["Carton crushed","red"] : !F.c207load ? ["Carton not loaded","red"] : ["Ship-to wrong","red"];
     case "NR-460219": return F.c219 ? ["Fix confirmed","brand"] : ["Invoice overbills","red"];
-    case "NR-460241": return F.nrl ? ["Pickup routed",""] : F.rr === "sent" ? ["Awaiting instructions",""] : ["Ready for review","amber"];
     case "NR-460262": return F.c262 ? ["Fix confirmed","brand"] : ["30 cases short","red"];
     case "NR-460233": return F.c233 ? ["Fix confirmed","brand"] : ["SSCCs reused","red"];
   }
@@ -631,14 +631,12 @@ function deadline(id){
   if (done(id)) return null;
   if (id === "NR-460207") { if (F.dep) return ["Ship notice due in " + E.dur(T(0,19,0) - S.clock), ""]; return S.clock < DL[id] ? ["Trailer seals in " + left(id), "red"] : null; }
   if (id === "NR-460219") return S.clock < DL[id] ? ["Invoice batch in " + left(id), ""] : null;
-  if (id === "NR-460241") return S.clock < DL[id] ? ["Routing request due in " + left(id), ""] : null;
   if (id === "NR-460262") return S.clock < DL[id] ? ["Change cutoff in " + left(id), ""] : null;
   if (id === "NR-460233") return S.clock < DL[id] ? ["Loading starts in " + left(id), ""] : null;
 }
 const LINE = {
   "NR-460207":() => F.rcv207 ? "660 of 660 received at DC 2" : `Load ${F.c207load ? "660" : "659"} of 660 · ship-to ${F.c207ship ? "DC 2" : "DC 4, order says DC 2"}`,
   "NR-460219":() => F.c219 ? "Invoice line 2 bills 176 cases" : "Invoice line 2 bills 180 · 176 allocated to ship",
-  "NR-460241":() => F.nrl ? "Lakeline Freight pickup 15:00 to 17:00 Thursday" : F.rr === "sent" ? "Routing request sent · awaiting instructions" : "Collect freight · 220 cases · routing request Missing",
   "NR-460262":() => F.c262 ? "Order cut to 270 cases" : "Groveport 610 free · 640 ordered on 3 orders · 30 short",
   "NR-460233":() => F.c233 ? "0 of 96 cartons carry used SSCCs" : "12 of 96 cartons carry SSCCs already used"
 };
@@ -651,7 +649,7 @@ const ruleList = keys => keys.map(k => `<p>${esc(R[k].text)} <span class="k">· 
 const readList = docs => `<p class="k">Records read</p>` + docs.map(d => `<p><button class="tag" type="button" data-doc="${esc(d)}">${esc(W.docs[d].name + (W.docs[d].ref ? " " + W.docs[d].ref : ""))}</button> <span class="k">· ${esc(W.docs[d].iface)}</span></p>`).join("");
 const whoList = rows => `<p class="k" style="margin-top:6px">Who did what</p>` + E.who3(rows);
 /* owner fixes: what is wrong, owner, where to fix, charge, and Priya's Confirm fix */
-const fixTable = rows => `<table class="ow fx"><thead><tr><th>What is wrong</th><th>Owner</th><th>Where to fix</th><th>Charge</th><th></th></tr></thead><tbody>${rows.map(r => `<tr${r.ok ? ' class="ok enter"' : ""}><td>${r.what}</td><td>${esc(r.owner)}</td><td>${esc(r.where)}</td><td class="nw">${r.ok ? strike(money(r.charge), money(0)) : money(r.charge)}</td><td class="nw">${r.ok ? `<span class="by">Confirmed by Priya Raman</span>` : `<button class="btn2 sm" type="button" data-act="${esc(r.act)}" ${S.busy ? 'aria-disabled="true"' : ""}>Confirm fix</button>`}</td></tr>`).join("")}</tbody></table>`;
+const fixTable = rows => `<table class="ow fx"><thead><tr><th>What is wrong</th><th>Owner</th><th>Where to fix</th><th>Charge</th><th></th></tr></thead><tbody>${rows.map(r => `<tr${r.ok ? ' class="ok enter"' : ""}><td>${r.what}</td><td>${esc(r.owner)}</td><td>${esc(r.where)}</td><td class="nw">${r.ok ? strike(money(r.charge), money(0)) : money(r.charge)}</td><td class="ac">${r.ok ? `<span class="by">Confirmed by Priya Raman</span>${r.undo ? `<button class="lnk" type="button" data-act="u:${esc(r.act)}" ${S.busy ? 'aria-disabled="true"' : ""}>Undo</button>` : ""}` : `<button class="btn sm" type="button" data-act="${esc(r.act)}" ${S.busy ? 'aria-disabled="true"' : ""}>Confirm fix</button>`}</td></tr>`).join("")}</tbody></table>`;
 const cash = id => { const now = charge(id); return `<div class="cash"><div class="cc${now ? " on" : ""}"><span>Not fixed</span><b>${money(FULL[id])}</b><em>${esc(CARRY[id])}</em></div><div class="cc${now ? "" : " on"}"><span>Fixed</span><b>${money(0)}</b></div><div class="cc"><span>At stake now</span><b>${money(now)}</b></div></div>`; };
 
 function rec207(){
@@ -667,9 +665,9 @@ function rec207(){
     const both = F.c207load && F.c207ship;
     stages.push({key:"fix", state:"now", title:both ? "Wait for departure" : "Fix the load and ship-to", chip:both ? ["Waiting on departure",""] : ["Owner fixes","red"],
       body:fixTable([
-        {act:"c207load", ok:F.c207load, charge:CH.load, owner:"Kinross", where:F.dmg ? "Replacement case at Kinross" : "Kinross loading",
+        {act:"c207load", ok:F.c207load, undo:true, charge:CH.load, owner:"Kinross", where:F.dmg ? "Replacement case at Kinross" : "Kinross loading",
          what:F.c207load ? `Load · ${strike("659 of 660", "660 of 660")}` : `Carton <span class="mono">006141410006005172</span> · ${F.dmg ? "Crushed" : "Staged"}`},
-        {act:"c207ship", ok:F.c207ship, charge:CH.ship, owner:"Ashby order desk", where:"Supplier ERP",
+        {act:"c207ship", ok:F.c207ship, undo:true, charge:CH.ship, owner:"Ashby order desk", where:"Supplier ERP",
          what:F.c207ship ? `Ship-to · ${strike("DC 4", "DC 2")}` : `Ship-to on the sales order · DC 4, should be DC 2`}])
         + `<p class="desc">${both ? "The ship notice waits for the departure scan." : F.c207load ? "Supplier ERP still reads DC 4." : F.dmg ? "The order ships 659 of 660 unless Kinross loads a replacement case." : "Not loaded before the seal: the order ships 659 of 660 cartons."}</p>` + cash("NR-460207"),
       details:ruleList(["carton","shipto","shortage"]) + readList(reads) + whoList([["Found by","Rule · Northfield guide"],["Load fixed by","Kinross"],["Ship-to fixed by","Ashby order desk"],["Fixes confirmed by","Priya Raman"]])});
@@ -692,17 +690,15 @@ function rec207(){
 /* one owner fix: the card before and after Confirm fix */
 function single(id, o){
   const stages = [];
-  if (!o.ok) stages.push({key:"fix", state:"now", title:o.title, chip:["Owner fixes","red"],
-    body:fixTable([{act:o.act, ok:false, charge:FULL[id], owner:o.owner, where:o.where, what:o.what}]) + (o.desc ? `<p class="desc">${o.desc}</p>` : "") + cash(id) + (o.extra || ""),
-    details:ruleList(o.rules) + readList(o.reads) + whoList([["Found by","Rule · Northfield guide"],["Fixed by",o.owner],["Fix confirmed by","Priya Raman"]])});
-  else stages.push({key:"fix", state:"done", summary:o.doneText, sub:"Confirmed by Priya Raman · charge at stake " + money(0) + ", was " + money(FULL[id]),
-    detailsDone:readList(o.reads.concat(o.after)) + whoList([["Fixed by",o.owner],["Fix confirmed by","Priya Raman"]])});
+  stages.push({key:"fix", state:"now", title:o.ok ? o.doneText : o.title, chip:o.ok ? ["Fix confirmed","brand"] : ["Owner fixes","red"],
+    body:fixTable([{act:o.act, ok:o.ok, undo:true, charge:FULL[id], owner:o.owner, where:o.where, what:o.ok ? o.whatAfter : o.what}]) + (!o.ok && o.desc ? `<p class="desc">${o.desc}</p>` : "") + cash(id) + (!o.ok && o.extra ? o.extra : ""),
+    details:ruleList(o.rules) + readList(o.ok ? o.reads.concat(o.after) : o.reads) + whoList([["Found by","Rule · Northfield guide"],["Fixed by",o.owner],["Fix confirmed by","Priya Raman"]])});
   stages.push({key:"next", state:"next", title:o.next});
   return {title:id, chip:chip(id), deadline:deadline(id), meta:o.meta, wrongLabel:o.ok ? "Records" : "What is wrong", wrong:[o.ok ? o.wrongAfter : o.wrongBefore], stages};
 }
 const rec219 = () => single("NR-460219", {ok:F.c219, act:"c219", title:"Correct the invoice", owner:"Ashby billing", where:"Supplier ERP, before the invoice batch",
   what:"Invoice draft INV-8012 · line 2 · 180 cases, 176 allocated to ship", rules:["invoice"], reads:["ERP-QTY-219","ERP-INV-8012"], after:["810:INV-8012"],
-  doneText:"Ashby billing corrected line 2 to 176 cases", next:"Invoice goes in the 18:00 batch",
+  doneText:"Ashby billing corrected line 2", whatAfter:`Invoice draft INV-8012 · line 2 · ${strike("180", "176")} cases`, next:"Invoice goes in the 18:00 batch",
   meta:"Northfield Retailer · Kinross Groveport to DC 2 · 2 lines · $11,772.00",
   wrongBefore:{v:`<b>Invoice draft</b> · INV-8012 line 2 bills 180 cases · 176 allocated to ship · <span class="st-red">${money(153.6)} over</span>`, tags:[["Supplier ERP · API","ERP-INV-8012"]]},
   wrongAfter:{v:`<b>Invoice</b> · INV-8012 line 2 bills ${strike("180", "176")} cases · ${money(11618.4)}`, tags:[["EDI 810","810:INV-8012"]]}});
@@ -710,40 +706,26 @@ const rec262 = () => single("NR-460262", {ok:F.c262, act:"c262", title:"Decide t
   what:"ASH-MUG-12 at Kinross Groveport · 610 free, 640 ordered · 30 short", rules:["backorder","fill"], reads:["INV-GRV"], after:["860:NR-460262 Change 1"],
   desc:"3 orders share the stock.",
   extra:`<table class="ow"><thead><tr><th>Order</th><th>Ordered</th></tr></thead><tbody><tr><td>NR-460262</td><td>300 cases</td></tr><tr><td>NR-460274</td><td>300 cases</td></tr><tr><td>NR-46620</td><td>40 cases</td></tr></tbody></table>`,
-  doneText:"NR-460262 cut to 270 cases", next:"Northfield receives at DC 2",
+  doneText:"NR-460262 cut to 270 cases", whatAfter:`NR-460262 line 1 · ${strike("300", "270")} cases`, next:"Northfield receives at DC 2",
   meta:"Northfield Retailer · Kinross Groveport to DC 2 · ASH-MUG-12",
   wrongBefore:{v:`<b>Stock</b> · Kinross Groveport 610 cases free · 640 ordered on 3 orders · <span class="st-red">30 short</span>`, tags:[["Kinross inventory · API","INV-GRV"]]},
   wrongAfter:{v:`<b>Order</b> · line 1 ${strike("300", "270")} cases · nothing short`, tags:[["EDI 860","860:NR-460262 Change 1"]]}});
 const rec233 = () => single("NR-460233", {ok:F.c233, act:"c233", title:"Relabel cartons", owner:"Kinross", where:"Kinross labelling",
   what:"12 of 96 cartons · SSCCs first used on NR-449512", rules:["sscc"], reads:["LBL-233"], after:["856:ASN-460233"],
-  doneText:"Kinross relabelled the 12 cartons", next:"Northfield receives at DC 2",
+  doneText:"Kinross relabelled the cartons", whatAfter:`Cartons with used SSCCs · ${strike("12 of 96", "0 of 96")}`, next:"Northfield receives at DC 2",
   meta:"Northfield Retailer · Kinross Joliet to DC 2 · 96 cartons ASH-HNY-340",
   wrongBefore:{v:`<b>Labels</b> · <span class="st-red">12 of 96</span> cartons carry SSCCs already used`, tags:[["Kinross scan · API","LBL-233"]]},
   wrongAfter:{v:`<b>Labels</b> · ${strike("12 of 96", "0 of 96")} cartons carry SSCCs already used`, tags:[["EDI 856","856:ASN-460233"]]}});
-function rec241(){
-  const stages = [];
-  const act = {id:"rr", button:"Send routing request", rows:[{action:"Send routing request", now:"Missing", after:"Sent", goesTo:"Northfield", via:"EDI 753"}],
-    says:"Sends a routing request to Northfield for 220 cases from Kinross Joliet to DC 2.", nodecision:"No request by Wednesday 10:00: Northfield charges $150.", ruleTag:"Routing request rule"};
-  if (F.rr === "sent") stages.push({key:"rr", state:"done", summary:"Routing request RR-460241 sent to Northfield", sub:(F.rr997 ? "Sent by Priya Raman · technically acknowledged" : "Sent by Priya Raman") + " · charge at stake " + money(0), detailsDone:readList(F.rr997 ? ["753:RR-460241","997:FA-NS350000001"] : ["753:RR-460241"]) + whoList([["Recommended by","Rule · Northfield guide"],["Sent by","Priya Raman"],["Carried by","Trading Grid"]])});
-  else stages.push({key:"rr", state:"now", title:"Send routing request", chip:["Ready for review","amber"], amber:true,
-    body:`<p class="vals">220 cases · Kinross Joliet to DC 2 · collect freight</p>` + E.nowAfter(act) + `<p class="reason"><b>Reason.</b> Freight from Kinross Joliet is collect this peak, so Northfield routes the load from a routing request.</p>` + cash("NR-460241") + E.decision(act),
-    details:ruleList(["routing","approve"]) + readList(["850:NR-460241","FT-JOL"]) + whoList([["Recommended by","Rule · Northfield guide"],["Sent by","Priya Raman, on Send routing request"],["Carried by","Trading Grid"]])});
-  if (F.nrl) stages.push({key:"ri", state:"done", summary:"Northfield routed the pickup · Lakeline Freight", sub:"15:00 to 17:00 Thursday · NRL-460241", detailsDone:readList(["754:NRL-460241","997:FA-AS350000005"])});
-  else if (F.rr === "sent") stages.push({key:"ri", state:"now", title:"Routing instructions", chip:["Awaiting Northfield",""], body:`<p class="vals">Ready 15:00 Thursday · weight 3,410</p>`});
-  else stages.push({key:"ri", state:"next", title:"Routing instructions from Northfield"});
-  return {title:"NR-460241", chip:chip("NR-460241"), deadline:deadline("NR-460241"), meta:"Northfield Retailer · Kinross Joliet to DC 2 · 220 cases · collect freight",
-    wrong:[{v:`<b>Routing request</b> · collect freight, 220 cases · ${F.rr === "sent" ? strike("Missing", "Sent") : '<span class="st-red">Missing</span>'}`, tags:[["Supplier ERP","FT-JOL"],["EDI 850","850:NR-460241"]]}].concat(F.nrl ? [{v:`<b>Routing instructions</b> · Lakeline Freight · pickup 15:00 to 17:00 Thursday`, tags:[["EDI 754","754:NRL-460241"]]}] : []), wrongLabel:F.rr === "sent" ? "Records" : "What is wrong", stages};
-}
-const REC = {"NR-460207":rec207, "NR-460219":rec219, "NR-460241":rec241, "NR-460262":rec262, "NR-460233":rec233};
+const REC = {"NR-460207":rec207, "NR-460219":rec219, "NR-460262":rec262, "NR-460233":rec233};
 const RULES_FOR = {"NR-460207":[["carton","659 of 660 loaded"],["shipto","Supplier ERP shows DC 4; order change says DC 2"],["shortage","1 carton short if it ships"],["release","Release stays with Priya Raman"],["asn1h","Due within 1 hour of departure"]],
-  "NR-460219":[["invoice","Line 2 bills 180; 176 allocated to ship"]], "NR-460241":[["routing","No routing request on collect freight"],["approve","Priya Raman sends it"]],
+  "NR-460219":[["invoice","Line 2 bills 180; 176 allocated to ship"]],
   "NR-460262":[["backorder","30 cases short across 3 orders"],["fill","Line ships 30 short"]], "NR-460233":[["sscc","12 SSCCs first used on NR-449512"]]};
 
 /* ---------- header: title, tiles and total follow the findings ---------- */
 function head(){
   const n = openN(), t = total();
   E.setHead(n ? `${n} Northfield ${n === 1 ? "shipment breaks" : "shipments break"} a rule before ${n === 1 ? "it leaves" : "they leave"} Kinross. ${money(t)} in charges at stake.` : `Every flagged Northfield shipment is fixed or sent. ${money(t)} in charges at stake.`);
-  document.getElementById("tiles").innerHTML = [["Orders checked","123"],["Clear",String(118 + 5 - n)],["Need attention",String(n)],["Charges at stake",money(t)]]
+  document.getElementById("tiles").innerHTML = [["Orders checked","123"],["Clear",String(119 + 4 - n)],["Need attention",String(n)],["Charges at stake",money(t)]]
     .map((x, i) => `<div class="tile${i === 3 ? " money" : ""}"><span>${x[0]}</span><b>${x[1]}</b></div>`).join("");
 }
 
@@ -769,7 +751,7 @@ E.buildMap({w:1100, h:166,
 function mapState(){
   E.setRec("erp", F.c207ship ? "Sales order NR-460207 · DC 2" : "Sales order NR-460207 · DC 4");
   E.setRec("kin", F.dep ? "NR-460207 · departed 18:00" : F.c207load ? "NR-460207 · 660 of 660" : F.dmg ? "NR-460207 · carton crushed" : "NR-460207 · 659 of 660");
-  E.setRec("nf", F.rcv207 ? "Receiving advice · 660 at DC 2" : F.rel207 === "sent" ? "Ship notice ASN-460207" : F.nrl ? "Routing instructions · NR-460241" : F.rr === "sent" ? "Routing request · NR-460241" : "Order change · ship-to DC 2");
+  E.setRec("nf", F.rcv207 ? "Receiving advice · 660 at DC 2" : F.rel207 === "sent" ? "Ship notice ASN-460207" : "Order change · ship-to DC 2");
   const n = openN();
   E.status(n ? n + (n === 1 ? " shipment" : " shipments") + " with a finding" : "No open findings");
 }
@@ -778,15 +760,23 @@ function mapState(){
 function advance(t){
   if (t > S.clock) S.clock = t;
   if (!F.dmg && S.clock >= T(0,17,21)) { F.dmg = true; E.hist(T(0,17,21), "Damage scan on NR-460207 · carton 006141410006005172 crushed", "Kinross", "DMG-207"); }
-  if (F.rr === "sent" && !F.rr997 && S.clock >= F.rrAt + 6) { F.rr997 = true; E.hist(F.rrAt + 6, "Technical acknowledgment FA-NS350000001 for RR-460241", "Northfield", "997:FA-NS350000001"); }
-  const nrlAt = F.rrAt == null ? null : Math.max(T(0,19,5), F.rrAt + 106);
-  if (F.rr === "sent" && !F.nrl && S.clock >= nrlAt) { F.nrl = true; E.hist(nrlAt, "Routing instructions NRL-460241 · Lakeline Freight pickup 15:00 to 17:00 Thursday", "Northfield", "754:NRL-460241"); E.hist(nrlAt + 7, "Technical acknowledgment FA-AS350000005 for NRL-460241", "Ashby", "997:FA-AS350000005"); }
 }
 const step = (t, fn, text) => { advance(t); fn(); E.event(text); E.render(); };
 
 /* Confirm fix: Priya records that the owner fixed it in its own system; Trading Grid sends nothing to the owner */
+const UNDO = {c207load:["c207load","SCAN-207-2","Load fix on NR-460207"], c207ship:["c207ship","ERP-COR-207","Ship-to fix on NR-460207"], c219:["c219",null,"Invoice fix on NR-460219"], c262:["c262",null,"Short-order fix on NR-460262"], c233:["c233",null,"Relabel fix on NR-460233"]};
+function undo(id){
+  const u = UNDO[id]; if (!u || !F[u[0]] || (F.dep && id.startsWith("c207"))) return;
+  F[u[0]] = false;
+  S.hist = S.hist.filter(h => !(u[1] && h.doc === u[1]) && !h.text.startsWith(u[2]));
+  E.hist(S.clock, u[2] + " withdrawn by Priya Raman", "Person");
+  E.event(u[2].replace(" on ", " on ") + " withdrawn. " + money(id === "c207load" ? CH.load : id === "c207ship" ? CH.ship : FULL[{c219:"NR-460219", c262:"NR-460262", c233:"NR-460233"}[id]]) + " back at stake.");
+  E.render(); E.say("Fix withdrawn.");
+}
 async function act(id){
-  if (S.busy) return; S.busy = true; E.renderRec();
+  if (S.busy) return;
+  if (id.startsWith("u:")) { undo(id.slice(2)); return; }
+  S.busy = true; E.renderRec();
   try {
     if (id === "c207load") {
       if (!F.dmg) advance(T(0,17,21));
@@ -819,18 +809,6 @@ async function act(id){
 
 /* sends: Priya presses the outcome button and Trading Grid carries the document; only that record's own records follow */
 async function approve(id){
-  if (id === "rr") {
-    const t = Math.max(S.clock + 1, T(0,17,19));
-    E.light("dx", true, "Routing request · EDI 753");
-    await E.travel("nf", "Routing request");
-    step(t, () => { F.rr = "sent"; F.rrAt = t; E.hist(t, "Routing request RR-460241 for NR-460241 sent to Northfield by Priya Raman", "Trading Grid", "753:RR-460241"); }, "Routing request RR-460241 sent to Northfield. " + money(CH.rr) + " no longer at stake.");
-    E.say("Routing request sent to Northfield.");
-    await E.wait(500);
-    await E.travel("nf", "Technical acknowledgment", true);
-    step(t + 6, () => {}, "Northfield technically acknowledged routing request RR-460241.");
-    E.light("dx", false, "");
-    return;
-  }
   if (id === "rel207") {
     const t = Math.max(S.clock, T(0,18,6));
     E.light("dx", true, "Ship notice · EDI 856");

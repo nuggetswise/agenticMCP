@@ -95,3 +95,8 @@ The rule catalogue (`world/ref.js`) marks each rule public, adapted or invented 
 - Limits: 20 Aviator questions a minute per address, no daily per-address limit, a model cap of 3,000 calls a day, and a forbidden (403) key also moves to the secondary route.
 - Retired docs moved to `docs/archive/` (see its README). The guide scripts are deleted and the build gate reads no doc.
 - P22, P23 and P24 are registered in `pages/pages.json`.
+
+### 0.4.7
+
+- Aviator's instruction names the action each side's ordinary requests call for (for Ashby, a rejected invoice is answered with the technical acknowledgment and the corrected invoice), and says never to answer a request to act with an explanation alone. Live on 0.4.6, Gemini explained instead of proposing for Ashby's "fix the invoice".
+- `scripts/live-proof.mjs` proves the per-minute limit over one kept-alive connection, because this workspace leaves through a large pool of rotating egress addresses (70 distinct in 150 requests).

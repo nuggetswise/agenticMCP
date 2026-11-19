@@ -1,0 +1,1020 @@
+{
+ "health": {
+  "status": "ok",
+  "version": "0.4.6",
+  "writes": true,
+  "connections": [
+   "ashby-assistant",
+   "northfield-assistant"
+  ],
+  "aviator": true,
+  "model_routes": [
+   "primary · gemini-3.5-flash-lite",
+   "secondary · gemini-3.8-flash"
+  ]
+ },
+ "rows": [
+  {
+   "request": "Reject INV-7731 and tell Ashby they billed more cases than received",
+   "side": "northfield",
+   "token": "p14-iX-L7USIYgkd",
+   "answer_from": "model",
+   "outcome": "Card: send_application_advice",
+   "sends": "TED*QTY*They billed more cases than received*IT1**2**300 · NTE*GEN*Invoice quantity above accepted quantity · NTE*GEN*270 shipped on line 1; held value $1,620.00 · TED*QTY*They billed more cases than received*IT1**2**120 · NTE*GEN*Invoice quantity above accepted quantity · NTE*GEN*119 received on line 2; held value $38.40",
+   "answer": "Jordan Ellis can approve the action card to send application advice AA-INV-7731-S to Ashby Supplier for invoice INV-7731 on purchase order NR-450118. The card rejects invoice INV-7731 under Northfield's matching rule because line 1 bills 300 cases against 270 shipped and received, and line 2 bills 120 cases against 119 received. The message in the application advice reads word for word: They billed more cases than received. Nothing happens until Jordan Ellis presses Approve.",
+   "expected": "A: 824 card; the words in TED02 of each error they concern, rule cause in a note; Gemini gives the message word for word",
+   "result": "Passed",
+   "card": {
+    "id": "AC-f099975836",
+    "action": "send_application_advice",
+    "label": "Reject a document with an application advice (824)",
+    "to": "Ashby Supplier",
+    "record": "AA-INV-7731-S",
+    "po": "NR-450118",
+    "lines": [
+     {
+      "line": 1,
+      "problem": "Invoice quantity above accepted quantity",
+      "billed": 300,
+      "shipped": 270,
+      "received": 270,
+      "amount_held": 1620,
+      "message": "They billed more cases than received"
+     },
+     {
+      "line": 2,
+      "problem": "Invoice quantity above accepted quantity",
+      "billed": 120,
+      "shipped": 120,
+      "received": 119,
+      "amount_held": 38.4,
+      "message": "They billed more cases than received"
+     }
+    ],
+    "detail": {
+     "rejects": "INV-7731",
+     "document_kind": "invoice",
+     "po": "NR-450118",
+     "lines": [
+      {
+       "line": 1,
+       "problem": "Invoice quantity above accepted quantity",
+       "billed": 300,
+       "shipped": 270,
+       "received": 270,
+       "amount_held": 1620,
+       "message": "They billed more cases than received"
+      },
+      {
+       "line": 2,
+       "problem": "Invoice quantity above accepted quantity",
+       "billed": 120,
+       "shipped": 120,
+       "received": 119,
+       "amount_held": 38.4,
+       "message": "They billed more cases than received"
+      }
+     ]
+    },
+    "rule": {
+     "owner": "Northfield",
+     "text": "The invoice bills the shipped quantity at the accepted PO price; an invoice that bills more is held"
+    },
+    "message": {
+     "text": "They billed more cases than received",
+     "in": "TED02",
+     "lines": [
+      1,
+      2
+     ]
+    },
+    "approver": "Jordan Ellis",
+    "buttons": [
+     "Approve",
+     "Cancel"
+    ],
+    "state": "Open",
+    "x12": "TED*QTY*They billed more cases than received*IT1**2**300~NTE*GEN*Invoice quantity above accepted quantity~NTE*GEN*270 shipped on line 1; held value $1,620.00~TED*QTY*They billed more cases than received*IT1**2**120~NTE*GEN*Invoice quantity above accepted quantity~NTE*GEN*119 received on line 2; held value $38.40"
+   }
+  },
+  {
+   "request": "Reject INV-7790 and tell Ashby line 3 is overbilled",
+   "side": "northfield",
+   "token": "p14-iX-L7USIYgkd",
+   "answer_from": "model",
+   "outcome": "Card: send_application_advice (line 3 refused; line 1 offered)",
+   "sends": "TED*QTY*Invoice quantity above accepted quantity*IT1**2**264 · NTE*GEN*240 shipped on line 1; held value $1,296.00",
+   "answer": "The rules found the error on line 1, not line 3, so the card is for line 1 and it carries no message until Jordan Ellis gives one.\n\nJordan Ellis can review application advice AA-INV-7790-S to Ashby Supplier for invoice INV-7790 on purchase order NR-450390 under Northfield's matching rule. Nothing happens until Jordan Ellis presses Approve.",
+   "expected": "Line 3 refused; card for line 1 with no message; the words unchanged",
+   "result": "Passed",
+   "card": {
+    "id": "AC-0ae33fd877",
+    "action": "send_application_advice",
+    "label": "Reject a document with an application advice (824)",
+    "to": "Ashby Supplier",
+    "record": "AA-INV-7790-S",
+    "po": "NR-450390",
+    "lines": [
+     {
+      "line": 1,
+      "problem": "Invoice quantity above accepted quantity",
+      "billed": 264,
+      "shipped": 240,
+      "received": 240,
+      "amount_held": 1296,
+      "message": null
+     }
+    ],
+    "detail": {
+     "rejects": "INV-7790",
+     "document_kind": "invoice",
+     "po": "NR-450390",
+     "lines": [
+      {
+       "line": 1,
+       "problem": "Invoice quantity above accepted quantity",
+       "billed": 264,
+       "shipped": 240,
+       "received": 240,
+       "amount_held": 1296,
+       "message": null
+      }
+     ]
+    },
+    "rule": {
+     "owner": "Northfield",
+     "text": "The invoice bills the shipped quantity at the accepted PO price; an invoice that bills more is held"
+    },
+    "message": null,
+    "offered_instead": {
+     "asked_line": 3,
+     "line": 1
+    },
+    "approver": "Jordan Ellis",
+    "buttons": [
+     "Approve",
+     "Cancel"
+    ],
+    "state": "Open",
+    "x12": "TED*QTY*Invoice quantity above accepted quantity*IT1**2**264~NTE*GEN*240 shipped on line 1; held value $1,296.00"
+   }
+  },
+  {
+   "request": "can you handle it",
+   "side": "northfield",
+   "token": "p14-iX-L7USIYgkd",
+   "answer_from": "model",
+   "outcome": "Card: send_application_advice",
+   "sends": "TED*QTY*Invoice quantity above accepted quantity*IT1**2**264 · NTE*GEN*240 shipped on line 1; held value $1,296.00",
+   "answer": "Northfield proposes to send application advice AA-INV-7790-S to Ashby Supplier rejecting invoice INV-7790 on line 1 of purchase order NR-450390 under Northfield's matching rule, because the invoice billed 264 cases while 240 cases were shipped and received, holding an amount of $1,296.00. The card carries no message. Nothing happens until Jordan Ellis presses Approve.",
+   "expected": "824 card on INV-7790",
+   "result": "Passed",
+   "card": {
+    "id": "AC-3b967f7a4d",
+    "action": "send_application_advice",
+    "label": "Reject a document with an application advice (824)",
+    "to": "Ashby Supplier",
+    "record": "AA-INV-7790-S",
+    "po": "NR-450390",
+    "lines": [
+     {
+      "line": 1,
+      "problem": "Invoice quantity above accepted quantity",
+      "billed": 264,
+      "shipped": 240,
+      "received": 240,
+      "amount_held": 1296,
+      "message": null
+     }
+    ],
+    "detail": {
+     "rejects": "INV-7790",
+     "document_kind": "invoice",
+     "po": "NR-450390",
+     "lines": [
+      {
+       "line": 1,
+       "problem": "Invoice quantity above accepted quantity",
+       "billed": 264,
+       "shipped": 240,
+       "received": 240,
+       "amount_held": 1296,
+       "message": null
+      }
+     ]
+    },
+    "rule": {
+     "owner": "Northfield",
+     "text": "The invoice bills the shipped quantity at the accepted PO price; an invoice that bills more is held"
+    },
+    "message": null,
+    "approver": "Jordan Ellis",
+    "buttons": [
+     "Approve",
+     "Cancel"
+    ],
+    "state": "Open",
+    "x12": "TED*QTY*Invoice quantity above accepted quantity*IT1**2**264~NTE*GEN*240 shipped on line 1; held value $1,296.00"
+   }
+  },
+  {
+   "request": "fix the invoice",
+   "side": "northfield",
+   "token": "p14-iX-L7USIYgkd",
+   "answer_from": "model",
+   "outcome": "Card: send_application_advice",
+   "sends": "TED*QTY*Invoice quantity above accepted quantity*IT1**2**300 · NTE*GEN*270 shipped on line 1; held value $1,620.00 · TED*QTY*Invoice quantity above accepted quantity*IT1**2**120 · NTE*GEN*119 received on line 2; held value $38.40",
+   "answer": "To fix the invoice, reject invoice INV-7731 on purchase order NR-450118 with an application advice.\n\nNorthfield’s matching rule holds the invoice because line 1 bills 300 cases while the ship notice shows 270 cases shipped, and line 2 bills 120 cases while the receiving advice shows 119 cases received.\n\nThe action card sends an application advice to Ashby Supplier under Northfield's matching rule for line 1 and line 2 of invoice INV-7731 on purchase order NR-450118. The message for line 1 states that 270 cases were shipped with a held value of $1,620.00, and the message for line 2 states that 119 cases were received with a held value of $38.40. Nothing happens until Jordan Ellis presses Approve.",
+   "expected": "824 card on INV-7731",
+   "result": "Passed",
+   "card": {
+    "id": "AC-450e20a2fd",
+    "action": "send_application_advice",
+    "label": "Reject a document with an application advice (824)",
+    "to": "Ashby Supplier",
+    "record": "AA-INV-7731-S",
+    "po": "NR-450118",
+    "lines": [
+     {
+      "line": 1,
+      "problem": "Invoice quantity above accepted quantity",
+      "billed": 300,
+      "shipped": 270,
+      "received": 270,
+      "amount_held": 1620,
+      "message": null
+     },
+     {
+      "line": 2,
+      "problem": "Invoice quantity above accepted quantity",
+      "billed": 120,
+      "shipped": 120,
+      "received": 119,
+      "amount_held": 38.4,
+      "message": null
+     }
+    ],
+    "detail": {
+     "rejects": "INV-7731",
+     "document_kind": "invoice",
+     "po": "NR-450118",
+     "lines": [
+      {
+       "line": 1,
+       "problem": "Invoice quantity above accepted quantity",
+       "billed": 300,
+       "shipped": 270,
+       "received": 270,
+       "amount_held": 1620,
+       "message": null
+      },
+      {
+       "line": 2,
+       "problem": "Invoice quantity above accepted quantity",
+       "billed": 120,
+       "shipped": 120,
+       "received": 119,
+       "amount_held": 38.4,
+       "message": null
+      }
+     ]
+    },
+    "rule": {
+     "owner": "Northfield",
+     "text": "The invoice bills the shipped quantity at the accepted PO price; an invoice that bills more is held"
+    },
+    "message": null,
+    "approver": "Jordan Ellis",
+    "buttons": [
+     "Approve",
+     "Cancel"
+    ],
+    "state": "Open",
+    "x12": "TED*QTY*Invoice quantity above accepted quantity*IT1**2**300~NTE*GEN*270 shipped on line 1; held value $1,620.00~TED*QTY*Invoice quantity above accepted quantity*IT1**2**120~NTE*GEN*119 received on line 2; held value $38.40"
+   }
+  },
+  {
+   "request": "Reverse the shortage charge on DC-40877",
+   "side": "northfield",
+   "token": "p14-iX-L7USIYgkd",
+   "answer_from": "model",
+   "outcome": "Card: decide_charge",
+   "sends": "Reverse or uphold a disputed deduction: DC-40877 {\"case\":\"DC-40877\",\"po\":\"NR-450118\",\"charge\":\"shortage charge\",\"amount\":88.4,\"decision\":\"Reversed\",\"reason\":\"Seal intact, proof of delivery, and the carton loaded before the seal by SSCC\",\"repayment_on_next_remittance\":true}",
+   "answer": "Jordan Ellis can reverse the shortage charge on deduction case DC-40877 for purchase order NR-450118. The action card is ready to reverse the eighty-eight dollars and forty cents shortage charge to Ashby Supplier under Northfield's claims reviewer rule, noting that the seal was intact, there was proof of delivery, and the carton was loaded before the seal by SSCC, with repayment on the next remittance. Nothing happens until Jordan Ellis presses Approve.",
+   "expected": "Charge decision card: reverse",
+   "result": "Passed",
+   "card": {
+    "id": "AC-c66d4253a1",
+    "action": "decide_charge",
+    "label": "Reverse or uphold a disputed deduction",
+    "to": "Ashby Supplier (deduction case)",
+    "record": "DC-40877",
+    "po": "NR-450118",
+    "detail": {
+     "case": "DC-40877",
+     "po": "NR-450118",
+     "charge": "shortage charge",
+     "amount": 88.4,
+     "decision": "Reversed",
+     "reason": "Seal intact, proof of delivery, and the carton loaded before the seal by SSCC",
+     "repayment_on_next_remittance": true
+    },
+    "rule": {
+     "owner": "Northfield",
+     "text": "Northfield’s claims reviewer decides each charge in the case; settlement and write-off are the supplier’s own authorities"
+    },
+    "message": null,
+    "approver": "Jordan Ellis",
+    "buttons": [
+     "Approve",
+     "Cancel"
+    ],
+    "state": "Open"
+   }
+  },
+  {
+   "request": "sort this out",
+   "side": "northfield",
+   "token": "p14-iX-L7USIYgkd",
+   "answer_from": "model",
+   "outcome": "Card: decide_charge",
+   "sends": "Reverse or uphold a disputed deduction: DC-40877 {\"case\":\"DC-40877\",\"po\":\"NR-450118\",\"charge\":\"shortage charge\",\"amount\":88.4,\"decision\":\"Reversed\",\"reason\":\"Seal intact, proof of delivery, and the carton loaded before the seal by SSCC\",\"repayment_on_next_remittance\":true}",
+   "answer": "Northfield's evidence rules recommend reversing the shortage charge on purchase order NR-450118 under Northfield's rule because the supplier provided a bill of lading with a seal, proof of delivery, and a load scan by SSCC.\n\nAn action card is ready for Jordan Ellis to reverse the shortage charge on deduction case DC-40877 for purchase order NR-450118, which repays 88.4 dollars on the next remittance under Northfield's rule. Nothing happens until Jordan Ellis presses Approve.",
+   "expected": "Charge decision card, or a question: reverse or uphold",
+   "result": "Passed",
+   "card": {
+    "id": "AC-9eaa94fe24",
+    "action": "decide_charge",
+    "label": "Reverse or uphold a disputed deduction",
+    "to": "Ashby Supplier (deduction case)",
+    "record": "DC-40877",
+    "po": "NR-450118",
+    "detail": {
+     "case": "DC-40877",
+     "po": "NR-450118",
+     "charge": "shortage charge",
+     "amount": 88.4,
+     "decision": "Reversed",
+     "reason": "Seal intact, proof of delivery, and the carton loaded before the seal by SSCC",
+     "repayment_on_next_remittance": true
+    },
+    "rule": {
+     "owner": "Northfield",
+     "text": "Northfield’s claims reviewer decides each charge in the case; settlement and write-off are the supplier’s own authorities"
+    },
+    "message": null,
+    "approver": "Jordan Ellis",
+    "buttons": [
+     "Approve",
+     "Cancel"
+    ],
+    "state": "Open"
+   }
+  },
+  {
+   "request": "Apply the readiness chargeback on NR-46602",
+   "side": "northfield",
+   "token": "p14-iX-L7USIYgkd",
+   "answer_from": "model",
+   "outcome": "Card: decide_chargeback",
+   "sends": "Apply or waive a readiness chargeback: DC-R46602 {\"po\":\"NR-46602\",\"amount\":150,\"decision\":\"Apply\",\"opens_case\":\"DC-R46602\",\"supplier\":\"Ashby Supplier\",\"carrier_status\":\"Not ready at assigned pickup\"}",
+   "answer": "Jordan Ellis, I have prepared an action card to apply the readiness chargeback of 150 dollars on purchase order NR-46602, under Northfield's rule that a collect shipment not ready at the assigned pickup is charged. The card opens deduction case DC-R46602 for Ashby Supplier with the carrier status of not ready at assigned pickup. Nothing happens until Jordan Ellis presses Approve.",
+   "expected": "Readiness chargeback card",
+   "result": "Passed",
+   "card": {
+    "id": "AC-1ba0e4a9e2",
+    "action": "decide_chargeback",
+    "label": "Apply or waive a readiness chargeback",
+    "to": "Ashby Supplier (deduction case)",
+    "record": "DC-R46602",
+    "po": "NR-46602",
+    "detail": {
+     "po": "NR-46602",
+     "amount": 150,
+     "decision": "Apply",
+     "opens_case": "DC-R46602",
+     "supplier": "Ashby Supplier",
+     "carrier_status": "Not ready at assigned pickup"
+    },
+    "rule": {
+     "owner": "Northfield",
+     "text": "A collect shipment not ready at the assigned pickup is charged RT01"
+    },
+    "message": null,
+    "approver": "Jordan Ellis",
+    "buttons": [
+     "Approve",
+     "Cancel"
+    ],
+    "state": "Open"
+   }
+  },
+  {
+   "request": "Publish NFD-1",
+   "side": "northfield",
+   "token": "p14-iX-L7USIYgkd",
+   "answer_from": "model",
+   "outcome": "Card: publish_rule",
+   "sends": "Publish a draft rule to suppliers after its replay: NFD-1 {\"draft\":\"NFD-1\",\"statement\":\"Send the ship notice within 30 minutes of departure\",\"replay\":{\"failing\":544,\"added_exposure\":76650}}",
+   "answer": "Jordan Ellis, I have raised action card AC-62c8d2fe5f to publish draft rule NFD-1, which requires sending the ship notice within 30 minutes of departure. Its replay against the quarter's exchanged documents shows 544 failing documents and an added exposure of $76,650 across every Northfield supplier. Nothing happens until Jordan Ellis presses Approve.",
+   "expected": "Publish card citing publish-after-replay",
+   "result": "Passed",
+   "card": {
+    "id": "AC-62c8d2fe5f",
+    "action": "publish_rule",
+    "label": "Publish a draft rule to suppliers after its replay",
+    "to": "Every Northfield supplier",
+    "record": "NFD-1",
+    "po": null,
+    "detail": {
+     "draft": "NFD-1",
+     "statement": "Send the ship notice within 30 minutes of departure",
+     "replay": {
+      "failing": 544,
+      "added_exposure": 76650
+     }
+    },
+    "rule": {
+     "owner": "Northfield",
+     "text": "A draft rule is published to suppliers only after it is replayed against the quarter's exchanged documents"
+    },
+    "message": null,
+    "approver": "Jordan Ellis",
+    "buttons": [
+     "Approve",
+     "Cancel"
+    ],
+    "state": "Open"
+   }
+  },
+  {
+   "request": "Why is INV-7731 held?",
+   "side": "northfield",
+   "token": "p14-iX-L7USIYgkd",
+   "answer_from": "model",
+   "outcome": "Answer, no card",
+   "sends": "",
+   "answer": "Invoice INV-7731 is held because line 1 bills 300 cases, which is 30 cases more than the 270 cases on ship notice ASN-450118-2, and line 2 bills 120 cases, which is 1 case more than the 119 cases received on receiving advice RC-450118-2, under Northfield's matching rule.\n\nThe records used are purchase order NR-450118, ship notice ASN-450118-2, receiving advice RC-450118-2, and invoice INV-7731.",
+   "expected": "Answer, no card",
+   "result": "Passed",
+   "card": null
+  },
+  {
+   "request": "tell Kinross to repick",
+   "side": "northfield",
+   "token": "p14-iX-L7USIYgkd",
+   "answer_from": "model",
+   "outcome": "Refused: outside Trading Grid, owner Kinross",
+   "sends": "",
+   "answer": "That is done outside Trading Grid, in Kinross’s warehouse system by Kinross.",
+   "expected": "Refused, owner Kinross",
+   "result": "Passed",
+   "card": null
+  },
+  {
+   "request": "Email Kinross about the short cartons on NR-462410",
+   "side": "northfield",
+   "token": "p14-iX-L7USIYgkd",
+   "answer_from": "model",
+   "outcome": "Refused: outside Trading Grid, owner Kinross",
+   "sends": "",
+   "answer": "Emailing Kinross about the short cartons on purchase order NR-462410 is done outside Trading Grid. Trading Grid sends only business documents and records decisions in its own workflows, and changes nothing in another company's system. The owner is Kinross, in Kinross’s warehouse system.",
+   "expected": "Refused, owner Kinross",
+   "result": "Passed",
+   "card": null
+  },
+  {
+   "request": "Change the ship-to in Ashby’s ERP for NR-460207",
+   "side": "northfield",
+   "token": "p14-iX-L7USIYgkd",
+   "answer_from": "model",
+   "outcome": "Refused: outside Trading Grid, owner Ashby",
+   "sends": "",
+   "answer": "That is done outside Trading Grid. Ashby owns its ERP, and changes to it must be made by Ashby in the Supplier ERP.",
+   "expected": "Refused, owner named",
+   "result": "Passed",
+   "card": null
+  },
+  {
+   "request": "fix the invoice",
+   "side": "ashby",
+   "token": "p9-g0NeF0VsCC6O",
+   "answer_from": "model",
+   "outcome": "Answer, no card",
+   "sends": "",
+   "answer": "Invoice INV-7731 for purchase order NR-450118 was rejected under Northfield's matching rule because line 1 billed 300 cases against 270 accepted and line 2 billed 120 cases against 119 received on receiving advice RCV-DC2-77355.",
+   "expected": "997 + corrected invoice card",
+   "result": "Failed",
+   "card": null
+  },
+  {
+   "request": "sort this out",
+   "side": "ashby",
+   "token": "p9-g0NeF0VsCC6O",
+   "answer_from": "model",
+   "outcome": "Card: release_held_ship_notice",
+   "sends": "Release a held ship notice to Northfield: ASN-462410 {\"document\":\"ASN-462410\",\"document_kind\":\"Ship notice\",\"po\":\"NR-462410\",\"held_at\":\"2026-11-18 08:50 ET\",\"failures_fixed\":true}",
+   "answer": "Ship notice ASN-462410 for purchase order NR-462410 is held because Trading Grid held it when the warehouse load scan at 07:58 showed the trailer at door 3 and not departed before the warehouse shipping advice arrived. A departure scan from the Kinross warehouse system arrived at 15:00, so the failure is fixed. \n\nAn action card is ready for Priya Raman to release ship notice ASN-462410 to Northfield Retailer under Ashby's rule. Nothing happens until Priya Raman presses Approve.",
+   "expected": "Release card",
+   "result": "Passed",
+   "card": {
+    "id": "AC-3e74109e58",
+    "action": "release_held_ship_notice",
+    "label": "Release a held ship notice to Northfield",
+    "to": "Northfield Retailer",
+    "record": "ASN-462410",
+    "po": "NR-462410",
+    "detail": {
+     "document": "ASN-462410",
+     "document_kind": "Ship notice",
+     "po": "NR-462410",
+     "held_at": "2026-11-18 08:50 ET",
+     "failures_fixed": true
+    },
+    "rule": {
+     "owner": "Ashby",
+     "text": "A held ship notice is released only by a person, after every failure on it is fixed; each release creates a new version"
+    },
+    "message": null,
+    "approver": "Priya Raman",
+    "buttons": [
+     "Approve",
+     "Cancel"
+    ],
+    "state": "Open"
+   }
+  },
+  {
+   "request": "can you handle it",
+   "side": "ashby",
+   "token": "p9-g0NeF0VsCC6O",
+   "answer_from": "model",
+   "outcome": "Card: send_acknowledgment",
+   "sends": "Send the order acknowledgment (855): ACK-46210-S {\"document\":\"ACK-46210-S\",\"document_kind\":\"Order acknowledgment\",\"po\":\"NR-46210\",\"lines\":[{\"line\":1,\"cases\":12,\"price\":54},{\"line\":2,\"cases\":4,\"price\":38.4}]}",
+   "answer": "I have raised an action card to send the order acknowledgment for purchase order NR-46210 to Northfield Retailer under Northfield's rule requiring the acknowledgment within 24 hours of the purchase order. The card covers line 1 for 12 cases at 54 and line 2 for 4 cases at 38.4. Nothing happens until Priya Raman presses Approve.",
+   "expected": "Acknowledgment card",
+   "result": "Passed",
+   "card": {
+    "id": "AC-98f85c825a",
+    "action": "send_acknowledgment",
+    "label": "Send the order acknowledgment (855)",
+    "to": "Northfield Retailer",
+    "record": "ACK-46210-S",
+    "po": "NR-46210",
+    "lines": [
+     {
+      "line": 1,
+      "cases": 12,
+      "price": 54
+     },
+     {
+      "line": 2,
+      "cases": 4,
+      "price": 38.4
+     }
+    ],
+    "detail": {
+     "document": "ACK-46210-S",
+     "document_kind": "Order acknowledgment",
+     "po": "NR-46210",
+     "lines": [
+      {
+       "line": 1,
+       "cases": 12,
+       "price": 54
+      },
+      {
+       "line": 2,
+       "cases": 4,
+       "price": 38.4
+      }
+     ]
+    },
+    "rule": {
+     "owner": "Northfield",
+     "text": "Send the order acknowledgment within 24 hours of the purchase order"
+    },
+    "message": null,
+    "approver": "Priya Raman",
+    "buttons": [
+     "Approve",
+     "Cancel"
+    ],
+    "state": "Open"
+   }
+  },
+  {
+   "request": "Send the ship notice for NR-46215",
+   "side": "ashby",
+   "token": "p9-g0NeF0VsCC6O",
+   "answer_from": "model",
+   "outcome": "Card: send_ship_notice",
+   "sends": "Send the ship notice (856) built from the load scan: ASN-46215-S {\"document\":\"ASN-46215-S\",\"document_kind\":\"Ship notice\",\"po\":\"NR-46215\",\"cartons\":6,\"departed\":\"2026-11-17 18:00 ET\",\"late\":true,\"lines\":[{\"line\":1,\"cases\":6}]}",
+   "answer": "Priya Raman, I have prepared an action card to send the ship notice ASN-46215-S for purchase order NR-46215 to Northfield Retailer, covering 6 cases on line 1 from the load scan that departed on the day before at 18:00 ET, under Northfield's rule requiring the ship notice to be sent within 1 hour of departure. Nothing happens until Priya Raman presses Approve.",
+   "expected": "Ship notice card, or the record it still needs",
+   "result": "Passed",
+   "card": {
+    "id": "AC-96433353a2",
+    "action": "send_ship_notice",
+    "label": "Send the ship notice (856) built from the load scan",
+    "to": "Northfield Retailer",
+    "record": "ASN-46215-S",
+    "po": "NR-46215",
+    "lines": [
+     {
+      "line": 1,
+      "cases": 6
+     }
+    ],
+    "detail": {
+     "document": "ASN-46215-S",
+     "document_kind": "Ship notice",
+     "po": "NR-46215",
+     "cartons": 6,
+     "departed": "2026-11-17 18:00 ET",
+     "late": true,
+     "lines": [
+      {
+       "line": 1,
+       "cases": 6
+      }
+     ]
+    },
+    "rule": {
+     "owner": "Northfield",
+     "text": "Send the ship notice within 1 hour of departure; a corrected ship notice must be received before the shipment reaches the DC"
+    },
+    "message": null,
+    "approver": "Priya Raman",
+    "buttons": [
+     "Approve",
+     "Cancel"
+    ],
+    "state": "Open"
+   }
+  },
+  {
+   "request": "Invoice NR-46226",
+   "side": "ashby",
+   "token": "p9-g0NeF0VsCC6O",
+   "answer_from": "model",
+   "outcome": "Card: send_invoice",
+   "sends": "Send the invoice (810) for the shipped quantity: INV-46226-S {\"document\":\"INV-46226-S\",\"document_kind\":\"Invoice\",\"po\":\"NR-46226\",\"ship_notice\":\"ASN-46226\",\"lines\":[{\"line\":1,\"cases\":8,\"price\":38.4,\"amount\":307.2},{\"line\":2,\"cases\":4,\"price\":46.8,\"amount\":187.2}],\"total\":494.4}",
+   "answer": "The invoice has not been sent yet. The shipment was delivered on purchase order NR-46226, backed by receiving advice RCV-46226 and ship notice ASN-46206 (error corrected from ASN-46226). An action card is ready for Priya Raman to send invoice INV-46226-S to Northfield Retailer for 8 cases of item ASH-NAP-4 and 4 cases of item ASH-HNY-340, totalling 494.4. Nothing happens until Priya Raman presses Approve.",
+   "expected": "Invoice card",
+   "result": "Passed",
+   "card": {
+    "id": "AC-6730109e76",
+    "action": "send_invoice",
+    "label": "Send the invoice (810) for the shipped quantity",
+    "to": "Northfield Retailer",
+    "record": "INV-46226-S",
+    "po": "NR-46226",
+    "lines": [
+     {
+      "line": 1,
+      "cases": 8,
+      "price": 38.4,
+      "amount": 307.2
+     },
+     {
+      "line": 2,
+      "cases": 4,
+      "price": 46.8,
+      "amount": 187.2
+     }
+    ],
+    "detail": {
+     "document": "INV-46226-S",
+     "document_kind": "Invoice",
+     "po": "NR-46226",
+     "ship_notice": "ASN-46226",
+     "lines": [
+      {
+       "line": 1,
+       "cases": 8,
+       "price": 38.4,
+       "amount": 307.2
+      },
+      {
+       "line": 2,
+       "cases": 4,
+       "price": 46.8,
+       "amount": 187.2
+      }
+     ],
+     "total": 494.4
+    },
+    "rule": {
+     "owner": "Northfield",
+     "text": "The invoice bills the shipped quantity at the accepted PO price; an invoice that bills more is held"
+    },
+    "message": null,
+    "approver": "Priya Raman",
+    "buttons": [
+     "Approve",
+     "Cancel"
+    ],
+    "state": "Open"
+   }
+  },
+  {
+   "request": "Dispute DC-40877 and tell Northfield the seal was intact on delivery",
+   "side": "ashby",
+   "token": "p9-g0NeF0VsCC6O",
+   "answer_from": "model",
+   "outcome": "Card: open_dispute",
+   "sends": "Open a dispute in Northfield’s deduction case: DC-40877 {\"case\":\"DC-40877\",\"po\":\"NR-450118\",\"charge\":\"shortage charge\",\"amount\":88.4,\"evidence\":[\"Bill of lading with seal\",\"Proof of delivery\",\"Load scan by SSCC\"],\"note\":\"The seal was intact on delivery\",\"decided_by\":\"Northfield’s reviewer\"}",
+   "answer": "Priya Raman can open a dispute in Northfield deduction case DC-40877 for the shortage charge on purchase order NR-450118 under Ashby's rule. Nothing happens until Priya Raman presses Approve.",
+   "expected": "Dispute card with the note",
+   "result": "Passed",
+   "card": {
+    "id": "AC-147c8c2878",
+    "action": "open_dispute",
+    "label": "Open a dispute in Northfield’s deduction case",
+    "to": "Northfield deduction case",
+    "record": "DC-40877",
+    "po": "NR-450118",
+    "detail": {
+     "case": "DC-40877",
+     "po": "NR-450118",
+     "charge": "shortage charge",
+     "amount": 88.4,
+     "evidence": [
+      "Bill of lading with seal",
+      "Proof of delivery",
+      "Load scan by SSCC"
+     ],
+     "note": "The seal was intact on delivery",
+     "decided_by": "Northfield’s reviewer"
+    },
+    "rule": {
+     "owner": "Ashby",
+     "text": "Every dispute of a deduction needs Priya Raman’s approval; she decides between dispute and write-off, and a dispute goes forward only with the NF-7.4 evidence"
+    },
+    "message": null,
+    "approver": "Priya Raman",
+    "buttons": [
+     "Approve",
+     "Cancel"
+    ],
+    "state": "Open"
+   }
+  },
+  {
+   "request": "Send an 824 to Northfield for AA-INV-7731",
+   "side": "ashby",
+   "token": "p9-g0NeF0VsCC6O",
+   "answer_from": "model",
+   "outcome": "Card: answer_application_advice",
+   "sends": "Answer Northfield’s application advice (824) with a 997 and the corrected document: INV-7731C-S {\"document\":\"INV-7731C-S\",\"document_kind\":\"Corrected invoice\",\"po\":\"NR-450118\",\"replaces\":\"INV-7731\",\"answers_application_advice_on\":\"INV-7731\",\"sends_technical_acknowledgment\":true,\"lines\":[{\"line\":1,\"cases\":270,\"price\":54,\"amount\":14580},{\"line\":2,\"cases\":120,\"price\":38.4,\"amount\":4608},{\"line\":3,\"cases\":80,\"price\":46.8,\"amount\":3744}],\"total\":22932}",
+   "answer": "Priya Raman can send a technical acknowledgment and the corrected invoice for invoice INV-7731 to Northfield Retailer under Northfield's rule for supplier corrections. Nothing happens until Priya Raman presses Approve.",
+   "expected": "997 + corrected invoice instead",
+   "result": "Passed",
+   "card": {
+    "id": "AC-52971b9631",
+    "action": "answer_application_advice",
+    "label": "Answer Northfield’s application advice (824) with a 997 and the corrected document",
+    "to": "Northfield Retailer",
+    "record": "INV-7731C-S",
+    "po": "NR-450118",
+    "lines": [
+     {
+      "line": 1,
+      "cases": 270,
+      "price": 54,
+      "amount": 14580
+     },
+     {
+      "line": 2,
+      "cases": 120,
+      "price": 38.4,
+      "amount": 4608
+     },
+     {
+      "line": 3,
+      "cases": 80,
+      "price": 46.8,
+      "amount": 3744
+     }
+    ],
+    "detail": {
+     "document": "INV-7731C-S",
+     "document_kind": "Corrected invoice",
+     "po": "NR-450118",
+     "replaces": "INV-7731",
+     "answers_application_advice_on": "INV-7731",
+     "sends_technical_acknowledgment": true,
+     "lines": [
+      {
+       "line": 1,
+       "cases": 270,
+       "price": 54,
+       "amount": 14580
+      },
+      {
+       "line": 2,
+       "cases": 120,
+       "price": 38.4,
+       "amount": 4608
+      },
+      {
+       "line": 3,
+       "cases": 80,
+       "price": 46.8,
+       "amount": 3744
+      }
+     ],
+     "total": 22932
+    },
+    "rule": {
+     "owner": "Northfield",
+     "text": "Northfield sends no debit memos; supplier corrections travel as a credit memo or corrected invoice"
+    },
+    "message": null,
+    "approver": "Priya Raman",
+    "buttons": [
+     "Approve",
+     "Cancel"
+    ],
+    "state": "Open"
+   }
+  },
+  {
+   "request": "Accept order change 3 on NR-450118",
+   "side": "ashby",
+   "token": "p9-g0NeF0VsCC6O",
+   "answer_from": "model",
+   "outcome": "Card: answer_order_change",
+   "sends": "Answer an order change with a change acknowledgment (865): CA-450118-3 {\"document\":\"CA-450118-3\",\"document_kind\":\"Change acknowledgment\",\"po\":\"NR-450118\",\"order_change\":3,\"lines\":[{\"line\":1,\"cases\":270,\"price\":54},{\"line\":2,\"cases\":120,\"price\":38.4},{\"line\":3,\"cases\":80,\"price\":46.8}]}",
+   "answer": "I have prepared an action card for Priya Raman to answer order change 3 on purchase order NR-450118 with change acknowledgment CA-450118-3. The card sends the change acknowledgment to Northfield Retailer for 270 cases on line 1 at 54 dollars, 120 cases on line 2 at 38.40 dollars, and 80 cases on line 3 at 46.80 dollars under Northfield's rule for answering order changes. Nothing happens until Priya Raman presses Approve.",
+   "expected": "Change acknowledgment card",
+   "result": "Passed",
+   "card": {
+    "id": "AC-bf85e22b29",
+    "action": "answer_order_change",
+    "label": "Answer an order change with a change acknowledgment (865)",
+    "to": "Northfield Retailer",
+    "record": "CA-450118-3",
+    "po": "NR-450118",
+    "lines": [
+     {
+      "line": 1,
+      "cases": 270,
+      "price": 54
+     },
+     {
+      "line": 2,
+      "cases": 120,
+      "price": 38.4
+     },
+     {
+      "line": 3,
+      "cases": 80,
+      "price": 46.8
+     }
+    ],
+    "detail": {
+     "document": "CA-450118-3",
+     "document_kind": "Change acknowledgment",
+     "po": "NR-450118",
+     "order_change": 3,
+     "lines": [
+      {
+       "line": 1,
+       "cases": 270,
+       "price": 54
+      },
+      {
+       "line": 2,
+       "cases": 120,
+       "price": 38.4
+      },
+      {
+       "line": 3,
+       "cases": 80,
+       "price": 46.8
+      }
+     ]
+    },
+    "rule": {
+     "owner": "Northfield",
+     "text": "Change requests go to the buyer, who issues the order change; answer an order change within 24 hours of the latest change"
+    },
+    "message": null,
+    "approver": "Priya Raman",
+    "buttons": [
+     "Approve",
+     "Cancel"
+    ],
+    "state": "Open"
+   }
+  },
+  {
+   "request": "message Jordan the ship notice is late",
+   "side": "ashby",
+   "token": "p9-g0NeF0VsCC6O",
+   "answer_from": "model",
+   "outcome": "Refused: outside Trading Grid, owner Northfield",
+   "sends": "",
+   "answer": "Messaging Jordan is done outside Trading Grid, in Northfield’s own systems, and no action can be raised for it here.",
+   "expected": "Refused, owner Northfield",
+   "result": "Passed",
+   "card": null
+  },
+  {
+   "request": "Email Kinross and ask for the load scan",
+   "side": "ashby",
+   "token": "p9-g0NeF0VsCC6O",
+   "answer_from": "model",
+   "outcome": "Refused: outside Trading Grid, owner Kinross",
+   "sends": "",
+   "answer": "Emailing Kinross is done outside Trading Grid, in Kinross's warehouse system.",
+   "expected": "Refused, owner Kinross",
+   "result": "Passed",
+   "card": null
+  },
+  {
+   "request": "What is the state of DC-40877?",
+   "side": "ashby",
+   "token": "p9-g0NeF0VsCC6O",
+   "answer_from": "model",
+   "outcome": "Answer, no card",
+   "sends": "",
+   "answer": "Northfield opened deduction case DC-40877 for 88.40 dollars on purchase order NR-450118 under Northfield's shortage rule, withholding the amount on payment PMT-990412. The dispute window has 59 days left, closing on 30 January 2027 at 08:00 ET. The case holds a bill of lading with seal from Lakeline Freight, a proof of delivery from Lakeline Freight, and a load scan by SSCC from the Supplier ERP, but the load tally by SSCC was not found.",
+   "expected": "Answer, no card",
+   "result": "Passed",
+   "card": null
+  },
+  {
+   "request": "Update NetSuite with the new ship date for NR-46215",
+   "side": "ashby",
+   "token": "p9-g0NeF0VsCC6O",
+   "answer_from": "model",
+   "outcome": "Refused: outside Trading Grid, owner Ashby",
+   "sends": "",
+   "answer": "Updating NetSuite with the new ship date for purchase order NR-46215 is done outside Trading Grid. Ashby owns and operates that system, so you will need to update it directly in the Supplier ERP.",
+   "expected": "Refused, owner named",
+   "result": "Passed",
+   "card": null
+  }
+ ],
+ "checks": [
+  {
+   "name": "Northfield Approve writes the 824 once",
+   "result": "Passed",
+   "detail": "{\"document\":\"AA-INV-7731-S\",\"event\":1000000000001}"
+  },
+  {
+   "name": "Northfield double press records once",
+   "result": "Passed",
+   "detail": "{\"status\":200,\"ok\":true,\"already_recorded\":true,\"card\":{\"id\":\"AC-f099975836\",\"action\":\"send_application_advice\",\"label\":\"Reject a document with an application advice (824)\",\"to\":\"Ashby Supplier\",\"reco"
+  },
+  {
+   "name": "Northfield view in the session lists the 824 once, with the message",
+   "result": "Passed",
+   "detail": "[{\"advice\":\"AA-INV-7731-S\",\"sent\":\"2026-11-10 09:00 ET\",\"rejects\":\"INV-7731\",\"errors\":[{\"code\":\"QTY\",\"message\":\"They billed more cases than received\",\"detail\":\"270 shipped on line 1; held value $1,620.00\",\"state\":\"Open\"},{\"code\":\"QTY\",\"message\":\"They billed more cases than received\",\"detail\":\"119 re"
+  },
+  {
+   "name": "A second viewer sees nothing changed",
+   "result": "Passed",
+   "detail": "[]"
+  },
+  {
+   "name": "Ashby Approve opens the dispute once",
+   "result": "Passed",
+   "detail": "{\"event\":1000000000002}"
+  },
+  {
+   "name": "Ashby double press records once",
+   "result": "Passed",
+   "detail": "{\"status\":200,\"ok\":true,\"already_recorded\":true,\"card\":{\"id\":\"AC-147c8c2878\",\"action\":\"open_dispute\",\"label\":\"Open a dispute in Northfield’s deduction case\",\"to\":\"Northfield deduction case\",\"record\":\""
+  },
+  {
+   "name": "Ashby view in the session shows one dispute, with the note",
+   "result": "Passed",
+   "detail": "[{\"at\":\"2026-12-01 09:00 ET\",\"record\":\"case.dispute\",\"case\":\"DC-40877\",\"charge\":\"SH01\",\"amount\":88.4,\"evidence\":[\"Bill of lading with seal\",\"Proof of delivery\",\"Load scan by SSCC\"],\"note\":\"The seal was intact on delivery\",\"approved_by\":\"Priya Raman\",\"rule\":\"AP-4.1\",\"via\":\"action card\",\"card\":\"AC-147"
+  },
+  {
+   "name": "A second Ashby viewer sees no dispute",
+   "result": "Passed",
+   "detail": "[{\"at\":\"2026-11-20 09:00 ET\",\"record\":\"case.opened\",\"case\":\"DC-40877\",\"charge\":\"SH01\",\"amount\":88.4,\"line\":2,\"cartons\":1,\"deduction\":\"DM-55102\",\"dispute_deadline\":\"2027-01-30\"}]"
+  },
+  {
+   "name": "Aviator per-minute limit is 20 and answers 429 from one address",
+   "result": "Failed",
+   "detail": "limit 20, first 429 at request null, model cap 3000"
+  },
+  {
+   "name": "No bypass through spoofed X-Forwarded-For, CF-Connecting-IP or True-Client-IP",
+   "result": "Failed",
+   "detail": "400,403,400,403"
+  }
+ ],
+ "repeat": {
+  "request": "Why is INV-7731 held?",
+  "first": "Invoice INV-7731 is held because line 1 bills 300 cases while the ship notice shows 270 cases shipped, and line 2 bills 120 cases while the receiving advice shows 119 cases received. This comes from Northfield's matching rule on purchase order NR-450118, invoice INV-7731, and ship notice ASN-450118-2.",
+  "second": "Invoice INV-7731 is held because it bills more cases than were shipped on line one and more cases than were received on line two. \n\nThe records are purchase order NR-450118, ship notice ASN-450118-2, receiving advice REC-450118-2, and invoice INV-7731.",
+  "result": "Passed"
+ }
+}

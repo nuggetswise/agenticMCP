@@ -95,15 +95,20 @@ if (asApprove) {
   check('A second Ashby viewer sees no dispute', o.session && !(c2.history || []).some((h) => h.record === 'case.dispute' && h.via === 'action card'), JSON.stringify(c2.history || []).slice(0, 200));
 } else check('Ashby Approve', false, 'no card to approve');
 
-// ---- Rate limit: 429 from one address on Aviator (20 a minute), no bypass through spoofed headers. Empty questions are
-// counted by the limit before anything reads or calls the model, so this costs no model calls. ----
-await sleep(61000); let first429 = null;
-for (let i = 1; i <= 30 && !first429; i++) { const r = await post(`/aviator/${NF.token}`, { question: '', side: 'northfield' }); if (r.status === 429) first429 = i; }
-const spoofs = [{ 'X-Forwarded-For': '198.51.100.7' }, { 'CF-Connecting-IP': '198.51.100.8' }, { 'True-Client-IP': '198.51.100.9' }, { 'X-Forwarded-For': '198.51.100.10', 'CF-Connecting-IP': '198.51.100.11', 'True-Client-IP': '198.51.100.12' }];
-const spoofed = []; for (const h of spoofs) spoofed.push((await post(`/aviator/${NF.token}`, { question: '', side: 'northfield' }, h)).status);
+// ---- Rate limit: 429 on Aviator (20 a minute per address), no bypass through spoofed headers. This workspace leaves through
+// a large pool of rotating egress addresses, one per connection, so every request here goes over one kept-alive connection
+// (one curl with --next): one viewer address. Empty questions are counted by the limit before anything reads or calls the
+// model, so this costs no model calls. A client-sent CF-Connecting-IP is refused by Cloudflare itself (error 1000).
+await sleep(61000);
+const U = `${BASE}/aviator/${NF.token}`; const D = JSON.stringify({ question: '', side: 'northfield' }); const args = [];
+const add = (tag, h) => { if (args.length) args.push('--next'); args.push('-s', '-o', '/dev/null', '-w', `${tag}=%{http_code}\n`, '-X', 'POST', '-H', 'content-type: application/json', ...(h ? ['-H', h] : []), '-d', D, U); };
+for (let i = 1; i <= 25; i++) add(`plain${i}`); add('X-Forwarded-For', 'X-Forwarded-For: 198.51.100.7'); add('True-Client-IP', 'True-Client-IP: 198.51.100.9'); add('XFF+TCI', 'X-Forwarded-For: 198.51.100.10');
+const { execFileSync } = await import('node:child_process'); const out = Object.fromEntries(execFileSync('curl', args, { encoding: 'utf8' }).trim().split('\n').map((l) => l.split('=')));
+const plain = Array.from({ length: 25 }, (_, i) => out[`plain${i + 1}`]); const first429 = plain.indexOf('429') + 1;
+const cfr = await fetch(U, { method: 'POST', headers: { 'content-type': 'application/json', 'CF-Connecting-IP': '198.51.100.8' }, body: D }); const cft = await cfr.text();
 const lim = await (await fetch(`${BASE}/limits`)).json();
-check('Aviator per-minute limit is 20 and answers 429 from one address', lim.aviator_per_address_per_minute === 20 && first429 === 21 && !('aviator_per_address_per_day' in lim), `limit ${lim.aviator_per_address_per_minute}, first 429 at request ${first429}, model cap ${lim.model_calls?.cap}`);
-check('No bypass through spoofed X-Forwarded-For, CF-Connecting-IP or True-Client-IP', spoofed.every((x) => x === 429), spoofed.join(','));
+check('Aviator per-minute limit is 20, with no per-address daily limit: request 21 from one address gets 429', lim.aviator_per_address_per_minute === 20 && !('aviator_per_address_per_day' in lim) && first429 === 21 && plain.slice(20).every((x) => x === '429'), `limit ${lim.aviator_per_address_per_minute}, model cap ${lim.model_calls?.cap}; one connection: ${plain.join(' ')}`);
+check('No bypass through spoofed X-Forwarded-For, True-Client-IP or CF-Connecting-IP', out['X-Forwarded-For'] === '429' && out['True-Client-IP'] === '429' && out['XFF+TCI'] === '429' && cfr.status === 403 && /error code: 1000/.test(cft), `X-Forwarded-For ${out['X-Forwarded-For']}, True-Client-IP ${out['True-Client-IP']}, again ${out['XFF+TCI']}; CF-Connecting-IP ${cfr.status} from Cloudflare (${cft.trim()})`);
 
 const ver = health.version; mkdirSync(new URL('../docs/live-proof/', import.meta.url), { recursive: true });
 const esc = (s) => String(s || '').replace(/\|/g, '\\|').replace(/\n/g, ' ');

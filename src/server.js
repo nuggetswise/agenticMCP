@@ -446,7 +446,7 @@ for (const t of [...SCOUT_TOOLS, ...WATCH_TOOLS, ...MATCH_TOOLS, ...RUNTIME_TOOL
 const SESSION_TOOLS = (cid) => cid === AS ? [...SCOUT_TOOLS, ...WATCH_TOOLS, ...RUNTIME_TOOLS[AS]] : [...MATCH_TOOLS, ...RUNTIME_TOOLS[NF]];
 async function runSessionTool(cid, t, args) { let out; try { out = await t.run(args); if (cid === NF) out = linkify(out, SIDE[NF]); } catch (e) { out = { result: 'Invalid request', error: e.message }; } log(cid, t.name, [], args, out.result || out.status || 'Answered', []); return out; }
 function makeServer(cid) {
-  const server = new McpServer({ name: cid === AS ? 'trading-grid-ashby' : 'trading-grid-northfield', title: cid === AS ? 'Trading Grid · Ashby Supplier' : 'Trading Grid · Northfield Retailer', version: '0.4.8' }, { instructions: INSTRUCTIONS[cid]() });
+  const server = new McpServer({ name: cid === AS ? 'trading-grid-ashby' : 'trading-grid-northfield', title: cid === AS ? 'Trading Grid · Ashby Supplier' : 'Trading Grid · Northfield Retailer', version: '0.4.9' }, { instructions: INSTRUCTIONS[cid]() });
   // Every tool on the connection answers through `present` (src/credit.js): no result, title or description names an agent.
   const register = server.registerTool.bind(server);
   server.registerTool = (name, meta, handler) => register(name, { ...meta, title: present(meta.title), description: present(meta.description) }, async (args) => {
@@ -490,7 +490,7 @@ app.use((req, res, next) => { const json = res.json.bind(res); res.json = (body)
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false }));
 app.get('/', (req, res) => res.type('html').send(homePage()));
-app.get('/healthz', (req, res) => res.json({ status: 'ok', version: '0.4.8', writes: WRITES, connections: [AS, NF], aviator: !!process.env.GEMINI_API_KEY, model_routes: Aviator.modelRoutes().map((r) => `${r.route} · ${r.model}`) }));
+app.get('/healthz', (req, res) => res.json({ status: 'ok', version: '0.4.9', writes: WRITES, connections: [AS, NF], aviator: !!process.env.GEMINI_API_KEY, model_routes: Aviator.modelRoutes().map((r) => `${r.route} · ${r.model}`) }));
 const cidOf = (req, res) => { const c = BY_TOKEN[req.params.token]; if (!c) { res.status(404).send('Not found'); return null; } return c; };
 
 app.post('/mcp/:token', async (req, res) => {
@@ -622,6 +622,8 @@ export function askedPeriod(question, at) {
   if (m) { const a = dayIn(Number(m[1]), m[3]), b = dayIn(Number(m[2]), m[3]); if (a && b && a <= b) return { from: a, to: b, words: `${m[1]} to ${m[2]} ${m[3]}` }; }
   m = q.match(new RegExp(`\\bweek (?:of|beginning|starting|ending)\\s+(?:the\\s+)?(?:(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?${MON}|${MON}\\s+(\\d{1,2}))`));
   if (m) { const d = dayIn(Number(m[1] || m[4]), m[2] || m[3]); if (d) return { ...D.weekOf(d), words: `the week of ${m[1] || m[4]} ${m[2] || m[3]}` }; }
+  // "the next two weeks": from the as-of day through the last day of that many weeks.
+  m = q.match(/\b(?:next|coming)\s+(two|2|three|3|four|4)\s+weeks\b/); if (m) { const n = { two: 2, three: 3, four: 4 }[m[1]] || Number(m[1]); return { from: today, to: sh(today, 7 * n - 1), words: `the next ${m[1]} weeks` }; }
   if (/\blast week\b/.test(q)) return { from: sh(w.from, -7), to: sh(w.to, -7), words: 'last week' };
   if (/\bnext week\b/.test(q)) return { from: sh(w.from, 7), to: sh(w.to, 7), words: 'next week' };
   if (/\bthis week\b/.test(q)) return { ...w, words: 'this week' };
@@ -631,6 +633,19 @@ export function askedPeriod(question, at) {
 // its own on this route: a refusal is an error code the page shows in its own words, and a fact the server sets for a turn
 // (a request outside Trading Grid, a card the records call for) goes to the model as a fact to write from.
 const MAX_QUESTION = 500, MAX_TURNS = 10;
+// The record on screen, read before the first model call so a question about it takes one model call, not two. A reference
+// named in the question wins; otherwise the record in the page's context, unless the question is about many records
+// (a quarter, a week, all suppliers), where one order would mislead. The model may still call any tool.
+const PREREAD = {
+  ashby: [[/\b(?:DC|DM)-\d+\b/, 'get_deduction_case', (r) => ({ case: r })], [/\bNR-\d+\b/, 'get_order', (r) => ({ po: r })], [/\b(?:INV|ASN|ACK|AA-INV|RCV-DC\d)-[A-Z0-9-]+\b/, 'get_document', (r) => ({ reference: r })]],
+  northfield: [[/\bINV-[A-Z0-9-]+\b/, 'three_way_match', (r) => ({ reference: r })], [/\b(?:DC|DM)-\d+\b/, 'review_deduction_case', (r) => ({ case: r })], [/\bNR-\d+\b/, 'supplier_document_trail', (r) => ({ po: r })], [/\bASN-[A-Z0-9-]+\b/, 'get_document', (r) => ({ reference: r })]],
+};
+const MANY = /\b(quarter|weeks?|months?|all|across|each|every|suppliers|stores|orders|invoices|how many|how much|most|rank|often|trend|total)\b/i;
+export function prereadFor(side, question, context, names) {
+  const pick = (text) => { for (const [re, tool, args] of PREREAD[side] || []) { const m = String(text || '').match(re); if (m && names.has(tool)) return { tool, arguments: args(m[0]) }; } return null; };
+  return pick(question) || (MANY.test(question) ? null : pick(context));
+}
+const readOk = (r) => r && typeof r === 'object' && !r.error && r.found !== false && !['Refused', 'Invalid request', 'Not available'].includes(r.result) && JSON.stringify(r).length <= 40000;
 /** One question from a hosted page. The token binds the prototype, the sides it shows and its story window; a side or
  *  as_of outside that binding is refused and nothing is read. The model reads the side's own tools at the page's moment,
  *  may raise action cards (data built from the rules and records), and writes the answer; the server checks the answer
@@ -700,10 +715,12 @@ async function pageAviator(page, req, res) {
     const callTool = (name, args) => { if (name === 'propose_action') { const r = proposeAction(args); results.push(r); return r; } const t = tools.find((x) => x.name === name); const a = { ...(args || {}) };
       if (t && t.input && 'as_of' in t.input && (!a.as_of || !asOfIso(a.as_of) || new Date(asOfIso(a.as_of)) > at)) a.as_of = asOf;
       const r = S.withSession(session.id, () => withVia(via, () => present(call(cid, name, a)))); results.push(r); if (periodTools.has(name)) periods.push(r && r.period_covered ? r.period_covered : null); return r; };
+    const pre = prereadFor(sideName, question, context, new Set(readTools.map((t) => t.name))); let preread = [], preText = '';
+    if (pre) { const r = callTool(pre.tool, pre.arguments); if (readOk(r)) { preread = [pre]; preText = ` The record on screen, read for you with ${pre.tool} ${JSON.stringify(pre.arguments)}: ${JSON.stringify(r)}`; } }
     const q = `${question}\n(As of ${fmtET(at)}.${context ? ` On screen: ${context}.` : ''}${asked ? ` The question's period, ${asked.words}, is ${asked.from} to ${asked.to}: pass from ${asked.from} and to ${asked.to} to the tool that takes a period, and answer for those days only.` : ''}${facts ? ` ${facts}` : ''}${hint || ''})`;
     // The server checks each answer; a mismatch goes back to the model with the reason, at most twice.
     const check = (answer) => Cards.checkAnswer(answer, { cards: runCards, results, outside, question, expect: expect && { ...expect, refused: !!lastRefusal } });
-    let out; try { out = await Aviator.ask({ question: q, history, tools, callTool, side: { person: SD.person, company: SD.company, other: SD.other }, clock: fmtET(at), routes, cards: true, check }); } catch (e) { console.error(e); out = { ok: false, status: 500 }; }
+    let out; try { out = await Aviator.ask({ question: q, history, tools, callTool, side: { person: SD.person, company: SD.company, other: SD.other }, clock: fmtET(at), routes, cards: true, check, preread, prereadText: preText }); } catch (e) { console.error(e); out = { ok: false, status: 500 }; }
     const covers = !asked || periods.some((p) => p && p.from === asked.from && p.to === asked.to);
     return { out, results, covers, readPeriod: periods.length > 0 }; };
   const all = Aviator.modelRoutes(); let r = await run(all); let retried = null;

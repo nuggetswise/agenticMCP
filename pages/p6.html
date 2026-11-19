@@ -591,7 +591,7 @@ const histFilter = h => (h.rec || "an").includes(S.ws === "nf" ? "n" : "a");
 
 /* money: Ashby's own view; Northfield's decisions reach Ashby only as money on a remittance */
 const sum = (ids, f) => ids.reduce((s, id) => s + (f(C[id], id) ? C[id].amt : 0), 0);
-const won = c => c.repaid || c.won;
+const won = c => c.repaid || c.won || c.dec === "waived";
 const withheld = () => sum(ORDER, c => !won(c));
 const notDisputed = () => sum(ORDER, c => !c.dsp);
 const inDispute = () => sum(ORDER, c => c.dsp && !won(c));
@@ -599,28 +599,34 @@ const wonTotal = () => sum(ORDER, won);
 const repaid = () => sum(ORDER, c => c.repaid);
 const disputes = () => ORDER.filter(id => C[id].dsp);
 /* Northfield's evidence rules group the disputes it receives */
-const group = id => id === "DC-40877" ? "conflict" : C[id].proof === "kinross" || C[id].proof === "tally" ? "complete" : "other";
-const GROUP = {conflict:"Conflicts with receiving", complete:"Load proof by SSCC", other:"Proof sent outside Trading Grid"};
+const group = id => id === "DC-40877" ? "conflict" : C[id].proof === "kinross" || C[id].proof === "tally" ? "complete" : "check";
+const GROUP = {conflict:"Conflicts with receiving", complete:"Complete pack", check:"Pack to check"};
 const HOLDS = {case:"Load scan, bill of lading and delivery receipt in the case", kinross:"Bill of lading in the case · load scan at Kinross", tally:"Bill of lading in the case · load tally at Kinross", none:"Bill of lading in the case", carrier:"Bill of lading and delivery receipt in the case"};
 
 function chipA(id){
   const c = C[id];
   if (c.repaid) return ["Repaid · matched","brand"];
   if (c.won) return ["Won · confirmed","brand"];
-  if (c.dsp) return ["Disputed",""];
+  if (c.dec === "waived") return ["Waived by Northfield","brand"];
+  if (c.dec === "upheld") return ["Upheld by Northfield",""];
+  if (c.dsp) return ["Awaiting Jordan Ellis",""];
   return ["Ready to dispute","amber"];
 }
-const lineA = id => { const c = C[id]; return c.repaid ? `${money(c.amt)} repaid on PMT-991204` : c.won ? `${money(c.amt)} won · confirmed by Priya Raman` : c.dsp ? `SH01 ${money(c.amt)} disputed · ${c.cartons} carton${c.cartons > 1 ? "s" : ""}` : HOLDS[c.proof]; };
-const subA = id => { const c = C[id]; return won(c) ? "Closed" : `${money(c.amt)} withheld` + (c.dsp ? "" : " · " + daysLeft()); };
-const listRowsA = () => ORDER.map(id => ({id, title:id, chip:chipA(id), line:esc(lineA(id)), sub:subA(id), c:won(C[id]) ? 1 : 0, r:ORDER.indexOf(id)})).sort((a, b) => a.c - b.c || a.r - b.r);
+const lineA = id => { const c = C[id]; return c.repaid ? `${money(c.amt)} repaid on PMT-991204` : c.won ? `${money(c.amt)} won · confirmed by Priya Raman` : c.dec === "waived" ? `${money(c.amt)} waived · repayment on a later remittance` : c.dec === "upheld" ? `SH01 ${money(c.amt)} upheld` : c.dsp ? `SH01 ${money(c.amt)} disputed · ${c.cartons} carton${c.cartons > 1 ? "s" : ""}` : HOLDS[c.proof]; };
+const subA = id => { const c = C[id]; return c.repaid || c.won ? "Closed" : c.dec ? "Decided by Jordan Ellis" : `${money(c.amt)} withheld` + (c.dsp ? "" : " · " + daysLeft()); };
+const listRowsA = () => ORDER.map(id => ({id, title:id, chip:chipA(id), line:esc(lineA(id)), sub:subA(id), c:C[id].repaid || C[id].won || C[id].dec ? 1 : 0, r:ORDER.indexOf(id)})).sort((a, b) => a.c - b.c || a.r - b.r);
 function chipN(id){
   const c = C[id];
   if (c.dec === "waived") return ["Waived","brand"];
   if (c.dec === "upheld") return ["Upheld",""];
+  if (c.won) return ["Closed by Ashby",""];
+  if (!c.dsp) return ["No dispute yet",""];
   return [GROUP[group(id)], "amber"];
 }
-const listRowsN = () => disputes().map(id => ({id, title:id, chip:chipN(id), line:esc(`Ashby Supplier · SH01 ${money(C[id].amt)} · ${C[id].po}`), sub:C[id].dec ? "Decided by Jordan Ellis" : GROUP[group(id)], c:C[id].dec ? 1 : 0, r:{conflict:0, complete:1, other:2}[group(id)]})).sort((a, b) => a.c - b.c || a.r - b.r);
-const openIn = g => disputes().filter(id => !C[id].dec && group(id) === g);
+const rankN = id => { const c = C[id]; return c.dec || c.won ? 9 : !c.dsp ? 5 : {conflict:0, complete:1, check:2}[group(id)]; };
+const listRowsN = () => ORDER.map(id => ({id, title:id, chip:chipN(id), line:esc(`Ashby Supplier · SH01 ${money(C[id].amt)} · ${C[id].po}`), sub:C[id].dec ? "Decided by Jordan Ellis" : C[id].dsp ? "Disputed · " + GROUP[group(id)] : "Deduction " + C[id].dm, c:0, r:rankN(id)})).sort((a, b) => a.r - b.r || ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
+const openIn = g => disputes().filter(id => !C[id].dec && !C[id].won && group(id) === g);
+const toDecide = () => disputes().filter(id => !C[id].dec && !C[id].won);
 
 /* ---------- record parts ---------- */
 const R = W.rules;
@@ -639,22 +645,25 @@ function recAshby(id){
   if (id === "DC-40877") wrong.push({v:`<b>Receiving advice</b> · line 2 119 of 120 · carton <span class="mono">006141410000003006</span> not scanned`, tags:[["EDI 861","861:RCV-DC2-77355"]]});
   wrong.push(packRow(id, c.dsp ? "attached to the dispute" : ""));
   const holds = {case:"the load scan, bill of lading and delivery receipt", kinross:"the bill of lading, the load scan from Kinross and the delivery receipt from Lakeline's portal", tally:"the bill of lading, the load tally by SSCC from Kinross and the delivery receipt from Lakeline's portal", none:"the bill of lading and the delivery receipt from Lakeline's portal", carrier:"the bill of lading and delivery receipt"}[c.proof];
-  const act = {id:"d:" + id, button:"Open dispute", rows:[{action:`Dispute SH01 · ${money(c.amt)}`, now:"Withheld", after:"Disputed", goesTo:"Ashby's case", via:"Trading Grid deductions"}],
-    says:`Records a dispute on ${id} for SH01 ${money(c.amt)}, with ${holds}. Northfield's receipt stays as it is unless Northfield revises it.`, nodecision:"Not disputed within 60 days: the deduction stands.", ruleTag:"Priya opens disputes"};
+  const act = {id:"d:" + id, button:"Open dispute", rows:[{action:`Dispute SH01 · ${money(c.amt)}`, now:"Withheld", after:"Disputed", goesTo:"Northfield", via:"Trading Grid deductions"}],
+    says:`Opens a dispute on ${id} in Trading Grid's deductions for SH01 ${money(c.amt)}, with ${holds}; Northfield sees it there. Northfield's receipt stays as it is unless Northfield revises it.`, nodecision:"Not disputed within 60 days: the deduction stands.", ruleTag:"Priya opens disputes"};
   if (!c.dsp) stages.push({key:"dsp", state:"now", title:"Open dispute", chip:chipA(id), amber:true,
     body:E.nowAfter(act) + `<p class="reason"><b>Reason.</b> Northfield withheld ${money(c.amt)} for ${c.cartons} carton${c.cartons > 1 ? "s" : ""} on ${esc(c.po)}; ${id === "DC-40877" ? "the load scan shows carton 006141410000003006 loaded before seal SL-3302918." : "the case holds " + HOLDS[c.proof].toLowerCase() + "."}</p>` + cashA(id) + E.decision(act),
     details:ruleList(["evid","window","ashby"]) + readList(c.ev) + whoList([["Recommended by","Rule · Ashby rule"],["Opened by","Priya Raman, on Open dispute"],["Recorded by","Trading Grid"]])});
-  else stages.push({key:"dsp", state:"done", summary:`Dispute opened by Priya Raman · SH01 ${money(c.amt)}`, sub:"Recorded on the case with the records Trading Grid holds",
+  else stages.push({key:"dsp", state:"done", summary:`Dispute opened by Priya Raman · SH01 ${money(c.amt)}`, sub:"In Trading Grid's deductions, where Northfield sees it",
     detailsDone:readList((id === "DC-40877" ? ["DSP-40877"] : []).concat(c.ev)) + whoList([["Opened by","Priya Raman"],["Recorded by","Trading Grid"]])});
   if (id === "DC-40877") {
     if (c.repaid) stages.push({key:"pay", state:"done", summary:`Repayment PMT-991204 matched to ${c.dm}`, sub:`+${money(c.amt)} · Supplier ERP matched it in receivables`, detailsDone:readList(["820:PMT-991204","ERP-MATCH-55102"])});
-    else if (c.dsp) stages.push({key:"pay", state:"now", title:"Repayment", chip:["Awaiting remittance",""], body:`<p class="vals">Closes when a Northfield remittance repays ${esc(c.dm)}</p>`});
+    else if (c.dec === "upheld") stages.push({key:"pay", state:"done", summary:"Upheld by Jordan Ellis · SH01 " + money(c.amt), sub:"The deduction stands"});
+    else if (c.dsp) stages.push({key:"pay", state:"now", title:c.dec === "waived" ? "Repayment" : "Northfield decides", chip:[c.dec === "waived" ? "Waived · awaiting remittance" : "Awaiting Jordan Ellis",""], body:`<p class="vals">${c.dec === "waived" ? "Closes when a Northfield remittance repays " + esc(c.dm) : "Jordan Ellis decides in Trading Grid's deductions"}</p>`});
     else stages.push({key:"pay", state:"next", title:"Repayment matched to the deduction"});
+  } else if (c.dec) {
+    stages.push({key:"won", state:"done", summary:`${c.dec === "waived" ? "Waived" : "Upheld"} by Jordan Ellis · SH01 ${money(c.amt)}`, sub:c.dec === "waived" ? "Repaid on a later remittance" : "The deduction stands"});
   } else {
     if (c.won) stages.push({key:"won", state:"now", title:`Won · ${money(c.amt)}`, chip:["Won · confirmed","brand"],
       body:`<p class="vals">Confirmed by Priya Raman · closed on her confirmation</p><div class="bar"><button class="lnk" type="button" data-act="u:${esc(id)}">Undo</button></div>`});
-    else if (c.dsp) stages.push({key:"won", state:"now", title:"Confirm the outcome", chip:["Disputed",""],
-      body:`<p class="vals">Northfield answers outside Trading Grid · ${money(c.amt)} at stake</p><div class="bar"><button class="btn sm" type="button" data-act="w:${esc(id)}" ${S.busy ? 'aria-disabled="true"' : ""}>Confirm won</button><span class="rt">Priya confirms</span></div>`});
+    else if (c.dsp) stages.push({key:"won", state:"now", title:"Northfield decides", chip:["Awaiting Jordan Ellis",""],
+      body:`<p class="vals">Awaiting Jordan Ellis in Trading Grid's deductions · ${money(c.amt)} at stake</p><div class="bar"><button class="btn sm" type="button" data-act="w:${esc(id)}" ${S.busy ? 'aria-disabled="true"' : ""}>Confirm won</button><span class="rt">Priya confirms</span></div>`});
     else stages.push({key:"won", state:"next", title:"Confirm the outcome"});
   }
   return {title:id, chip:chipA(id), deadline:c.dsp ? null : [daysLeft(), ""], meta:`Northfield Retailer · ${c.po} line ${c.line} · deduction ${c.dm}`,
@@ -664,16 +673,15 @@ function recAshby(id){
 function recNorth(id){
   const c = C[id], stages = [], g = group(id);
   const wrong = [{v:`<b>Receiving advice</b> · ${id === "DC-40877" ? 'line 2 119 of 120 · carton <span class="mono">006141410000003006</span> not scanned' : `${c.cartons} carton${c.cartons > 1 ? "s" : ""} short`}`, tags:id === "DC-40877" ? [["EDI 861","861:RCV-DC2-77355"]] : []},
-    {v:`<b>Dispute</b> · received from Ashby · SH01 ${money(c.amt)} · deduction ${esc(c.dm)}`, tags:[]}];
-  if (g !== "other") wrong.push(packRow(id, "in the dispute"));
-  const peers = openIn(g);
-  if (!c.dec && peers.length > 1) stages.push({key:"grp", state:"now", title:GROUP[g] + " · " + peers.length + " disputes", chip:["Decide together",""],
-    body:`<p class="vals">${peers.map(esc).join(" · ")} · ${money(peers.reduce((s, x) => s + C[x].amt, 0))}</p><div class="bar"><button class="btn" type="button" data-approve="g:${g}" ${S.busy ? 'aria-disabled="true"' : ""}>Waive ${peers.length} charges · ${money(peers.reduce((s, x) => s + C[x].amt, 0))}</button><span class="rt">Jordan decides</span></div>`});
-  const rec = g === "conflict" ? "Seal, delivery receipt and load scan present: waive SH01. AS02 stands while the receipt reads 119 of 120." : g === "complete" ? "Seal, delivery receipt and load proof by SSCC present: waive SH01." : "Ashby sent its proof outside Trading Grid: the reviewer checks it.";
+    {v:`<b>Dispute</b> · from Ashby in Trading Grid's deductions · SH01 ${money(c.amt)} · deduction ${esc(c.dm)}`, tags:[]}];
+  if (c.dsp) wrong.push(packRow(id, "in the dispute"));
+  if (!c.dsp) { stages.push({key:"wait", state:"next", title:"Ashby disputes the deduction"}); return {title:id, chip:chipN(id), deadline:null, meta:`Ashby Supplier · ${c.po} line ${c.line} · deduction ${c.dm}`, wrongLabel:"Northfield's records", wrong:wrong.filter(w => !w.v.startsWith("<b>Dispute")), stages}; }
+  const rec = g === "conflict" ? "Seal, delivery receipt and load scan present: waive SH01. AS02 stands while the receipt reads 119 of 120." : g === "complete" ? "Seal, delivery receipt and load proof by SSCC present: waive SH01." : "The reviewer checks the pack against the evidence rule.";
   const wa = "w:" + id, up = "u:" + id;
-  if (!c.dec) stages.push({key:"sh01", state:"now", title:`Decide SH01 · ${money(c.amt)}`, chip:chipN(id), amber:true,
+  if (c.won && !c.dec) stages.push({key:"sh01", state:"done", summary:"Closed by Ashby", sub:"Ashby confirmed the outcome"});
+  else if (!c.dec) stages.push({key:"sh01", state:"now", title:`Decide SH01 · ${money(c.amt)}`, chip:chipN(id), amber:true,
     body:`<p class="reason"><b>Rules.</b> ${esc(rec)}</p><p class="says">Waive charge records the decision in Northfield's case; Northfield repays ${money(c.amt)} on a later remittance. Uphold charge keeps the deduction.</p><div class="bar"><button class="btn" type="button" data-approve="${wa}" ${S.pending[wa] || S.busy ? 'aria-disabled="true"' : ""}>${S.pending[wa] ? "Recording" : "Waive charge"}</button><button class="btn2" type="button" data-approve="${up}" ${S.pending[up] || S.busy ? "disabled" : ""}>Uphold charge</button><span class="rt">Jordan decides</span></div>`,
-    details:ruleList(["evid","sealed","decide"]) + readList(["861:RCV-DC2-77355"].filter(() => id === "DC-40877").concat(g !== "other" ? c.ev : [])) + whoList([["Grouped by","Rule · Northfield's evidence rules"],["Decided by","Jordan Ellis"]])});
+    details:ruleList(["evid","sealed","decide"]) + readList(["861:RCV-DC2-77355"].filter(() => id === "DC-40877").concat(c.ev)) + whoList([["Grouped by","Rule · Northfield's evidence rules"],["Decided by","Jordan Ellis, here or through Aviator"]])});
   else stages.push({key:"sh01", state:"done", summary:`SH01 ${c.dec === "waived" ? "waived" : "upheld"} by Jordan Ellis · ${money(c.amt)}`, sub:c.dec === "waived" ? "Repaid on a later remittance" : "Deduction stands", detailsDone:id === "DC-40877" ? readList(["DEC-40877"]) : ""});
   if (id === "DC-40877") stages.push({key:"as02", state:c.as02 ? "done" : "now", title:"AS02 · " + money(151), chip:["Stands",""], summary:"AS02 " + money(151) + " stands · on compliance charges CI-NF-2611-0418", sub:"Receipt RCV-DC2-77355 unchanged at 119 of 120",
     body:`<p class="vals">Ship notice charge on the same carton · stands while the receipt reads 119 of 120</p>`, details:ruleList(["as02","receipt"]), detailsDone:readList(["CI-NF-2611-0418"])});
@@ -689,21 +697,21 @@ function head(){
       null, "A deduction Ashby disputes is won back and closed.");
     document.getElementById("tiles").innerHTML = [["Withheld",money(withheld())],["Disputed",money(inDispute())],["Won",money(wonTotal())],["Repaid on remittance",money(repaid())]].map((x, i) => `<div class="tile${i === 0 ? " money" : ""}"><span>${x[0]}</span><b>${x[1]}</b></div>`).join("");
   } else {
-    const d = disputes(), open = d.filter(id => !C[id].dec);
+    const d = disputes(), open = toDecide();
     const amt = ids => money(ids.reduce((s, id) => s + C[id].amt, 0));
     E.setHead(!d.length ? "No Ashby disputes to decide yet." : open.length ? `${open.length} Ashby ${open.length === 1 ? "dispute" : "disputes"} to decide, ${amt(open)} in charges.` : "Every Ashby dispute is decided.",
-      null, "Disputes are decided against the evidence rule, several at a time.");
-    document.getElementById("tiles").innerHTML = [["To decide",amt(open)],["Conflicts with receiving",String(openIn("conflict").length)],["Load proof by SSCC",String(openIn("complete").length)],["Proof sent outside",String(openIn("other").length)]].map(x => `<div class="tile"><span>${x[0]}</span><b>${x[1]}</b></div>`).join("");
+      null, "Each dispute is decided against the evidence rule, one or several at a time with Aviator.");
+    document.getElementById("tiles").innerHTML = [["To decide",amt(open)],["Conflicts with receiving",String(openIn("conflict").length)],["Complete packs",String(openIn("complete").length)],["Packs to check",String(openIn("check").length)]].map(x => `<div class="tile"><span>${x[0]}</span><b>${x[1]}</b></div>`).join("");
   }
 }
-const EVENT = {ashby:"Checked when remittance PMT-990412 arrived. Nothing is disputed until Priya Raman opens it.", nf:"Northfield's evidence rules group each dispute as it arrives. Jordan Ellis decides every charge."};
+const EVENT = {ashby:"Checked when remittance PMT-990412 arrived. Nothing reaches Northfield until Priya Raman opens a dispute.", nf:"Northfield's evidence rules group each dispute as it arrives. Jordan Ellis decides every charge."};
 
 E.page = {
   listRows:() => S.ws === "ashby" ? listRowsA() : listRowsN(),
-  listCount:() => S.ws === "ashby" ? ORDER.filter(id => !won(C[id])).length + " open" : disputes().filter(id => !C[id].dec).length + " to decide",
+  listCount:() => S.ws === "ashby" ? ORDER.filter(id => !won(C[id])).length + " open" : toDecide().length + " to decide",
   record:id => !id ? {title:"Disputes", chip:["Awaiting Ashby",""], meta:"Ashby Supplier · remittance PMT-990412", wrong:[], stages:[{key:"w", state:"next", title:"A dispute arrives from Ashby"}]} : S.ws === "ashby" ? recAshby(id) : recNorth(id),
   rulesFor:id => (id ? RULES_FOR(id) : []).map(r => ({text:R[r[0]].text, src:R[r[0]].src, found:r[1]})).concat([{text:R.order.text, src:R.order.src, found:"Sorts the list"}]),
-  questions:() => S.ws === "ashby" ? ["Why can DC-40877 be disputed?","What does Kinross hold for DC-41102?","What did these deductions cost Ashby this quarter?"] : ["Which disputes can I waive together?","Why waive SH01 on DC-40877 while AS02 stands?","What do this week's disputes cost if I waive them all?"],
+  questions:() => S.ws === "ashby" ? ["Why can DC-40877 be disputed?","What does Kinross hold for DC-41102?","What did these deductions cost Ashby this quarter?"] : ["Which disputes can I decide now, and what do the rules recommend?","Waive the disputes with a complete pack","Why waive SH01 on DC-40877 while AS02 stands?"],
   approve, act, switchWs, histFilter,
   after:() => { head(); mapState(); }
 };
@@ -714,7 +722,7 @@ function switchWs(ws){
   document.getElementById("wslabel").textContent = ws === "ashby" ? "Ashby Supplier · Deductions" : "Northfield Retailer · Supplier charges";
   document.getElementById("who").textContent = ws === "ashby" ? "Priya Raman" : "Jordan Ellis";
   E.setHead("", EVENT[ws]);
-  document.querySelector(".src .lab").textContent = ws === "ashby" ? "Deductions" : "Disputes";
+  document.querySelector(".src .lab").textContent = ws === "ashby" ? "Deductions" : "Ashby deductions and disputes";
   const rows = E.page.listRows(); S.sel = rows.length ? rows[0].id : null;
   if (ws === "ashby" && C["DC-40877"].dec === "waived" && !C["DC-40877"].repaid) S.sel = "DC-40877";
   E.render();
@@ -732,15 +740,15 @@ E.buildMap({w:1100, h:212,
          {id:"kin", d:"M252 106 C 340 106, 360 106, 438 106", label:"Scans · API", lx:345, ly:99, from:"Kinross", to:"Trading Grid"},
          {id:"lkl", d:"M252 176 C 340 176, 360 140, 438 140", label:"Images · portal API", lx:345, ly:172, from:"Lakeline Freight", to:"Trading Grid"},
          {id:"nf", d:"M674 106 C 750 106, 780 106, 848 106", label:"Remittances · EDI", lx:761, ly:98, from:"Trading Grid", to:"Northfield"}],
-  summary:() => "Supplier ERP, Kinross and Lakeline Freight reach Trading Grid by API; remittances travel between Northfield and Ashby as EDI. Disputes are recorded on each company's own cases."});
+  summary:() => "Supplier ERP, Kinross and Lakeline Freight reach Trading Grid by API; remittances travel as EDI, and disputes and decisions sit in Trading Grid's deductions, where both companies see them."});
 function mapState(){
   const c = C["DC-40877"];
   E.setRec("erp", c.repaid ? "DM-55102 matched · +$88.40" : "Load scan SHP-450118-2 · 120 of 120");
   E.setRec("kin", C["DC-41102"].dsp || C["DC-41118"].dsp ? "Load proof attached" : "Load scan and tally held");
   E.setRec("lkl", "Bills of lading and receipts");
   E.setRec("nf", c.repaid ? "Remittance PMT-991204 · +$88.40" : "Remittance PMT-990412 · −$586.80");
-  { const od = S.ws === "nf" ? disputes().filter(id => !C[id].dec).length : disputes().filter(id => !won(C[id])).length; E.setRec("dd", od ? od + (od === 1 ? " dispute open" : " disputes open") : disputes().length ? "Disputes decided" : "5 cases"); }
-  E.status(S.ws === "ashby" ? ORDER.filter(id => !C[id].dsp).length + " to dispute" : disputes().filter(id => !C[id].dec).length + " to decide");
+  { const od = toDecide().length; E.setRec("dd", od ? od + (od === 1 ? " dispute open" : " disputes open") : disputes().length ? "Disputes decided" : "5 cases"); }
+  E.status(S.ws === "ashby" ? ORDER.filter(id => !C[id].dsp).length + " to dispute" : toDecide().length + " to decide");
 }
 
 /* ---------- world time ---------- */
@@ -775,20 +783,14 @@ async function approve(key){
     if (c.proof === "kinross" || c.proof === "tally" || c.proof === "none") { E.light("dd", true, "Attaching evidence"); await E.travel("lkl", "Delivery receipt", false); }
     E.light("dd", true, "Dispute · " + id);
     await E.read("dd");
-    step(t, () => { c.dsp = true; H(t, `Dispute on ${id} opened by Priya Raman · SH01 ${money(c.amt)}`, "Trading Grid", id === "DC-40877" ? "DSP-40877" : "", "a"); H(t, `Dispute on ${id} received from Ashby · SH01 ${money(c.amt)}`, "Ashby", "", "n"); }, `Dispute on ${id} recorded. ${money(c.amt)} now disputed.`);
+    step(t, () => { c.dsp = true; H(t, `Dispute on ${id} opened by Priya Raman · SH01 ${money(c.amt)}`, "Trading Grid", id === "DC-40877" ? "DSP-40877" : "", "an"); }, `Dispute on ${id} opened in Trading Grid's deductions. Jordan Ellis sees it in Northfield's workspace.`);
     E.light("dd", false, ""); E.say("Dispute opened on " + id + ".");
-    return;
-  }
-  if (k === "g") {
-    const ids = openIn(id); E.light("dd", true, "Decisions · " + ids.length); await E.read("dd");
-    step(S.clock + 3, () => ids.forEach(x => { C[x].dec = "waived"; H(S.clock, `SH01 on ${x} waived by Jordan Ellis · ${money(C[x].amt)}`, "Northfield", "", "n"); }), `Jordan Ellis waived ${ids.length} charges together: ${ids.join(", ")}.`);
-    E.light("dd", false, ""); E.say(ids.length + " charges waived.");
     return;
   }
   if (k === "w" || k === "u") {
     const t = id === "DC-40877" ? Math.max(S.clock + 1, T(4,10,0)) : S.clock + 3;
     E.light("dd", true, "Decision · " + id); await E.read("dd");
-    step(t, () => { c.dec = k === "w" ? "waived" : "upheld"; H(t, `SH01 on ${id} ${c.dec} by Jordan Ellis · ${money(c.amt)}`, "Northfield", id === "DC-40877" && k === "w" ? "DEC-40877" : "", "n"); },
+    step(t, () => { c.dec = k === "w" ? "waived" : "upheld"; H(t, `SH01 on ${id} ${c.dec} by Jordan Ellis · ${money(c.amt)}`, "Northfield", id === "DC-40877" && k === "w" ? "DEC-40877" : "", "an"); },
       k === "w" ? `Jordan Ellis waived SH01 on ${id}. Northfield repays ${money(c.amt)} on a later remittance.` : `Jordan Ellis upheld SH01 on ${id}. The deduction stands.`);
     E.light("dd", false, ""); E.say("Decision recorded on " + id + ".");
   }
@@ -802,6 +804,21 @@ function act(key){
   E.render(); E.say(c.won ? "Won confirmed." : "Confirmation withdrawn.");
 }
 E.page.onEdited = () => {};
+/* Aviator's decision cards: when Jordan presses Approve on a decide_charge card on the hosted copy, the page shows that decision */
+(() => {
+  const f0 = window.fetch; if (!f0) return;
+  window.fetch = function(url, opts){
+    const p = f0.apply(this, arguments);
+    if (typeof url === "string" && /\/aviator\/[^/]+\/cards\//.test(url)) p.then(r => r.clone().json()).then(j => {
+      const card = j && j.card; if (!j || !j.ok || !card || card.action !== "decide_charge" || card.state !== "Approved") return;
+      const c = C[card.record]; if (!c || c.dec) return;
+      c.dec = /uphold/i.test(JSON.stringify(card.detail || {})) ? "upheld" : "waived";
+      H(S.clock, `SH01 on ${card.record} ${c.dec} by Jordan Ellis through Aviator · ${money(c.amt)}`, "Northfield", "", "an");
+      E.event(`Jordan Ellis ${c.dec} SH01 on ${card.record} through Aviator.`); E.render();
+    }).catch(() => {});
+    return p;
+  };
+})();
 
 /* ---------- first screen ---------- */
 document.querySelector('[data-ws="ashby"]').setAttribute("aria-pressed", "true");

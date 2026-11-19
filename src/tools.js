@@ -6,6 +6,8 @@ import * as A from './agents.js';
 import { scorecardAsOf, failingLines } from './score.js';
 import * as NR from './retailer.js';
 import { findingOutcomes, USE_CASES } from './findings.js';
+import { fillRate, shipNoticeTimeliness } from './performance.js';
+import { QUARTER } from './score.js';
 
 const FIND_IN = { period: z.enum(['quarter', 'prior', 'all']).optional().describe('quarter (default): 27 September 2026 to settlement on 9 January 2027; prior: the closed period 29 March to 7 August 2026; all: both'), use_case: z.enum(USE_CASES).optional().describe('List the findings of one use case, each with its stages'), finding: z.string().optional().describe('One finding’s trail, by finding id, record (PO, case, document) or PO number'), list: z.boolean().optional().describe('List every finding with its stages (at most 200)') };
 const FIND_TEXT = (who, own, other) => `What happened to every finding Trading Grid raised for ${who}: totals per stage (raised, opened, decided, fixed by its owner, confirmed by the next record, money settled) and per use case, the leaks between stages (never opened, decided after the deadline, no confirming record), each owner’s response time measured only from records that arrived (Unknown where none arrived), each rule set’s proposals approved as proposed, edited and declined with what people changed, and value proven only from ${own}. Findings come from replaying the rules in force over the documents and records; every total counts rows of the finding log and the same arguments always give the same figures. ${who}’s findings only: ${other}. Pass use_case for its findings, finding for one trail. Changes nothing.`;
@@ -17,6 +19,14 @@ const t = (v) => D.asOfDate(v);
 // return period_covered, so a caller can check that an answer covers the period asked.
 const PERIOD_IN = { from: z.string().optional().describe('First day of the period, a date such as 2026-11-22. Give from and to when the question names a week or dates'), to: z.string().optional().describe('Last day of the period, a date such as 2026-11-28'),
   period: z.enum(D.PERIODS).optional().describe('A named week instead of dates, resolved from as_of: this_week, last_week or next_week; or quarter for the whole quarter, the same as leaving period out. Weeks run Sunday to Saturday') };
+
+
+// fill_rate and ship_notice_timeliness run from the start of trading; a named quarter or dates narrow them. Aviator offers them on these pages only.
+const PERF_PAGES = ['p7', 'p22'];
+const perfPeriod = (a, at) => (a.period === 'quarter' ? { from: QUARTER.start, to: QUARTER.end, basis: 'The quarter' } : D.resolvePeriod(a, at));
+const PERF_IN = { lines: z.boolean().optional().describe('Include every short line (fill rate) or every late ship notice (timeliness)'), ...PERIOD_IN };
+const FILL_TEXT = (who) => `${who} fill rate, calculated by Trading Grid from the start of trading: cases shipped on the supplier’s ship notices ÷ cases ordered after accepted order changes, per order line, with the invoiced quantity as a cross-check, the short lines by reason (short shipped, cut at acknowledgment, not shipped) and the formula. Counts the lines due up to the day before as_of. Pass from and to, or period (quarter, this_week, last_week), to narrow it. Trading Grid’s own calculation, read from the purchase order, order changes, order acknowledgment, ship notices and invoices: no retailer record is needed.`;
+const TIMELY_TEXT = (who, basis) => `${who} timely ship notices, calculated by Trading Grid from the start of trading on Northfield’s guide rule NF-4.2 (ship notice within 1 hour of departure): ship notices whose first transmission was on time ÷ all ship notices, with every late ship notice and how late. Departure is ${basis}. Pass from and to, or period, to narrow it.`;
 
 export const SCOPES = ['orders', 'documents', 'errors', 'rules', 'deductions'];
 export const TOOLS = [
@@ -58,6 +68,10 @@ export const TOOLS = [
   { name: 'finding_outcomes', title: 'Finding outcomes', job: 'Performance review', rest: ['GET', '/v1/findings'], required: ['orders', 'documents'], optional: ['errors', 'rules', 'deductions'],
     description: FIND_TEXT('Ashby', 'matched repayments and reversed charges', 'Northfield’s findings, payables and reviewer notes read "Not available to Ashby"'),
     input: { ...FIND_IN, as_of: asOf }, run: (db, a) => findingOutcomes(db, 'Ashby', { asOf: t(a.as_of), period: a.period, use_case: a.use_case, finding: a.finding, list: a.list }) },
+  { name: 'fill_rate', title: 'Fill rate, calculated by Trading Grid', job: 'Performance review', rest: ['GET', '/v1/fill-rate'], required: ['orders', 'documents'], optional: [], period: true, pages: PERF_PAGES,
+    description: FILL_TEXT('Ashby’s'), input: { ...PERF_IN, as_of: asOf }, run: (db, a) => { const at = t(a.as_of); return fillRate(db, { asOf: at, period: perfPeriod(a, at), lines: !!a.lines, viewer: 'ASHBY' }); } },
+  { name: 'ship_notice_timeliness', title: 'Timely ship notices, calculated by Trading Grid', job: 'Performance review', rest: ['GET', '/v1/ship-notice-timeliness'], required: ['orders', 'documents'], optional: [], period: true, pages: PERF_PAGES,
+    description: TIMELY_TEXT('Ashby’s', 'the departure scan in Ashby’s and Kinross’s own records'), input: { ...PERF_IN, as_of: asOf }, run: (db, a) => { const at = t(a.as_of); return shipNoticeTimeliness(db, { asOf: at, period: perfPeriod(a, at), lines: !!a.lines, viewer: 'ASHBY' }); } },
   { name: 'recommend_next_step', title: 'Next step for an exception', job: 'Exception investigation', rest: ['POST', '/v1/next-step'], required: ['orders', 'documents'], optional: ['errors', 'rules', 'deductions'],
     description: 'For one exception, reads the Supplier ERP, warehouse, carrier and Trading Grid records and returns the next step with the evidence behind it and what a fixed rule would have done. Jobs: missing_document (record: PO), deduction (record: case id), trade_test (record: test ship notice), shelf (record: store number), shipment_risk (record: PO), scorecard (record: "YYYY-MM-DD to YYYY-MM-DD", optional). It proposes; it sends and changes nothing.',
     input: { job: z.enum(Object.keys(A.JOBS)).describe('Kind of exception'), record: z.string().optional().describe('The record to investigate'), as_of: asOf }, run: (db, a) => A.JOBS[a.job](db, a.record || '', t(a.as_of)) },
@@ -105,6 +119,12 @@ export const NF_TOOLS = [
   { name: 'finding_outcomes', title: 'Finding outcomes', job: 'Performance review', required: ['suppliers'], optional: ['deductions', 'rule_drafts'],
     description: FIND_TEXT('Northfield', 'charges reversed and repaid', 'a supplier’s findings and its ERP, warehouse and carrier records read "Not available to Northfield"'),
     input: { ...FIND_IN, as_of: asOf }, run: (db, a) => findingOutcomes(db, 'Northfield', { asOf: t(a.as_of), period: a.period, use_case: a.use_case, finding: a.finding, list: a.list }) },
+  { name: 'fill_rate', title: 'Supplier fill rates, calculated by Trading Grid', job: 'Performance review', required: ['suppliers', 'documents'], optional: [], period: true, pages: PERF_PAGES,
+    description: `${FILL_TEXT('Suppliers’')} Without a supplier: every supplier ranked, each in its own counting unit. With a supplier: that supplier’s rate and short lines.`, input: { supplier: z.string().optional().describe('Supplier name or id. Leave out for every supplier ranked'), ...PERF_IN, as_of: asOf },
+    run: (db, a) => { const at = t(a.as_of); return fillRate(db, { supplier: a.supplier, asOf: at, period: perfPeriod(a, at), lines: !!a.lines, viewer: 'NORTHFIELD' }); } },
+  { name: 'ship_notice_timeliness', title: 'Supplier timely ship notices, calculated by Trading Grid', job: 'Performance review', required: ['suppliers', 'documents'], optional: [], period: true, pages: PERF_PAGES,
+    description: `${TIMELY_TEXT('Suppliers’', 'the ship time on each ship notice, because a supplier’s departure scan is not available to Northfield')} Without a supplier: every supplier ranked.`, input: { supplier: z.string().optional().describe('Supplier name or id. Leave out for every supplier ranked'), ...PERF_IN, as_of: asOf },
+    run: (db, a) => { const at = t(a.as_of); return shipNoticeTimeliness(db, { supplier: a.supplier, asOf: at, period: perfPeriod(a, at), lines: !!a.lines, viewer: 'NORTHFIELD' }); } },
   { name: 'list_deduction_cases', title: 'Deduction cases', job: 'Claims queue', required: ['deductions'], optional: [],
     description: 'Deduction cases Northfield has opened against its suppliers in the current quarter up to a point in time, with count and total. Pass from (a date, for example 2026-03-29) to include decided cases from the history before the quarter, across suppliers.', input: { as_of: asOf, from: fromD }, run: (db, a) => NR.casesNF(db, t(a.as_of), a.from) },
   { name: 'review_deduction_case', title: 'Review a deduction case', job: 'Claims review', required: ['deductions'], optional: ['rules'],

@@ -159,7 +159,7 @@ function trace(s, actor, type, what, detail = {}) { s.trace.push({ n: s.trace.le
 export const PAYMENT_UNCHANGED = 'No payment state changed: payment release stays in Northfield accounts payable';
 const MODE_APPROVER = { policy: 'Standing policy, set by Jordan Ellis', suggest: 'None: Match Agent may only suggest; Jordan Ellis acts in accounts payable' };
 function audit(s, p, outcome) {
-  const approver = p.taken_over_by || p.approved_by || (p.needs === 'approve' ? (p.state === 'Awaiting approval' ? 'Jordan Ellis (awaiting)' : p.rejected_by || 'Jordan Ellis') : MODE_APPROVER[p.needs]);
+  const approver = p.approved_by || (p.needs === 'approve' ? (p.state === 'Awaiting approval' ? 'Jordan Ellis (awaiting)' : p.rejected_by || 'Jordan Ellis') : MODE_APPROVER[p.needs]);
   s.audit.push({ session: s.id, proposal: p.id, action: p.action, record: p.args.invoice || null, agent: p.by, authority_rule: ACTIONS[p.action].rule, authority_mode: p.needs, approver, outcome, clock: fmtET(iso(s.clock)) });
 }
 export const TYPES = { system: 'System', rule: 'Fixed rule', ai: 'AI judgment', human: 'Human approval', external: 'External confirmation', tool: 'Tool call' };
@@ -377,8 +377,6 @@ export function decide(db, s, proposalId, decision, by = 'Jordan Ellis', note) {
   const p = s.proposals.find((x) => x.id === proposalId);
   if (!p) return { state: 'Refused', message: `No proposal ${proposalId}` };
   if (p.state !== 'Awaiting approval') return { state: 'Refused', message: `${proposalId} is ${p.state.toLowerCase()}; an approval cannot be replayed.` };
-  if (decision === 'take_over') { p.state = 'Taken over'; p.taken_over_by = by; p.note = note || null; s.handed_over = { by, proposal: p.id, note: p.note, at: fmtET(iso(s.clock)) }; s.agent.status = 'handed_to_person';
-    trace(s, by, 'human', `Take over: ${by} set ${p.id} aside and works ${p.args.invoice} by hand`, { action: p.action, note: p.note }); audit(s, p, `Taken over by ${by}; done by hand${p.note ? `: ${p.note}` : ''}`); return { state: 'Taken over', proposal: p.id, by }; }
   if (decision !== 'approve') { p.state = 'Rejected'; p.rejected_by = by; trace(s, by, 'human', `Rejected ${p.id}`, { action: p.action, record: p.args.invoice }); audit(s, p, `Rejected by ${by}`); return { state: 'Rejected', proposal: p.id }; }
   p.state = 'Approved'; p.approved_by = by; trace(s, by, 'human', `Approved ${p.id} on ${p.args.invoice}: ${ACTIONS[p.action].label}`, { args: p.args, record: p.args.invoice, payment: PAYMENT_UNCHANGED });
   const r = execute(db, s, p, by);
@@ -430,7 +428,7 @@ export function outcome(db, s) {
   if (Object.values(s.cases).some((k) => k.matched && !k.corrections.some((x) => x.reference === k.matched.reference && vis(s, x)))) violations.push('MG-3: a match rests on no supplier document (a 997 is not acceptance)');
   const first = s.proposals[0];
   return { invoice: s.anchor, state: stateOf(s, c), matching: e.matching, total_fault: e.total_fault, lines: e.lines.map((l) => ({ line: l.line, status: l.status, billed: l.billed, received: l.received, settling_record: l.settling_record })),
-    first_step: first ? first.action : null, steps: s.proposals.filter((p) => !['Rejected', 'Taken over'].includes(p.state)).map((p) => `${p.action}${p.args.lines ? ` [${p.args.lines.join(',')}]` : p.args.line ? ` [${p.args.line}]` : p.args.correction ? ` ${p.args.correction}` : ''}`),
+    first_step: first ? first.action : null, steps: s.proposals.filter((p) => p.state !== 'Rejected').map((p) => `${p.action}${p.args.lines ? ` [${p.args.lines.join(',')}]` : p.args.line ? ` [${p.args.line}]` : p.args.correction ? ` ${p.args.correction}` : ''}`),
     proposed_clear_for_payment: c.released_proposed, payment_released: false, supplier_claims: claimsOf(db, s, c), open_supplier_claims: claimsOf(db, s, c).filter((x) => x.state.startsWith('Open')).length, requests: s.requests.map((r) => ({ id: r.id, kind: r.kind, lines: r.lines, answer: r.answer && vis(s, r.answer) ? `${r.answer.kind}${r.answer.reference ? ' ' + r.answer.reference : ''} (${r.answer.source})` : 'No answer (997 only)' })),
     approvals: s.trace.filter((t) => t.type === 'human').length, actions_executed: s.proposals.filter((p) => p.state === 'Executed').length, actions_failed: s.proposals.filter((p) => p.state === 'Failed').length, actions_refused: s.trace.filter((t) => t.what.startsWith('Refused')).length,
     violations, synthetic: 'Supplier answers are synthetic, from the deterministic rules in src/match.js, except a recorded corrected invoice revealed at its recorded time' };
@@ -497,7 +495,6 @@ function waitAtLimit(s, ag, t0) {
   trace(s, 'Match Agent', 'system', `At its limit; waiting: ${what}`, { tool_calls: ag.tool_calls, ms: Date.now() - t0 });
 }
 export async function runMatch(db, s, { callModel, maxSteps = 14, maxToolCalls = 24, maxSessionCalls = 96, maxMs = 300000, event, paused = () => false } = {}) {
-  if (s.handed_over) return { ok: true, status: 'handed_to_person', awaiting: [] };
   if (paused()) { s.agent.status = 'paused'; trace(s, 'Trading Grid', 'system', 'Match Agent is paused by the administrator; each held invoice stays a plain task with no proposal', {}); return { ok: true, status: 'paused', awaiting: [] }; }
   if (!callModel) return { ok: false, blocked: 'No model is configured on this server; Match Agent cannot run. Nothing was simulated in its place.' };
   const ag = s.agent; const t0 = Date.now(); const turnStart = ag.tool_calls; ag.status = 'running';
@@ -534,7 +531,6 @@ export async function runMatch(db, s, { callModel, maxSteps = 14, maxToolCalls =
 export async function decideAndResume(db, s, proposalId, decision, by, opts = {}) {
   const r = decide(db, s, proposalId, decision, by, opts.note);
   if (r.state === 'Refused') return r;
-  if (r.state === 'Taken over') return { decision: r, run: { ok: true, status: s.agent.status } };
   const ev = r.result ? `${proposalId} ${decision === 'approve' ? 'approved by ' + by : 'rejected'}; result: ${JSON.stringify(r.result)}` : `${proposalId} rejected by ${by}`;
   const run = await runMatch(db, s, { ...opts, event: ev });
   return { decision: r, run };

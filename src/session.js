@@ -17,6 +17,8 @@ const SESSIONS = new Map();
 const SESSION_ID_BASE = 1e12; // session rows never collide with recorded ids
 let nextId = SESSION_ID_BASE;
 
+export const SHADOW = ['invoices', 'invoice_lines', 'errors', 'shipments', 'shipment_lines'];
+const COLS = {};
 const EVENT_COLS = ['id', 'at', 'kind', 'po', 'system', 'party', 'channel', 'data'];
 const DOC_COLS = ['doc_id', 'reference', 'po', 'doc_type', 'name', 'sender_id', 'receiver_id', 'supplier_id', 'partner_id', 'sent_at', 'isa_ctl', 'gs_ctl', 'st_ctl', 'status', 'answers_doc_id', 'test', 'file', 'body', 'raw'];
 
@@ -24,6 +26,11 @@ const DOC_COLS = ['doc_id', 'reference', 'po', 'doc_type', 'name', 'sender_id', 
 export function installSessions(db) {
   db.function('tg_session', { deterministic: false }, () => CURRENT);
   const draftCols = db.prepare("SELECT name FROM pragma_table_info('draft_rules')").all().map((r) => r.name).filter((c) => c !== 'state');
+  // The derived tables a card's document changes, so every calculated view (three-way match, scorecards, open-order value,
+  // rejections) sees the session's own documents: invoices and their lines, shipments and their lines, and 824 errors.
+  for (const t of SHADOW) { const cols = db.prepare(`SELECT name, type FROM pragma_table_info('${t}')`).all(); COLS[t] = cols.map((c) => c.name);
+    db.exec(`CREATE TEMP TABLE IF NOT EXISTS session_${t} (${cols.map((c) => `${c.name} ${c.type || 'TEXT'}`).join(', ')}, session_id TEXT NOT NULL);
+      CREATE TEMP VIEW IF NOT EXISTS ${t} AS SELECT ${COLS[t].join(', ')} FROM main.${t} UNION ALL SELECT ${COLS[t].join(', ')} FROM temp.session_${t} WHERE session_id = tg_session();`); }
   db.exec(`
     CREATE TEMP TABLE IF NOT EXISTS session_events (${EVENT_COLS.map((c) => (c === 'id' ? 'id INTEGER PRIMARY KEY' : `${c} TEXT`)).join(', ')}, session_id TEXT NOT NULL);
     CREATE INDEX IF NOT EXISTS temp.session_events_s ON session_events (session_id, po);
@@ -56,12 +63,19 @@ export function appendDocument(db, doc) {
   SESSIONS.get(CURRENT)?.writes.push({ kind: 'document', id: doc.doc_id }); return doc.doc_id;
 }
 
+/** Adds one row to a derived table: to the session in force, or, with no session, to the shared world (removed by the admin reset). */
+export function appendRow(db, table, row) {
+  if (!SHADOW.includes(table)) throw new Error(`No derived table ${table}`); const cols = COLS[table];
+  if (!CURRENT) { db.prepare(`INSERT INTO main.${table} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(',')})`).run(...cols.map((c) => row[c] ?? null)); return; }
+  db.prepare(`INSERT INTO temp.session_${table} (${cols.join(', ')}, session_id) VALUES (${cols.map(() => '?').join(',')},?)`).run(...cols.map((c) => row[c] ?? null), CURRENT);
+}
+
 // ---------- The session store ----------
 const sweep = (now = Date.now()) => { for (const [id, s] of SESSIONS) if (now - s.last > IDLE_MS) end(null, id); };
 function end(db, id) { SESSIONS.delete(id); ENDERS.forEach((f) => f(id)); }
 const ENDERS = [];
 /** Registers cleanup for an ended session (its TEMP rows). */
-export function onEnd(db) { ENDERS.push((id) => { db.prepare('DELETE FROM temp.session_events WHERE session_id = ?').run(id); db.prepare('DELETE FROM temp.session_documents WHERE session_id = ?').run(id); }); }
+export function onEnd(db) { ENDERS.push((id) => { for (const t of ['events', 'documents', ...SHADOW]) db.prepare(`DELETE FROM temp.session_${t} WHERE session_id = ?`).run(id); }); }
 
 /** The viewer's session for this page: the one named if it is live and bound to this page, else a new one. */
 export function sessionFor({ id, page, address, now = Date.now() }) {

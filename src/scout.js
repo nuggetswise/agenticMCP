@@ -82,7 +82,7 @@ function trace(s, actor, type, what, detail = {}) {
 // who approved and the outcome. The server copies these into the access log.
 const MODE_APPROVER = { policy: 'Standing policy, set by Priya Raman', suggest: 'None: the model may only suggest' };
 function audit(s, p, outcome) {
-  const approver = p.taken_over_by || p.approved_by || (p.needs === 'approve' ? (p.state === 'Awaiting approval' ? 'Priya Raman (awaiting)' : p.rejected_by || 'Priya Raman') : MODE_APPROVER[p.needs]);
+  const approver = p.approved_by || (p.needs === 'approve' ? (p.state === 'Awaiting approval' ? 'Priya Raman (awaiting)' : p.rejected_by || 'Priya Raman') : MODE_APPROVER[p.needs]);
   s.audit.push({ session: s.id, proposal: p.id, action: p.action, agent: p.by, authority_rule: ACTIONS[p.action].rule, authority_mode: p.needs, approver, outcome, clock: fmtET(iso(s.clock)) });
 }
 const TYPES = { system: 'System', rule: 'Fixed rule', ai: 'AI judgment', human: 'Human approval', external: 'External confirmation', tool: 'Tool call' };
@@ -127,7 +127,7 @@ const SENT = { order_desk_corrects_sales_order: 'Ship-to corrected by Ashby orde
 export function queueView(s) {
   const elapsed = Math.round((s.clock - Date.parse(s.world.branch_at)) / MIN);
   const state = (po) => { const ps = s.proposals.filter((p) => p.po === po); const done = ps.filter((p) => p.state === 'Executed').pop();
-    if (ps.some((p) => p.state === 'Awaiting approval')) return 'Ready to approve'; if (ps.some((p) => p.state === 'Taken over')) return 'Edited by Priya Raman'; return done ? SENT[done.action] || 'Sent' : null; };
+    if (ps.some((p) => p.state === 'Awaiting approval')) return 'Ready to approve'; return done ? SENT[done.action] || 'Sent' : null; };
   const loaded = cartonsLoaded(s); const left = Math.max(0, Math.round((Date.parse(s.world.seal_at) - s.clock) / MIN));
   const hero = { po: s.world.po, kind: 'load', running: !s.load.sealed, cutoff: 'Trailer seals', cutoff_minutes: left, door: s.world.door, source: 'Kinross scan · API',
     problem: loaded < s.load.expected ? `Load scan ${loaded} of ${s.load.expected} cartons; ${s.load.staged.length ? `carton ${s.load.staged[0]} staged, not loaded` : 'one carton short'}${s.erp.ship_to !== 'DC 2' ? `. Order change moved ship-to from DC 4 to DC 2; Supplier ERP shows ${s.erp.ship_to}` : ''}` : `${loaded} of ${s.load.expected} cartons loaded; ship-to DC 2`,
@@ -206,11 +206,6 @@ export function decide(db, s, proposalId, decision, by = 'Priya Raman', note, ch
   const p = s.proposals.find((x) => x.id === proposalId);
   if (!p) return { state: 'Refused', message: `No proposal ${proposalId}` };
   if (p.state !== 'Awaiting approval') return { state: 'Refused', message: `${proposalId} is ${p.state.toLowerCase()}; an approval cannot be replayed.` };
-  // Take over (R15): the person sets this proposal aside and does the case by hand. The model stops proposing in this session.
-  if (decision === 'take_over' && p.po !== s.world.po) { p.state = 'Taken over'; p.taken_over_by = by; p.note = note || null;
-    trace(s, by, 'human', `Take over: ${by} set ${p.id} aside and does ${p.po} by hand`, { action: p.action, po: p.po, note: p.note }); audit(s, p, `Taken over by ${by}; done by hand${p.note ? `: ${p.note}` : ''}`); return { state: 'Taken over', proposal: p.id, by }; }
-  if (decision === 'take_over') { p.state = 'Taken over'; p.taken_over_by = by; p.note = note || null; s.handed_over = { by, proposal: p.id, note: p.note, at: fmtET(iso(s.clock)) }; s.agent.status = 'handed_to_person';
-    trace(s, by, 'human', `Take over: ${by} set ${p.id} aside and does the case by hand`, { action: p.action, note: p.note }); audit(s, p, `Taken over by ${by}; done by hand${p.note ? `: ${p.note}` : ''}`); return { state: 'Taken over', proposal: p.id, by }; }
   if (decision !== 'approve') { p.state = 'Rejected'; p.rejected_by = by; trace(s, by, 'human', `Rejected ${p.id}`, { action: p.action }); audit(s, p, 'Rejected'); return { state: 'Rejected', proposal: p.id }; }
   p.state = 'Approved'; p.approved_by = by; trace(s, by, 'human', `Approved ${p.id}: ${ACTIONS[p.action].label}`, { po: p.po, args: p.args });
   return execute(db, s, p, by);
@@ -334,8 +329,7 @@ function waitAtLimit(s, ag, t0) {
   trace(s, 'Model', 'system', `At its limit; waiting: ${what}`, { tool_calls: ag.tool_calls, ms: Date.now() - t0 });
 }
 export async function runScout(db, s, { callModel, maxSteps = 12, maxToolCalls = 16, maxSessionCalls = 64, maxMs = 90000, event, paused = () => false } = {}) {
-  // Pause and override are enforced here, before any model call: a paused Scout, or a case a person took over, gets no model turn.
-  if (s.handed_over) return { ok: true, status: 'handed_to_person', awaiting: [] };
+  // Pause and override are enforced here, before any model call: a paused Scout, gets no model turn.
   if (paused()) { s.agent.status = 'paused'; trace(s, 'Trading Grid', 'system', 'Scout Agent is paused by the administrator; the event stays a plain task with no proposal', {}); return { ok: true, status: 'paused', awaiting: [] }; }
   if (!callModel) return { ok: false, blocked: 'No model is configured on this server, so only the rule baseline runs. Nothing was simulated in its place.' };
   const ag = s.agent; const t0 = Date.now(); const turnStart = ag.tool_calls; ag.status = 'running';
@@ -376,7 +370,7 @@ export async function decideAndResume(db, s, proposalId, decision, by, opts = {}
   const p0 = s.proposals.find((x) => x.id === proposalId);
   const r = decide(db, s, proposalId, decision, by, opts.note, opts.choice);
   if (r.state === 'Refused') return r;
-  if (r.state === 'Taken over' || p0?.queue) return { decision: r, run: { ok: true, status: s.agent.status } };
+  if (p0?.queue) return { decision: r, run: { ok: true, status: s.agent.status } };
   const ev = r.result ? `${proposalId} ${decision === 'approve' ? 'approved by ' + by : 'rejected'}; result: ${JSON.stringify(r.result)}` : `${proposalId} rejected by ${by}`;
   const run = await runScout(db, s, { ...opts, event: ev });
   return { decision: r, run };

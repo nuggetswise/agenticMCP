@@ -100,7 +100,7 @@ export const getSession = (id) => SESSIONS.get(id) || null;
 function trace(s, actor, type, what, detail = {}) { s.trace.push({ n: s.trace.length + 1, clock: fmtET(iso(s.clock)), actor, type, what, ...(Object.keys(detail).length ? { detail } : {}) }); }
 const MODE_APPROVER = { policy: 'Standing policy, set by Priya Raman', suggest: 'None: Watch Agent may only suggest' };
 function audit(s, p, outcome) {
-  const approver = p.taken_over_by || p.approved_by || (p.needs === 'approve' ? (p.state === 'Awaiting approval' ? 'Priya Raman (awaiting)' : p.rejected_by || 'Priya Raman') : MODE_APPROVER[p.needs]);
+  const approver = p.approved_by || (p.needs === 'approve' ? (p.state === 'Awaiting approval' ? 'Priya Raman (awaiting)' : p.rejected_by || 'Priya Raman') : MODE_APPROVER[p.needs]);
   s.audit.push({ session: s.id, proposal: p.id, action: p.action, agent: p.by, authority_rule: ACTIONS[p.action].rule, authority_mode: p.needs, approver, outcome, clock: fmtET(iso(s.clock)) });
 }
 export const TYPES = { system: 'System', rule: 'Fixed rule', ai: 'AI judgment', human: 'Human approval', external: 'External confirmation', tool: 'Tool call' };
@@ -306,8 +306,6 @@ export function decide(db, s, proposalId, decision, by = 'Priya Raman', note) {
   const p = s.proposals.find((x) => x.id === proposalId);
   if (!p) return { state: 'Refused', message: `No proposal ${proposalId}` };
   if (p.state !== 'Awaiting approval') return { state: 'Refused', message: `${proposalId} is ${p.state.toLowerCase()}; an approval cannot be replayed.` };
-  if (decision === 'take_over') { p.state = 'Taken over'; p.taken_over_by = by; p.note = note || null; s.handed_over = { by, proposal: p.id, note: p.note, at: fmtET(iso(s.clock)) }; s.agent.status = 'handed_to_person';
-    trace(s, by, 'human', `Take over: ${by} set ${p.id} aside and does the case by hand`, { action: p.action, note: p.note }); audit(s, p, `Taken over by ${by}; done by hand${p.note ? `: ${p.note}` : ''}`); return { state: 'Taken over', proposal: p.id, by }; }
   if (decision !== 'approve') { p.state = 'Rejected'; p.rejected_by = by; trace(s, by, 'human', `Rejected ${p.id}`, { action: p.action }); audit(s, p, 'Rejected'); return { state: 'Rejected', proposal: p.id }; }
   // Validated again at approval: the world may have moved since the proposal (UI pace: one minute per decision).
   s.clock += MIN; tick(db, s);
@@ -488,7 +486,6 @@ function waitAtLimit(s, ag, t0) {
   trace(s, 'Watch Agent', 'system', `At its limit; waiting: ${what}`, { tool_calls: ag.tool_calls, ms: Date.now() - t0 });
 }
 export async function runWatch(db, s, { callModel, maxSteps = 14, maxToolCalls = 24, maxSessionCalls = 96, maxMs = 300000, event, paused = () => false } = {}) {
-  if (s.handed_over) return { ok: true, status: 'handed_to_person', awaiting: [] };
   if (paused()) { s.agent.status = 'paused'; trace(s, 'Trading Grid', 'system', 'Watch Agent is paused by the administrator; the queue arrives as plain tasks with no proposal', {}); return { ok: true, status: 'paused', awaiting: [] }; }
   if (!callModel) return { ok: false, blocked: 'No model is configured on this server; Watch Agent cannot run. Nothing was simulated in its place.' };
   const ag = s.agent; const t0 = Date.now(); const turnStart = ag.tool_calls; ag.status = 'running';
@@ -531,7 +528,6 @@ const RULES = 'Rule engine';
 export function rulesPass(db, s) {
   const waiting = new Map(s.proposals.filter((p) => p.state === 'Awaiting approval').map((p) => [p.args.po, null]));
   const act = (action, args) => {
-    if (s.set_aside.has(args.po)) return null;
     if (waiting.has(args.po)) { const first = waiting.get(args.po); if (first && !first.then) first.then = { action, args }; return null; }
     const r = propose(db, s, RULES, action, args, { rationale: null });
     if (r.state === 'Awaiting approval') waiting.set(args.po, s.proposals.find((p) => p.id === r.proposal));
@@ -542,12 +538,11 @@ export function rulesPass(db, s) {
 export function startRules(db, { variation = {}, policy = {}, label } = {}) {
   const hours = D.param(db, 'AP-7.2', 'hours'); // Ashby's own window (24 hours); the agreement with Kinross, KX-945, allows 48
   const s = startSession(db, { variation: { ...(FACTS.kinross_window_hours.values.includes(hours) ? { kinross_window_hours: hours } : {}), ...variation }, policy, label });
-  s.by_rules = true; s.set_aside = new Set(); s.agent.status = 'rules'; rulesPass(db, s); return s;
+  s.by_rules = true; s.agent.status = 'rules'; rulesPass(db, s); return s;
 }
 export function decideRules(db, s, proposalId, decision, by = 'Priya Raman', note) {
   const p = s.proposals.find((x) => x.id === proposalId); let r = decide(db, s, proposalId, decision, by, note);
   if (r.state === 'Refused') return r;
-  if (r.state === 'Taken over') { s.set_aside.add(p.args.po); s.handed_over = null; s.agent.status = 'rules'; return r; }
   // The next step shown with this approval (the 810 once its invoice exists) goes under the same approval.
   if (decision === 'approve' && p.then && p.state === 'Executed') { const n = propose(db, s, RULES, p.then.action, p.then.args); if (n.state === 'Awaiting approval') r = decide(db, s, n.proposal, 'approve', by); }
   rulesPass(db, s); return r;
@@ -555,8 +550,6 @@ export function decideRules(db, s, proposalId, decision, by = 'Priya Raman', not
 export function advanceRules(db, s, { minutes, to } = {}) {
   const target = to != null ? to : minutes != null ? s.clock + minutes * MIN : Math.min(...s.pending.map((p) => Date.parse(p.at)), s.horizon);
   const arrived = advance(db, s, { to: target });
-  // A new record on an order Priya took over brings the rules back to it.
-  for (const a of arrived) if (a.po) s.set_aside.delete(a.po);
   rulesPass(db, s); return arrived.map((a) => a.what);
 }
 /** What a page needs of a rules session: clock, queue, proposals waiting for Priya, records still due, and the trace. */
@@ -587,7 +580,6 @@ export function rulesRecording(db, opts = {}) {
 export async function decideAndResume(db, s, proposalId, decision, by, opts = {}) {
   const r = decide(db, s, proposalId, decision, by, opts.note);
   if (r.state === 'Refused') return r;
-  if (r.state === 'Taken over') return { decision: r, run: { ok: true, status: s.agent.status } };
   // Another proposal may still wait for Priya: the agent resumes only when none does.
   if (s.proposals.some((p) => p.state === 'Awaiting approval')) return { decision: r, run: { ok: true, status: 'waiting_for_priya' } };
   const ev = r.result ? `${proposalId} ${decision === 'approve' ? 'approved by ' + by : 'rejected'}; result: ${JSON.stringify(r.result)}` : `${proposalId} rejected by ${by}`;
@@ -597,7 +589,7 @@ export async function decideAndResume(db, s, proposalId, decision, by, opts = {}
 export async function advanceAndResume(db, s, { minutes, to, ...opts } = {}) {
   const target = to != null ? to : minutes != null ? s.clock + minutes * MIN : Math.min(...s.pending.map((p) => Date.parse(p.at)), s.horizon);
   const arrived = advance(db, s, { to: target });
-  if (!arrived.length || s.handed_over || !opts.callModel) return { arrived: arrived.map((a) => a.what), run: { ok: true, status: s.agent.status } };
+  if (!arrived.length || !opts.callModel) return { arrived: arrived.map((a) => a.what), run: { ok: true, status: s.agent.status } };
   return { arrived: arrived.map((a) => a.what), run: await runWatch(db, s, { ...opts, event: `Records arrived: ${arrived.map((a) => a.what).join('; ')}` }) };
 }
 export { geminiCaller } from './scout.js';

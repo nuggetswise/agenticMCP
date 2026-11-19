@@ -102,7 +102,7 @@ const act = (rt, d, s, by = 'Test agent') => (action, args) => { const r = rt.pr
   // Only a Trading Grid record waits for approval (a dispute in the deduction case); an owner's fix is shown and nothing waits.
   const shown = Claim.propose(db, s, 'Claim Agent', 'holder_shares_evidence', { record: 'DC-41102', evidence: 'load_scan' }); ok(shown.state !== 'Awaiting approval' && s.proposals.find((x) => x.id === shown.proposal)?.result?.state === 'Shown', 'engine: an owner fix is shown, not approved');
   const sc = Claim.startSession(db, {}); const p = Claim.propose(db, sc, 'Claim Agent', 'submit_dispute', { record: 'DC-40877' }); ok(p.state === 'Awaiting approval', 'engine: approve mode waits for a dispute');
-  ok(Claim.decide(db, sc, p.proposal, 'take_over', 'Priya Raman', 'I dispute it myself').state === 'Taken over', 'engine: edit takes over');
+  ok(Claim.decide(db, sc, p.proposal, 'reject', 'Priya Raman').state === 'Rejected' && !sc.state.cases?.['DC-40877']?.disputed, 'engine: a rejected dispute records nothing');
   let n = 0; const stub = async () => { n++; return { candidates: [{ content: { role: 'model', parts: [{ functionCall: { name: 'propose_action', args: { action: 'submit_dispute', record: 'DC-41131', rationale: 'test' } } }] } }] }; };
   const s2 = Claim.startSession(db, { variation: Claim.branchWith('december_28') }); const r = await Claim.runAgent(db, s2, { callModel: stub });
   ok(r.status === 'waiting_for_person' && n === 2 && s2.trace.some((t) => /Waiting for Priya Raman/.test(t.what)), 'engine: two refusals stop the agent and report waiting for Priya Raman');

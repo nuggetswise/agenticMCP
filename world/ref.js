@@ -104,6 +104,7 @@ export const rules = [
   R('NF-1.4', 'acknowledgment', '855', 'Send the order acknowledgment within 24 hours of the purchase order', { window: 24 }),
   R('NF-1.7', 'acknowledgment', '855', 'The order acknowledgment carries the transaction totals segment (CTT) with the number of lines; the X12 standard leaves it optional'),
   R('NF-1.5', 'acceptance', '997', 'Northfield returns a technical acknowledgment (997) to an acknowledgment or change response and sends no business acceptance; a quantity change is accepted only on a matching order change'),
+  R('NF-1.8', 'application advice', '824', "Application advice (824) error codes in TED01, one per error: QTY quantity above accepted, TTL totals segment missing, IID item not on the item list, LOC ship-to not recognized, CTN carton count differs from cartons listed, TOT total differs from the lines, UOM quantity not in cases, DTE ship date after delivery date. X12 leaves TED01 codes to each guide; these are this world's own"),
   R('NF-1.6', 'orders', '860,865', 'Change requests go to the buyer, who issues the order change; answer an order change within 24 hours of the latest change', { window: 24 }),
   R('NF-2.1', 'fulfilment', '856', 'No backorders: a short line is cancelled and the shipped quantity reported', { code: 'OT01', charge: '3% of cost of goods, quarterly; months under $1,000 waived', basis: 'public', pub: [pub('walmart', 'In-full misses are charged about 3% of the cost of goods on the affected portion')] }),
   R('NF-2.2', 'fulfilment', '856', 'One PO ships from one location'),
@@ -154,20 +155,22 @@ export const rules = [
   R('SH01', 'charges', '861,820', 'Shortage: invoice cost of each short carton plus $50', { code: 'SH01', charge: 'Carton cost plus $50' }),
   { id: 'KX-945', owner: 'Ashby agreement', implements: null, params: { hours: 48 }, rule_set: 'kinross', topic: 'warehouse', doc_type: '945', statement: "Kinross returns the warehouse shipping advice (945) within 48 hours of Ashby’s warehouse shipping order (940). Agreement between Ashby and its warehouse, Kinross", window_hours: 48, limit_value: null, charge_code: null, charge: null, check: null, source: 'Ashby warehouse agreement with Kinross. Searched; no standard 945 turnaround is published. SPS Commerce, 3PL selection checklist, Sep 2026 (get a written service level; no standard turnaround)', basis: 'invented', public_sources: [] },
   R('NF-7.11', 'invoice', '810', "Invoice line prices within 0.5% of the acknowledged order price are paid without review; beyond that the line is held", { limit: '0.5%', params: { tolerance: 0.005 } }),
+  R('NF-11.1', 'rules', null, "A draft rule is published to suppliers only after it is replayed against the quarter's exchanged documents"),
   ...ASHBY_RULES,
 ];
 export const RULE = Object.fromEntries(rules.map((r) => [r.id, r]));
 
 /** Application advice (824) error codes Northfield uses, each tied to one rule. */
+// basis 'invented': the code and its wording are this world's own (rule NF-1.8); X12 leaves TED01 codes to each guide.
 export const TED = {
-  TTL: { rule: 'NF-1.7', cause: 'Transaction totals segment missing' },
-  IID: { rule: 'NF-4.11', cause: 'Item not on Northfield item list' },
-  LOC: { rule: 'NF-4.12', cause: 'Ship-to location not recognized' },
-  CTN: { rule: 'NF-4.13', cause: 'Carton count does not match cartons listed' },
-  TOT: { rule: 'NF-7.10', cause: 'Invoice total does not match line amounts' },
-  UOM: { rule: 'NF-4.14', cause: 'Quantity not in cases' },
-  DTE: { rule: 'NF-4.15', cause: 'Ship date after delivery date' },
-  QTY: { rule: 'NF-7.8', cause: 'Invoice quantity above accepted quantity' },
+  TTL: { rule: 'NF-1.7', cause: 'Transaction totals segment missing', basis: 'invented' },
+  IID: { rule: 'NF-4.11', cause: 'Item not on Northfield item list', basis: 'invented' },
+  LOC: { rule: 'NF-4.12', cause: 'Ship-to location not recognized', basis: 'invented' },
+  CTN: { rule: 'NF-4.13', cause: 'Carton count does not match cartons listed', basis: 'invented' },
+  TOT: { rule: 'NF-7.10', cause: 'Invoice total does not match line amounts', basis: 'invented' },
+  UOM: { rule: 'NF-4.14', cause: 'Quantity not in cases', basis: 'invented' },
+  DTE: { rule: 'NF-4.15', cause: 'Ship date after delivery date', basis: 'invented' },
+  QTY: { rule: 'NF-7.8', cause: 'Invoice quantity above accepted quantity', basis: 'invented' },
   PRC: { rule: 'NF-7.11', cause: 'Line price beyond tolerance of the order price' },
   STO: { rule: 'NF-4.7', cause: 'Ship-to differs from the current PO' },
   PCK: { rule: 'NF-4.9', cause: 'Units per case differ from Northfield item setup' },

@@ -11,7 +11,7 @@ import { TED } from '../world/ref.js';
 import { fmtET } from '../world/lib.js';
 import * as D from './domain.js';
 import * as NR from './retailer.js';
-import { appendEvent, appendDocument, currentSession } from './session.js';
+import { appendEvent, appendDocument, appendRow, currentSession } from './session.js';
 
 const J = (s) => { try { return s ? JSON.parse(s) : {}; } catch { return {}; } };
 const money = (n) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -38,16 +38,13 @@ export const CARD_ACTIONS = {
     send_application_advice: { write: 'send_application_advice', permission: 'send_application_advice', rule: 'NF-7.8', takes: 'document (an 810 or 856 Northfield received), optional messages per error code', does: 'Reject a document with an application advice (824)' },
     decide_charge: { write: 'decide_charge', permission: 'decide_charge', rule: 'NF-7.7', takes: 'case, charge, decision (Reversed or Upheld), reason', does: 'Reverse or uphold a disputed deduction' },
     decide_chargeback: { write: 'decide_chargeback', permission: 'decide_chargeback', rule: 'NF-3.6', takes: 'po, decision (Apply or Waive)', does: 'Apply or waive a readiness chargeback' },
-    publish_rule: { write: 'publish_rule', permission: 'publish_rule', rule: null, takes: 'draft (NFD-…)', does: 'Publish a draft rule to suppliers after its replay' },
+    publish_rule: { write: 'publish_rule', permission: 'publish_rule', rule: 'NF-11.1', takes: 'draft (NFD-…)', does: 'Publish a draft rule to suppliers after its replay' },
   },
 };
 const SIDE_PARTY = { ashby: 'ASHBY', northfield: 'NORTHFIELD' };
 const PERSON = { ashby: 'Priya Raman', northfield: 'Jordan Ellis' };
 
 // ---------- Plain-language intent: Aviator acts only when asked, and never outside Trading Grid ----------
-const ACT = /\b(send|resend|release|open|dispute|approve|reject|reverse|uphold|publish|apply|waive|acknowledge|answer|submit|issue|draft|accept|decline|file|raise|go ahead|do it|please (do|make|send))\b/i;
-/** Whether the person asked Aviator to do something, rather than asked about something. */
-export const asksToAct = (q) => ACT.test(String(q || '')) && !/^\s*(why|what|how|when|where|who|which|is|are|was|did|does|do)\b(?!.*\b(can you|could you|please)\b)/i.test(String(q || ''));
 // Words that ask for a message to someone. "message", "text" and "tell" count only with a person or company after them.
 const WHO = '(?:him|her|them|kinross|lakeline|jordan|priya|ashby|northfield|the (?:buyer|carrier|warehouse|supplier|retailer|desk|order desk|billing desk|driver))';
 const OUTSIDE = new RegExp(`\\b(?:e-?mail|phone|call|ring up|sms|slack|teams|whatsapp|instruct|remind|notify|ping|chase)\\b|\\b(?:message|text|tell|ask)\\s+${WHO}\\b`, 'i');
@@ -56,9 +53,26 @@ const OWNERS = [
   [/billing desk|order desk|supplier erp|netsuite|ashby/i, 'Ashby', 'the Supplier ERP'], [/jordan|northfield|buyer|retailer/i, 'Northfield', 'Northfield’s own systems'],
   [/priya/i, 'Ashby', 'Ashby’s own systems'],
 ];
+// A message to the other company that a Trading Grid document or decision carries. Northfield's application advice
+// carries a plain message per error (TED02, 60 characters, or a note in NTE, 80 characters, as its guide allows); Ashby's
+// dispute in Northfield's deduction case carries a note. The words go into that record and a card is raised; no email.
+const CARRIERS = {
+  northfield: { action: 'send_application_advice', names: /\b(reject|rejecting|824|application advice)\b/i, ref: /\b(?:INV|ASN)-[A-Z0-9-]+\b/i, arg: 'document' },
+  ashby: { action: 'open_dispute', names: /\bdispute\b/i, ref: /\bDC-[A-Z0-9-]+\b/i, arg: 'case' },
+};
+const MESSAGE_WORDS = new RegExp(`\\b(?:tell|message|text|ask|let)\\s+${WHO}\\s+(?:know\\s+)?(?:that\\s+|to\\s+)?([^]+)$`, 'i');
+const NOT_CARRIED = /\b(?:e-?mail|phone|call|ring up|sms|slack|teams|whatsapp)\b/i;
+/** The record a request's message to the other company goes into, and the message words; null when no such record is named. */
+export function carriedMessage(q, side) {
+  const t = String(q || ''); const c = CARRIERS[side]; if (!c || !c.names.test(t) || NOT_CARRIED.test(t)) return null;
+  const ref = t.match(c.ref)?.[0]; const m = t.match(MESSAGE_WORDS);
+  const note = m ? m[1].replace(/[*~>\n\r]/g, ' ').replace(/\s+/g, ' ').replace(/[.!\s]+$/, '').trim() : null;
+  return { action: c.action, args: ref ? { [c.arg]: ref.toUpperCase() } : {}, note: note ? note[0].toUpperCase() + note.slice(1) : null };
+}
 /** A request Trading Grid does not carry: an email, call or instruction to someone, or a change in another company's system. */
 export function outsideTradingGrid(q, side) {
-  const t = String(q || ''); const asksSend = OUTSIDE.test(t) && /\b(can you|could you|please|send|write|draft|go|would you)\b|^\s*\w+\b/i.test(t);
+  const t = String(q || ''); if (carriedMessage(t, side)) return null;
+  const asksSend = OUTSIDE.test(t) && /\b(can you|could you|please|send|write|draft|go|would you)\b|^\s*\w+\b/i.test(t);
   const otherSystem = /\b(change|update|edit|fix|correct|cancel|delete|create|post|adjust)\b.*\b(supplier erp|netsuite|erp|wms|warehouse system|(kinross|lakeline|northfield|ashby)(’s|'s)? (own )?(system|systems|erp|wms|portal|inventory|ordering system))\b/i.test(t);
   const thisSidesDoc = /\b(855|856|810|865|824|997|ship notice|invoice|acknowledg|application advice|dispute|chargeback|deduction|rule)\b/i.test(t) && !OUTSIDE.test(t);
   if (!(OUTSIDE.test(t) && asksSend) && !(otherSystem && !thisSidesDoc)) return null;
@@ -81,6 +95,20 @@ function x12Doc(db, { type, ref, po, from, to, T, body, answers = null, name }) 
   const supplier = from === 'NORTHFIELD' ? to : from;
   return { doc_id: `${type}:${ref}:${currentSession() || 'X'}`, reference: ref, po, doc_type: type, name, sender_id: from, receiver_id: to, supplier_id: supplier, partner_id: 'NORTHFIELD', sent_at: T, isa_ctl: ctl, gs_ctl: ctl, st_ctl: '0001', status: 'Delivered', answers_doc_id: answers, test: 0, file: 'session', body: JSON.stringify({ ...d, isa_ctl: ctl, gs_ctl: ctl, st_ctl: '0001', session: currentSession() }), raw };
 }
+/** The rows a sent document adds to the calculated tables, as the world's build derives them, so every calculated view
+ *  (three-way match, scorecards, open-order value, rejections) sees the document in the session that sent it. */
+function deriveRows(db, doc, body) {
+  const locOf = (gln) => (gln && db.prepare('SELECT id FROM locations WHERE gln = ?').get(gln)?.id) || gln || null;
+  if (doc.doc_type === '810') {
+    appendRow(db, 'invoices', { invoice: doc.reference, po: doc.po, doc_id: doc.doc_id, sent_at: doc.sent_at, total: body.total, status: doc.status, replaces: body.replaces || null, terms_days: body.terms_days ?? null });
+    for (const l of body.lines || []) appendRow(db, 'invoice_lines', { invoice: doc.reference, po: doc.po, line: l.line, qty: l.qty, price: l.price });
+  } else if (doc.doc_type === '856') {
+    appendRow(db, 'shipments', { shipment_id: doc.reference, po: doc.po, doc_id: doc.doc_id, sent_at: doc.sent_at, shipped_at: body.shipped_at, delivery_date: body.delivery_date || null, cartons: body.carton_count, ship_from: locOf(body.ship_from_gln), ship_to: locOf(body.ship_to_gln), bol: body.bol || null, seal: body.seal || null, complete: 1 });
+    for (const l of body.lines || []) appendRow(db, 'shipment_lines', { shipment_id: doc.reference, po: doc.po, line: l.line, sku: l.sku || null, qty: l.qty, uom: l.uom || 'CA' });
+  } else if (doc.doc_type === '824') {
+    (body.errors || []).forEach((e, i) => appendRow(db, 'errors', { error_id: `${doc.doc_id}:${i + 1}`, doc_id: doc.answers_doc_id, reported_by: doc.doc_id, channel: 'Application advice (824)', code: e.code, cause: e.cause, field: e.seg ? `${e.seg}${e.elem ? String(e.elem).padStart(2, '0') : ''}` : null, sent_value: e.bad ?? null, allowed: e.allowed ?? null, rule_id: TED[e.code]?.rule || null, status: 'Open', corrected_by: null }));
+  }
+}
 const itemOf = (l) => ({ nf_item: l.northfield_item, sku: l.sku, gtin: l.gtin || undefined });
 
 // ---------- Builders: each returns { ok, card } or { ok: false, message } ----------
@@ -96,8 +124,9 @@ function buildDispute(db, side, a, T) {
   }
   const amount = charge === c.charge ? (c.dispute_amount ?? c.amount) : Math.abs((c.other_charges_on_this_order || []).find((x) => x.charge === charge)?.amount || 0);
   const evidence = (c.evidence || []).filter((e) => e.state === 'In the case').map((e) => e.evidence);
-  return { ok: true, card: { record: c.case, po: c.po, to: 'Northfield deduction case', args: { case: c.case, charge, amount, evidence },
-    says: `Open a dispute of the ${chargeName(charge)} of ${money(amount)} on ${c.case} in Northfield’s deduction case, with ${evidence.join(', ') || 'the case evidence'}. Northfield’s reviewer decides it (NF-7.7).` } };
+  const note = a.note ? String(a.note).replace(/[\n\r]/g, ' ').trim().slice(0, 300) : null;
+  return { ok: true, card: { record: c.case, po: c.po, to: 'Northfield deduction case', args: { case: c.case, charge, amount, evidence, note },
+    says: `Open a dispute of the ${chargeName(charge)} of ${money(amount)} on ${c.case} in Northfield’s deduction case, with ${evidence.join(', ') || 'the case evidence'}${note ? `, noting "${note}"` : ''}. Northfield’s reviewer decides it (NF-7.7).` } };
 }
 function buildRelease(db, side, a, T) {
   const doc = String(a.document || a.record || '').toUpperCase().replace(/\s+DRAFT$/, '');
@@ -196,12 +225,22 @@ function buildAdvice(db, side, a, T) {
   if (!errors.length) return { ok: false, message: `Northfield’s rules find no error in ${ref} at this moment, so there is nothing to reject.` };
   // TED02: the plain message. The guide's cause by default; a message drafted for the person must stay plain and within 60 characters.
   const drafted = Object.fromEntries((Array.isArray(a.messages) ? a.messages : []).map((x) => [String(x.code || '').toUpperCase(), String(x.message || '').replace(/[*~>\n\r]/g, ' ').trim()]));
+  // A message the person gave in words ("tell Ashby line 3 is overbilled") goes on the first error: in TED02 when it fits
+  // 60 characters, else as a note (NTE) of at most 80 characters, which Northfield's guide allows.
+  const note = a.note ? String(a.note).replace(/[*~>\n\r]/g, ' ').trim() : null; let noteIn = null;
+  if (note && !Object.keys(drafted).length) { if (note.length <= GUIDE_824.ted02_max) { drafted[errors[0].code] = note; noteIn = 'TED02'; }
+    else if (GUIDE_824.nte_allowed && note.length <= GUIDE_824.nte_max) { errors[0].note = note; noteIn = 'NTE'; }
+    else return { ok: false, message: `The message is ${note.length} characters; the application advice carries at most ${GUIDE_824.ted02_max} in the error (TED02) or ${GUIDE_824.nte_max} in a note (NTE).` }; }
   for (const e of errors) { const msg = drafted[e.code] || TED[e.code].cause; if (msg.length > GUIDE_824.ted02_max) return { ok: false, message: `The message for ${e.code} is ${msg.length} characters; the application advice allows ${GUIDE_824.ted02_max} (TED02).` }; e.cause = msg; e.rule = TED[e.code].rule; if (!GUIDE_824.nte_allowed) e.allowed = null; }
   const b = J(d.body); const aref = refFree(db, `AA-${ref}`);
-  const body = { action: 'TE', answers_ref: ref, answers_gs: d.gs_ctl, answers_st: d.st_ctl, answers_set: d.doc_type, errors: errors.map(({ code, cause, seg, elem, bad, allowed }) => ({ code, cause, seg, elem, bad, allowed })) };
+  const body = { action: 'TE', answers_ref: ref, answers_gs: d.gs_ctl, answers_st: d.st_ctl, answers_set: d.doc_type, errors: errors.map(({ code, cause, seg, elem, bad, allowed, note: n }) => ({ code, cause, seg, elem, bad, allowed, ...(n ? { note: n } : {}) })) };
+  // Where the person's words name a line the rules do not find in error, the card says so beside the message.
+  const lineSaid = note && note.match(/\bline\s+(\d+)/i)?.[1]; const linesFound = errors.map((e) => e.line).filter(Boolean);
+  const mismatch = lineSaid && linesFound.length && !linesFound.includes(Number(lineSaid)) ? ` Northfield’s rules find the error on line ${linesFound.join(', ')}, not line ${lineSaid}.` : '';
   return { ok: true, card: { record: aref, po: d.po, to: NAME[d.sender_id] || d.sender_id, args: { document: ref, answers: d.doc_id, ref: aref, body, supplier: d.sender_id },
-    says: `Send application advice ${aref} to ${NAME[d.sender_id] || d.sender_id}, rejecting ${DOC_NAMES[d.doc_type]} ${ref}: ${errors.map((e) => `${e.code} "${e.cause}"${e.allowed ? ` (${e.allowed})` : ''}`).join('; ')}. ${NAME[d.sender_id] || 'The supplier'} answers with a 997 and the corrected document (${[...new Set(errors.map((e) => e.rule))].join(', ')}).`,
-    x12_preview: errors.map((e) => `TED*${e.code}*${e.cause}*${e.seg}**${e.elem}**${e.bad}${e.allowed ? `~NTE*GEN*${String(e.allowed).slice(0, GUIDE_824.nte_max)}` : ''}`).join('~') } };
+    says: `Send application advice ${aref} to ${NAME[d.sender_id] || d.sender_id}, rejecting ${DOC_NAMES[d.doc_type]} ${ref}: ${errors.map((e) => `${e.code} "${e.cause}"${e.allowed ? ` (${e.allowed})` : ''}${e.note ? `, note "${e.note}"` : ''}`).join('; ')}.${mismatch} ${NAME[d.sender_id] || 'The supplier'} answers with a 997 and the corrected document (${[...new Set(errors.map((e) => e.rule))].join(', ')}).`,
+    message: note ? { text: note, in: noteIn } : null,
+    x12_preview: errors.map((e) => `TED*${e.code}*${e.cause}*${e.seg}**${e.elem}**${e.bad}${e.allowed ? `~NTE*GEN*${String(e.allowed).slice(0, GUIDE_824.nte_max)}` : ''}${e.note ? `~NTE*GEN*${e.note}` : ''}`).join('~') } };
 }
 function buildDecision(db, side, a, T) {
   const c = NR.caseNF(db, String(a.case || a.record || ''), new Date(T)); if (!c.found) return { ok: false, message: c.message };
@@ -230,7 +269,7 @@ function buildPublish(db, side, a, T) {
   const r = NR.replayRule(db, { draft: id, as_of: T }); if (!r || r.found === false) return { ok: false, message: r?.message || `${id} could not be replayed.` };
   const fails = r.failing_with_draft ?? r.failing ?? null; const exposure = r.added_exposure ?? null;
   return { ok: true, card: { record: id, po: null, to: 'Every Northfield supplier', args: { draft: id, replay: { failing_with_draft: fails, added_exposure: exposure } },
-    says: `Publish ${id} to suppliers: “${d.statement}”. Replayed against the quarter, it ${fails != null ? `fails ${typeof fails === 'object' ? JSON.stringify(fails) : fails} documents` : 'was checked'}${exposure != null ? ` and adds ${typeof exposure === 'number' ? money(exposure) : JSON.stringify(exposure)} in exposure` : ''}. A rule is published only after its replay.` } };
+    says: `Publish ${id} to suppliers: “${d.statement}”. Replayed against the quarter, it ${fails != null ? `fails ${typeof fails === 'object' ? JSON.stringify(fails) : fails} documents` : 'was checked'}${exposure != null ? ` and adds ${typeof exposure === 'number' ? money(exposure) : JSON.stringify(exposure)} in exposure` : ''}. A rule is published only after its replay (NF-11.1).` } };
 }
 const BUILD = { open_dispute: buildDispute, release_held_ship_notice: buildRelease, send_acknowledgment: (db, s, a, T) => buildDocument(db, s, a, T, '855'), answer_order_change: (db, s, a, T) => buildDocument(db, s, a, T, '865'),
   send_ship_notice: (db, s, a, T) => buildDocument(db, s, a, T, '856'), send_invoice: (db, s, a, T) => buildDocument(db, s, a, T, '810'), answer_application_advice: buildAnswerAdvice,
@@ -249,24 +288,24 @@ export function applyCard(db, card, by) {
   const a = card.args; const T = card.at; const side = card.side; const party = SIDE_PARTY[side];
   const ev = (kind, po, data, system = 'Trading Grid') => appendEvent(db, { at: T, kind, po, system, party, channel: 'Trading Grid', data: JSON.stringify({ ...data, via: 'action card', card: card.id, pressed_by: by }) });
   switch (card.action) {
-    case 'open_dispute': return { event: ev('case.dispute', card.po, { case: a.case, charge: a.charge, amount: a.amount, evidence: a.evidence, approved_by: by, rule: 'AP-4.1' }, 'Northfield deduction case') };
+    case 'open_dispute': return { event: ev('case.dispute', card.po, { case: a.case, charge: a.charge, amount: a.amount, evidence: a.evidence, ...(a.note ? { note: a.note } : {}), approved_by: by, rule: 'AP-4.1' }, 'Northfield deduction case') };
     case 'release_held_ship_notice': return { event: ev('tg.release', a.po, { document: a.document, state: 'Released', rule: 'AP-1.3', released_by: by }) };
     case 'send_acknowledgment': case 'answer_order_change': case 'send_ship_notice': case 'send_invoice': {
       const doc = x12Doc(db, { type: a.document, ref: a.ref, po: a.po, from: 'ASHBY', to: 'NORTHFIELD', T, body: a.body, name: { 855: 'Order acknowledgment', 865: 'Change acknowledgment', 856: 'Ship notice', 810: 'Invoice' }[a.document] });
-      appendDocument(db, doc); return { document: doc.reference, event: ev('tg.sent', a.po, { document: doc.reference, set: a.document, sent_by: by }) }; }
+      appendDocument(db, doc); deriveRows(db, doc, a.body); return { document: doc.reference, event: ev('tg.sent', a.po, { document: doc.reference, set: a.document, sent_by: by }) }; }
     case 'answer_application_advice': {
       const adv = db.prepare("SELECT * FROM documents WHERE doc_type = '824' AND reference = ?").get(a.advice); const out = {};
       if (a.ack_needed && adv) { const ack = x12Doc(db, { type: '997', ref: `FA-${adv.reference}`, po: a.po, from: 'ASHBY', to: 'NORTHFIELD', T, answers: adv.doc_id, name: 'Technical acknowledgment', body: { group_id: FUNC['824'], group_ctl: adv.gs_ctl, set_id: '824', set_ctl: adv.st_ctl, result: 'A' } }); appendDocument(db, ack); out.acknowledgment = ack.reference; }
       const inv = x12Doc(db, { type: '810', ref: a.ref, po: a.po, from: 'ASHBY', to: 'NORTHFIELD', T: new Date(Date.parse(T) + 60000).toISOString(), body: a.body, name: 'Invoice' });
-      appendDocument(db, inv); out.document = inv.reference; out.event = ev('tg.sent', a.po, { document: inv.reference, set: '810', replaces: a.body.replaces, answers: a.advice, sent_by: by }); return out; }
+      appendDocument(db, inv); deriveRows(db, inv, a.body); out.document = inv.reference; out.event = ev('tg.sent', a.po, { document: inv.reference, set: '810', replaces: a.body.replaces, answers: a.advice, sent_by: by }); return out; }
     case 'send_application_advice': {
       const doc = x12Doc(db, { type: '824', ref: a.ref, po: card.po, from: 'NORTHFIELD', to: a.supplier, T, answers: a.answers, body: a.body, name: 'Application advice' });
-      appendDocument(db, doc); return { document: doc.reference, event: ev('tg.sent', card.po, { document: doc.reference, set: '824', rejects: a.document, approved_by: by }) }; }
+      appendDocument(db, doc); deriveRows(db, doc, a.body); return { document: doc.reference, event: ev('tg.sent', card.po, { document: doc.reference, set: '824', rejects: a.document, approved_by: by }) }; }
     case 'decide_charge': return { event: ev('case.decision', a.po, { case: a.case, charge: a.charge, amount: a.amount, decision: a.decision, decided_by: by, reason: a.reason, recommended_by: a.recommended ? 'Northfield’s evidence rules' : null }, 'Northfield deduction case') };
     case 'decide_chargeback': return a.decision === 'Apply'
       ? { case: a.case, event: ev('case.opened', a.po, { case: a.case, charge: 'RT01', amount: a.amount, deduction: null, opened_by: by, basis: `Lakeline reports the collect load not ready at the assigned pickup ${fmtET(a.assigned_pickup)}`, dispute_deadline: new Date(Date.parse(T) + 60 * 86400000).toISOString().slice(0, 10) }, 'Northfield deduction case') }
       : { event: ev('compliance.chargeback_waived', a.po, { charge: 'RT01', amount: a.amount, waived_by: by }, 'Northfield compliance record') };
-    case 'publish_rule': return { event: ev('rule.published', null, { draft: a.draft, published_by: by, replay: a.replay }, 'Northfield supplier guide') };
+    case 'publish_rule': return { event: ev('rule.published', null, { draft: a.draft, published_by: by, replay: a.replay, rule: 'NF-11.1' }, 'Northfield supplier guide') };
   }
   throw new Error(`No write for ${card.action}`);
 }

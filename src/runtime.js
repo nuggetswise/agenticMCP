@@ -44,7 +44,7 @@ export function makeRuntime(spec) {
   function trace(s, actor, type, what, detail = {}) { s.trace.push({ n: s.trace.length + 1, clock: fmtET(iso(s.clock)), actor, type, what, ...(Object.keys(detail).length ? { detail } : {}) }); }
   const MODE_APPROVER = { policy: `Standing policy, set by ${person}`, suggest: `None: ${agent} may only suggest` };
   function audit(s, p, outcome) {
-    const approver = p.taken_over_by || p.approved_by || (p.needs === 'approve' ? (p.state === 'Awaiting approval' ? `${person} (awaiting)` : p.rejected_by || person) : MODE_APPROVER[p.needs]);
+    const approver = p.approved_by || (p.needs === 'approve' ? (p.state === 'Awaiting approval' ? `${person} (awaiting)` : p.rejected_by || person) : MODE_APPROVER[p.needs]);
     s.audit.push({ session: s.id, proposal: p.id, action: p.action, record: p.args.record || null, agent: p.by, authority_rule: ACTIONS[p.action].rule, authority_mode: p.needs, approver, outcome, clock: fmtET(iso(s.clock)) });
   }
 
@@ -130,8 +130,6 @@ export function makeRuntime(spec) {
     const p = s.proposals.find((x) => x.id === proposalId);
     if (!p) return { state: 'Refused', message: `No proposal ${proposalId}` };
     if (p.state !== 'Awaiting approval' && !(p.state === 'Suggested' && decision === 'approve')) return { state: 'Refused', message: `${proposalId} is ${p.state.toLowerCase()}; an approval cannot be replayed.` };
-    if (decision === 'take_over') { p.state = 'Taken over'; p.taken_over_by = by; p.note = note || null; (s.handed ||= {})[p.args.record || '*'] = { by, proposal: p.id, note: p.note, at: fmtET(iso(s.clock)) };
-      trace(s, by, 'human', `Take over: ${by} set ${p.id} aside and works ${p.args.record || 'the case'} by hand; ${agent} watches for the next event on it`, { action: p.action, note: p.note }); audit(s, p, `Taken over by ${by}${p.note ? `: ${p.note}` : ''}`); return { state: 'Taken over', proposal: p.id, by }; }
     if (decision !== 'approve') { p.state = 'Rejected'; p.rejected_by = by; trace(s, by, 'human', `Rejected ${p.id}`, { action: p.action }); audit(s, p, 'Rejected'); return { state: 'Rejected', proposal: p.id }; }
     s.clock += MIN; tick(db, s);
     const bad = spec.validate(db, s, p.action, p.args, ctx); if (bad) { p.state = 'Failed'; p.result = { state: 'Refused', response: bad }; trace(s, 'Trading Grid', 'rule', `Refused at approval: ${p.id}`, { reason: bad }); audit(s, p, `Failed: ${bad}`); return { state: 'Failed', proposal: p.id, result: p.result }; }
@@ -198,8 +196,7 @@ When you are waiting for ${person} or another party, stop and say in one or two 
         ag.tool_calls++; const args = { ...modelArgs(AGENT_TOOLS, f.name, f.args) }; let result;
         if (f.name === 'propose_action') {
           const { action, rationale, alternatives, ...rest } = args;
-          if (rest.record && s.handed?.[rest.record] && !s.handed[rest.record].reopened) result = { state: 'Refused', message: `${person} took ${rest.record} over; ${agent} proposes on it again only after a new business event.` };
-          else result = propose(db, s, agent, action, rest, { rationale, alternatives });
+          result = propose(db, s, agent, action, rest, { rationale, alternatives });
           if (result.state === 'Awaiting approval') waiting = true;
           if (result.state === 'Refused' && !result.usage) { ag.refused ||= {}; ag.refused[action] = (ag.refused[action] || 0) + 1; if (ag.refused[action] >= 2) { blocked = result.message; result = { ...result, message: `${result.message} Refused twice: stop proposing ${action}; ${person} is told what is waiting.` }; } }
         } else if (READS[f.name]) { result = read(db, s, f.name, args); trace(s, agent, 'tool', `Read ${f.name}`, { args }); }
@@ -216,7 +213,6 @@ When you are waiting for ${person} or another party, stop and say in one or two 
   async function decideAndResume(db, s, proposalId, decision, by, opts = {}) {
     const r = decide(db, s, proposalId, decision, by, opts.note);
     if (r.state === 'Refused') return r;
-    if (r.state === 'Taken over') return { decision: r, run: { ok: true, status: s.agent.status } };
     if (s.proposals.some((p) => p.state === 'Awaiting approval')) return { decision: r, run: { ok: true, status: 'waiting_for_person' } };
     const ev = r.result ? `${proposalId} ${decision === 'approve' ? 'approved by ' + by : 'rejected'}; result: ${JSON.stringify(r.result)}` : `${proposalId} rejected by ${by}`;
     return { decision: r, run: opts.callModel ? await runAgent(db, s, { ...opts, event: ev }) : { ok: true, status: s.agent.status } };
@@ -224,8 +220,7 @@ When you are waiting for ${person} or another party, stop and say in one or two 
   async function advanceAndResume(db, s, { minutes, ...opts } = {}) {
     const target = minutes != null ? s.clock + minutes * MIN : Math.min(...s.pending.map((p) => Date.parse(p.at)), s.horizon);
     const arrived = advance(db, s, { to: target });
-    // A new business event on a record that was taken over hands it back to the agent.
-    for (const a of arrived) if (a.record && s.handed?.[a.record]) s.handed[a.record].reopened = true;
+    // A new business event on a record runs the rules again from the records that arrived.
     if (!arrived.length || !opts.callModel) return { arrived: arrived.map((a) => a.what), run: { ok: true, status: s.agent.status } };
     return { arrived: arrived.map((a) => a.what), run: await runAgent(db, s, { ...opts, event: `Records arrived: ${arrived.map((a) => a.what).join('; ')}` }) };
   }
@@ -255,8 +250,8 @@ When you are waiting for ${person} or another party, stop and say in one or two 
   const view = (db, s, extra = {}) => s ? ({ session: s.id, agent, label: s.label, clock: fmtET(iso(s.clock)), branch_at: fmtET(iso(s.branch)), status: s.agent.status, variation: s.changes, facts: s.facts,
     queue: spec.queue(db, s, ctx), awaiting: s.proposals.filter((p) => p.state === 'Awaiting approval').map((p) => ({ id: p.id, action: p.action, does: ACTIONS[p.action].label, args: p.args, proposed_by: p.by, rationale: p.rationale, alternatives: p.alternatives, rule: ACTIONS[p.action].rule })),
     suggested: s.proposals.filter((p) => p.state === 'Suggested').map((p) => ({ id: p.id, action: p.action, does: ACTIONS[p.action].label, args: p.args, proposed_by: p.by, rationale: p.rationale })),
-    pending: s.pending.map((p) => ({ at: fmtET(p.at), what: p.what })), ...(s.handed ? { handed_over: s.handed } : {}),
-    roles: s.proposals.filter((p) => p.state !== 'Awaiting approval').map((p) => ({ proposal: p.id, action: p.action, recommended_by: p.by, authorised_by: p.taken_over_by ? `${p.taken_over_by} (took over)` : p.approved_by || (p.needs === 'policy' ? `Standing policy (${ACTIONS[p.action].rule})` : p.needs === 'suggest' ? person : p.rejected_by || '—'), carried_out_by: p.state === 'Executed' ? ACTIONS[p.action].actor : '—', state: p.state })),
+    pending: s.pending.map((p) => ({ at: fmtET(p.at), what: p.what })),
+    roles: s.proposals.filter((p) => p.state !== 'Awaiting approval').map((p) => ({ proposal: p.id, action: p.action, recommended_by: p.by, authorised_by: p.approved_by || (p.needs === 'policy' ? `Standing policy (${ACTIONS[p.action].rule})` : p.needs === 'suggest' ? person : p.rejected_by || '—'), carried_out_by: p.state === 'Executed' ? ACTIONS[p.action].actor : '—', state: p.state })),
     outcome: spec.outcome(db, s, ctx), trace: s.trace, overhead: { model_calls: s.agent.calls, tool_calls: s.agent.tool_calls, ms: s.agent.ms, model_routes: s.agent.routes || {} }, ...extra })
     : { result: 'Invalid request', error: 'No such session; sessions live in memory and end when the server restarts.' };
 
@@ -276,7 +271,7 @@ export function runtimeTools(rt, { name, db, callModel, paused, log, recordTrial
     { name: `${name}_setup`, readOnly: true, title: `${rt.agent} setup: facts, approval modes and guardrails`, description: `What can be set before a ${rt.agent} run (${desc}): story moments, facts with their recorded values, presets, each action with its rule and approval mode, and the administrator guardrails. Changes nothing.`, input: {}, run: async () => rt.setup() },
     { name: `${name}_start`, title: `Start ${rt.agent}`, description: `Branches the demo world at the story moment into an isolated session (later recorded records hidden; nothing reaches the recorded world), lets ${rt.agent} investigate ${desc} with its read tools, and returns when it waits for ${rt.spec.person}, finishes or hits its limit. Returns the session id, the queue, proposals awaiting approval, who recommended, authorised and carried out each action, and the trace. Outside parties answer by deterministic rules, labelled synthetic.`, input: { variation: VAR, facts: FACTS, policy: POLICY, label: z.string().optional() },
       run: async ({ variation, facts, policy, label } = {}) => { const s = rt.startSession(db, { variation: rt.branchWith(variation, facts), policy: pol(policy), label: label || 'Operator' }); const r = await rt.runAgent(db, s, { callModel: callModel(), paused }); drain(s); return rt.view(db, s, r.ok ? {} : { blocked: r.blocked || r.status }); } },
-    { name: `${name}_decide`, title: `Decide a ${rt.agent} proposal as ${rt.spec.person}`, description: `Records ${rt.spec.person}'s decision on one proposal: approve, reject, or take_over (Take over: the person takes the record over; ${rt.agent} proposes on it again only after a new business event). On approval the server executes it, then ${rt.agent} continues from the result. An approval cannot be replayed. Only call this when the user has decided.`, input: { session: z.string(), proposal: z.string(), decision: z.enum(['approve', 'reject', 'take_over']), note: z.string().optional() },
+    { name: `${name}_decide`, title: `Decide a ${rt.agent} proposal as ${rt.spec.person}`, description: `Records ${rt.spec.person}'s decision on one proposal: approve or reject. On approval the server executes it, then ${rt.agent} continues from the result. An approval cannot be replayed. Only call this when the user has decided.`, input: { session: z.string(), proposal: z.string(), decision: z.enum(['approve', 'reject']), note: z.string().optional() },
       run: async ({ session, proposal, decision, note }) => { const s = rt.getSession(session); if (!s) return rt.view(db, null); const r = await rt.decideAndResume(db, s, proposal, decision, rt.spec.person, { callModel: callModel(), paused, note }); drain(s); if (r.state === 'Refused') return { ...r, result: 'Refused' }; return rt.view(db, s, r.run?.ok === false ? { blocked: r.run.blocked || r.run.status } : {}); } },
     { name: `${name}_state`, readOnly: true, title: `${rt.agent} session state and trace`, description: `Current state of a ${rt.agent} session: clock, queue, proposals, roles, pending records, outcome and trace. Pass advance_minutes to move the session clock on: records due by then arrive and ${rt.agent} continues from them.`, input: { session: z.string(), advance_minutes: z.number().int().min(1).max(60 * 24 * 45).optional() },
       run: async ({ session, advance_minutes } = {}) => { const s = rt.getSession(session); if (!s) return rt.view(db, null); if (!advance_minutes) return rt.view(db, s); const r = await rt.advanceAndResume(db, s, { minutes: advance_minutes, callModel: callModel(), paused }); drain(s); return rt.view(db, s, { arrived: r.arrived, ...(r.run?.ok === false ? { blocked: r.run.blocked || r.run.status } : {}) }); } },

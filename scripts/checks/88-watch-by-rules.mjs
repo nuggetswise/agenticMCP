@@ -18,10 +18,10 @@ export default function ({ db, ok, eq }) {
   const last = (po) => rec.steps[po].at(-1).rows.map((r) => `${r.document} ${r.state}`);
   eq('watch_rules.five_approvals_reach_the_ending', [rec.steps['NR-46215'].length + rec.steps['NR-46220'].length + rec.steps['NR-46210'].length + rec.steps['NR-46226'].length, last('NR-46215'), last('NR-46220'), last('NR-46210'), last('NR-46226')],
     [5, ['856 Closed; sent Late'], ['945 Closed', '856 Sent'], ['855 Sent'], ['810 Sent']]);
-  // Take over: Priya takes an order over; the rules leave it alone until a new record arrives on it.
+  // Reject: Priya rejects a release; nothing is sent and the order waits for her.
   const s = W.startRules(db, {}); const p = s.proposals.find((x) => x.state === 'Awaiting approval' && x.args.po === 'NR-46210');
-  W.decideRules(db, s, p.id, 'take_over', 'Priya Raman', 'by hand');
-  ok('watch_rules.a_takeover_is_not_proposed_again', !s.proposals.some((x) => x.state === 'Awaiting approval' && x.args.po === 'NR-46210') && s.proposals.find((x) => x.id === p.id).taken_over_by === 'Priya Raman');
+  W.decideRules(db, s, p.id, 'reject', 'Priya Raman');
+  ok('watch_rules.a_rejected_release_sends_nothing', s.proposals.find((x) => x.id === p.id).state === 'Rejected' && s.proposals.find((x) => x.id === p.id).rejected_by === 'Priya Raman' && !s.docs.some((d) => d.po === 'NR-46210' && d.state === 'Sent'));
   // The Kinross window is Priya's rule in the catalogue: at 48 hours NR-46220 is inside the window and not flagged.
   const wide = W.rulesView(db, W.startRules(db, { variation: { kinross_window_hours: 48 } }));
   ok('watch_rules.kinross_window_changes_which_rows_are_flagged', !wide.queue.rows.some((r) => r.po === 'NR-46220') && rec.start.queue.rows.some((r) => r.po === 'NR-46220'));

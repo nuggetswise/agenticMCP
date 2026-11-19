@@ -282,10 +282,10 @@ for (const p of REG.prototypes) {
   { G.setAgentState(gdb, G.AS, { agent: 'Scout', state: 'paused', by: 'Priya Raman' }); const s = Scout.startSession(db);
     const run = await Scout.runScout(db, s, { callModel: noModel, paused: () => G.isPaused(gdb, 'Scout Agent') });
     eq('governance.paused_scout_gets_no_model_turn', [run.status, s.agent.calls, s.proposals.filter((p) => p.by === 'Model').length], ['paused', 0, 0]); G.setAgentState(gdb, G.AS, { agent: 'Scout Agent', state: 'active', by: 'Priya Raman' }); }
-  // Only a business document waits for approval on the shipment itself, so the override is taken on the ship notice release.
+  // Only a business document waits for approval on the shipment itself, so the reject is taken on the ship notice release.
   { const s = Scout.startSession(db); Scout.propose(db, s, 'Model', 'order_desk_corrects_sales_order'); Scout.propose(db, s, 'Model', 'build_ship_notice'); const p = Scout.propose(db, s, 'Model', 'release_ship_notice');
-    const d = Scout.decide(db, s, p.proposal, 'take_over', 'Priya Raman', 'Releases it herself after checking the load'); const a = s.audit.at(-1); const run = await Scout.runScout(db, s, { callModel: noModel });
-    eq('governance.override_is_recorded_with_who_made_it', [d.state, a.approver, /^Taken over by Priya Raman/.test(a.outcome), s.handed_over?.by, run.status, s.agent.calls, Scout.decide(db, s, p.proposal, 'approve').state], ['Taken over', 'Priya Raman', true, 'Priya Raman', 'handed_to_person', 0, 'Refused']); }
+    const d = Scout.decide(db, s, p.proposal, 'reject', 'Priya Raman'); const a = s.audit.at(-1);
+    eq('governance.reject_is_recorded_with_who_made_it', [d.state, a.approver, /^Rejected/.test(a.outcome), !!s.asn?.released, Scout.decide(db, s, p.proposal, 'approve').state], ['Rejected', 'Priya Raman', true, false, 'Refused']); }
   // Story 4: a trial of a changed agent rule is a change-list entry: what changed, the replay result, drift, rollback, who ran it and when.
   { const t = G.trialAgentRule(gdb, ash, G.AS, { job: 'shelf', rule: 'AP-6.1', params: { min_weekly_avg: 500 }, records: ['114', '207'], as_of: '2026-10-26T08:07:00-04:00' }, 'Gate check');
     const e = G.changeList(gdb, G.AS, { kind: 'trial' }).entries[0];

@@ -13,14 +13,15 @@ export const asOfDate = (v) => { if (!v) return storyClock(); const d = new Date
 
 /** A period for a tool, resolved from as_of: explicit from and to dates, or a named period. Weeks run Sunday to Saturday,
  *  US Eastern, as the story calendar counts them. Null when none is asked. */
-export const PERIODS = ['this_week', 'last_week', 'next_week'];
+// quarter is the whole quarter: the same as naming no period (the model asks for it by name, and a refusal cost a model call).
+export const PERIODS = ['this_week', 'last_week', 'next_week', 'quarter'];
 const dayOf = (v) => (/^\d{4}-\d{2}-\d{2}/.test(String(v)) ? String(v).slice(0, 10) : null);
 const shift = (day, n) => new Date(Date.parse(`${day}T12:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
 export const weekOf = (day) => { const dow = new Date(`${day}T12:00:00Z`).getUTCDay(); const from = shift(day, -dow); return { from, to: shift(from, 6) }; };
 export function resolvePeriod({ from, to, period } = {}, asOf = storyClock()) {
   if (from || to) { const f = dayOf(from), t = dayOf(to); if ((from && !f) || (to && !t)) throw new Error('from and to must be dates, for example 2026-11-22'); if (f && t && f > t) throw new Error('from is after to');
     return { from: f || t, to: t || f, basis: 'The dates asked for' }; }
-  if (!period) return null; if (!PERIODS.includes(period)) throw new Error(`period is one of ${PERIODS.join(', ')}`);
+  if (!period || period === 'quarter') return null; if (!PERIODS.includes(period)) throw new Error(`period is one of ${PERIODS.join(', ')}`);
   const w = weekOf(etDay(asOf)); const n = period === 'last_week' ? -7 : period === 'next_week' ? 7 : 0;
   return { from: shift(w.from, n), to: shift(w.to, n), basis: `${period.replace('_', ' ')} at ${fmtET(asOf)}; weeks run Sunday to Saturday` };
 }

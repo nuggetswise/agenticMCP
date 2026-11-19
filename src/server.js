@@ -446,7 +446,7 @@ for (const t of [...SCOUT_TOOLS, ...WATCH_TOOLS, ...MATCH_TOOLS, ...RUNTIME_TOOL
 const SESSION_TOOLS = (cid) => cid === AS ? [...SCOUT_TOOLS, ...WATCH_TOOLS, ...RUNTIME_TOOLS[AS]] : [...MATCH_TOOLS, ...RUNTIME_TOOLS[NF]];
 async function runSessionTool(cid, t, args) { let out; try { out = await t.run(args); if (cid === NF) out = linkify(out, SIDE[NF]); } catch (e) { out = { result: 'Invalid request', error: e.message }; } log(cid, t.name, [], args, out.result || out.status || 'Answered', []); return out; }
 function makeServer(cid) {
-  const server = new McpServer({ name: cid === AS ? 'trading-grid-ashby' : 'trading-grid-northfield', title: cid === AS ? 'Trading Grid · Ashby Supplier' : 'Trading Grid · Northfield Retailer', version: '0.4.9' }, { instructions: INSTRUCTIONS[cid]() });
+  const server = new McpServer({ name: cid === AS ? 'trading-grid-ashby' : 'trading-grid-northfield', title: cid === AS ? 'Trading Grid · Ashby Supplier' : 'Trading Grid · Northfield Retailer', version: '0.4.10' }, { instructions: INSTRUCTIONS[cid]() });
   // Every tool on the connection answers through `present` (src/credit.js): no result, title or description names an agent.
   const register = server.registerTool.bind(server);
   server.registerTool = (name, meta, handler) => register(name, { ...meta, title: present(meta.title), description: present(meta.description) }, async (args) => {
@@ -490,7 +490,7 @@ app.use((req, res, next) => { const json = res.json.bind(res); res.json = (body)
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false }));
 app.get('/', (req, res) => res.type('html').send(homePage()));
-app.get('/healthz', (req, res) => res.json({ status: 'ok', version: '0.4.9', writes: WRITES, connections: [AS, NF], aviator: !!process.env.GEMINI_API_KEY, model_routes: Aviator.modelRoutes().map((r) => `${r.route} · ${r.model}`) }));
+app.get('/healthz', (req, res) => res.json({ status: 'ok', version: '0.4.10', writes: WRITES, connections: [AS, NF], aviator: !!process.env.GEMINI_API_KEY, model_routes: Aviator.modelRoutes().map((r) => `${r.route} · ${r.model}`) }));
 const cidOf = (req, res) => { const c = BY_TOKEN[req.params.token]; if (!c) { res.status(404).send('Not found'); return null; } return c; };
 
 app.post('/mcp/:token', async (req, res) => {
@@ -576,17 +576,21 @@ app.get('/p', (req, res) => res.set('X-Robots-Tag', 'noindex').json({ pages: Obj
 // the server never rewrites the model's answer.
 const KIND_WORDS = { wms: 'Kinross', carrier: 'Lakeline', erp: 'Supplier ERP', tg: 'Trading Grid', case: 'deduction case', rule: 'rule' };
 const kindLabel = (ref) => String(ref).replace(/^([a-z]+)\.([a-z_]+)$/, (m, k, f) => `${KIND_WORDS[k] || k} ${f.replace(/_/g, ' ')}`);
-/** The records an answer read, by their business names: those it names first, then the rest it read. */
-function recordsRead(text, results) {
-  const refs = []; const add = (r) => { if (r && !refs.includes(r)) refs.push(r); };
+/** The records an answer read, by their business names. `read`: the records the answer names, then the record the
+ *  question was about (a reference in the question, or the record on screen the server read first). `also`: every other
+ *  record the tools returned (technical acknowledgments, scans and the like), kept apart so the page lists only what the
+ *  answer rests on. Only records a tool returned in this turn are listed. */
+export function recordsRead(text, results, focus = []) {
   // Only records: a reference (NR-450118, INV-7731C, PMT-990412) or a record kind; never a sentence a tool returned about one.
   const isRecord = (x) => /^[A-Z][A-Z0-9]*-[A-Z0-9][A-Z0-9.#-]*$/.test(x) || /^[a-z]+\.[a-z_]+$/.test(x) || /^\d{3}$/.test(x);
   const all = []; for (const r of results) for (const x of refsOf(r)) if (isRecord(String(x)) && !all.includes(x)) all.push(x);
-  // Every record the tools returned in this turn, those the answer names first. A reference the answer names that a tool
-  // returned under any field is listed too (the answer check refuses a reference no tool returned).
-  const rawResults = JSON.stringify(results); for (const x of String(text).match(Cards.REF_RE) || []) if (rawResults.includes(x) && !all.includes(x)) all.unshift(x);
-  for (const x of all) if (String(text).includes(x)) add(x); for (const x of all) add(x);
-  return refs.map((ref) => {
+  // A reference the answer names that a tool returned under any field counts as returned (the answer check refuses one no tool returned).
+  const raw = JSON.stringify(results); const returned = (x) => all.includes(x) || raw.includes(x);
+  const main = []; const add = (x) => { if (x && returned(x) && !main.includes(x)) main.push(x); };
+  for (const x of String(text).match(Cards.REF_RE) || []) add(x);
+  for (const x of all) if (String(text).includes(x)) add(x);
+  for (const x of focus) add(x);
+  const named = (refs) => refs.map((ref) => {
     if (db.prepare('SELECT 1 FROM orders WHERE po = ?').get(ref)) return { record: ref, name: `Purchase order ${ref}` };
     const d = db.prepare('SELECT name FROM documents WHERE reference = ? ORDER BY sent_at LIMIT 1').get(ref); if (d) return { record: ref, name: `${d.name} ${ref}` };
     if (/^PMT-/.test(ref)) return { record: ref, name: `Remittance ${ref}` };
@@ -599,6 +603,8 @@ function recordsRead(text, results) {
     if (/^[a-z]+\.[a-z_]+$/.test(ref)) { const n = kindLabel(ref); return { record: n, name: n.charAt(0).toUpperCase() + n.slice(1) }; }
     return { record: ref, name: ref };
   }).filter((r, i, a) => r && a.findIndex((x) => x && x.name === r.name) === i);
+  const read = named(main); const also = named(all.filter((x) => !main.includes(x))).filter((r) => !read.some((x) => x.name === r.name));
+  return { read, also };
 }
 // The viewer's address for the per-address limits. Render sits behind Cloudflare: Cloudflare sets CF-Connecting-IP to the
 // connecting client and overwrites any value a client sends, while Render only appends to X-Forwarded-For, so req.ip there is a
@@ -722,7 +728,7 @@ async function pageAviator(page, req, res) {
     const check = (answer) => Cards.checkAnswer(answer, { cards: runCards, results, outside, question, expect: expect && { ...expect, refused: !!lastRefusal } });
     let out; try { out = await Aviator.ask({ question: q, history, tools, callTool, side: { person: SD.person, company: SD.company, other: SD.other }, clock: fmtET(at), routes, cards: true, check, preread, prereadText: preText }); } catch (e) { console.error(e); out = { ok: false, status: 500 }; }
     const covers = !asked || periods.some((p) => p && p.from === asked.from && p.to === asked.to);
-    return { out, results, covers, readPeriod: periods.length > 0 }; };
+    return { out, results, covers, readPeriod: periods.length > 0, pre: preread[0] || null }; };
   const all = Aviator.modelRoutes(); let r = await run(all); let retried = null;
   // An answer for a different period than the question asked is asked again on the secondary model (the primary when
   // there is none). If that also reads another period, the page gets an error code rather than a wrong answer.
@@ -735,7 +741,8 @@ async function pageAviator(page, req, res) {
   withVia(via, () => log(cid, 'aviator', [], { question_chars: question.length, tools: (out.tools_called || []).map((t) => t.tool), model_route: out.model ? `${out.route || 'primary'} · ${out.model}` : null, ms: Date.now() - started, as_of: asOf, session: session.id, rechecks: out.rechecks || 0, ...(out.reasons ? { failed_checks: out.reasons, failed_check_texts: out.reason_texts } : {}), ...(out.cause ? { cause: out.cause } : {}), ...(asked ? { period: `${asked.from} to ${asked.to}` } : {}), ...(retried ? { retried_for_period_on: retried } : {}), ...(outside ? { outside_trading_grid: outside.owner } : {}), cards: runCards.map((c) => c.id) }, out.ok ? `Answered from ${out.tools_called.length} tool call(s)` : out.capped ? 'Daily model cap reached' : out.wrong_period ? 'Refused: the answer read a different period' : out.unchecked ? 'No answer: failed the server check' : 'No answer', runCards.map((c) => c.record)));
   if (out.wrong_period) return res.status(422).json({ ok: false, error: 'wrong_period', period: { from: asked.from, to: asked.to }, session: session.id });
   if (!out.ok) return res.status(out.capped ? 429 : 503).json({ ok: false, error: out.capped ? 'daily_cap' : /no model key/.test(out.message || '') ? 'aviator_unavailable' : 'no_answer', ...(out.cause ? { cause: out.cause } : {}), ...(out.reasons ? { checks: out.reasons } : {}), session: session.id });
-  res.json({ ok: true, answer: out.answer, answer_from: 'model', read: recordsRead(out.answer, results), side, as_of: asOf, as_of_eastern: fmtET(at), ...(asked ? { period: { from: asked.from, to: asked.to } } : {}), ...(outside ? { outside_trading_grid: { owner: outside.owner, where: outside.where } } : {}), session: session.id, cards: runCards.map(publicCard) });
+  const rr = recordsRead(out.answer, results, [...(question.match(Cards.REF_RE) || []), ...(r.pre ? Object.values(r.pre.arguments) : [])]);
+  res.json({ ok: true, answer: out.answer, answer_from: 'model', read: rr.read, also_read: rr.also, side, as_of: asOf, as_of_eastern: fmtET(at), ...(asked ? { period: { from: asked.from, to: asked.to } } : {}), ...(outside ? { outside_trading_grid: { owner: outside.owner, where: outside.where } } : {}), session: session.id, cards: runCards.map(publicCard) });
 }
 
 // ---------- Action cards on hosted pages ----------

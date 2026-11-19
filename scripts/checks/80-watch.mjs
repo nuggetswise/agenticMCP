@@ -1,4 +1,4 @@
-// P13 Silent order watch: the Watch Agent runtime (src/watch.js) held to the spec (docs/agent-and-mcp-strategy.md, Build brief 2)
+// P13 Silent order watch: the Watch Agent runtime (src/watch.js) held to the spec (retired strategy doc, now docs/archive)
 // and to D61: the queue at the branch is computed from records, the rule baseline gives the spec's next step on each changed-evidence
 // record, Priya's Kinross window changes which rows are flagged, NR-46231 is never chased, a 997 is never acceptance, a session
 // changes no recorded row, and no read returns a record from after the branch unless it was revealed as a confirmation.

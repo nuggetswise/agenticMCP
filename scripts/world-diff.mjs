@@ -1,7 +1,7 @@
 // Proof that a world change keeps every existing record: builds the world at a base commit (default: the commit
 // before world coverage, e8f0e93) and compares it with the current build, table by table, in all three databases.
 // A row present at the base and absent now (on the columns both share) is a changed or lost record, and fails unless
-// docs/phase1/rebaseline.json names that table with the reason it was re-baselined on purpose. Added rows are listed.
+// docs/archive/phase1/rebaseline.json names that table with the reason it was re-baselined on purpose. Added rows are listed.
 // Usage: node scripts/world-diff.mjs [base-commit] [--report path]
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, symlinkSync } from 'node:fs';
@@ -19,7 +19,7 @@ if (!existsSync(join(BASE, 'build', 'tg.db'))) {
   if (!existsSync(join(BASE, 'node_modules'))) symlinkSync(join(ROOT, 'node_modules'), join(BASE, 'node_modules'));
   execSync('node --no-warnings world/build.js', { cwd: BASE, stdio: 'ignore' });
 }
-const ALLOW = join(ROOT, 'docs', 'phase1', 'rebaseline.json');
+const ALLOW = join(ROOT, 'docs', 'archive', 'phase1', 'rebaseline.json');
 const allow = existsSync(ALLOW) ? JSON.parse(readFileSync(ALLOW, 'utf8')) : {};
 const SKIP = new Set(['connections', 'access_log', 'proposals', 'agent_changes', 'rule_replays']);
 const out = { base: REF, tables: {} }; let bad = 0;

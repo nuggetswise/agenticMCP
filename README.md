@@ -83,3 +83,15 @@ The rule catalogue (`world/ref.js`) marks each rule public, adapted or invented 
 - PRC, STO and PCK are invented too; NF-1.8 lists all eleven 824 codes.
 - In a session, Ashby's corrected invoice marks the 824's open errors Corrected and the original invoice "Replaced by …", as session overlay rows; recorded rows and other viewers are unchanged.
 - Deleted: `ui/`, the kit and walk scripts, `scripts/page-build.mjs`, and the docs that described Take over or Edit suggestion. The build guide's R15 and D58 now read Approve or Reject, and Approve or Cancel for a card.
+
+### 0.4.6
+
+- Every word a viewer reads in Aviator's chat is written by Gemini from tool results. The server never writes or substitutes an answer: `answer_from` is always `model`, and `answer_replaced_because` is gone.
+- The server still checks each answer against the cards and the records (codes, quoted phrases, lines, amounts, "done" claims, a card's message word for word, a refused line, an owner outside Trading Grid). On a mismatch it sends the model the reasons and it answers again, up to twice; then the page gets `error: no_answer` ("Aviator couldn't answer that. Try again.").
+- Outside Trading Grid: the guard stays (propose_action is not offered, so no card can be raised); the model writes the reply from the owner and the place, which the response also carries as `outside_trading_grid`.
+- Cards are data: `label`, `to`, `record`, `po`, `lines`, `detail`, `rule {owner, text}`, `message {text, in, lines}`, `approver`, `buttons`, `state`, `x12`, `offered_instead`. No `says`.
+- A line the rules do not find is refused; the card for the line they found is raised with no message, and the person's words are never changed.
+- Every refusal on the hosted routes is an error code, never a sentence.
+- Limits: 20 Aviator questions a minute per address, no daily per-address limit, a model cap of 3,000 calls a day, and a forbidden (403) key also moves to the secondary route.
+- Retired docs moved to `docs/archive/` (see its README). The guide scripts are deleted and the build gate reads no doc.
+- P22, P23 and P24 are registered in `pages/pages.json`.

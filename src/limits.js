@@ -1,22 +1,17 @@
-// Protects the model key behind the public pages: a per-address rate limit on each public route, and one daily cap on
-// calls that reach the model (Aviator and the agent runtimes share it). Both answer with a short plain message a page can
-// show in its chat. Counters live in memory and reset when the server restarts or the day (UTC) turns.
+// Protects the model key behind the public pages: a per-address rate limit per minute on each public route, and one daily
+// cap on calls that reach the model (Aviator and the agent runtimes share it). There is no per-address daily limit. Hosted
+// pages get error codes, never sentences. Counters live in memory and reset when the server restarts or the day (UTC) turns.
 
 const num = (v, d) => (v != null && v !== '' && Number.isFinite(Number(v)) ? Number(v) : d);
 
 export const LIMITS = {
-  aviator_per_minute: num(process.env.AVIATOR_PER_MINUTE, 6),
-  aviator_per_day: num(process.env.AVIATOR_PER_ADDRESS_DAY, 60),
+  aviator_per_minute: num(process.env.AVIATOR_PER_MINUTE, 20),
   public_per_minute: num(process.env.PUBLIC_PER_MINUTE, 120),
-  model_calls_per_day: num(process.env.MODEL_DAILY_CAP, 600),
+  model_calls_per_day: num(process.env.MODEL_DAILY_CAP, 3000),
 };
 
-export const MESSAGES = {
-  rate: 'Wait a minute and ask again. This address has reached its limit of questions per minute.',
-  rate_day: 'Ask again tomorrow. This address has reached its daily limit of questions.',
-  public_rate: 'Wait a minute and try again. This address has reached its limit of requests per minute.',
-  cap: 'Ask again tomorrow. Aviator has reached its daily limit of answers.',
-};
+// Only the connected-assistant tools (ask_aviator over MCP) carry this text; hosted pages get the error code daily_cap.
+export const MESSAGES = { cap: 'Aviator has reached its daily limit of model calls.' };
 
 const today = () => new Date().toISOString().slice(0, 10);
 

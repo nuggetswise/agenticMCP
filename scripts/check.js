@@ -348,12 +348,6 @@ for (const p of REG.prototypes) {
   for (const t of p.acceptance) ok(`registry ${p.id} acceptance ${t} ran and passed`, results[t] === true, results[t] === undefined ? 'no such test' : 'failed');
 }
 eq('registry.built_prototypes_state_their_ending', REG.prototypes.filter((p) => p.status === 'Built' && !p.ends_at).map((p) => p.id), []);
-// Doc snapshots (docs/*.md) are dated records, not current (T2.8): each carries its export date and says it is not current.
-// They are no longer held to agree with the registry or the server; the Build Guide is the working copy.
-const DOCS = { plan: 'prototype-plan.md', server: 'database-and-server-plan.md', strategy: 'agent-and-mcp-strategy.md' };
-for (const [k, f] of Object.entries(DOCS)) { const t = existsSync(join(ROOT, 'docs', f)) ? readFileSync(join(ROOT, 'docs', f), 'utf8') : '';
-  ok(`docs.${k} is a dated snapshot marked not current`, /^<!-- Dated snapshot, exported \d{1,2} \w+ 20\d\d .*it is not current\./.test(t)); }
-
 // ── World coverage (D60): one file of checks per stage in scripts/checks, each given the same helpers ──────────────
 for (const f of readdirSync(join(ROOT, 'scripts', 'checks')).filter((x) => x.endsWith('.mjs')).sort()) {
   const m = await import(join(ROOT, 'scripts', 'checks', f));

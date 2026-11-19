@@ -1,6 +1,6 @@
 // Action cards: what Aviator, or a connected assistant, may ask a person to approve. The server builds every card from the
 // side's own rules and the records at the moment, never from the model's words: the model names an action and a record, the
-// server checks it against the rules and writes the plain sentence that says what happens, to whom and under which rule.
+// server checks it against the rules and returns it as data: what happens, to whom, on which record and under which rule.
 // Nothing happens until the person presses Approve; the card id is the idempotency key, so one press records one action.
 //
 // Trading Grid acts only as Trading Grid does: it sends a business document it carries (855, 865, 856, 810, 997, 824) or
@@ -77,7 +77,7 @@ export function outsideTradingGrid(q, side) {
   const thisSidesDoc = /\b(855|856|810|865|824|997|ship notice|invoice|acknowledg|application advice|dispute|chargeback|deduction|rule)\b/i.test(t) && !OUTSIDE.test(t);
   if (!(OUTSIDE.test(t) && asksSend) && !(otherSystem && !thisSidesDoc)) return null;
   const hit = OWNERS.find(([re]) => re.test(t)); const [, who, where] = hit || [null, side === 'ashby' ? 'the person who owns it' : 'the owner of the record', 'their own system'];
-  return { answer: `That is done outside Trading Grid. Trading Grid sends only business documents and records decisions in its own workflows; it does not ${/\b(call|phone|ring)\b/i.test(t) ? 'make calls' : 'send emails, messages or instructions'}, and it changes nothing in a company’s own system. ${who} owns it, in ${where}.`, owner: who, where };
+  return { owner: who, where, asks: /\b(call|phone|ring)\b/i.test(t) ? 'a call' : otherSystem && !OUTSIDE.test(t) ? 'a change in another company’s system' : 'an email, message or instruction' };
 }
 
 // ---------- Records ----------
@@ -126,7 +126,7 @@ function buildDispute(db, side, a, T) {
   const evidence = (c.evidence || []).filter((e) => e.state === 'In the case').map((e) => e.evidence);
   const note = a.note ? String(a.note).replace(/[\n\r]/g, ' ').trim().slice(0, 300) : null;
   return { ok: true, card: { record: c.case, po: c.po, to: 'Northfield deduction case', args: { case: c.case, charge, amount, evidence, note },
-    says: `Open a dispute of the ${chargeName(charge)} of ${money(amount)} on ${c.case} in Northfield’s deduction case, with ${evidence.join(', ') || 'the case evidence'}${note ? `, noting "${note}"` : ''}. Northfield’s reviewer decides it (NF-7.7).` } };
+    detail: { case: c.case, po: c.po, charge: chargeName(charge), amount, evidence, note, decided_by: 'Northfield’s reviewer' } } };
 }
 function buildRelease(db, side, a, T) {
   const doc = String(a.document || a.record || '').toUpperCase().replace(/\s+DRAFT$/, '');
@@ -141,7 +141,7 @@ function buildRelease(db, side, a, T) {
   else if (Array.isArray(hold.d.findings)) { fixed = !!after('erp.correction'); open = hold.d.findings.map((f) => `${f.finding} (${f.owner})`).join('; '); }
   if (!fixed) return { ok: false, message: `${doc} stays held: ${open}. A held ship notice is released only after every failure on it is fixed (AP-1.3).` };
   return { ok: true, card: { record: doc, po: hold.po, to: 'Northfield Retailer', args: { document: doc, po: hold.po },
-    says: `Release ship notice ${doc} for ${hold.po} to Northfield. Every failure that held it is fixed and confirmed by its owner’s record. Priya Raman releases it (AP-1.3).` } };
+    detail: { document: doc, document_kind: 'Ship notice', po: hold.po, held_at: fmtET(hold.at), failures_fixed: true } } };
 }
 function buildDocument(db, side, a, T, type) {
   const po = D.normPo(String(a.po || a.record || '')); const o = ordersOf(db, po); if (!o || o.supplier_id !== 'ASHBY') return { ok: false, message: `No Ashby order ${po}.` };
@@ -151,14 +151,14 @@ function buildDocument(db, side, a, T, type) {
   if (type === '855') {
     if (has('855').length) return { ok: false, message: `${po} is already acknowledged (${has('855').at(-1).reference}).` };
     const ref = refFree(db, `ACK-${base}`); const body = { lines: lines.map((l) => ({ line: l.line, qty_ordered: l.qty_ordered, qty: l.qty_ordered, price: l.price, code: 'IA', ...itemOf(l) })) };
-    return { ok: true, card: { record: ref, po, to: 'Northfield Retailer', args: { po, document: '855', ref, body }, says: `Send order acknowledgment ${ref} to Northfield, accepting ${lines.map((l) => `line ${l.line} at ${l.qty_ordered} cases`).join(', ')} at the order prices (NF-1.4).` } };
+    return { ok: true, card: { record: ref, po, to: 'Northfield Retailer', args: { po, document: '855', ref, body }, detail: { document: ref, document_kind: 'Order acknowledgment', po, lines: lines.map((l) => ({ line: l.line, cases: l.qty_ordered, price: l.price })) } } };
   }
   if (type === '865') {
     const ch = has('860').at(-1); if (!ch) return { ok: false, message: `Northfield has sent no order change on ${po}.` };
     if (has('865').some((d) => d.sent_at > ch.sent_at)) return { ok: false, message: `Order change ${ch.reference} on ${po} is already answered.` };
     const seq = J(ch.body).seq || 1; const ref = refFree(db, `CA-${base}-${seq}`);
     const body = { seq, lines: lines.map((l) => ({ line: l.line, qty_ordered: l.qty_ordered, qty: l.qty_ordered, price: l.price, code: 'IA', ...itemOf(l) })) };
-    return { ok: true, card: { record: ref, po, to: 'Northfield Retailer', args: { po, document: '865', ref, body }, says: `Send change acknowledgment ${ref} to Northfield, accepting order change ${seq} on ${po}: ${lines.map((l) => `line ${l.line} at ${l.qty_ordered} cases`).join(', ')} (NF-1.6).` } };
+    return { ok: true, card: { record: ref, po, to: 'Northfield Retailer', args: { po, document: '865', ref, body }, detail: { document: ref, document_kind: 'Change acknowledgment', po, order_change: seq, lines: lines.map((l) => ({ line: l.line, cases: l.qty_ordered, price: l.price })) } } };
   }
   if (type === '856') {
     if (has('856').length) return { ok: false, message: `A ship notice for ${po} is already sent (${has('856').at(-1).reference}).` };
@@ -169,7 +169,7 @@ function buildDocument(db, side, a, T, type) {
     const ref = refFree(db, `ASN-${base}`); const late = (Date.parse(T) - Date.parse(dep.at)) / 3600000 > 1;
     const body = { po_ref: po, carton_count: load.d.cartons_loaded, scac: 'LKLF', shipped_at: dep.at, delivery_date: o.requested_delivery, ship_to_name: parties.ST?.name, ship_to_gln: parties.ST?.gln, ship_from_name: 'Ashby Supplier', ship_from_gln: parties.VN?.gln,
       lines: lines.map((l) => ({ line: l.line, qty: l.qty_accepted ?? l.qty_ordered, uom: 'CA', ...itemOf(l) })) };
-    return { ok: true, card: { record: ref, po, to: 'Northfield Retailer', args: { po, document: '856', ref, body }, says: `Send ship notice ${ref} for ${po} to Northfield, built from the load scan of ${load.d.cartons_loaded} cartons and the departure at ${fmtET(dep.at).slice(11)}${late ? '. It is more than an hour after departure, so it stays Late (NF-4.2)' : ' (NF-4.2)'}.` } };
+    return { ok: true, card: { record: ref, po, to: 'Northfield Retailer', args: { po, document: '856', ref, body }, detail: { document: ref, document_kind: 'Ship notice', po, cartons: load.d.cartons_loaded, departed: fmtET(dep.at), late, lines: body.lines.map((l) => ({ line: l.line, cases: l.qty })) } } };
   }
   if (type === '810') {
     if (has('810').length) return { ok: false, message: `${po} is already invoiced (${has('810').at(-1).reference}).` };
@@ -178,7 +178,7 @@ function buildDocument(db, side, a, T, type) {
     const ls = lines.map((l) => ({ line: l.line, qty: shipped(l.line), uom: 'CA', price: l.price, ...itemOf(l) })).filter((l) => l.qty > 0);
     const total = Math.round(ls.reduce((s, l) => s + l.qty * l.price, 0) * 100) / 100; const ref = refFree(db, `INV-${base}`);
     const body = { po_ref: po, po_date: o.received_at.slice(0, 10), buyer_name: parties.BY?.name, buyer_gln: parties.BY?.gln, vendor_name: parties.VN?.name, vendor_gln: parties.VN?.gln, terms_days: 30, lines: ls, total };
-    return { ok: true, card: { record: ref, po, to: 'Northfield Retailer', args: { po, document: '810', ref, body }, says: `Send invoice ${ref} for ${po} to Northfield: ${ls.map((l) => `line ${l.line}, ${l.qty} cases at ${money(l.price)}`).join('; ')}, ${money(total)} in all, the quantity on ship notice ${asn.reference} (NF-7.8).` } };
+    return { ok: true, card: { record: ref, po, to: 'Northfield Retailer', args: { po, document: '810', ref, body }, detail: { document: ref, document_kind: 'Invoice', po, ship_notice: asn.reference, lines: ls.map((l) => ({ line: l.line, cases: l.qty, price: l.price, amount: Math.round(l.qty * l.price * 100) / 100 })), total } } };
   }
   return { ok: false, message: 'Name the document to send: 855, 865, 856 or 810.' };
 }
@@ -199,7 +199,7 @@ function buildAnswerAdvice(db, side, a, T) {
   const total = Math.round(ls.reduce((s, l) => s + l.qty * l.price, 0) * 100) / 100; const ref = refFree(db, `${rejected.reference}C`);
   const body = { po_ref: adv.po, po_date: rb.po_date || null, replaces: rejected.reference, buyer_name: rb.parties?.BY?.name, buyer_gln: rb.parties?.BY?.gln, vendor_name: rb.parties?.VN?.name, vendor_gln: rb.parties?.VN?.gln, terms_days: rb.terms_days ?? 30, lines: ls, total };
   return { ok: true, card: { record: ref, po: adv.po, to: 'Northfield Retailer', args: { advice: adv.reference, po: adv.po, document: '997+810', ref, ack_needed: !ack, body },
-    says: `Ashby does not send an application advice here: Northfield’s application advice rejects invoice ${rejected.reference}. Send ${ack ? '' : 'the technical acknowledgment of that advice and '}corrected invoice ${ref} replacing ${rejected.reference}: ${ls.map((l) => `line ${l.line} at ${l.qty} cases`).join(', ')}, ${money(total)} (NF-7.2).` } };
+    detail: { document: ref, document_kind: 'Corrected invoice', po: adv.po, replaces: rejected.reference, answers_application_advice_on: rejected.reference, sends_technical_acknowledgment: !ack, lines: ls.map((l) => ({ line: l.line, cases: l.qty, price: l.price, amount: Math.round(l.qty * l.price * 100) / 100 })), total } } };
 }
 /** Northfield's 824 against a document it received: each error coded from its guide, with a plain message in TED02. */
 function buildAdvice(db, side, a, T) {
@@ -212,7 +212,7 @@ function buildAdvice(db, side, a, T) {
     const m = NR.threeWayMatch(db, ref, new Date(T)); if (!m.found) return { ok: false, message: m.message };
     for (const l of m.lines) {
       if (/^quantity/.test(l.origin)) errors.push({ code: 'QTY', seg: 'IT1', elem: '2', bad: String(l.billed), allowed: `${Math.min(l.shipped, l.received)} ${l.received < l.shipped ? 'received' : 'shipped'} on line ${l.line}; held value ${money(l.amount_at_issue)}`, line: l.line,
-        billed: l.billed, shipped: l.shipped, received: l.received, plain: `billed ${l.billed} cases; ${l.shipped} shipped and ${l.received} received, ${money(l.amount_at_issue)} held` });
+        billed: l.billed, shipped: l.shipped, received: l.received, held: l.amount_at_issue, plain: `billed ${l.billed} cases; ${l.shipped} shipped and ${l.received} received, ${money(l.amount_at_issue)} held` });
       else if (/^price/.test(l.origin)) errors.push({ code: 'PRC', seg: 'IT1', elem: '4', bad: String(l.invoice_price), allowed: `Order price ${money(l.po_price)} on line ${l.line}`, line: l.line, plain: `billed at ${money(l.invoice_price)} against the order price of ${money(l.po_price)}` });
     }
     const sum = Math.round(m.lines.reduce((s, l) => s + l.billed * (l.invoice_price ?? 0), 0) * 100) / 100;
@@ -251,13 +251,12 @@ function buildAdvice(db, side, a, T) {
   const aref = refFree(db, `AA-${ref}`); const who = NAME[d.sender_id] || d.sender_id;
   const body = { action: 'TE', answers_ref: ref, answers_gs: d.gs_ctl, answers_st: d.st_ctl, answers_set: d.doc_type, errors: errors.map(({ code, cause, seg, elem, bad, allowed, notes }) => ({ code, cause, seg, elem, bad, allowed, notes })) };
   const x12 = errors.map((e) => [`TED*${e.code}*${e.cause}*${e.seg}**${e.elem}**${e.bad}`, ...e.notes.map((n) => `NTE*GEN*${n}`)].join('~')).join('~');
-  // What the card says is what the 824 carries, in plain words: no error codes, no Trading Grid reference numbers.
-  const plainErr = (e) => `${e.line ? `line ${e.line}: ` : ''}${e.plain || TED[e.code].cause.toLowerCase()}`;
-  const says = `Send an application advice to ${who} rejecting ${DOC_NAMES[d.doc_type]} ${ref}. ${errors.map((e) => `${plainErr(e)[0].toUpperCase()}${plainErr(e).slice(1)}`).join('. ')}.`
-    + (note ? ` ${noteIn === 'TED02' ? 'Your message' : 'Your note'} to ${who}, "${note}", goes with ${targets.length === errors.length && errors.length > 1 ? 'each error' : targets.map((e) => (e.line ? `line ${e.line}` : 'the error')).join(' and ')}.` : '')
-    + ` ${who} answers with a technical acknowledgment and the corrected document.`;
+  // The card is data: what the 824 rejects, each error's line with billed, shipped, received and the amount held, and the
+  // message exactly as the person gave it. Aviator explains it; the server checks that explanation against these fields.
+  const lines = errors.map((e) => ({ ...(e.line ? { line: e.line } : {}), problem: TED[e.code].cause, ...(e.billed != null ? { billed: e.billed, shipped: e.shipped, received: e.received, amount_held: e.held } : {}), message: e.cause !== TED[e.code].cause ? e.cause : null }));
   return { ok: true, card: { record: aref, po: d.po, to: who, args: { document: ref, answers: d.doc_id, ref: aref, body, supplier: d.sender_id },
-    says, message: note ? { text: note, in: noteIn, lines: targets.map((e) => e.line).filter(Boolean) } : null, x12_preview: x12 } };
+    detail: { rejects: ref, document_kind: DOC_NAMES[d.doc_type], po: d.po, lines },
+    message: note ? { text: note, in: noteIn, lines: targets.map((e) => e.line).filter(Boolean) } : null, x12_preview: x12 } };
 }
 function buildDecision(db, side, a, T) {
   const c = NR.caseNF(db, String(a.case || a.record || ''), new Date(T)); if (!c.found) return { ok: false, message: c.message };
@@ -268,7 +267,7 @@ function buildDecision(db, side, a, T) {
   const amount = c.disputes.filter((d) => d.charge === charge).at(-1).amount; const rec = c.review_agent?.charge === charge ? c.review_agent : null;
   const reason = String(a.reason || rec?.reason || '').slice(0, 300) || null;
   return { ok: true, card: { record: c.case, po: c.po, to: `${c.supplier} (deduction case)`, args: { case: c.case, po: c.po, charge, decision, amount, reason, recommended: rec?.next_step || null },
-    says: `${decision === 'Reversed' ? 'Reverse' : 'Uphold'} the ${chargeName(charge)} of ${money(amount)} on ${c.case}${reason ? `: ${reason}` : ''}. ${decision === 'Reversed' ? 'The repayment follows on Northfield’s next remittance (NF-7.6). ' : ''}Jordan Ellis decides it (NF-7.7).` } };
+    detail: { case: c.case, po: c.po, charge: chargeName(charge), amount, decision, reason, repayment_on_next_remittance: decision === 'Reversed' } } };
 }
 function buildChargeback(db, side, a, T) {
   const po = D.normPo(String(a.po || a.record || '')); const miss = evsOf(db, po, 'carrier.pickup_missed', T).pop();
@@ -277,7 +276,7 @@ function buildChargeback(db, side, a, T) {
   const decision = /waive/i.test(a.decision || '') ? 'Waive' : /apply|approve|charge/i.test(a.decision || '') ? 'Apply' : null; if (!decision) return { ok: false, message: 'Say whether to apply or waive the chargeback.' };
   const amount = D.chargeOf(db, 'RT01'); const sup = ordersOf(db, po)?.supplier_id; const caseId = `DC-R${po.replace(/^NR-/, '')}`;
   return { ok: true, card: { record: decision === 'Apply' ? caseId : po, po, to: decision === 'Apply' ? `${NAME[sup] || sup} (deduction case)` : 'Northfield compliance record', args: { po, decision, amount, case: caseId, supplier: sup, assigned_pickup: miss.d.assigned_pickup },
-    says: decision === 'Apply' ? `Apply the ${money(amount)} readiness chargeback on ${po}: Lakeline reports the collect load not ready at the assigned pickup (NF-3.6). This opens deduction case ${caseId} in Trading Grid, visible to ${NAME[sup] || 'the supplier'} with the carrier status attached.` : `Waive the readiness chargeback on ${po}. Trading Grid records the waiver with Jordan Ellis’s name; no case is opened (NF-3.6).` } };
+    detail: { po, amount, decision, opens_case: decision === 'Apply' ? caseId : null, supplier: NAME[sup] || sup, carrier_status: 'Not ready at assigned pickup' } } };
 }
 function buildPublish(db, side, a, T) {
   const id = String(a.draft || a.record || '').toUpperCase(); const d = db.prepare('SELECT * FROM draft_rules WHERE id = ?').get(id);
@@ -286,7 +285,7 @@ function buildPublish(db, side, a, T) {
   const r = NR.replayRule(db, { draft: id, as_of: T }); if (!r || r.found === false) return { ok: false, message: r?.message || `${id} could not be replayed.` };
   const fails = r.failing_with_draft ?? r.failing ?? null; const exposure = r.added_exposure ?? null;
   return { ok: true, card: { record: id, po: null, to: 'Every Northfield supplier', args: { draft: id, replay: { failing_with_draft: fails, added_exposure: exposure } },
-    says: `Publish the draft rule “${d.statement}” to suppliers. Replayed against the quarter, it ${fails != null ? `fails ${typeof fails === 'object' ? JSON.stringify(fails) : fails} documents` : 'was checked'}${exposure != null ? ` and adds ${typeof exposure === 'number' ? money(exposure) : JSON.stringify(exposure)} in exposure` : ''}. A rule is published only after its replay (NF-11.1).` } };
+    detail: { draft: id, statement: d.statement, replay: { failing: fails, added_exposure: exposure } } } };
 }
 const BUILD = { open_dispute: buildDispute, release_held_ship_notice: buildRelease, send_acknowledgment: (db, s, a, T) => buildDocument(db, s, a, T, '855'), answer_order_change: (db, s, a, T) => buildDocument(db, s, a, T, '865'),
   send_ship_notice: (db, s, a, T) => buildDocument(db, s, a, T, '856'), send_invoice: (db, s, a, T) => buildDocument(db, s, a, T, '810'), answer_application_advice: buildAnswerAdvice,
@@ -297,30 +296,41 @@ export function buildCard(db, side, action, args = {}, T) {
   const def = CARD_ACTIONS[side]?.[action]; if (!def) return { ok: false, message: `${action} is not something ${side === 'ashby' ? 'Ashby' : 'Northfield'} does in Trading Grid.` };
   let r; try { r = BUILD[action](db, side, args || {}, at(T)); } catch (e) { return { ok: false, message: `The records do not support this action: ${String(e.message).slice(0, 160)}` }; }
   if (!r.ok) return r;
-  return { ok: true, card: { action, write: def.write, side, rule: def.rule, approver: PERSON[side], buttons: ['Approve', 'Cancel'], at: at(T), ...r.card, says: plainSays(r.card.says) } };
+  return { ok: true, card: { action, write: def.write, side, rule: def.rule, approver: PERSON[side], buttons: ['Approve', 'Cancel'], at: at(T), ...r.card } };
 }
 
-/** A card's sentence in plain words: no rule codes and no X12 set numbers; the rule is shown beside it, by name. */
-export const plainSays = (t) => String(t || '').replace(/\s*\((?:(?:NF|AP|AM|KX)-[\d.]+(?:,\s*)?)+\)/g, '').replace(/\s*\((?:8|9)\d\d\)/g, '').replace(/\s+([.,;:])/g, '$1').trim();
-
-/** Checks Aviator's answer against the cards it raised: every quoted phrase and line it names must be on a card, it may
- *  not say the action is done, and it may not claim a message the card does not carry. Where it does not hold, the
- *  answer is the cards' own description. Without a card, an answer that describes one is replaced too. */
-export function checkAnswer(answer, cards, { person, refusal } = {}) {
+/** Checks Aviator's answer, which the model writes, against the cards it raised and the records it read. Returns the reasons
+ *  it does not hold (empty when it does); the server sends them back to the model to answer again, and never rewrites it.
+ *  - no rule codes, charge codes, unit codes, field names or record kinds in a sentence;
+ *  - every quoted phrase, line number and amount it names is on a card or in a tool result;
+ *  - it never says an action is done; a card's message is given exactly, and no message is claimed where a card has none;
+ *  - a line the person named that the rules refused is explained with the line the rules found;
+ *  - the facts the server set for the turn (an owner outside Trading Grid, a card the records call for) are respected. */
+export function checkAnswer(answer, { cards = [], results = [], outside = null, expect = null, codes = [] } = {}) {
   const text = String(answer || ''); const reasons = [];
-  const describe = () => cards.map((c) => `${c.offered ? `${plainSays(c.offered.refused)} Instead, the card for line ${c.offered.line} is ready, with the message "${c.offered.message_as_sent}": ` : 'The card is ready: '}${c.says} Nothing is sent until ${person} presses Approve.`).join(' ');
-  if (!cards.length) {
-    if (/\b(card (is )?ready|cards? (below|above)|press(es)? Approve|I('ve| have) (raised|prepared|created) (a|the) card)\b/i.test(text)) return { answer: refusal || 'No card was raised for this request.', from: 'server', reason: 'the answer described a card that was not raised' };
-    return { answer: text, from: 'model' };
-  }
-  const hay = cards.map((c) => `${c.says} ${(c.x12_preview || '').replace(/[*~]/g, ' ')} ${c.message?.text || ''} ${c.offered ? `${c.offered.refused} ${c.offered.message_as_sent}` : ''}`).join(' ').toLowerCase().replace(/\s+/g, ' ');
-  for (const m of text.matchAll(/["“]([^"”]{3,})["”]/g)) if (!hay.includes(m[1].toLowerCase().replace(/\s+/g, ' ').replace(/[.]$/, ''))) reasons.push(`quotes "${m[1]}", which is not on the card`);
-  if (/\b(has been|have been|was|were|is now|I('ve| have)|I) (sent|rejected|released|published|opened|applied|waived|reversed|upheld|submitted|disputed)\b/i.test(text) && !/\b(until|once|when|after)\b[^.]*\bApprove/i.test(text)) reasons.push('says the action is done');
-  if (/\b(your (message|note|words)|the message|message (is|was) (included|added)|includ\w* (your|the) (message|note))\b/i.test(text) && !cards.some((c) => c.message)) reasons.push('claims a message the card does not carry');
-  for (const m of text.matchAll(/\bline (\d+)\b/gi)) if (!new RegExp(`\\bline ${m[1]}\\b`).test(hay)) reasons.push(`names line ${m[1]}, which is not on the card`);
-  for (const c of cards) if (c.offered && !new RegExp(`\\bline ${c.offered.line}\\b`, 'i').test(text)) reasons.push(`does not say the rules found line ${c.offered.line}`);
-  for (const c of cards) if (c.message && !text.toLowerCase().includes(c.message.text.toLowerCase())) reasons.push('does not give the message the card carries');
-  return reasons.length ? { answer: describe(), from: 'card', reason: [...new Set(reasons)].join('; ') } : { answer: text, from: 'model' };
+  if (!text.trim() || text.trim() === 'No answer.') return ['The answer is empty. Answer the question from the tool results.'];
+  const fieldsOf = (c) => JSON.stringify({ to: c.to, record: c.record, detail: c.detail, message: c.message, rule: c.rule_text, offered: c.offered, x12: c.x12_preview });
+  const hay = `${cards.map(fieldsOf).join(' ')} ${JSON.stringify(results)}`.toLowerCase().replace(/\\[nrt]|\s+/g, ' ');
+  const cardHay = cards.map(fieldsOf).join(' ').toLowerCase().replace(/\s+/g, ' ');
+  const code = text.match(/\b(?:NF|AP|AM|KX)-\d+(?:\.\d+)?\b|\b[A-Z]{2}\d{2}\b(?!-)|\b\d[\d,]*\s*(?:CA|EA)\b|\b[a-z]+_[a-z_]+\b|\b(?:wms|carrier|erp|tg|case|rule)\.[a-z_]+\b/);
+  if (code && !codes.includes(code[0])) reasons.push(`It contains "${code[0]}". Write plain words: say whose rule it is, the charge by name, cases or each, and records by their reference and what they are; no codes or field names.`);
+  if (/\*\*|^#+ |^\s*[-*] /m.test(text)) reasons.push('It uses markdown. Write plain sentences.');
+  for (const m of text.matchAll(/["“]([^"”]{3,})["”]/g)) if (!hay.includes(m[1].toLowerCase().replace(/\s+/g, ' ').replace(/[.]$/, ''))) reasons.push(`It quotes "${m[1]}", which is on no card and in no tool result. Quote only what the card or the records hold.`);
+  for (const m of text.matchAll(/\$\s?(\d[\d,]*(?:\.\d\d)?)/g)) { const n = m[1].replace(/,/g, ''); const v = Number(n);
+    if (!hay.includes(n) && !hay.includes(v.toFixed(2)) && !hay.includes(String(v)) && !hay.includes(m[1])) reasons.push(`It gives $${m[1]}, which is on no card and in no tool result.`); }
+  if (new RegExp(`\\b(?:${cards.length ? 'has been|have been|is now|' : ''}I(?:'ve| have)?|we(?:'ve| have)?) (?:sent|rejected|released|published|opened|applied|waived|reversed|upheld|submitted|disputed|filed|issued)\\b`, 'i').test(text)) reasons.push('It says an action is done. Nothing happens until the person presses Approve on the card; say the card is ready.');
+  if (cards.length) {
+    for (const m of text.matchAll(/\bline (\d+)\b/gi)) if (!new RegExp(`"line":${m[1]}\\b|line ${m[1]}\\b|"asked_line":${m[1]}\\b`).test(cardHay)) reasons.push(`It names line ${m[1]}, which is on no card.`);
+    for (const c of cards) {
+      if (c.message && !text.toLowerCase().includes(c.message.text.toLowerCase())) reasons.push(`The card carries the message "${c.message.text}" exactly; give it word for word.`);
+      if (!c.message && /\b(?:with|includes?|including|carries|carrying|adds?) (?:your|the) (?:message|note|words)\b|\b(?:your|the) (?:message|note) (?:is|was) (?:included|added|in)\b/i.test(text)) reasons.push('It says the card carries a message; this card carries none.');
+      if (c.offered && !new RegExp(`\\bline ${c.offered.line}\\b`, 'i').test(text)) reasons.push(`The rules found no error on line ${c.offered.asked_line}; they found it on line ${c.offered.line}. Say so, and that the card is for line ${c.offered.line} and carries no message until the person gives one.`);
+    }
+    if (!/\bapprove/i.test(text)) reasons.push('Say that nothing happens until the person presses Approve on the card.');
+  } else if (/\b(?:card (?:is )?ready|the card below|press(?:es)? Approve)\b/i.test(text)) reasons.push('It describes a card, but no card was raised. Call propose_action, or say why there is no card.');
+  if (outside) { if (!text.includes(outside.owner)) reasons.push(`Name the owner: ${outside.owner}, in ${outside.where}.`); if (!/outside Trading Grid/i.test(text)) reasons.push('Say plainly that this is done outside Trading Grid.'); }
+  if (expect && !cards.some((c) => c.action === expect.action) && !expect.refused) reasons.push(expect.reason);
+  return [...new Set(reasons)];
 }
 
 /** Makes the write a card describes, at the card's moment, in the session in force. Returns the record written. */

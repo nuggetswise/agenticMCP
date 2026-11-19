@@ -9,6 +9,7 @@
 <form id="f"><textarea id="q" aria-label="Question"></textarea><button id="send" type="submit">Ask</button></form>
 <div id="log" role="log" aria-live="polite"></div>
 <script>
+var ERR = { no_answer: "Aviator couldn't answer that. Try again.", rate_limited: "Wait a minute and ask again.", daily_cap: "Aviator has reached its daily limit. Try again tomorrow.", outside_page_window: "This page answers only at its own moment.", side_not_on_page: "This page does not show that workspace.", question_too_long: "Shorten the question to 500 characters.", too_many_turns: "Start a new conversation.", empty_question: "Type a question.", wrong_period: "Ask again with the dates.", aviator_unavailable: "Aviator is not available." };
 (function () {
   "use strict";
   var TOKEN = "test-C3PPJLhbsFo1", hist = { ashby: [], northfield: [] };
@@ -21,7 +22,7 @@
     add("q", q); $("q").value = ""; $("send").disabled = true;
     fetch("/aviator/" + encodeURIComponent(TOKEN), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question: q, side: side, context: "Aviator route test", history: hist[side].slice(-10) }) })
       .then(function (r) { return r.json(); })
-      .then(function (j) { if (j.ok) { hist[side].push({ role: "user", text: q }, { role: "model", text: j.answer }); add("a", j.answer, j.read); } else add("a", j.message || "No answer."); })
+      .then(function (j) { if (j.ok) { hist[side].push({ role: "user", text: q }, { role: "model", text: j.answer }); add("a", j.answer, j.read); } else add("a", (ERR[j.error] || ERR.no_answer) + " (" + j.error + ")"); })
       .catch(function () { add("a", "The server did not answer."); })
       .then(function () { $("send").disabled = false; });
   });

@@ -20,24 +20,24 @@ function detectors(name, s, actor) {
 
 // Server-side guards, independent of any actor.
 { const s = M.startSession(db);
-  check(M.propose(db, s, 'Test', 'request_credit_or_corrected_invoice', { invoice: 'INV-7731', lines: [1], price: 1 }).state === 'Refused', 'guard: MG-1 refuses an action that supplies invoice values');
-  const p = M.propose(db, s, 'Test', 'request_credit_or_corrected_invoice', { invoice: 'INV-7731', lines: [1, 2] }); check(p.state === 'Awaiting approval', 'guard: a correction request waits for Jordan');
-  check(M.propose(db, s, 'Test', 'request_credit_or_corrected_invoice', { invoice: 'INV-7731', lines: [2, 1] }).state === 'Duplicate', 'guard: idempotent duplicate proposal');
+  check(M.propose(db, s, 'Test', 'reject_held_lines', { invoice: 'INV-7731', lines: [1], price: 1 }).state === 'Refused', 'guard: MG-1 refuses an action that supplies invoice values');
+  const p = M.propose(db, s, 'Test', 'reject_held_lines', { invoice: 'INV-7731', lines: [1, 2] }); check(p.state === 'Awaiting approval', 'guard: a correction request waits for Jordan');
+  check(M.propose(db, s, 'Test', 'reject_held_lines', { invoice: 'INV-7731', lines: [2, 1] }).state === 'Duplicate', 'guard: idempotent duplicate proposal');
   M.decide(db, s, p.proposal, 'approve'); check(M.decide(db, s, p.proposal, 'approve').state === 'Refused', 'guard: an approval cannot be replayed');
   check(M.propose(db, s, 'Test', 'release_for_payment_proposal', { invoice: 'INV-7731', lines: [2] }).state === 'Refused', 'guard: a line billed above the receiving advice cannot be proposed clear');
   check(M.startSession(db, { policy: { release_for_payment_proposal: 'policy' } }).modes.release_for_payment_proposal === 'suggest', 'guard: payment release stays a suggestion (locked)');
   const never = async () => { throw new Error('model called'); };
   const ps = M.startSession(db); const r = await M.runMatch(db, ps, { callModel: never, paused: () => true });
   check(r.status === 'paused' && ps.agent.calls === 0 && !ps.proposals.length, 'guard: a paused Match Agent gets no model turn and proposes nothing');
-  const es = M.startSession(db); const ep = M.propose(db, es, 'Match Agent', 'request_credit_or_corrected_invoice', { invoice: 'INV-7731', lines: [1, 2] }); M.decide(db, es, ep.proposal, 'edit', 'Jordan Ellis', 'Jordan calls Ashby');
-  check((await M.runMatch(db, es, { callModel: never })).status === 'handed_to_person' && es.audit.at(-1).approver === 'Jordan Ellis', 'guard: Edit suggestion hands the invoice to Jordan and the agent stops');
+  const es = M.startSession(db); const ep = M.propose(db, es, 'Match Agent', 'reject_held_lines', { invoice: 'INV-7731', lines: [1, 2] }); const er = M.decide(db, es, ep.proposal, 'reject', 'Jordan Ellis');
+  check(er.state === 'Rejected' && !es.requests.length && es.audit.at(-1).approver === 'Jordan Ellis', 'guard: a rejected 824 sends nothing and is attributed to Jordan');
   check((await M.runMatch(db, M.startSession(db), {})).blocked?.startsWith('No model'), 'guard: no model configured, nothing simulated in its place'); }
 
 // Phase 3 step 4: every short line in one request; a refused credit goes to Jordan; refusals and the limit end in a report of what waits.
-{ const s1 = M.startSession(db); const one = M.propose(db, s1, 'Match Agent', 'request_credit_or_corrected_invoice', { invoice: 'INV-7731', lines: [1] });
-  check(one.state === 'Refused' && /every short line together/.test(one.message), 'fix: a request for line 1 alone is refused while line 2 is short; every short line goes in one request');
+{ const s1 = M.startSession(db); const one = M.propose(db, s1, 'Match Agent', 'reject_held_lines', { invoice: 'INV-7731', lines: [1] });
+  check(one.state === 'Refused' && /every held line together/.test(one.message), 'fix: an application advice for line 1 alone is refused while line 2 is short; every held line goes in one 824');
   const s2 = M.startSession(db, { facts: M.VARIATIONS.ashby_dispute }); check(M.propose(db, s2, 'Match Agent', 'short_pay_at_payment', { invoice: 'INV-7731', lines: [1, 2] }).state === 'Refused', 'fix: no short-pay before the supplier has answered a request for those lines');
-  const rq = M.propose(db, s2, 'Match Agent', 'request_credit_or_corrected_invoice', { invoice: 'INV-7731', lines: [1, 2] }); M.decide(db, s2, rq.proposal, 'approve');
+  const rq = M.propose(db, s2, 'Match Agent', 'reject_held_lines', { invoice: 'INV-7731', lines: [1, 2] }); M.decide(db, s2, rq.proposal, 'approve');
   const sp = M.propose(db, s2, 'Match Agent', 'short_pay_at_payment', { invoice: 'INV-7731', lines: [1, 2] });
   check(sp.state === 'Awaiting approval' && sp.approver === 'Jordan Ellis', 'fix: when the supplier refuses the credit, Match Agent escalates to Jordan Ellis with a short-pay proposal he decides');
   const d = M.decide(db, s2, sp.proposal, 'approve'); check(d.state === 'Executed' && M.outcome(db, s2).payment_released === false && M.outcome(db, s2).lines.filter((l) => l.status === 'short_pay_decided').length === 2, 'fix: the short-pay decision settles both lines and releases no payment');
@@ -48,12 +48,12 @@ function detectors(name, s, actor) {
   check(r4.status !== 'stopped' && s4.trace.some((t) => /^At its limit; waiting/.test(t.what)), 'fix: at its limit Match Agent reports what it is waiting for, never just stopped'); }
 
 // Harness check of the agent loop with a scripted caller (not a model): tool calls reach the reads and the gate.
-{ const script = [[{ name: 'read_queue', args: {} }], [{ name: 'propose_action', args: { action: 'release_for_payment_proposal', invoice: 'INV-7731', lines: [1, 3], rationale: 'scripted' } }], [{ name: 'propose_action', args: { action: 'request_credit_or_corrected_invoice', invoice: 'INV-7731', lines: [1, 2], rationale: 'scripted' } }], []];
+{ const script = [[{ name: 'read_queue', args: {} }], [{ name: 'propose_action', args: { action: 'release_for_payment_proposal', invoice: 'INV-7731', lines: [1, 3], rationale: 'scripted' } }], [{ name: 'propose_action', args: { action: 'reject_held_lines', invoice: 'INV-7731', lines: [1, 2], rationale: 'scripted' } }], []];
   let i = 0; const scripted = async () => ({ candidates: [{ content: { role: 'model', parts: (script[i++] || []).map((f) => ({ functionCall: f })).concat(i > 3 ? [{ text: 'Waiting.' }] : []) } }] });
   const s = M.startSession(db, { label: 'scripted harness' }); const r = await M.runMatch(db, s, { callModel: scripted });
   check(r.status === 'waiting_for_jordan' && s.proposals.map((p) => p.state).join() === 'Awaiting approval' && s.trace.some((t) => t.what === 'Refused release_for_payment_proposal'), 'harness: scripted caller reads, is refused a release on a held line, and waits for Jordan on the request'); }
 
-const EXPECT = { canonical: 'request_credit_or_corrected_invoice', correction_on_file: 'match_corrected_invoice', price_set_by_change: 'clear_line_by_accepted_change', price_beyond_tolerance: 'request_credit_or_corrected_invoice', total_differs: 'reject_document_fault', triple_mismatch: 'request_credit_or_corrected_invoice', ashby_free_text: 'request_credit_or_corrected_invoice', ashby_free_text_proved: 'request_credit_or_corrected_invoice', ashby_dispute: 'request_credit_or_corrected_invoice', ashby_no_answer: 'request_credit_or_corrected_invoice' };
+const EXPECT = { canonical: 'reject_held_lines', correction_on_file: 'match_corrected_invoice', price_set_by_change: 'clear_line_by_accepted_change', price_beyond_tolerance: 'reject_held_lines', total_differs: 'reject_document_fault', triple_mismatch: 'reject_held_lines', ashby_free_text: 'reject_held_lines', ashby_free_text_proved: 'reject_held_lines', ashby_dispute: 'reject_held_lines', ashby_no_answer: 'reject_held_lines' };
 const rows = [];
 for (const [name, facts] of Object.entries(M.VARIATIONS)) {
   const s = M.startSession(db, { facts, label: `test ${name}` }); const o = M.runBaseline(db, s); detectors(name, s, 'baseline');
@@ -83,7 +83,7 @@ function standIn() {
     if (corr) return propose('match_corrected_invoice', { correction: corr.reference }, `read_corrections: ${corr.reference} is on file (NF-7.2)`);
     const chg = L.find((l) => l.status === 'price_set_by_change'); if (chg) return propose('clear_line_by_accepted_change', { line: chg.line }, `read_invoice: ${chg.settling_record}`);
     const need = L.filter((l) => ['above_shipped', 'above_received', 'price_held'].includes(l.status) && !asked.includes(l.line)).map((l) => l.line);
-    if (need.length) return propose('request_credit_or_corrected_invoice', { lines: need }, `read_receipts and read_invoice: lines ${need.join(', ')} do not match`);
+    if (need.length) return propose('reject_held_lines', { lines: need }, `read_receipts and read_invoice: lines ${need.join(', ')} do not match`);
     const answered = results.read_requests.requests.filter((r) => r.invoice === inv && r.kind === 'correction' && /^Answered/.test(r.state)).flatMap((r) => r.lines);
     const left = L.filter((l) => ['above_shipped', 'above_received'].includes(l.status) && answered.includes(l.line)).map((l) => l.line);
     if (left.length) return propose('short_pay_at_payment', { lines: left }, `read_requests: the supplier's answer leaves lines ${left.join(', ')} uncorrected`);

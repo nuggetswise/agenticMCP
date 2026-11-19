@@ -910,65 +910,6 @@
      }
     }
    }
-  },
-  "/v1/proposals": {
-   "post": {
-    "operationId": "request_change",
-    "summary": "Request a change in Trading Grid",
-    "description": "Use when the user asks to send, resend, correct, approve or change anything. In this release the connection is read-only: it answers \"Action not available\" with the Trading Grid record where an authorized user completes and approves the action. With writes enabled it records an approval-gated proposal instead; nothing changes until Priya Raman approves it in Trading Grid.",
-    "tags": [
-     "Boundary"
-    ],
-    "x-mcp-tool": "request_change",
-    "x-required-scopes": [],
-    "x-optional-scopes": [],
-    "x-read-only": false,
-    "responses": {
-     "200": {
-      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     },
-     "403": {
-      "description": "A required scope is not granted on this connection"
-     },
-     "404": {
-      "description": "Record not found, or not Ashby’s"
-     }
-    },
-    "requestBody": {
-     "required": true,
-     "content": {
-      "application/json": {
-       "schema": {
-        "type": "object",
-        "properties": {
-         "action": {
-          "type": "string",
-          "description": "What the user asked to do"
-         },
-         "po": {
-          "type": "string",
-          "description": "PO number the action concerns"
-         },
-         "document": {
-          "type": "string",
-          "description": "Document reference the action concerns"
-         }
-        },
-        "required": [
-         "action"
-        ]
-       }
-      }
-     }
-    }
-   }
   }
  }
 }

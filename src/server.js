@@ -28,6 +28,8 @@ import * as G from './governance.js';
 import { JOBS } from './agents.js';
 import { present, ruleSet, RULE_SETS } from './credit.js';
 import { LIMITS, MESSAGES, windowLimit, modelBudget } from './limits.js';
+import * as S from './session.js';
+import * as Cards from './actions.js';
 
 const PORT = Number(process.env.PORT || 3000);
 const TOKEN = process.env.MCP_TOKEN || randomBytes(18).toString('base64url');
@@ -42,7 +44,9 @@ if (!existsSync(MAIN_DB) || !existsSync(ASHBY_DB) || !existsSync(NORTHFIELD_DB))
 const db = new DatabaseSync(MAIN_DB);
 const ashbyDb = new DatabaseSync(ASHBY_DB, { readOnly: true });
 const nfDb = new DatabaseSync(NORTHFIELD_DB, { readOnly: true });
-const BASELINE_EVENT = db.prepare('SELECT max(id) m FROM events').get().m;
+// Viewer sessions shadow events, documents and draft_rules on this connection before any statement is prepared (src/session.js).
+S.installSessions(db); S.onEnd(db);
+const BASELINE_EVENT = db.prepare('SELECT max(id) m FROM main.events').get().m;
 const BASELINE_RULES = db.prepare('SELECT id, statement, params FROM rules').all(); const BASELINE_VERSIONS = db.prepare('SELECT rule_id, valid_from, statement, params FROM rule_versions').all();
 const AS = 'ashby-assistant', NF = 'northfield-assistant';
 const BY_TOKEN = { [TOKEN]: AS, [NF_TOKEN]: NF };
@@ -71,6 +75,10 @@ function log(cid, tool, scopesUsed, args, result, records, w) {
   db.prepare('INSERT INTO access_log (at, connection_id, user_name, tool, scopes_used, arguments, result, records, agent, authority_rule, authority_mode, approver, outcome) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)').run(new Date().toISOString(), VIA ? VIA.id : cid, VIA ? VIA.user : conn(cid).user_name, tool, JSON.stringify(scopesUsed), JSON.stringify(args || {}), result, JSON.stringify(records || []),
     w ? w.agent : null, w ? w.rule || null : null, w ? w.mode : null, w ? w.approver : null, w ? w.outcome || result : null);
 }
+/** A company's access log: its own connection, plus every call made for it from a public page (the read route, logged as
+ *  public-<side>, and a hosted page's Aviator and action cards, logged as aviator-<page>-<side>). Newest first. */
+const SIDE_NAME = { 'ashby-assistant': 'ashby', 'northfield-assistant': 'northfield' };
+const logRows = (cid, limit) => db.prepare("SELECT * FROM access_log WHERE connection_id = ? OR connection_id = ? OR connection_id LIKE ? ORDER BY id DESC LIMIT ?").all(cid, `public-${SIDE_NAME[cid]}`, `aviator-%-${SIDE_NAME[cid]}`, limit);
 /** A write that lands in a shared record is logged on the other company's connection too, with the same attribution. */
 const logOther = (cid, tool, what, records, w) => log(OTHER[cid], `counterparty:${tool}`, [], { by: SIDE[cid].company }, what, records, w && { ...w, outcome: what });
 const assistantOf = (cid) => `${SIDE[cid].person}’s assistant`;
@@ -98,11 +106,11 @@ function mask(out, has) {
 
 /** When a write lands: after the later of the requested time and the last record on that order. */
 function writeAt(po, asOf) { const last = po ? db.prepare('SELECT max(at) m FROM events WHERE po = ?').get(po).m : null; const t = Math.max(D.asOfDate(asOf).getTime(), last ? Date.parse(last) + 60000 : 0); return new Date(t).toISOString(); }
-function addEvent(at, kind, po, party, data) { return db.prepare('INSERT INTO events (at, kind, po, system, party, channel, data) VALUES (?,?,?,?,?,?,?)').run(at, kind, po, kind.startsWith('case.') ? 'Northfield deduction case' : kind.startsWith('rule.') ? 'Northfield supplier guide' : 'Trading Grid', party, 'Trading Grid', JSON.stringify(data)).lastInsertRowid; }
+function addEvent(at, kind, po, party, data) { return S.appendEvent(db, { at, kind, po, system: kind.startsWith('case.') ? 'Northfield deduction case' : kind.startsWith('rule.') ? 'Northfield supplier guide' : 'Trading Grid', party, channel: 'Trading Grid', data: JSON.stringify(data) }); }
 function propose(cid, kind, rule, action, target, payload, by = assistantOf(cid)) {
   const id = `PR-${String(db.prepare('SELECT count(*) n FROM proposals').get().n + 1).padStart(4, '0')}`; const side = SIDE[cid];
   db.prepare('INSERT INTO proposals (id, connection_id, kind, approver, rule_id, created_at, created_by, action, target, payload, state, authority_mode) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)').run(id, cid, kind, side.person, rule || null, new Date().toISOString(), by, action, target || '', JSON.stringify(payload), 'Awaiting approval', 'approve');
-  log(cid, kind === 'change' ? 'request_change' : ({ dispute: 'submit_dispute', release: 'release_ship_notice', decision: 'decide_charge', publish: 'publish_rule' })[kind], [], payload, 'Proposal recorded', [id, target].filter(Boolean),
+  log(cid, kind === 'card' ? payload.card.write : ({ dispute: 'submit_dispute', release: 'release_ship_notice', decision: 'decide_charge', publish: 'publish_rule' })[kind], [], payload, 'Proposal recorded', [id, target].filter(Boolean),
     { agent: by, rule, mode: 'approve', approver: `${side.person} (awaiting)`, outcome: `Proposal ${id} awaiting approval` });
   return { result: 'Proposal recorded', proposal: id, state: 'Awaiting approval', approver: side.person, rule: rule ? D.rule(db, rule) : null, message: `Nothing has left ${side.company}. ${side.person} approves or rejects this proposal in Trading Grid.`, approve_at: `${BASE}/admin/<token>` };
 }
@@ -122,6 +130,14 @@ function write(cid, name, args) {
     // It is credited to Ashby's evidence rules, or to her assistant while those rules are paused.
     return propose(cid, 'dispute', 'AP-4.1', `Dispute ${charge} in ${c.case}`, c.case, { case: c.case, po: c.po, charge, amount, evidence, as_of: args.as_of || null, nf_7_4_evidence: onHand ? 'In the case' : 'Not all in the case', needs: 'Priya Raman’s approval (AP-4.1)' }, G.isPaused(db, 'Claim Agent') ? assistantOf(cid) : ruleSet('Claim Agent'));
   }
+  // Business documents, application advice and chargebacks: the card is built from the side's rules and records, as on a page.
+  const cardAction = cid === AS && name === 'send_document' ? ({ 855: 'send_acknowledgment', 865: 'answer_order_change', 856: 'send_ship_notice', 810: 'send_invoice', 997: 'answer_application_advice' })[args.document]
+    : cid === NF && ['send_application_advice', 'decide_chargeback'].includes(name) ? name : null;
+  if (cardAction) {
+    const r = Cards.buildCard(db, cid === AS ? 'ashby' : 'northfield', cardAction, args, D.asOfDate(args.as_of));
+    if (!r.ok) { log(cid, name, [], args, 'Invalid request', [], refusedW(cid, null, 'Invalid request')); return { result: 'Invalid request', message: r.message }; }
+    return propose(cid, 'card', r.card.rule, r.card.says, r.card.record, { card: r.card });
+  }
   if (cid === AS && name === 'release_ship_notice') return propose(cid, 'release', 'AP-1.3', `Release held ship notice ${args.document}`, args.document, args);
   if (cid === NF && name === 'decide_charge') {
     const c = NR.caseNF(db, args.case || '', D.asOfDate(args.as_of)); if (!c.found) { log(cid, name, [], args, 'Invalid request', [], refusedW(cid, 'NF-7.7', 'Invalid request')); return c; }
@@ -137,7 +153,6 @@ function write(cid, name, args) {
     if (!db.prepare('SELECT 1 FROM rule_replays WHERE draft_id = ?').get(id)) { log(cid, name, [], args, 'Refused: replay first', [id], refusedW(cid, null, 'Refused: replay first')); return { result: 'Refused', message: `${id} has not been replayed against the quarter. Call replay_draft_rule with draft ${id} first; a rule is published only after a replay.` }; }
     return propose(cid, 'publish', null, `Publish ${id}: ${d.statement}`, id, { draft: id });
   }
-  if (name === 'request_change') { const po = args.po ? D.normPo(args.po) : null; return propose(cid, 'change', null, args.action, po || args.document || '', args); }
   return { result: 'Invalid request', error: `Unknown tool ${name}` };
 }
 
@@ -163,7 +178,7 @@ export function call(cid, name, args = {}) {
   if (cid === AS && name === 'compare_with_other_suppliers') { log(cid, name, [], args, D.NOT_AVAILABLE, []); return { result: D.NOT_AVAILABLE, message: 'Other suppliers’ records are not available on Ashby’s connection.' }; }
   if (cid === AS && name === 'read_retailer_records') return refuse(cid, name, args, ASHBY_PRIVATE.what);
   if (cid === NF && name === 'read_supplier_records') return refuse(cid, name, args, 'Suppliers’ ERP, warehouse and carrier records and their internal policies');
-  if ([...(cid === AS ? ASHBY_WRITES : NF_WRITES), { name: 'request_change' }].some((w) => w.name === name)) return write(cid, name, args);
+  if ((cid === AS ? ASHBY_WRITES : NF_WRITES).some((w) => w.name === name)) return write(cid, name, args);
   if (name === 'run_readonly_sql') {
     const missing = side.scopes.filter((s) => !has(s)); if (missing.length) { log(cid, name, side.scopes, args, 'Scope not granted', []); return { result: 'Scope not granted', missing_scopes: missing }; }
     const q = String(args.sql || '').trim().replace(/;+\s*$/, '');
@@ -173,9 +188,9 @@ export function call(cid, name, args = {}) {
     catch (e) { log(cid, name, side.scopes, args, 'Invalid request', []); return { result: 'Invalid request', error: e.message }; }
   }
   if (name === 'get_access_log') {
-    const rows = db.prepare('SELECT * FROM access_log WHERE connection_id = ? ORDER BY id DESC LIMIT ?').all(cid, args.limit || 50); log(cid, name, [], args, 'Answered', []);
+    const rows = logRows(cid, args.limit || 50); log(cid, name, [], args, 'Answered', []);
     return { connection: cid, configured_by: conn(cid).configured_by, scopes: conn(cid).scopes, writes: WRITES ? 'Proposals a person approves' : 'Read only', agents: G.agentsOf(db, cid),
-      calls: rows.map((r) => ({ at: r.at, user: r.user_name, tool: r.tool, scopes: JSON.parse(r.scopes_used), arguments: JSON.parse(r.arguments), result: r.result, records: JSON.parse(r.records),
+      calls: rows.map((r) => ({ at: r.at, ...(r.connection_id !== cid ? { via: r.connection_id } : {}), user: r.user_name, tool: r.tool, scopes: JSON.parse(r.scopes_used), arguments: JSON.parse(r.arguments), result: r.result, records: JSON.parse(r.records),
         ...(r.agent ? { write: { agent: r.agent, authority: { rule: r.authority_rule, mode: r.authority_mode }, approver: r.approver, outcome: r.outcome } } : {}) })) };
   }
   // Governance (T2.3): pause and resume an agent, trial a changed agent rule, read the change list.
@@ -218,7 +233,7 @@ export function call(cid, name, args = {}) {
 }
 
 /** A person decides a proposal in Trading Grid. Approval appends the record it describes. */
-/** decision: approve, reject, or edit (Edit suggestion, R15): the person sets the proposal aside and does the case by hand; nothing is appended. */
+/** decision: approve or reject. Nothing is appended on a reject. */
 export function decide(cid, id, decision, note) {
   const p = db.prepare("SELECT * FROM proposals WHERE id = ? AND state = 'Awaiting approval'").get(id); if (!p || p.connection_id !== cid) return null;
   const side = SIDE[cid]; const a = JSON.parse(p.payload); let eventId = null; const now = new Date().toISOString();
@@ -228,13 +243,14 @@ export function decide(cid, id, decision, note) {
     if (p.kind === 'dispute') { eventId = addEvent(writeAt(a.po, a.as_of), 'case.dispute', a.po, 'ASHBY', { case: a.case, charge: a.charge, amount: a.amount, evidence: a.evidence, drafted_by: p.created_by, approved_by: 'Priya Raman', authority: auth, outcome: 'Dispute submitted', proposal: p.id }); logOther(cid, 'submit_dispute', `Dispute received on ${a.charge} in ${a.case}`, [a.case], w); }
     else if (p.kind === 'decision') { const c = NR.caseNF(db, a.case, D.asOfDate('2027-01-06')); const amt = c.charge === 'PROMO' ? c.disputes.filter((d) => d.charge === a.charge).at(-1)?.amount : (c.withheld.find((w) => (a.charge === c.charge ? w.reference === c.deduction : /CI-NF/.test(w.reference))) || {}).amount;
       eventId = addEvent(writeAt(a.po, a.as_of), 'case.decision', a.po, 'NORTHFIELD', { case: a.case, charge: a.charge, amount: amt ? Math.abs(amt) : null, decision: a.decision, decided_by: 'Jordan Ellis', drafted_by: p.created_by, rules_recommended: a.rules_recommended, reason: a.reason, authority: auth, outcome: a.decision, proposal: p.id }); logOther(cid, 'decide_charge', `${a.charge} in ${a.case} ${a.decision} by Jordan Ellis`, [a.case], w); }
-    else if (p.kind === 'publish') { const d = db.prepare('SELECT * FROM draft_rules WHERE id = ?').get(a.draft); db.prepare("UPDATE draft_rules SET state = 'Published' WHERE id = ?").run(a.draft); eventId = addEvent(writeAt(null, null), 'rule.published', null, 'NORTHFIELD', { draft: a.draft, statement: d.statement, published_by: 'Jordan Ellis', replayed: true, drafted_by: p.created_by, authority: auth, proposal: p.id }); logOther(cid, 'publish_rule', `Rule ${a.draft} published by Northfield`, [a.draft], w); }
+    else if (p.kind === 'publish') { const d = db.prepare('SELECT * FROM draft_rules WHERE id = ?').get(a.draft); eventId = addEvent(writeAt(null, null), 'rule.published', null, 'NORTHFIELD', { draft: a.draft, statement: d.statement, published_by: 'Jordan Ellis', replayed: true, drafted_by: p.created_by, authority: auth, proposal: p.id }); logOther(cid, 'publish_rule', `Rule ${a.draft} published by Northfield`, [a.draft], w); }
     else if (p.kind === 'release') { eventId = addEvent(writeAt(a.po ? D.normPo(a.po) : null, null), 'tg.release', a.po ? D.normPo(a.po) : null, 'ASHBY', { document: a.document, released_by: 'Priya Raman', rule: 'AP-1.3', drafted_by: p.created_by, authority: auth, proposal: p.id }); }
+    else if (p.kind === 'card') { const r = Cards.applyCard(db, { ...a.card, id: p.id }, side.person); eventId = r.event; logOther(cid, a.card.write, `${a.card.says}`, [a.card.record], w); }
     else eventId = addEvent(now, 'proposal.approved', /^NR-/.test(p.target) ? p.target : null, side.party, { proposal: p.id, action: p.action, target: p.target, proposed_by: p.created_by, approved_by: side.person });
   }
-  const state = decision === 'approve' ? 'Approved' : decision === 'edit' ? 'Taken over' : 'Rejected';
-  const outcome = decision === 'approve' ? `Approved; ${eventId ? `record ${eventId} appended` : 'nothing appended'}` : decision === 'edit' ? `Taken over by ${side.person}; done by hand${note ? `: ${note}` : ''}` : 'Rejected; nothing sent';
-  db.prepare('UPDATE proposals SET state = ?, decided_by = ?, decided_at = ?, result_event = ?, note = ? WHERE id = ?').run(state, side.person, now, eventId, decision === 'edit' ? note || null : null, p.id);
+  const state = decision === 'approve' ? 'Approved' : 'Rejected';
+  const outcome = decision === 'approve' ? `Approved; ${eventId ? `record ${eventId} appended` : 'nothing appended'}` : 'Rejected; nothing sent';
+  db.prepare('UPDATE proposals SET state = ?, decided_by = ?, decided_at = ?, result_event = ?, note = ? WHERE id = ?').run(state, side.person, now, eventId, null, p.id);
   log(cid, `${decision}_proposal`, [], { proposal: p.id, ...(note ? { note } : {}) }, state, [p.id, p.target], { ...w, outcome });
   return p.id;
 }
@@ -244,7 +260,7 @@ const NF_SQL_TOOL = { name: 'run_readonly_sql', title: 'Read-only SQL over North
 const LOG_TOOL = { name: 'get_access_log', title: 'Access log', description: 'Every call made on this connection, and writes the other company made into shared records: time, user, tool, scopes used, arguments, result and records returned. Newest first.', input: { limit: z.number().int().min(1).max(200).optional() } };
 export const ALL_TOOLS = [...TOOLS, ...BOUNDARY, ...ASHBY_WRITES, ...ASHBY_REFUSALS, SQL_TOOL, LOG_TOOL];
 export const ALL_NF_TOOLS = [...NF_TOOLS, ...NF_WRITES, ...NF_REFUSALS, NF_SQL_TOOL, LOG_TOOL];
-const WRITE_NAMES = new Set(['request_change', 'submit_dispute', 'release_ship_notice', 'decide_charge', 'publish_rule']);
+const WRITE_NAMES = new Set(['submit_dispute', 'release_ship_notice', 'send_document', 'decide_charge', 'publish_rule', 'send_application_advice', 'decide_chargeback']);
 // Governance tools (T2.3). Pause and a trial change no Trading Grid record but do record on the change list, so none is marked read-only.
 const agentNames = (cid) => Object.keys(G.AGENTS).filter((a) => G.AGENTS[a].connection === cid).map((a) => `${RULE_SETS[a].runtime} (${ruleSet(a)})`).join(', ');
 const GOV = (cid) => [
@@ -267,12 +283,12 @@ const INSTRUCTIONS = {
     'Questions about "now" are answered as of the story clock, Tuesday 17 November 2026 11:00 Eastern, unless you pass as_of. get_story_calendar lists other moments.',
     'Find records by PO number, document reference or case id. Answer only from tool results and cite each record with its link.',
     'Keep a technical acknowledgment (997) separate from business acceptance: Northfield sends no business acceptance.',
-    WRITES ? 'Writes follow Ashby’s rules: submit_dispute, release_ship_notice and request_change record proposals Priya Raman approves in Trading Grid; every dispute needs her approval (AP-4.1), and ship notice release always stays with a person (AP-1.3). Findings are credited to the rule that found them; no answer names an agent.' : 'Nothing on this connection creates, changes or sends a Trading Grid record. For any action, call request_change and give the user its Trading Grid link.',
+    WRITES ? 'Writes follow Ashby’s rules: submit_dispute and release_ship_notice record proposals Priya Raman approves in Trading Grid; every dispute needs her approval (AP-4.1), and ship notice release always stays with a person (AP-1.3). Findings are credited to the rule that found them; no answer names an agent.' : 'Nothing on this connection creates, changes or sends a Trading Grid record. Trading Grid sends only business documents and never sends requests, tasks, notes or email: for any other action, say what is wrong, who owns it and where they fix it.',
     'Records of other suppliers are not available, and Northfield’s payables, draft rules and reviewer notes are Northfield’s: say "Not available to Ashby".'].join(' '),
   [NF]: () => ['This is Northfield Retailer’s connection to Trading Grid for Jordan Ellis’s own assistant. All data is fictional.',
     'It holds the same quarter of trade as its suppliers see, 27 September to 26 December 2026, settlement to 9 January 2027. Times are US Eastern; the default as_of is Tuesday 17 November 2026 11:00 Eastern.',
     'Documents exchanged with suppliers are shared: both sides see the same X12. A supplier’s ERP, warehouse and carrier records are the supplier’s: say "Not available to Northfield" unless the supplier shared them into a case.',
-    WRITES ? 'Writes follow Northfield’s guide: decide_charge, publish_rule and request_change record proposals Jordan Ellis approves in Trading Grid. Jordan decides every charge (NF-7.7). A rule is published only after replay_draft_rule.' : 'This connection is read-only.',
+    WRITES ? 'Writes follow Northfield’s guide: decide_charge and publish_rule record proposals Jordan Ellis approves in Trading Grid. Jordan decides every charge (NF-7.7). A rule is published only after replay_draft_rule.' : 'This connection is read-only.',
     'Answer only from tool results and cite each record with its link.'].join(' '),
 };
 // ---------- Scout (P5): a server-side agent working in an isolated session branched from the recorded world ----------
@@ -281,14 +297,13 @@ const FACTS_IN = z.object({ carton_condition: z.enum(['crushed', 'good']), carto
 const POLICY_IN = z.record(z.enum(['suggest', 'approve', 'policy'])).optional().describe('Approval mode per action for this run, for actions Priya Raman may change (scout_setup lists them). Locked actions keep their mode.');
 const branchWith = (variation, facts) => ({ ...Scout.VARIATIONS[variation || 'canonical'], ...Scout.factsToVariation(facts || {}) });
 const VAR = z.enum(Object.keys(Scout.VARIATIONS)).optional().describe(`Physical state at Kinross to branch with: ${Object.keys(Scout.VARIATIONS).join(', ')}. Default canonical.`);
-export const scoutView = (sess, extra = {}) => sess ? ({ session: sess.id, label: sess.label, clock: fmtET(new Date(sess.clock)), status: sess.agent.status, ...scoutGov(sess), variation: sess.changes, awaiting: sess.proposals.filter((p) => p.state === 'Awaiting approval').map((p) => ({ id: p.id, po: p.po, action: p.action, does: Scout.ACTIONS[p.action].label, args: p.args, proposed_by: p.by, rationale: p.rationale, alternatives: p.alternatives, rule: Scout.ACTIONS[p.action].rule })), queue: Scout.queueView(sess), tasks: sess.tasks, proposals: sess.proposals.map((p) => ({ id: p.id, po: p.po, action: p.action, args: p.args, by: p.by, state: p.state, needs: p.needs, approved_by: p.approved_by || null, taken_over_by: p.taken_over_by || null, result: p.result?.response || null, at: p.at })), ship_notice: sess.asn, receipt: sess.receipt || null, load: { loaded: sess.load.base_loaded + sess.load.loaded.length, of: sess.load.expected, staged: sess.load.staged, sealed: sess.load.sealed }, outcome: Scout.outcome(sess), trace: sess.trace, overhead: { model_calls: sess.agent.calls, tool_calls: sess.agent.tool_calls, ms: sess.agent.ms, model_routes: sess.agent.routes || {} }, ...extra }) : { result: 'Invalid request', error: 'No such session; sessions live in memory and end when the server restarts.' };
+export const scoutView = (sess, extra = {}) => sess ? ({ session: sess.id, label: sess.label, clock: fmtET(new Date(sess.clock)), status: sess.agent.status, ...scoutGov(sess), variation: sess.changes, awaiting: sess.proposals.filter((p) => p.state === 'Awaiting approval').map((p) => ({ id: p.id, po: p.po, action: p.action, does: Scout.ACTIONS[p.action].label, args: p.args, proposed_by: p.by, rationale: p.rationale, alternatives: p.alternatives, rule: Scout.ACTIONS[p.action].rule })), queue: Scout.queueView(sess), tasks: sess.tasks, proposals: sess.proposals.map((p) => ({ id: p.id, po: p.po, action: p.action, args: p.args, by: p.by, state: p.state, needs: p.needs, approved_by: p.approved_by || null, result: p.result?.response || null, at: p.at })), ship_notice: sess.asn, receipt: sess.receipt || null, load: { loaded: sess.load.base_loaded + sess.load.loaded.length, of: sess.load.expected, staged: sess.load.staged, sealed: sess.load.sealed }, outcome: Scout.outcome(sess), trace: sess.trace, overhead: { model_calls: sess.agent.calls, tool_calls: sess.agent.tool_calls, ms: sess.agent.ms, model_routes: sess.agent.routes || {} }, ...extra }) : { result: 'Invalid request', error: 'No such session; sessions live in memory and end when the server restarts.' };
 // Governance (T2.3): Scout runs only while not paused (checked by the server before every model turn), a person can set a
-// proposal aside (Edit suggestion), and every proposal state change is copied into the access log with its attribution.
+// proposal aside by rejecting it, and every proposal state change is copied into the access log with its attribution.
 const scoutPaused = () => G.isPaused(db, 'Scout Agent');
 function scoutGov(sess) {
   const g = {};
   if (sess.agent.status === 'paused') { const f = sess.trace.find((t) => t.actor === 'Rule engine')?.detail?.findings || []; g.plain_task = { agent: 'Scout Agent', agent_state: 'Paused', proposal: null, task: 'Kinross load scan for SHP-460207: work the shipment by hand', rule_findings: f, message: 'Scout Agent is paused, so this event arrives as a plain task with no proposal.' }; }
-  if (sess.handed_over) g.handed_over = sess.handed_over;
   return g;
 }
 function drainScout(sessionId) { const sess = Scout.getSession(sessionId); if (!sess) return; for (const a of sess.audit.slice(sess.audited || 0)) log(AS, `scout:${a.action}`, [], { session: a.session, proposal: a.proposal }, a.outcome, [a.session, a.proposal], { agent: a.agent, rule: a.authority_rule, mode: a.authority_mode, approver: a.approver, outcome: a.outcome }); sess.audited = sess.audit.length; }
@@ -316,10 +331,10 @@ async function scoutReplay({ variation, facts, detail, policy } = {}, by = assis
 const SCOUT_TOOLS = [
   { name: 'scout_start', title: 'Start the shipment session on NR-460207', description: 'Branches the demo world at Tuesday 8 December 2026 17:12 ET into an isolated session (later recorded events hidden; nothing reaches the recorded world), lets Scout Agent investigate the Kinross load scan for NR-460207 with its read tools, and returns when the model waits for Priya Raman, finishes or hits its limit. Returns the session id, proposals awaiting approval and the full trace with who did what. Kinross and Northfield answers in a session are synthetic, from deterministic rules.', input: { variation: VAR, facts: FACTS_IN, policy: POLICY_IN, label: z.string().optional(), brief: z.boolean().optional().describe('Return only the session id, status, proposals awaiting approval and outcome; the full view stays at the session link') }, run: scoutStart },
   { name: 'scout_setup', title: 'Shipment session setup: facts, approval modes and guardrails', description: 'What can be set before a shipment session on NR-460207: the Kinross facts with their recorded values, each action with its rule, its approval mode and whether Priya Raman may change it, and the administrator guardrails. Changes nothing.', input: {}, run: async () => Scout.setup() },
-  { name: 'scout_decide', title: 'Decide a shipment session proposal as Priya Raman', description: 'Records Priya Raman’s decision on one proposal in a shipment session: approve, reject, or edit (Edit suggestion: she sets it aside and does the case by hand, recorded with her name). On approval the server executes it (Kinross and Northfield respond by their rules), then the model continues from the result. An approval cannot be replayed. Only call this when the user has decided.', input: { session: z.string(), proposal: z.string().describe('Proposal id, for example SP-2'), decision: z.enum(['approve', 'reject', 'edit']).describe('approve, reject, or edit: Edit suggestion, where Priya sets the proposal aside and does the case by hand; the model then stops proposing in this session'), note: z.string().optional().describe('With edit: what Priya does instead'), brief: z.boolean().optional().describe('Return only the session id, status, proposals awaiting approval and outcome') }, run: scoutDecide },
+  { name: 'scout_decide', title: 'Decide a shipment session proposal as Priya Raman', description: 'Records Priya Raman’s decision on one proposal in a shipment session: approve or reject. On approval the server executes it (Kinross and Northfield respond by their rules), then the model continues from the result. An approval cannot be replayed. Only call this when the user has decided.', input: { session: z.string(), proposal: z.string().describe('Proposal id, for example SP-2'), decision: z.enum(['approve', 'reject']).describe('approve or reject'), note: z.string().optional().describe('With edit: what Priya does instead'), brief: z.boolean().optional().describe('Return only the session id, status, proposals awaiting approval and outcome') }, run: scoutDecide },
   { name: 'scout_state', title: 'Shipment session state and trace', description: 'Current state of a shipment session: clock, load, proposals awaiting approval, outcome so far, trace and agent overhead.', input: { session: z.string() }, run: async ({ session }) => scoutView(Scout.getSession(session)) },
   { name: 'scout_baseline', title: 'Rule baseline on NR-460207', description: 'Runs the deterministic rule baseline on the same branch and variation, with the same reads and actions and a labelled test approver, and returns its outcome and trace.', input: { variation: VAR, facts: FACTS_IN, policy: POLICY_IN }, run: scoutBaseline },
-  { name: 'scout_replay', title: 'Governance replay: rule baseline and model run side by side', description: 'Runs the rule baseline and the model run on the same branch and variation, approving every proposal as a labelled test approver, and returns both outcomes, one-line traces and the model’s overhead. Pass detail full for every trace field. Pass policy to trial a changed approval mode for an editable action (for example {"kinross_load": "policy"}): the baseline then also runs under the policy in force and the actions whose authority differs are listed. Every replay is recorded on the change list as a trial (get_change_list). Locked actions (AP-1.3 release, AP-1.4 build, AP-5.1 reserved stock) cannot change. For governance review, not operation.', input: { variation: VAR, detail: z.enum(['brief', 'full']).optional(), policy: z.record(z.enum(['suggest', 'approve', 'policy'])).optional().describe('Action to mode: suggest, approve or policy') }, run: (a) => scoutReplay(a) },
+  { name: 'scout_replay', title: 'Governance replay: rule baseline and model run side by side', description: 'Runs the rule baseline and the model run on the same branch and variation, approving every proposal as a labelled test approver, and returns both outcomes, one-line traces and the model’s overhead. Pass detail full for every trace field. Pass policy to trial a changed approval mode for an editable action (for example {"kinross_loads_carton": "policy"}): the baseline then also runs under the policy in force and the actions whose authority differs are listed. Every replay is recorded on the change list as a trial (get_change_list). Locked actions (AP-1.3 release, AP-1.4 build, AP-5.1 reserved stock) cannot change. For governance review, not operation.', input: { variation: VAR, detail: z.enum(['brief', 'full']).optional(), policy: z.record(z.enum(['suggest', 'approve', 'policy'])).optional().describe('Action to mode: suggest, approve or policy') }, run: (a) => scoutReplay(a) },
 ];
 // ---------- Watch Agent (P13): a server-side agent on the open-order queue, in an isolated session branched from the recorded world ----------
 const watchPaused = () => G.isPaused(db, 'Watch Agent');
@@ -331,7 +346,6 @@ const watchBranch = (variation, facts) => ({ ...Watch.VARIATIONS[variation || 'c
 function watchGov(sess) {
   const g = {};
   if (sess.agent.status === 'paused') g.plain_task = { agent: 'Watch Agent', agent_state: 'Paused', proposal: null, task: 'Work the open-order queue by hand', queue: Watch.queue(db, sess).rows.map((r) => `${r.po} ${r.document}: ${r.what}`), message: 'Watch Agent is paused, so the queue arrives as plain tasks with no proposal.' };
-  if (sess.handed_over) g.handed_over = sess.handed_over;
   return g;
 }
 export const watchView = (sess, extra = {}) => sess ? ({ session: sess.id, label: sess.label, clock: fmtET(new Date(sess.clock)), branch_at: fmtET(new Date(sess.branch)), status: sess.agent.status, ...watchGov(sess), variation: sess.changes, facts: sess.facts,
@@ -362,7 +376,7 @@ async function watchReplay({ variation, facts, detail, policy } = {}, by = assis
 const WATCH_TOOLS = [
   { name: 'watch_setup', title: 'Watch setup: facts, Priya’s rules, approval modes and guardrails', description: 'What can be set before a Watch Agent run on Ashby’s open Northfield orders: the story moment and Kinross facts with their recorded values, Priya Raman’s editable rules (the Kinross 945 window), each action with its rule, approval mode and whether Priya may change it, the presets, and the administrator guardrails. Changes nothing.', input: {}, run: async () => Watch.setup() },
   { name: 'watch_start', title: 'Start Watch Agent on the open-order queue', description: 'Branches the demo world at Wednesday 18 November 2026 09:00 ET (or another preset moment) into an isolated session (later recorded records hidden; nothing reaches the recorded world), lets Watch Agent read the queue of orders missing a document Northfield requires and investigate each, and returns when it waits for Priya Raman, finishes or hits its limit. Returns the session id, the queue with each row’s state, proposals awaiting approval and the full trace. Kinross answers, 997s and session documents are synthetic.', input: { variation: WVAR, facts: WFACTS_IN, policy: WPOLICY_IN, label: z.string().optional(), run_by: z.enum(['agent', 'rules']).optional().describe('rules: the decision table proposes with no model and no agent, and the Kinross window is read from KX-945 (P13); default agent') }, run: watchStart },
-  { name: 'watch_decide', title: 'Decide a Watch Agent proposal as Priya Raman', description: 'Records Priya Raman’s decision on one proposal in a Watch session: approve, reject, or edit (Edit suggestion: she sets it aside and does it by hand). On approval the server executes it (Kinross and Northfield respond by their rules) and Watch Agent continues from the result. An approval cannot be replayed. Only call this when the user has decided.', input: { session: z.string(), proposal: z.string().describe('Proposal id, for example WP-2'), decision: z.enum(['approve', 'reject', 'edit']), note: z.string().optional().describe('With edit: what Priya does instead') }, run: watchDecide },
+  { name: 'watch_decide', title: 'Decide a Watch Agent proposal as Priya Raman', description: 'Records Priya Raman’s decision on one proposal in a Watch session: approve or reject. On approval the server executes it (Kinross and Northfield respond by their rules) and Watch Agent continues from the result. An approval cannot be replayed. Only call this when the user has decided.', input: { session: z.string(), proposal: z.string().describe('Proposal id, for example WP-2'), decision: z.enum(['approve', 'reject']), note: z.string().optional().describe('With edit: what Priya does instead') }, run: watchDecide },
   { name: 'watch_state', title: 'Watch session state, queue and trace', description: 'Current state of a Watch session: clock, queue rows with their states, proposals awaiting approval, confirmations pending, outcome, trace and agent overhead. Pass advance_minutes to move the session clock on: confirming records due by then arrive (a 997, a receiving advice, a Kinross 945) and Watch Agent continues from them.', input: { session: z.string(), advance_minutes: z.number().int().min(1).max(2880).optional() }, run: watchState },
   { name: 'watch_baseline', title: 'Rule baseline on the open-order queue', description: 'Runs the deterministic rule baseline (the decision table for a missing document) on the same branch and facts, with the same reads and actions and a labelled test approver, over Priya’s morning, and returns its outcome and trace.', input: { variation: WVAR, facts: WFACTS_IN, policy: WPOLICY_IN }, run: watchBaseline },
   { name: 'watch_replay', title: 'Governance replay: baseline and Watch Agent side by side', description: 'Runs the rule baseline and Watch Agent on the same branch and facts, approving every proposal as a labelled test approver and moving the clock to each confirming record, and returns both outcomes, one-line traces, the steps both took (automation) and those only one took. Recorded on the change list as a trial. For governance review, not operation.', input: { variation: WVAR, facts: WFACTS_IN, detail: z.enum(['brief', 'full']).optional(), policy: WPOLICY_IN }, run: (a) => watchReplay(a) },
@@ -394,7 +408,7 @@ async function matchReplay({ variation, facts, policy, detail } = {}, by = assis
 const MATCH_TOOLS = [
   { name: 'match_setup', title: 'Match Agent setup: queue, facts, approval modes and guardrails', description: 'What can be set before a Match Agent run on the P14 story moment (Tuesday 10 November 2026 09:00 ET): the invoices held at that moment with their rules, the facts with their recorded values and presets, each action with its rules, its approval mode and whether Jordan Ellis may change it, and the administrator guardrails. Changes nothing.', input: {}, run: async () => Match.setup(nfDb) },
   { name: 'match_start', title: 'Start Match Agent on the held invoices', description: 'Branches Northfield’s records at the P14 story moment into an isolated session (later records hidden; nothing reaches the recorded world), lets Match Agent investigate the held invoices with its read tools, and returns when it waits for Jordan Ellis, finishes or hits its limit. Returns the session id, the queue, proposals awaiting approval and the trace with who did what. Supplier answers in a session are synthetic, from deterministic rules, except a recorded corrected invoice revealed at its recorded time.', input: { variation: MATCH_VAR, facts: MATCH_FACTS_IN, policy: MATCH_POLICY_IN, label: z.string().optional() }, run: matchStart },
-  { name: 'match_decide', title: 'Decide a Match Agent proposal as Jordan Ellis', description: 'Records Jordan Ellis’s decision on one proposal in a Match session: approve, reject, or edit (Edit suggestion: he sets it aside and works the invoice by hand, recorded with his name). On approval the server executes it (the supplier answers by its rules), then Match Agent continues. No payment is released by any decision. An approval cannot be replayed. Only call this when the user has decided.', input: { session: z.string(), proposal: z.string().describe('Proposal id, for example MP-1'), decision: z.enum(['approve', 'reject', 'edit']), note: z.string().optional().describe('With edit: what Jordan does instead') }, run: matchDecide },
+  { name: 'match_decide', title: 'Decide a Match Agent proposal as Jordan Ellis', description: 'Records Jordan Ellis’s decision on one proposal in a Match session: approve or reject. On approval the server executes it (the supplier answers by its rules), then Match Agent continues. No payment is released by any decision. An approval cannot be replayed. Only call this when the user has decided.', input: { session: z.string(), proposal: z.string().describe('Proposal id, for example MP-1'), decision: z.enum(['approve', 'reject']), note: z.string().optional().describe('With edit: what Jordan does instead') }, run: matchDecide },
   { name: 'match_state', title: 'Match session state and trace', description: 'Current state of a Match session: clock, queue, proposals awaiting approval, outcome so far (line by line, with the record that settles each), what the supplier sees, trace and agent overhead.', input: { session: z.string() }, run: async ({ session }) => matchView(Match.getSession(session)) },
   { name: 'match_baseline', title: 'Rule baseline on the held invoices', description: 'Runs the rule baseline on the same branch and facts: first the simplest baseline (the match shows Held with the failing rule), then fixed logic from the P14 decision table over the same reads and actions, with a labelled test approver. Returns its outcome and trace.', input: { variation: MATCH_VAR, facts: MATCH_FACTS_IN, policy: MATCH_POLICY_IN }, run: matchBaseline },
   { name: 'match_replay', title: 'Governance replay: baseline and Match Agent side by side', description: 'Runs the rule baseline and Match Agent on the same branch and facts, approving every proposal as a labelled test approver, and returns both outcomes, one-line traces, the steps where the two match (automation) and the agent’s overhead. Recorded on the change list as a trial. Pass detail full for every trace field. For governance review, not operation.', input: { variation: MATCH_VAR, facts: MATCH_FACTS_IN, policy: MATCH_POLICY_IN, detail: z.enum(['brief', 'full']).optional() }, run: (a) => matchReplay(a) },
@@ -432,7 +446,7 @@ for (const t of [...SCOUT_TOOLS, ...WATCH_TOOLS, ...MATCH_TOOLS, ...RUNTIME_TOOL
 const SESSION_TOOLS = (cid) => cid === AS ? [...SCOUT_TOOLS, ...WATCH_TOOLS, ...RUNTIME_TOOLS[AS]] : [...MATCH_TOOLS, ...RUNTIME_TOOLS[NF]];
 async function runSessionTool(cid, t, args) { let out; try { out = await t.run(args); if (cid === NF) out = linkify(out, SIDE[NF]); } catch (e) { out = { result: 'Invalid request', error: e.message }; } log(cid, t.name, [], args, out.result || out.status || 'Answered', []); return out; }
 function makeServer(cid) {
-  const server = new McpServer({ name: cid === AS ? 'trading-grid-ashby' : 'trading-grid-northfield', title: cid === AS ? 'Trading Grid · Ashby Supplier' : 'Trading Grid · Northfield Retailer', version: '0.4.1' }, { instructions: INSTRUCTIONS[cid]() });
+  const server = new McpServer({ name: cid === AS ? 'trading-grid-ashby' : 'trading-grid-northfield', title: cid === AS ? 'Trading Grid · Ashby Supplier' : 'Trading Grid · Northfield Retailer', version: '0.4.4' }, { instructions: INSTRUCTIONS[cid]() });
   // Every tool on the connection answers through `present` (src/credit.js): no result, title or description names an agent.
   const register = server.registerTool.bind(server);
   server.registerTool = (name, meta, handler) => register(name, { ...meta, title: present(meta.title), description: present(meta.description) }, async (args) => {
@@ -476,7 +490,7 @@ app.use((req, res, next) => { const json = res.json.bind(res); res.json = (body)
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false }));
 app.get('/', (req, res) => res.type('html').send(homePage()));
-app.get('/healthz', (req, res) => res.json({ status: 'ok', version: '0.4.1', writes: WRITES, connections: [AS, NF], aviator: !!process.env.GEMINI_API_KEY, model_routes: Aviator.modelRoutes().map((r) => `${r.route} · ${r.model}`) }));
+app.get('/healthz', (req, res) => res.json({ status: 'ok', version: '0.4.4', writes: WRITES, connections: [AS, NF], aviator: !!process.env.GEMINI_API_KEY, model_routes: Aviator.modelRoutes().map((r) => `${r.route} · ${r.model}`) }));
 const cidOf = (req, res) => { const c = BY_TOKEN[req.params.token]; if (!c) { res.status(404).send('Not found'); return null; } return c; };
 
 app.post('/mcp/:token', async (req, res) => {
@@ -519,7 +533,7 @@ app.get('/records/northfield/order/:po', (req, res) => res.type('html').send(nfO
 app.get('/records/northfield/document/:id', (req, res) => { const d = NR.documentNF(db, req.params.id); res.type('html').send(d.found ? documentPage(D.document(db, req.params.id).found ? D.document(db, req.params.id) : { ...d, found: true, versions: [], control_numbers: {}, file: '' }) : nfOrderPage(d)); });
 app.get('/records/:old/order/:po', (req, res) => res.redirect(`/records/order/${encodeURIComponent(req.params.po)}`));
 
-const adminData = (cid, token) => ({ connection: conn(cid), side: SIDE[cid], rows: db.prepare('SELECT * FROM access_log WHERE connection_id = ? ORDER BY id DESC LIMIT 200').all(cid), allScopes: SIDE[cid].scopes, token, mcpUrl: `${BASE}/mcp/${token}`, writes: WRITES, proposals: db.prepare('SELECT * FROM proposals WHERE connection_id = ? ORDER BY created_at DESC').all(cid), governance: G.changeList(db, cid, { limit: 50 }) });
+const adminData = (cid, token) => ({ connection: conn(cid), side: SIDE[cid], rows: logRows(cid, 200), allScopes: SIDE[cid].scopes, token, mcpUrl: `${BASE}/mcp/${token}`, writes: WRITES, proposals: db.prepare('SELECT * FROM proposals WHERE connection_id = ? ORDER BY created_at DESC').all(cid), governance: G.changeList(db, cid, { limit: 50 }) });
 // Aviator: the in-product assistant. A Trading Grid page posts a question; the model runs on the server with the
 // connection's read tools only, so scopes, refusals and the access log apply exactly as they do for the company's own assistant.
 const cors = (res) => res.set({ 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'content-type' });
@@ -535,8 +549,8 @@ app.post('/aviator/:token', async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ ok: false, message: 'Aviator failed.' }); }
 });
 // ---------- Hosted prototype pages (/p/<id>) ----------
-// A claude.ai artifact cannot call this server, so each prototype is also served here from pages/<id>.html, and that copy
-// is the link shared with viewers. Its Aviator chat posts to /aviator/<page token> on the same origin. pages/pages.json
+// The prototypes are the pages served here from pages/<id>.html (the build chat owns them), and this is the link shared
+// with viewers. Its Aviator chat posts to /aviator/<page token> on the same origin. pages/pages.json
 // names each page's calendar moment, the sides it shows and its token. A page token answers Aviator only: it opens no MCP,
 // REST, admin or public data route, and no model key reaches a page.
 const PAGES_DIR = process.env.PAGES_DIR ? new URL(`file://${process.env.PAGES_DIR.replace(/\/?$/, '/')}`) : new URL('../pages/', import.meta.url);
@@ -555,7 +569,7 @@ app.get('/p/:id', (req, res) => {
 });
 app.get('/robots.txt', (req, res) => res.type('text').send('User-agent: *\nDisallow: /p/\nDisallow: /aviator/\nDisallow: /public/\n'));
 app.get('/favicon.ico', (req, res) => res.status(204).end());
-// The synced pages with their hashes, so a deploy can be checked against each published artifact. The test page is not listed.
+// The hosted pages with the sha256 of each file, so a deploy can be checked against the page the build chat committed. The test page is not listed.
 app.get('/p', (req, res) => res.set('X-Robots-Tag', 'noindex').json({ pages: Object.entries(PAGES).filter(([id]) => id !== '_test' && existsSync(new URL(`${id}.html`, PAGES_DIR))).map(([id, p]) => ({ page: `${BASE}/p/${id}`, prototype: p.calendar, sides: p.sides, sha256: createHash('sha256').update(readFileSync(new URL(`${id}.html`, PAGES_DIR))).digest('hex') })) }));
 
 // Plain words for an Aviator answer: no rule codes, charge codes, unit codes or field names in a sentence, and quantities in
@@ -566,6 +580,8 @@ const CHARGE_WORDS = new Map(db.prepare('SELECT charge_code, topic FROM rules WH
 const KIND_WORDS = { wms: 'Kinross', carrier: 'Lakeline', erp: 'Supplier ERP', tg: 'Trading Grid', case: 'deduction case', rule: 'rule' };
 export function plainAnswer(text) {
   let t = String(text || '');
+  // A credit that names its rule set ("Northfield matching rule NF-7.8") reads as the owner's rule set, with no code.
+  t = t.replace(/\b(Northfield|Ashby)(?:’s|'s)? ((?:[a-z]+ ){0,3}?)rules? (?:[A-Z]{2,3}-\d+(?:\.\d+)?)(?:(?:,| and) (?:[A-Z]{2,3}-\d+(?:\.\d+)?))*/g, (m, who, kind) => `${who}’s ${kind}rule`);
   t = t.replace(/\s*\((?:rule |under |per |see )?(?:[A-Z]{2,3}-\d+(?:\.\d+)?|[A-Z]{2}\d{2})(?:[,;/ ]+(?:and )?(?:[A-Z]{2,3}-\d+(?:\.\d+)?|[A-Z]{2}\d{2}))*\)/g, '');
   t = t.replace(/\b(?:rule )?([A-Z]{2,3}-\d+(?:\.\d+)?)\b/g, (m, id) => RULE_WORDS.get(id) || m);
   t = t.replace(/\b([A-Z]{2}\d{2})\b/g, (m, c) => CHARGE_WORDS.get(c) || m);
@@ -577,7 +593,9 @@ export function plainAnswer(text) {
 /** The records an answer read, by their business names: those it names first, then the rest it read. */
 function recordsRead(text, results) {
   const refs = []; const add = (r) => { if (r && !refs.includes(r)) refs.push(r); };
-  const all = []; for (const r of results) for (const x of refsOf(r)) if (!all.includes(x)) all.push(x);
+  // Only records: a reference (NR-450118, INV-7731C, PMT-990412) or a record kind; never a sentence a tool returned about one.
+  const isRecord = (x) => /^[A-Z][A-Z0-9]*-[A-Z0-9][A-Z0-9.#-]*$/.test(x) || /^[a-z]+\.[a-z_]+$/.test(x) || /^\d{3}$/.test(x);
+  const all = []; for (const r of results) for (const x of refsOf(r)) if (isRecord(String(x)) && !all.includes(x)) all.push(x);
   for (const x of all) if (String(text).includes(x)) add(x); for (const x of all) if (refs.length < 8) add(x);
   return refs.map((ref) => {
     if (db.prepare('SELECT 1 FROM orders WHERE po = ?').get(ref)) return { record: ref, name: `Purchase order ${ref}` };
@@ -593,7 +611,11 @@ function recordsRead(text, results) {
     return { record: ref, name: ref };
   }).filter((r, i, a) => r && a.findIndex((x) => x && x.name === r.name) === i);
 }
-const ipOf = (req) => req.ip || req.socket?.remoteAddress || 'unknown';
+// The viewer's address for the per-address limits. Render sits behind Cloudflare: Cloudflare sets CF-Connecting-IP to the
+// connecting client and overwrites any value a client sends, while Render only appends to X-Forwarded-For, so req.ip there is a
+// proxy hop shared by many viewers and moved by any X-Forwarded-For a client adds (measured 18 November 2026). Locally, with no
+// Cloudflare in front, the socket address is the viewer; X-Forwarded-For is never read for a limit.
+const ipOf = (req) => { const cf = String(req.get('cf-connecting-ip') || req.get('true-client-ip') || '').trim(); return /^[0-9a-f.:]{3,45}$/i.test(cf) ? cf : req.socket?.remoteAddress || 'unknown'; };
 const AV_MINUTE = windowLimit(LIMITS.aviator_per_minute, 60000), AV_DAY = windowLimit(LIMITS.aviator_per_day, 86400000), PUBLIC_MINUTE = windowLimit(LIMITS.public_per_minute, 60000);
 export const resetLimits = () => { AV_MINUTE.reset(); AV_DAY.reset(); PUBLIC_MINUTE.reset(); };
 const asOfIso = (v) => { if (!v) return null; try { return D.asOfDate(String(v)).toISOString(); } catch { return null; } };
@@ -637,17 +659,49 @@ async function pageAviator(page, req, res) {
   const moment = pageMoment(page); const through = page.through ? new Date(page.through).toISOString() : null; // null: window end not set yet, left open
   let asOf = moment; if (b.as_of != null && b.as_of !== '') { const x = asOfIso(b.as_of); if (!x || x < moment || (through && x > through)) return refuse(403, REFUSALS.moment); asOf = x; }
   const at = new Date(asOf);
+  // The viewer's session: one per viewer and page, shared by both sides of a switcher page, ended after 30 minutes idle.
+  const { session } = S.sessionFor({ id: b.session, page: page.id, address: addr }); const sideName = side;
+  const reply = (body) => res.json({ ok: true, side, as_of: asOf, as_of_eastern: fmtET(at), session: session.id, cards: [], read: [], ...body });
+  // Outside Trading Grid: an email, call or instruction to anyone, or a change in another company's system. Said plainly, no card.
+  const outside = Cards.outsideTradingGrid(question, sideName);
+  if (outside) { withVia(via, () => log(cid, 'aviator', [], { question_chars: question.length, tools: [], model_route: null, ms: Date.now() - started, as_of: asOf, session: session.id }, 'Answered: outside Trading Grid', []));
+    return reply({ answer: outside.answer, outside_trading_grid: { owner: outside.owner, where: outside.where } }); }
+  // Ashby asked to send an application advice: Ashby answers Northfield's 824 with a 997 and the corrected document instead.
+  if (sideName === 'ashby' && /\b(send|issue|raise|file|reject\w*)\b[^?]*\b(824|application advice)\b/i.test(question)) {
+    const refs = question.match(/\bAA-[A-Z0-9-]+\b/i)?.[0]; const po = question.match(/\bNR-\d{5,6}\b/)?.[0];
+    const r = S.withSession(session.id, () => Cards.buildCard(db, 'ashby', 'answer_application_advice', { advice: refs, po }, at));
+    const lead = 'Ashby does not send an application advice: Northfield’s 824 is answered with a technical acknowledgment (997) and the corrected document.';
+    if (!r.ok) return reply({ answer: plainAnswer(`${lead} ${r.message}`) });
+    const card = keepCard(session, r.card, { advice: refs, po }, page, sideName); withVia(via, () => log(cid, 'aviator', [], { question_chars: question.length, tools: [], as_of: asOf, session: session.id, card: card.id }, 'Card raised', [r.card.record]));
+    return reply({ answer: plainAnswer(`${lead} The card below sends both; nothing is sent until Priya Raman presses Approve.`), cards: [publicCard(card)] }); }
   const context = typeof b.context === 'string' ? b.context.slice(0, 300) : b.context ? JSON.stringify(b.context).slice(0, 300) : '';
   const history = turns.filter((h) => h && typeof h.text === 'string').map((h) => ({ role: h.role === 'model' || h.role === 'aviator' ? 'model' : 'user', text: h.text.slice(0, 2000) }));
-  const tools = cid === AS ? TOOLS : NF_TOOLS; const S = SIDE[cid]; const asked = askedPeriod(question, at);
+  const readTools = cid === AS ? TOOLS : NF_TOOLS; const SD = SIDE[cid]; const asked = askedPeriod(question, at);
+  const actions = Object.keys(Cards.CARD_ACTIONS[sideName]);
+  const PROPOSE = { name: 'propose_action', description: `Raise an action card for ${SD.person} when asked to do something Trading Grid does. The server builds the card from ${SD.company}’s rules and the records; nothing happens until ${SD.person} presses Approve. Actions: ${actions.map((k) => `${k} (${Cards.CARD_ACTIONS[sideName][k].does}; takes ${Cards.CARD_ACTIONS[sideName][k].takes})`).join('; ')}.`,
+    input: { action: z.enum(actions), note: z.string().optional().describe('The person’s own words to the other company, when the record carries them: an application advice’s message, or a dispute’s note'), case: z.string().optional(), charge: z.string().optional(), decision: z.string().optional().describe('Reversed or Upheld; Apply or Waive'), reason: z.string().optional(), po: z.string().optional(), document: z.string().optional(), draft: z.string().optional(), advice: z.string().optional(),
+      messages: z.array(z.object({ code: z.string(), message: z.string() })).optional().describe('With send_application_advice: a plain message per error code, at most 60 characters') } };
+  const tools = [...readTools, PROPOSE]; const carried = Cards.carriedMessage(question, sideName);
+  const perms = Object.fromEntries(G.aviatorPermissions(db, cid).actions.map((x) => [x.action, x.permission])); let runCards = [];
+  const proposeAction = (args) => {
+    // The model decides whether the person asked for an action. The server still checks the permission, builds the card
+    // from the rules and records, and writes nothing until the person presses Approve.
+    const { action, ...rest } = args || {};
+    // A message to the other company that this record carries: the person's own words go into it.
+    if (carried && action === carried.action && carried.note && !rest.note && !(Array.isArray(rest.messages) && rest.messages.length)) rest.note = carried.note; if (!Cards.CARD_ACTIONS[sideName][action]) return { result: 'Refused', message: `${action} is not something ${SD.company} does in Trading Grid.` };
+    if (perms[Cards.CARD_ACTIONS[sideName][action].permission] !== 'propose_action_card') return { result: 'Refused', message: `Aviator is set to answer only for this action (P21); ${SD.person} does it on the screen.` };
+    if (session.cards.size >= S.LIMITS.cards) return { result: 'Refused', message: 'This session has reached its limit of cards. Start a new session.' };
+    const r = S.withSession(session.id, () => Cards.buildCard(db, sideName, action, rest, at)); if (!r.ok) return { result: 'Not available', message: r.message };
+    const card = keepCard(session, r.card, rest, page, sideName); runCards.push(card); return { result: 'Card ready', card: publicCard(card), note: `Nothing happens until ${SD.person} presses Approve.` }; };
   const periodTools = new Set(tools.filter((t) => t.period).map((t) => t.name));
   // One run of the model: every tool that takes as_of reads at the page's moment or earlier, whatever the model passes.
   const run = async (routes, hint) => { const results = []; const periods = [];
-    const callTool = (name, args) => { const t = tools.find((x) => x.name === name); const a = { ...(args || {}) };
+    runCards.forEach((c) => session.cards.delete(c.id)); runCards = [];
+    const callTool = (name, args) => { if (name === 'propose_action') return proposeAction(args); const t = tools.find((x) => x.name === name); const a = { ...(args || {}) };
       if (t && t.input && 'as_of' in t.input && (!a.as_of || !asOfIso(a.as_of) || new Date(asOfIso(a.as_of)) > at)) a.as_of = asOf;
-      const r = withVia(via, () => present(call(cid, name, a))); results.push(r); if (periodTools.has(name)) periods.push(r && r.period_covered ? r.period_covered : null); return r; };
-    const q = `${question}\n(As of ${fmtET(at)}.${context ? ` On screen: ${context}.` : ''}${asked ? ` The question's period, ${asked.words}, is ${asked.from} to ${asked.to}: pass from ${asked.from} and to ${asked.to} to the tool that takes a period, and answer for those days only.` : ''}${hint || ''})`;
-    let out; try { out = await Aviator.ask({ question: q, history, tools, callTool, side: { person: S.person, company: S.company, other: S.other }, clock: fmtET(at), routes }); } catch (e) { console.error(e); out = { ok: false, status: 500, message: 'Aviator failed.' }; }
+      const r = S.withSession(session.id, () => withVia(via, () => present(call(cid, name, a)))); results.push(r); if (periodTools.has(name)) periods.push(r && r.period_covered ? r.period_covered : null); return r; };
+    const q = `${question}\n(As of ${fmtET(at)}.${context ? ` On screen: ${context}.` : ''}${asked ? ` The question's period, ${asked.words}, is ${asked.from} to ${asked.to}: pass from ${asked.from} and to ${asked.to} to the tool that takes a period, and answer for those days only.` : ''}${carried ? ` The words to ${SD.other} go into the ${carried.action === 'send_application_advice' ? 'application advice' : 'dispute'} as its message: Trading Grid carries them in that record, so raise the card with ${carried.action}.` : ''}${hint || ''})`;
+    let out; try { out = await Aviator.ask({ question: q, history, tools, callTool, side: { person: SD.person, company: SD.company, other: SD.other }, clock: fmtET(at), routes, cards: true }); } catch (e) { console.error(e); out = { ok: false, status: 500, message: 'Aviator failed.' }; }
     // The answer covers the asked period when a tool that reads a period read exactly those days.
     const covers = !asked || periods.some((p) => p && p.from === asked.from && p.to === asked.to);
     return { out, results, covers, readPeriod: periods.length > 0 }; };
@@ -662,8 +716,51 @@ async function pageAviator(page, req, res) {
   withVia(via, () => log(cid, 'aviator', [], { question_chars: question.length, tools: (out.tools_called || []).map((t) => t.tool), model_route: out.model ? `${out.route || 'primary'} · ${out.model}` : null, ms: Date.now() - started, as_of: asOf, ...(asked ? { period: `${asked.from} to ${asked.to}` } : {}), ...(retried ? { retried_for_period_on: retried } : {}) }, out.ok ? `Answered from ${out.tools_called.length} tool call(s)` : out.capped ? 'Daily model cap reached' : out.wrong_period ? 'Refused: the answer read a different period' : 'No answer', []));
   if (out.wrong_period) return res.status(422).json({ ok: false, message: `Ask again with the dates. Aviator could not read ${asked.from} to ${asked.to} for this question.` });
   if (!out.ok) return res.status(out.capped ? 429 : 503).json({ ok: false, limited: !!out.capped, message: out.capped ? MESSAGES.cap : /no model key/.test(out.message || '') ? 'Aviator is not available on this server.' : 'Ask again in a moment. Aviator did not receive an answer.' });
-  res.json({ ok: true, answer: plainAnswer(out.answer), read: recordsRead(out.answer, results), side, as_of: asOf, as_of_eastern: fmtET(at), ...(asked ? { period: { from: asked.from, to: asked.to } } : {}) });
+  res.json({ ok: true, answer: plainAnswer(out.answer), read: recordsRead(out.answer, results), side, as_of: asOf, as_of_eastern: fmtET(at), ...(asked ? { period: { from: asked.from, to: asked.to } } : {}), session: session.id, cards: runCards.map(publicCard) });
 }
+
+// ---------- Action cards on hosted pages ----------
+const PERSON_OF = { ashby: 'Priya Raman', northfield: 'Jordan Ellis' };
+const RULE_TEXT = (id) => { if (!id) return null; const r = db.prepare('SELECT id, owner, statement FROM rules WHERE id = ?').get(id); return r ? { id: r.id, owner: r.owner, rule: r.statement } : null; };
+/** Keeps a card in the viewer's session: the card id is the idempotency key for its one write. */
+function keepCard(session, card, input, page, side) {
+  const id = `AC-${randomBytes(5).toString('hex')}`; const c = { ...card, id, input, page: page.id, session: session.id, side, state: 'Open', raised_at: new Date().toISOString() };
+  session.cards.set(id, c); return c; }
+/** What a page shows on a card: what happens, to whom, under which rule, and Approve or Cancel. No codes in the sentence. */
+const publicCard = (c) => ({ id: c.id, action: c.action, says: plainAnswer(c.says), to: c.to, record: c.record, approver: c.approver, under: RULE_TEXT(c.rule), buttons: c.state === 'Open' ? ['Approve', 'Cancel'] : [], state: c.state,
+  ...(c.x12_preview ? { x12: c.x12_preview } : {}), ...(c.message ? { message: c.message } : {}), ...(c.decided_at ? { decided_at: c.decided_at, decided_by: c.decided_by } : {}) });
+app.options('/aviator/:token/cards/:card', (req, res) => { cors(res).status(204).end(); });
+app.post('/aviator/:token/cards/:card', (req, res) => {
+  cors(res); const page = BY_PAGE_TOKEN[req.params.token]; if (!page) return res.status(404).json({ ok: false, message: 'Not found' });
+  const hit = PUBLIC_MINUTE.hit(ipOf(req)); if (!hit.ok) return res.status(429).set('Retry-After', String(hit.retry_after)).json({ ok: false, limited: true, message: MESSAGES.public_rate });
+  const b = req.body || {}; const s = S.getSession(b.session); const card = s && s.page === page.id ? s.cards.get(String(req.params.card)) : null;
+  if (!card) return res.status(404).json({ ok: false, message: 'This card is not in your session. Sessions end after 30 minutes idle; ask again to raise a new card.' });
+  const decision = String(b.decision || '').toLowerCase(); if (!['approve', 'cancel'].includes(decision)) return res.status(400).json({ ok: false, message: 'Press Approve or Cancel.' });
+  const cid = SIDE_CID[card.side]; const person = PERSON_OF[card.side];
+  const via = { id: `aviator-${page.id}-${card.side}`, user: `${person}, pressed on /p/${page.id} (viewer session ${s.id})` };
+  // One press records one action: a card already decided returns what was recorded, and nothing is written again.
+  if (card.state !== 'Open') return res.json({ ok: true, already_recorded: true, card: publicCard(card), result: card.result || null, record: card.reread || null, session: s.id });
+  s.last = Date.now();
+  const w = (outcome) => ({ agent: 'Aviator', rule: card.rule, mode: 'approve', approver: person, outcome });
+  if (decision === 'cancel') { card.state = 'Cancelled'; card.decided_at = new Date().toISOString(); card.decided_by = person;
+    withVia(via, () => log(cid, `card:${card.write}`, [], { session: s.id, card: card.id, action: card.action }, 'Cancelled; nothing sent', [card.record], w('Cancelled; nothing sent')));
+    return res.json({ ok: true, card: publicCard(card), session: s.id }); }
+  if (s.writes.length >= S.LIMITS.writes) return res.status(429).json({ ok: false, limited: true, message: 'This session has reached its limit of approvals. Start a new session.' });
+  // The card must still hold against the records now: another card in the session may have changed them.
+  const again = S.withSession(s.id, () => Cards.buildCard(db, card.side, card.action, card.input, card.at));
+  if (!again.ok) { card.state = 'No longer applies'; card.decided_at = new Date().toISOString(); card.result = { message: again.message };
+    withVia(via, () => log(cid, `card:${card.write}`, [], { session: s.id, card: card.id, action: card.action }, 'Refused: no longer applies', [card.record], w(again.message)));
+    return res.status(409).json({ ok: false, card: publicCard(card), message: plainAnswer(again.message), session: s.id }); }
+  const result = S.withSession(s.id, () => Cards.applyCard(db, { ...again.card, id: card.id }, person));
+  card.state = 'Approved'; card.decided_at = new Date().toISOString(); card.decided_by = person; card.result = result;
+  const rr = Cards.rereadOf(card, result); card.reread = rr ? S.withSession(s.id, () => withVia(via, () => present(call(cid, rr[0], rr[1])))) : null;
+  withVia(via, () => log(cid, `card:${card.write}`, [], { session: s.id, card: card.id, action: card.action }, 'Approved', [card.record, result.document].filter(Boolean), w(`Approved by ${person}; ${plainAnswer(card.says)}`)));
+  res.json({ ok: true, card: publicCard(card), result, record: card.reread, session: s.id });
+});
+// The session's own cards and writes, for a page that reopens.
+app.get('/aviator/:token/session/:session', (req, res) => { cors(res); const page = BY_PAGE_TOKEN[req.params.token]; const s = page && S.getSession(req.params.session);
+  if (!s || s.page !== page.id) return res.status(404).json({ ok: false, message: 'No such session; sessions end after 30 minutes idle.' });
+  res.json({ ok: true, ...S.sessionInfo(s), cards: [...s.cards.values()].map(publicCard) }); });
 
 // ---------- Public read route (/public/<side>/tools/<name>) ----------
 // No token: a hosted page reads its side's records here. Only read tools and the side's refusals answer, with that side's
@@ -680,6 +777,8 @@ app.all('/public/:side/tools/:name', (req, res) => {
   if (!cid) return res.status(404).json({ result: 'Not found', message: 'Side is ashby or northfield.' });
   const hit = PUBLIC_MINUTE.hit(ipOf(req)); if (!hit.ok) return res.status(429).set('Retry-After', String(hit.retry_after)).json({ result: 'Rate limited', message: MESSAGES.public_rate });
   const via = { id: `public-${side}`, user: 'Public read route' }; const args = { ...req.query, ...(req.body && typeof req.body === 'object' ? req.body : {}) };
+  // A viewer's page reads its own session (what its cards wrote); with no session it reads the recorded world.
+  const sess = args.session ? S.getSession(args.session) : null; delete args.session;
   if (!PUBLIC_READ[cid].has(name)) {
     const known = PUBLIC_REFUSED.has(name) || [...SESSION_TOOLS(cid)].some((t) => t.name === name);
     withVia(via, () => log(cid, name, [], args, known ? 'Refused: not a public read' : 'Not found', []));
@@ -688,7 +787,7 @@ app.all('/public/:side/tools/:name', (req, res) => {
   for (const k of ['days', 'limit']) if (typeof args[k] === 'string' && args[k] !== '' && !Number.isNaN(Number(args[k]))) args[k] = Number(args[k]);
   for (const k of ['include_warehouse', 'lines', 'list']) if (typeof args[k] === 'string') args[k] = args[k] === 'true';
   if (typeof args.pos === 'string') args.pos = args.pos.split(',');
-  res.json(withVia(via, () => call(cid, name, args)));
+  res.json(S.withSession(sess?.id || null, () => withVia(via, () => call(cid, name, args))));
 });
 app.get('/limits', (req, res) => res.json({ aviator_per_address_per_minute: LIMITS.aviator_per_minute, aviator_per_address_per_day: LIMITS.aviator_per_day, public_reads_per_address_per_minute: LIMITS.public_per_minute, model_calls: modelBudget() }));
 app.get('/openapi.json', (req, res) => { const f = new URL('../openapi/openapi.json', import.meta.url); if (existsSync(f)) res.type('json').send(readFileSync(f)); else res.status(404).send('Not built'); });
@@ -702,7 +801,7 @@ app.post('/admin/:token/clear-log', (req, res) => { const cid = cidOf(req, res);
 // A person decides each proposal here. Approval appends the record it describes; a reset returns both companies to baseline.
 app.post('/admin/:token/proposals/:id/:decision', (req, res) => {
   const cid = cidOf(req, res); if (!cid) return; if (!WRITES) return res.status(403).send('Writes are off in this release');
-  const d = ['approve', 'reject', 'edit'].includes(req.params.decision) ? req.params.decision : null; if (!d) return res.status(400).send('Decision is approve, reject or edit');
+  const d = ['approve', 'reject'].includes(req.params.decision) ? req.params.decision : null; if (!d) return res.status(400).send('Decision is approve or reject');
   decide(cid, req.params.id, d, req.body?.note); res.redirect(`/admin/${req.params.token}`);
 });
 // An administrator pauses or resumes an agent (T2.3 story 2). Recorded on the change list and the access log with the person's name.
@@ -714,8 +813,9 @@ app.post('/admin/:token/agents/:agent/:action', (req, res) => {
 });
 app.post('/admin/:token/reset', (req, res) => {
   const cid = cidOf(req, res); if (!cid) return;
-  db.prepare('DELETE FROM events WHERE id > ?').run(BASELINE_EVENT); db.prepare('DELETE FROM proposals').run(); db.prepare('DELETE FROM access_log').run(); db.prepare('DELETE FROM rule_replays').run(); db.prepare('DELETE FROM agent_changes').run();
-  db.prepare("UPDATE draft_rules SET state = CASE WHEN in_force_from IS NULL THEN 'Draft' ELSE 'Scheduled' END").run();
+  db.prepare('DELETE FROM main.events WHERE id > ?').run(BASELINE_EVENT); for (const [t, k] of [['invoice_lines', "invoice IN (SELECT invoice FROM main.invoices WHERE doc_id IN (SELECT doc_id FROM main.documents WHERE file = 'session'))"], ['invoices', "doc_id IN (SELECT doc_id FROM main.documents WHERE file = 'session')"], ['shipment_lines', "shipment_id IN (SELECT shipment_id FROM main.shipments WHERE doc_id IN (SELECT doc_id FROM main.documents WHERE file = 'session'))"], ['shipments', "doc_id IN (SELECT doc_id FROM main.documents WHERE file = 'session')"], ['errors', "reported_by IN (SELECT doc_id FROM main.documents WHERE file = 'session')"]]) db.prepare(`DELETE FROM main.${t} WHERE ${k}`).run();
+  db.prepare("DELETE FROM main.documents WHERE file = 'session'").run(); db.prepare('DELETE FROM proposals').run(); db.prepare('DELETE FROM access_log').run(); db.prepare('DELETE FROM rule_replays').run(); db.prepare('DELETE FROM agent_changes').run();
+  db.prepare("UPDATE main.draft_rules SET state = CASE WHEN in_force_from IS NULL THEN 'Draft' ELSE 'Scheduled' END").run();
   for (const r of BASELINE_RULES) db.prepare('UPDATE rules SET statement = ?, params = ? WHERE id = ?').run(r.statement, r.params, r.id);
   for (const v of BASELINE_VERSIONS) db.prepare('UPDATE rule_versions SET statement = ?, params = ? WHERE rule_id = ? AND valid_from = ?').run(v.statement, v.params, v.rule_id, v.valid_from);
   for (const c of [AS, NF]) db.prepare('UPDATE connections SET scopes = ? WHERE id = ?').run(JSON.stringify(SIDE[c].scopes), c);

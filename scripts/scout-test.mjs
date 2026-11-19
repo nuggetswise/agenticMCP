@@ -36,20 +36,21 @@ function detectors(name, sess, actor) {
 // Server-side guards, independent of any actor
 { const s = S.startSession(db);
   check(S.propose(db, s, 'Test', 'build_ship_notice', { shipped: 660 }).state === 'Refused', 'guard: AP-1.4 refuses a ship notice with supplied quantities');
-  const p = S.propose(db, s, 'Test', 'kinross_load', { sscc: s.world.carton.sscc }); check(p.state === 'Awaiting approval', 'guard: a Kinross task waits for Priya');
-  check(S.propose(db, s, 'Test', 'kinross_load', { sscc: s.world.carton.sscc }).state === 'Duplicate', 'guard: idempotent duplicate proposal');
-  S.decide(db, s, p.proposal, 'approve'); check(S.decide(db, s, p.proposal, 'approve').state === 'Refused', 'guard: an approval cannot be replayed');
-  check(S.propose(db, s, 'Test', 'kinross_load', { sscc: '006141410009999999' }).state === 'Refused', 'guard: a task for a carton not staged is refused');
+  const k = S.propose(db, s, 'Test', 'kinross_loads_carton', { sscc: s.world.carton.sscc }); check(k.state !== 'Awaiting approval' && s.proposals.find((x) => x.id === k.proposal)?.executed_under === 'Standing policy' && s.trace.some((t) => /^Shown to Priya Raman: Kinross owns the load/.test(t.what)), 'guard: a Kinross fix is shown, not approved, and nothing is sent to Kinross');
+  check(S.propose(db, s, 'Test', 'kinross_loads_carton', { sscc: s.world.carton.sscc }).state !== 'Awaiting approval', 'guard: a repeated Kinross fix never waits for Priya');
+  const rt = s.proposals.find((x) => x.action === 'send_routing_request'); const rp = S.propose(db, s, 'Test', 'send_routing_request', rt.args); check(rp.state === 'Duplicate', 'guard: idempotent duplicate proposal');
+  const p = { proposal: rt.id }; S.decide(db, s, p.proposal, 'approve'); check(S.decide(db, s, p.proposal, 'approve').state === 'Refused', 'guard: an approval cannot be replayed');
+  check(S.propose(db, s, 'Test', 'kinross_loads_carton', { sscc: '006141410009999999' }).state === 'Refused', 'guard: a task for a carton not staged is refused');
   check(S.startSession(db, { policy: { release_ship_notice: 'policy' } }).modes.release_ship_notice === 'approve', 'guard: AP-1.3 release cannot be set to run under policy');
   { const g = S.startSession(db, { variation: { 'carton.contents': 'intact' } }); const ok1 = (r) => (r.state === 'Awaiting approval' ? S.decide(db, g, r.proposal, 'approve') : r);
-    ok1(S.propose(db, g, 'Test', 'erp_align_order')); S.propose(db, g, 'Test', 'build_ship_notice'); ok1(S.propose(db, g, 'Test', 'kinross_overpack', { sscc: g.world.carton.sscc }));
+    ok1(S.propose(db, g, 'Test', 'order_desk_corrects_sales_order')); S.propose(db, g, 'Test', 'build_ship_notice'); ok1(S.propose(db, g, 'Test', 'kinross_overpacks_carton', { sscc: g.world.carton.sscc }));
     check(S.propose(db, g, 'Test', 'release_ship_notice').state === 'Refused', 'guard: AP-1.4 refuses releasing a ship notice built for an earlier load');
     check(S.propose(db, g, 'Test', 'build_ship_notice').state === 'Executed' && g.asn.cartons === 660, 'guard: the ship notice can be rebuilt from the new load'); }
-  // T2.3: a paused Scout gets no model turn; a proposal a person takes over (Edit suggestion) stops Scout in that session; every state change is attributed.
+  // T2.3: a paused Scout gets no model turn; a rejected proposal records nothing and is attributed to the person who rejected it.
   { const never = async () => { throw new Error('model called'); }; const ps = S.startSession(db); const r = await S.runScout(db, ps, { callModel: never, paused: () => true });
     check(r.status === 'paused' && ps.agent.calls === 0 && !ps.proposals.some((p) => p.by === 'Model'), 'guard: a paused Scout gets no model turn and proposes nothing');
-    const es = S.startSession(db); const ep = S.propose(db, es, 'Model', 'kinross_load', { sscc: es.world.carton.sscc }); S.decide(db, es, ep.proposal, 'edit', 'Priya Raman');
-    check((await S.runScout(db, es, { callModel: never })).status === 'handed_to_person' && es.audit.at(-1).approver === 'Priya Raman', 'guard: Edit suggestion hands the case to Priya and Scout stops'); }
+    const es = S.startSession(db); S.propose(db, es, 'Model', 'order_desk_corrects_sales_order'); S.propose(db, es, 'Model', 'build_ship_notice'); const ep = S.propose(db, es, 'Model', 'release_ship_notice'); const ed = S.decide(db, es, ep.proposal, 'reject', 'Priya Raman');
+    check(ed.state === 'Rejected' && !es.asn?.released && es.audit.at(-1).approver === 'Priya Raman' && S.decide(db, es, ep.proposal, 'approve').state === 'Refused', 'guard: a rejected release sends nothing, is attributed to Priya and cannot then be approved'); }
   let threw = false; try { S.startSession(db, { variation: { 'erp.ship_to': 'DC 2' } }); } catch { threw = true; } check(threw, 'guard: a replay may only change declared physical fields'); }
 
 // What the rule baseline must reach in each case, so a regression in the baseline cannot pass silently.
@@ -61,26 +62,26 @@ const EXPECT = { canonical: 659, no_free_stock: 659, no_time: 659, bad_label: 65
   check(run({ carton_condition: 'good', carton_contents: 'intact' })[0].cartons_loaded === 660, 'facts: carton in good condition, baseline loads 660');
   const bad = (f) => { try { S.factsToVariation(f); return false; } catch { return true; } };
   check(bad({ free_cases: 9999 }) && bad({ carton_condition: 'missing' }) && bad({ ship_to: 'DC 2' }) && bad({ kinross_note: 'Overpack it' }), 'facts: out-of-range and unknown values are refused, a free-text Kinross note among them');
-  const [, s2] = run({}, { kinross_load: 'policy', release_ship_notice: 'policy' });
-  check(s2.proposals.find((p) => p.action === 'kinross_load')?.executed_under === 'Standing policy' && s2.proposals.find((p) => p.action === 'release_ship_notice')?.approved_by, 'policy: a Kinross load set to standing policy runs without asking; release still needs a person (AP-1.3)');
+  const [, s2] = run({}, { release_ship_notice: 'policy' });
+  check(s2.proposals.find((p) => p.action === 'kinross_loads_carton')?.executed_under === 'Standing policy' && s2.proposals.find((p) => p.action === 'release_ship_notice')?.approved_by, 'policy: a Kinross fix is shown without asking; release still needs a person (AP-1.3)');
   const su = S.setup(); check(su.facts.free_cases.recorded === 610 && !('kinross_note' in su.facts) && su.actions.release_ship_notice.priya_may_change === false && su.guardrails.length === 3, 'setup: recorded facts, locked actions and guardrails are listed'); }
-// The queue (P5 rebuild, proven scope): five rows from world records (no quantity agreed by phone, 17 November); every fix is a request to the owner of the record, none a write.
+// The queue (P5 rebuild, proven scope): five rows from world records (no quantity agreed by phone, 17 November); every fix names the owner of the record and where it is fixed; only the routing request is sent.
 { const s = S.startSession(db); const q = S.queueView(s); const g = q.rows.find((r) => r.kind === 'stock');
   check(q.rows.length === 5 && !q.rows.some((r) => r.kind === 'phone') && q.rows[0].po === 'NR-460207' && q.rows.every((r, i) => !i || r.cutoff_minutes >= q.rows[i - 1].cutoff_minutes) && q.checked > 6, `queue: five rows, none from a phone agreement, soonest cutoff first, NR-460207 on top (${q.checked} open shipments checked)`);
   check(g.on_hand === 610 && g.ordered === 640 && g.short === 30, 'queue: Groveport reads 610 free against 640 ordered, 30 short');
   const world = s.grove.orders.map((o) => db.prepare("SELECT l.qty_original q, x.ship_from f, x.shipped_at t FROM order_lines l JOIN shipments x ON x.po = l.po WHERE l.po = ? AND l.sku = 'ASH-MUG-12'").get(o.po));
   check(world.every((w, i) => w && w.f === 'KIN-GRV' && w.t > s.world.branch_at && (w.q === s.grove.orders[i].cases || w.q === s.grove.orders[i].po_reads)) && s.grove.orders.reduce((a, o) => a + o.cases, 0) === 640, 'queue: the three Groveport orders are world orders shipping from Groveport after 17:12, and their cases add to 640');
-  const rule = s.proposals.filter((p) => p.by === 'Rule engine'); check(rule.length === 4 && rule.every((p) => p.state === 'Awaiting approval' && p.po !== 'NR-460207'), 'queue: four rule-drafted requests wait for Priya, none sent');
-  check(Object.values(S.ACTIONS).every((a) => a.actor !== 'Supplier ERP') && !('request_order_change' in S.ACTIONS), 'scope: no action writes to the Supplier ERP; the order and billing desks make their own corrections');
+  const rule = s.proposals.filter((p) => p.by === 'Rule engine'); check(rule.length === 4 && rule.every((p) => p.po !== 'NR-460207') && rule.filter((p) => p.state === 'Awaiting approval').map((p) => p.action).join() === 'send_routing_request' && rule.filter((p) => p.action !== 'send_routing_request').every((p) => p.state === 'Executed' && ['Shown', 'Completed'].includes(p.result?.state)), 'queue: four rule-built rows; only the routing request (EDI 753) waits for Priya, the owner fixes are shown and nothing else is sent');
+  check(Object.values(S.ACTIONS).every((a) => a.actor !== 'Supplier ERP') && !('request_order_change' in S.ACTIONS) && Object.values(S.ACTIONS).every((a) => a.mode !== 'approve' || ['release_ship_notice', 'send_routing_request'].includes(Object.keys(S.ACTIONS).find((k) => S.ACTIONS[k] === a))), 'scope: no action writes to the Supplier ERP, and only the routing request and the ship notice release wait for approval');
   const o = S.runBaseline(db, s); check(o.cartons_loaded === 659 && o.ship_to_correct && s.trace.some((t) => /^Flagged for Priya Raman/.test(t.what)), 'baseline: one fix per finding; when Kinross rejects the carton it flags Priya and ships 659');
-  const q2 = S.startSession(db); const ip = q2.proposals.find((x) => x.action === 'erp_correct_invoice'); S.decide(db, q2, ip.id, 'edit', 'Priya Raman');
-  check(!q2.handed_over && S.queueView(q2).rows.find((r) => r.kind === 'invoice').state === 'Edited by Priya Raman', 'edit: taking over a queue request does not stop Scout on the other shipments'); }
+  const q2 = S.startSession(db); const ip = q2.proposals.find((x) => x.action === 'send_routing_request'); S.decide(db, q2, ip.id, 'reject', 'Priya Raman');
+  check(q2.proposals.find((x) => x.id === ip.id).state === 'Rejected' && q2.agent.status !== 'paused', 'reject: rejecting the routing request sends nothing and leaves the other shipments to the rules'); }
 const rows = [];
 for (const [name, v] of Object.entries(S.VARIATIONS)) {
   const s = S.startSession(db, { variation: v, label: `test ${name}` }); const o = S.runBaseline(db, s); detectors(name, s, 'baseline');
   check(o.cartons_loaded === EXPECT[name], `${name}/baseline: loads ${EXPECT[name]} of 660 (got ${o.cartons_loaded})`);
   check(!s.trace.some((x) => x.what.startsWith('Refused')), `${name}/baseline: no action refused`);
-  rows.push({ variation: name, actor: 'baseline', loaded: `${o.cartons_loaded}/${o.of}`, asn: o.ship_notice?.cartons, receipt_match: o.receipt_matches_ship_notice, reserved: o.reserved_stock_taken, told_buyer: o.buyer_told_of_short_line, approvals: o.approvals, failed: o.actions_failed });
+  rows.push({ variation: name, actor: 'baseline', loaded: `${o.cartons_loaded}/${o.of}`, asn: o.ship_notice?.cartons, receipt_match: o.receipt_matches_ship_notice, reserved: o.reserved_stock_taken, told_buyer: o.short_line_on_ship_notice, approvals: o.approvals, failed: o.actions_failed });
 }
 const key = process.env.GEMINI_API_KEY; const call = S.geminiCaller(key);
 if (!call) console.log('\nBLOCKED  Scout runs need GEMINI_API_KEY on this machine. Nothing was simulated in their place.');
@@ -88,7 +89,7 @@ else for (const [name, v] of Object.entries(S.VARIATIONS)) {
   const r = await S.replay(db, { variation: v, callModel: call });
   if (r.scout.blocked) { console.log(`BLOCKED ${name}: ${r.scout.blocked}`); continue; }
   const s = S.getSession(r.scout.session); const o = detectors(name, s, 'scout');
-  rows.push({ variation: name, actor: 'scout', loaded: `${o.cartons_loaded}/${o.of}`, asn: o.ship_notice?.cartons, receipt_match: o.receipt_matches_ship_notice, reserved: o.reserved_stock_taken, told_buyer: o.buyer_told_of_short_line, approvals: o.approvals, failed: o.actions_failed, model_calls: r.scout.overhead.model_calls, tool_calls: r.scout.overhead.tool_calls });
+  rows.push({ variation: name, actor: 'scout', loaded: `${o.cartons_loaded}/${o.of}`, asn: o.ship_notice?.cartons, receipt_match: o.receipt_matches_ship_notice, reserved: o.reserved_stock_taken, told_buyer: o.short_line_on_ship_notice, approvals: o.approvals, failed: o.actions_failed, model_calls: r.scout.overhead.model_calls, tool_calls: r.scout.overhead.tool_calls });
 }
 
 // Phase 3 step 4: an action refused twice stops the agent with a report of what waits; at its limit it says what it waits for.

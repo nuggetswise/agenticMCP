@@ -1,6 +1,6 @@
 {
   "name": "tg-retail-demo-mcp",
-  "version": "0.4.1",
+  "version": "0.4.4",
   "private": true,
   "description": "One Ashby and Northfield demo world behind every TG for Retail prototype: X12 files, a derived database, and a read-only MCP and REST server. All data is fictional.",
   "type": "module",
@@ -24,8 +24,7 @@
     "kit-check": "node --no-warnings scripts/kit-check.mjs",
     "kit-tokens": "node --no-warnings scripts/kit-tokens.mjs --check",
     "runtime": "node --no-warnings scripts/runtime-test.mjs",
-    "sync": "node --no-warnings scripts/pages.mjs sync",
-    "pages": "node --no-warnings scripts/pages.mjs check",
+    "pages": "node --no-warnings scripts/pages.mjs",
     "hosted": "node --no-warnings scripts/hosted-test.mjs"
   },
   "dependencies": {

@@ -8,7 +8,7 @@ One fictional quarter of trade between Ashby Supplier and Northfield Retailer, b
 2. The same parser reads the files back; every database row is derived from the parsed documents (`world/build.js`). Records that never travel as EDI are stored as events.
 3. `src/server.js` serves one read-only connection for Ashby over MCP (`/mcp/<token>`) and REST (`/api/<token>/v1/...`, described by `/openapi.json`). Both come from `src/tools.js`.
 4. Questions are answered as of a time (`as_of`); the default is the story clock, Tuesday 17 November 2026 11:00 Eastern (`STORY_CLOCK`).
-5. `WRITES=on` turns `request_change` into approval-gated proposals; approval appends an event, reset returns to baseline. Off in this release.
+5. `WRITES=on` turns the write tools (`submit_dispute`, `release_ship_notice`, `decide_charge`, `publish_rule`) into approval-gated proposals; approval appends an event, reset returns to baseline. There is no general request tool: Trading Grid sends only business documents and opens records in its own workflows, and a fix that belongs to the owner of a record is shown with who owns it and where it is fixed.
 
 ## Commands
 
@@ -38,7 +38,7 @@ The rule catalogue (`world/ref.js`) marks each rule public, adapted or invented 
 
 ## Hosted pages, Aviator for pages and the public read route (0.4.0)
 
-- `/p/<id>` serves `pages/<id>.html` (noindex; `robots.txt` disallows `/p/`). A claude.ai artifact cannot call this server, so the hosted copy is the link shared with viewers. Sync one page with `npm run sync -- <id> <file> <sha256>` after reading its published artifact; the routine refuses a file whose hash is not the artifact's (see `scripts/pages.mjs`).
+- `/p/<id>` serves `pages/<id>.html` (noindex; `robots.txt` disallows `/p/`). These pages are the prototypes; the build chat owns `pages/<id>.html` on its own branch. `npm run pages` checks every page in `pages/` against `pages/pages.json` (see `scripts/pages.mjs`).
 - `POST /aviator/<page token>` takes `question`, `side`, `as_of`, `context`, `history`. `pages/pages.json` binds each token to its prototype, sides and story window; anything outside is refused. With no `as_of` the page's calendar moment is used, never the story clock. Replies carry the answer in plain words and the records read by business name. A page token opens nothing else.
 - Limits (`src/limits.js`, env `AVIATOR_PER_MINUTE` 6, `AVIATOR_PER_ADDRESS_DAY` 60, `PUBLIC_PER_MINUTE` 120, `MODEL_DAILY_CAP` 600): per-address rate limits and one daily cap on every model call, each with a plain message. Questions are capped at 500 characters and history at 10 turns.
 - `/public/<side>/tools/<name>`: read tools only, with that side's scopes and refusals, logged as `public-<side>`. Writes, governance, sessions, SQL and the access log are refused.
@@ -50,3 +50,26 @@ The rule catalogue (`world/ref.js`) marks each rule public, adapted or invented 
 - A hosted Aviator question that names a week or dates is resolved on the server and checked: an answer that read a different period is asked again on the secondary model, and refused if that also misses.
 - Every Kinross shipping advice (945) reports the quantity picked and loaded, as its load scan and ship notice do.
 - Page tokens for P7 and P8 are in `pages/pages.json`. Window ends (`through`) stay open until the build chat states them.
+
+### 0.4.2
+
+- Trading Grid sends only business documents. `request_change` is gone from both connections. Every runtime step that sent a request, task, note or email to Kinross, Lakeline, Ashby's desks or Northfield now shows what is wrong, who owns it and where it is fixed, with no Approve; the owner's next record confirms the fix. Northfield's correction request is the application advice (EDI 824) Jordan Ellis approves, and a ship notice the carrier contradicts is rejected with an 824. Aviator's order-change permissions are the 865 change acknowledgment (Ashby) and the 860 order change (Northfield).
+- The per-address limits key on the viewer: `CF-Connecting-IP` behind Render's Cloudflare edge, the socket address otherwise. X-Forwarded-For is never read for a limit.
+- `three_way_match` reads the remittance that paid an invoice or the invoice that replaced it, as of the moment, and names the settlement; a missing reference is refused in plain words.
+- Aviator answers name a rule set without its code ("Northfield's matching rule"), and the records read list only records.
+
+### 0.4.3
+
+- Claude artifacts are retired: the prototypes are the pages at `/p/<id>`. `pages.json` holds no artifact field, `npm run pages` checks whatever is in `pages/`, and `npm run contract` reads `pages/<id>.html` (a prototype with no page is Not assessed).
+- Aviator is a chatbot with action cards (`src/actions.js`). Asked to act, it returns a card the server builds from the side's rules and records, inside the side's P21 permissions; nothing happens until the person presses Approve (`POST /aviator/<token>/cards/<card>`, `decision` approve or cancel). The card id is the idempotency key. Cards cover a dispute, a held ship notice release, the 855, 865, 856 and 810, the 997 with the corrected invoice that answers an 824, Northfield's 824 (each error coded, TED02 at most 60 characters, NTE as the guide allows), a charge decision, a readiness chargeback and a rule publish. A request to email, call or instruct anyone, or to change another company's system, is answered as done outside Trading Grid, with the owner and the place, and no card.
+- Viewer sessions (`src/session.js`): each viewer gets a private branch of the world for 30 minutes idle, shared across both sides of a switcher page. Card writes are tagged to the session; other viewers and the recorded world never change. `/public/...` reads take `session`.
+- Trading Grid writes into no system of record: accepting a charge, matching a repayment, creating a sales order and creating an invoice are Ashby's own steps in the Supplier ERP, shown as owner fixes; their records arrive from the Supplier ERP.
+- New write tools on the connections: `send_document` (Ashby), `send_application_advice` and `decide_chargeback` (Northfield). Each company's access log includes its public-route and hosted-page calls. "Edit suggestion" is removed (0.4.4).
+
+### 0.4.4
+
+- Take over is gone. A rule decision is Approve or Reject; an Aviator card is Approve or Cancel. There is no third choice in the server, the tools, the runtimes or the tests.
+- Aviator no longer gates on keywords. The model decides whether the person asked for an action ("fix the invoice", "sort this out", "can you handle it") and calls `propose_action`; the server still checks the P21 permission, refuses anything outside Trading Grid, builds the card from rules and records, and writes nothing until Approve. Ashby asking to send an 824 still gets the 997 and the corrected resend.
+- A message to the other company that a Trading Grid record carries is not refused. Northfield's application advice carries it (TED02 up to 60 characters, else an NTE note up to 80); Ashby's dispute carries it as a note. "Tell", "message" or "ask" a party with no such record named is still answered as done outside Trading Grid, with the owner.
+- Session views: a card's 810, 856 or 824 adds its invoice, shipment and error rows to the viewer's session (TEMP tables shadowing `invoices`, `invoice_lines`, `shipments`, `shipment_lines`, `errors`), so every calculated view sees it in that session only. `three_way_match` lists the application advice sent against the order's invoices.
+- Rules: NF-1.8 records Northfield's 824 error codes (QTY, TTL, IID, LOC, CTN, TOT, UOM, DTE) as invented for this world, and the codes carry basis invented. NF-11.1 states that a draft rule is published only after its replay; the publish card cites it.

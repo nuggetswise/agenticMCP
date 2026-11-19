@@ -323,7 +323,8 @@
    "capability_status": "planned",
    "owner": "Unassigned",
    "tools_northfield": [
-    "supplier_scorecard"
+    "supplier_scorecard",
+    "decide_chargeback"
    ],
    "ends_at": "Supplier and retailer hold the same account of the score and what drives it"
   },
@@ -489,7 +490,6 @@
     "lookup_retailer_rules",
     "orders_needing_attention",
     "read_retailer_records",
-    "request_change",
     "run_readonly_sql"
    ],
    "anchors": [
@@ -514,7 +514,6 @@
     "get_document",
     "supplier_scorecard",
     "read_supplier_records",
-    "request_change",
     "get_story_calendar"
    ]
   },
@@ -561,7 +560,8 @@
    "tools": [
     "orders_needing_attention",
     "recommend_next_step",
-    "get_order"
+    "get_order",
+    "send_document"
    ],
    "anchors": [
     "order:NR-46210",
@@ -602,12 +602,17 @@
     {
      "record": "INV-7731",
      "as_of": "2026-11-10T09:00:00-05:00",
-     "next_step": "hold_and_request_corrected_invoice"
+     "next_step": "hold_and_reject_with_824"
+    },
+    {
+     "record": "INV-7731",
+     "as_of": "2026-11-24T09:00:00-05:00",
+     "next_step": "match_corrected_invoice"
     },
     {
      "record": "INV-7731",
      "as_of": "2026-12-30T09:00:00-05:00",
-     "next_step": "match_corrected_invoice"
+     "next_step": "none"
     }
    ],
    "tools": [],
@@ -615,7 +620,7 @@
     "three_way_match",
     "supplier_document_trail",
     "get_document",
-    "request_change"
+    "send_application_advice"
    ],
    "anchors": [
     "document:INV-7731"

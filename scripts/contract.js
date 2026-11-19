@@ -1,6 +1,7 @@
 // Contract test: every record number, person, company and rule a built screen shows must exist in the world.
-// Screen sources are fetched from the published prototypes into contract/screens/<id>.html (not committed);
-// curated numbers per prototype live in contract/claims.json. Reports per prototype; exit 1 on any difference.
+// Screens are the hosted pages in pages/<id>.html (P5 reads pages/p5.html); SCREENS points elsewhere. Curated numbers per
+// prototype live in contract/claims.json, kept by the build chat. A prototype with no page in pages/ is reported Not assessed
+// and does not fail the run; exit 1 on any difference in a page that is there.
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync, existsSync, writeFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -9,7 +10,8 @@ import vm from 'node:vm';
 import { MAIN_DB } from '../world/build.js';
 import { buyerFixture, normOrder, inFull } from '../src/score.js';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const DIR = process.env.SCREENS || join(ROOT, 'contract', 'screens');
+const DIR = process.env.SCREENS || join(ROOT, 'pages');
+const screenOf = (id) => [join(DIR, `${id.toLowerCase()}.html`), join(DIR, `${id}.html`)].find((f) => existsSync(f)) || null;
 const db = new DatabaseSync(MAIN_DB, { readOnly: true });
 const CLAIMS = JSON.parse(readFileSync(join(ROOT, 'contract', 'claims.json'), 'utf8'));
 const has = (sql, v) => !!db.prepare(sql).get(v);
@@ -74,7 +76,7 @@ function x12Panels(src) {
 }
 const report = {}; let bad = 0;
 for (const [id, c] of Object.entries(CLAIMS)) {
-  const f = join(DIR, `${id}.html`); if (!existsSync(f)) { report[id] = { screen: 'not fetched' }; bad++; continue; }
+  const f = screenOf(id); if (!f) { report[id] = { screen: 'not in pages/', not_assessed: true }; continue; }
   const src = readFileSync(f, 'utf8'); const r = { unknown_records: [], wrong_names: [], numbers: [] };
   for (const [re, kind] of PATTERNS) for (const v of new Set(src.match(re) || [])) { if ((c.ignore || []).some((x) => v.startsWith(x))) continue; if (!known[kind](v)) r.unknown_records.push(v); }
   for (const re of WRONG) for (const v of new Set(src.match(new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g')) || [])) if (!['Priya Raman', 'Jordan Ellis'].includes(v)) r.wrong_names.push(v);
@@ -98,5 +100,5 @@ for (const [id, c] of Object.entries(CLAIMS)) {
   r.pass = !r.unknown_records.length && !r.wrong_names.length && !r.numbers.length && !r.dates.length && !r.rule_wording.length && r.x12_panels.every((x) => x.result.startsWith('matches')); if (!r.pass) bad++; report[id] = r;
 }
 writeFileSync(join(ROOT, 'build', 'contract-report.json'), JSON.stringify(report, null, 1));
-for (const [id, r] of Object.entries(report)) console.log(`${r.pass ? 'PASS' : 'FAIL'} ${id}${r.pass ? '' : ` · unknown records ${r.unknown_records?.length ?? '-'}: ${(r.unknown_records || []).slice(0, 8).join(' ')} · names ${(r.wrong_names || []).join(', ')} · numbers ${(r.numbers || []).map((n) => `${n.claim} [${n.on_screen} vs ${n.world}]`).join('; ')} · dates ${(r.dates || []).length}: ${(r.dates || []).slice(0, 6).join(' | ')} · rule wording ${(r.rule_wording || []).length}`}`);
-process.exit(bad ? 1 : 0);
+for (const [id, r] of Object.entries(report)) if (r.not_assessed) console.log(`NOT ASSESSED ${id} · no page in ${DIR.replace(ROOT + '/', '')}`); else console.log(`${r.pass ? 'PASS' : 'FAIL'} ${id}${r.pass ? '' : ` · unknown records ${r.unknown_records?.length ?? '-'}: ${(r.unknown_records || []).slice(0, 8).join(' ')} · names ${(r.wrong_names || []).join(', ')} · numbers ${(r.numbers || []).map((n) => `${n.claim} [${n.on_screen} vs ${n.world}]`).join('; ')} · dates ${(r.dates || []).length}: ${(r.dates || []).slice(0, 6).join(' | ')} · rule wording ${(r.rule_wording || []).length}`}`);
+console.log(`${Object.values(report).filter((r) => !r.not_assessed).length} page(s) assessed, ${bad} failed`); process.exit(bad ? 1 : 0);

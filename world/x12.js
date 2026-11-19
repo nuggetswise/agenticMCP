@@ -109,6 +109,7 @@ const BODY = {
     ...d.errors.flatMap((e) => [
       seg('TED', e.code, clean(e.cause).slice(0, 60), e.seg || '', '', e.elem || '', '', clean(e.bad || '').slice(0, 99)),
       ...(e.allowed ? [seg('NTE', 'GEN', clean(e.allowed).slice(0, 80))] : []),
+      ...(e.note ? [seg('NTE', 'GEN', clean(e.note).slice(0, 80))] : []),
     ]),
   ],
   997: (d) => [
@@ -225,7 +226,7 @@ const READ = {
     lines: S.filter((e) => e[0] === 'IT1').map((e) => ({ line: +e[1], qty: +e[2], uom: e[3], price: +e[4], ...items(e, 6) })), total: +first(S, 'TDS')[1] / 100 }; },
   861: (S) => { const b = first(S, 'BRA'); const dt = first(S, 'DTM', '050'); const lines = []; for (const e of S) { if (e[0] === 'RCD') lines.push({ line: +e[1], qty: +e[2], short: e[6] ? +e[6] : 0, not_scanned: [] }); if (e[0] === 'LIN') Object.assign(lines[lines.length - 1], items(e, 2)); if (e[0] === 'MAN') lines[lines.length - 1].not_scanned.push(e[2]); }
     return { ref: b[1], po: first(S, 'PRF')[1], asn_ref: first(S, 'REF', 'SI')[2], received_at: iso8(dt[2], dt[3] + '00'), parties: n1(S), lines }; },
-  824: (S) => { const b = first(S, 'BGN'); const o = first(S, 'OTI'); const errors = []; for (const e of S) { if (e[0] === 'TED') errors.push({ code: e[1], cause: e[2], seg: e[3] || null, elem: e[5] || null, bad: e[7] || null, allowed: null }); if (e[0] === 'NTE' && errors.length) errors[errors.length - 1].allowed = e[2]; }
+  824: (S) => { const b = first(S, 'BGN'); const o = first(S, 'OTI'); const errors = []; for (const e of S) { if (e[0] === 'TED') errors.push({ code: e[1], cause: e[2], seg: e[3] || null, elem: e[5] || null, bad: e[7] || null, allowed: null }); if (e[0] === 'NTE' && errors.length) { const x = errors[errors.length - 1]; if (x.allowed == null) x.allowed = e[2]; else x.note = e[2]; } }
     return { ref: b[2], action: o[1], answers_ref: o[3], answers_gs: +o[8], answers_st: o[9], answers_set: o[10], errors }; },
   997: (S) => { const a1 = first(S, 'AK1'), a2 = first(S, 'AK2'), a5 = first(S, 'AK5'), a9 = first(S, 'AK9');
     return { ref: `FA-${a1[2]}`, group_id: a1[1], group_ctl: +a1[2], set_id: a2[1], set_ctl: a2[2], result: a5[1], set_code: a5[2] || null, group_code: a9[5] || null,

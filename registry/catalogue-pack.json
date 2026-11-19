@@ -29,6 +29,16 @@
    ]
   },
   {
+   "id": "NF-11.1",
+   "owner": "Northfield",
+   "statement": "A draft rule is published to suppliers only after it is replayed against the quarter's exchanged documents",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
    "id": "NF-1.1",
    "owner": "Northfield",
    "statement": "The current PO revision is the commitment; a change counts only on an order change",
@@ -72,6 +82,16 @@
    "id": "NF-1.7",
    "owner": "Northfield",
    "statement": "The order acknowledgment carries the transaction totals segment (CTT) with the number of lines; the X12 standard leaves it optional",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-1.8",
+   "owner": "Northfield",
+   "statement": "Application advice (824) error codes in TED01, one per error: QTY quantity above accepted, TTL totals segment missing, IID item not on the item list, LOC ship-to not recognized, CTN carton count differs from cartons listed, TOT total differs from the lines, UOM quantity not in cases, DTE ship date after delivery date. X12 leaves TED01 codes to each guide; these are this world's own",
    "implements": [],
    "charge": "",
    "basis": "Invented",

@@ -60,7 +60,7 @@
    "base_rows": 38362,
    "changed_or_lost": 1,
    "added": 1,
-   "rebaselined": "D80: Kinross Groveport stock of ASH-MUG-12 at the 8 December inventory read moves from 520 to 590, against 619 ordered on three named orders (was 640 on three unnamed orders). Only this read, the stock positions pinned to it and the inventory advice that reports them move; no order, shipment, invoice or charge changes (docs/phase4/p5-world-diff.json). 17 November 2026 (call 140): ASN-450118-1 is sent at 18:20 ET on 6 November, after the 17:30 load scan and the 18:00 departure, and its 997 follows; both keep their control numbers. Ship notices and receiving advice added for other suppliers are new rows only. 18 November 2026 (call 152): application advice AA-INV-7731 is sent at 09:04 ET on 10 November on Jordan Ellis's approval and rejects lines 1 and 2; its 997 follows; both keep their control numbers. The routing request, routing instructions, four store activity reports and their 997s are new rows only (docs/phase4/nov18-fixes-world-diff.json)."
+   "rebaselined": "D80: Kinross Groveport stock of ASH-MUG-12 at the 8 December inventory read moves from 520 to 590, against 619 ordered on three named orders (was 640 on three unnamed orders). Only this read, the stock positions pinned to it and the inventory advice that reports them move; no order, shipment, invoice or charge changes (docs/phase4/p5-world-diff.json). 17 November 2026 (call 140): ASN-450118-1 is sent at 18:20 ET on 6 November, after the 17:30 load scan and the 18:00 departure, and its 997 follows; both keep their control numbers. Ship notices and receiving advice added for other suppliers are new rows only. 18 November 2026 (call 152): application advice AA-INV-7731 is sent at 09:04 ET on 10 November on Jordan Ellis's approval and rejects lines 1 and 2; its 997 follows; both keep their control numbers. The routing request, routing instructions, four store activity reports and their 997s are new rows only (docs/phase4/nov18-fixes-world-diff.json). 20 November 2026: Northfield's January chargeback batch (world/stages/compliance.js) takes 27 compliance deductions on remittance PMT-990170 of Friday 8 January 2027, so that remittance's paid amounts and its 820 change; no other remittance, invoice, order, shipment, receipt or case changes, and every other record the stage adds is a new row (docs/phase4/nov20-compliance-world-diff.json)."
   },
   "tg.draft_rules": {
    "base_rows": 15,
@@ -205,7 +205,8 @@
   "tg.remittance_items": {
    "base_rows": 1673,
    "changed_or_lost": 27,
-   "added": 27
+   "added": 27,
+   "rebaselined": "20 November 2026: Northfield's January chargeback batch (world/stages/compliance.js) takes 27 compliance deductions on remittance PMT-990170 of Friday 8 January 2027, so that remittance's paid amounts and its 820 change; no other remittance, invoice, order, shipment, receipt or case changes, and every other record the stage adds is a new row (docs/phase4/nov20-compliance-world-diff.json)."
   },
   "tg.return_authorisations": {
    "base_rows": 3,
@@ -356,7 +357,7 @@
    "base_rows": 32882,
    "changed_or_lost": 1,
    "added": 1,
-   "rebaselined": "D80: Kinross Groveport stock of ASH-MUG-12 at the 8 December inventory read moves from 520 to 590, against 619 ordered on three named orders (was 640 on three unnamed orders). Only this read, the stock positions pinned to it and the inventory advice that reports them move; no order, shipment, invoice or charge changes (docs/phase4/p5-world-diff.json). 17 November 2026 (call 140): ASN-450118-1 is sent at 18:20 ET on 6 November, after the 17:30 load scan and the 18:00 departure, and its 997 follows; both keep their control numbers. Ship notices and receiving advice added for other suppliers are new rows only. 18 November 2026 (call 152): application advice AA-INV-7731 is sent at 09:04 ET on 10 November on Jordan Ellis's approval and rejects lines 1 and 2; its 997 follows; both keep their control numbers. The routing request, routing instructions, four store activity reports and their 997s are new rows only (docs/phase4/nov18-fixes-world-diff.json)."
+   "rebaselined": "D80: Kinross Groveport stock of ASH-MUG-12 at the 8 December inventory read moves from 520 to 590, against 619 ordered on three named orders (was 640 on three unnamed orders). Only this read, the stock positions pinned to it and the inventory advice that reports them move; no order, shipment, invoice or charge changes (docs/phase4/p5-world-diff.json). 17 November 2026 (call 140): ASN-450118-1 is sent at 18:20 ET on 6 November, after the 17:30 load scan and the 18:00 departure, and its 997 follows; both keep their control numbers. Ship notices and receiving advice added for other suppliers are new rows only. 18 November 2026 (call 152): application advice AA-INV-7731 is sent at 09:04 ET on 10 November on Jordan Ellis's approval and rejects lines 1 and 2; its 997 follows; both keep their control numbers. The routing request, routing instructions, four store activity reports and their 997s are new rows only (docs/phase4/nov18-fixes-world-diff.json). 20 November 2026: Northfield's January chargeback batch (world/stages/compliance.js) takes 27 compliance deductions on remittance PMT-990170 of Friday 8 January 2027, so that remittance's paid amounts and its 820 change; no other remittance, invoice, order, shipment, receipt or case changes, and every other record the stage adds is a new row (docs/phase4/nov20-compliance-world-diff.json)."
   },
   "ashby.errors": {
    "base_rows": 57,
@@ -496,7 +497,8 @@
   "ashby.remittance_items": {
    "base_rows": 1366,
    "changed_or_lost": 27,
-   "added": 27
+   "added": 27,
+   "rebaselined": "20 November 2026: Northfield's January chargeback batch (world/stages/compliance.js) takes 27 compliance deductions on remittance PMT-990170 of Friday 8 January 2027, so that remittance's paid amounts and its 820 change; no other remittance, invoice, order, shipment, receipt or case changes, and every other record the stage adds is a new row (docs/phase4/nov20-compliance-world-diff.json)."
   },
   "ashby.return_authorisations": {
    "base_rows": 3,
@@ -642,7 +644,7 @@
    "base_rows": 30290,
    "changed_or_lost": 1,
    "added": 1,
-   "rebaselined": "17 November 2026 (call 140): ASN-450118-1 is sent at 18:20 ET on 6 November, after the 17:30 load scan and the 18:00 departure, and its 997 follows; both keep their control numbers. Ship notices and receiving advice added for other suppliers are new rows only. 18 November 2026 (call 152): application advice AA-INV-7731 is sent at 09:04 ET on 10 November on Jordan Ellis's approval and rejects lines 1 and 2; its 997 follows; both keep their control numbers. The routing request, routing instructions, four store activity reports and their 997s are new rows only (docs/phase4/nov18-fixes-world-diff.json)."
+   "rebaselined": "17 November 2026 (call 140): ASN-450118-1 is sent at 18:20 ET on 6 November, after the 17:30 load scan and the 18:00 departure, and its 997 follows; both keep their control numbers. Ship notices and receiving advice added for other suppliers are new rows only. 18 November 2026 (call 152): application advice AA-INV-7731 is sent at 09:04 ET on 10 November on Jordan Ellis's approval and rejects lines 1 and 2; its 997 follows; both keep their control numbers. The routing request, routing instructions, four store activity reports and their 997s are new rows only (docs/phase4/nov18-fixes-world-diff.json). 20 November 2026: Northfield's January chargeback batch (world/stages/compliance.js) takes 27 compliance deductions on remittance PMT-990170 of Friday 8 January 2027, so that remittance's paid amounts and its 820 change; no other remittance, invoice, order, shipment, receipt or case changes, and every other record the stage adds is a new row (docs/phase4/nov20-compliance-world-diff.json)."
   },
   "northfield.draft_rules": {
    "base_rows": 15,
@@ -787,7 +789,8 @@
   "northfield.remittance_items": {
    "base_rows": 1673,
    "changed_or_lost": 27,
-   "added": 27
+   "added": 27,
+   "rebaselined": "20 November 2026: Northfield's January chargeback batch (world/stages/compliance.js) takes 27 compliance deductions on remittance PMT-990170 of Friday 8 January 2027, so that remittance's paid amounts and its 820 change; no other remittance, invoice, order, shipment, receipt or case changes, and every other record the stage adds is a new row (docs/phase4/nov20-compliance-world-diff.json)."
   },
   "northfield.return_authorisations": {
    "base_rows": 3,
@@ -875,5 +878,5 @@
    "added": 0
   }
  },
- "summary": "168 of 174 base tables keep every row; 3 changed without a re-baseline"
+ "summary": "168 of 174 base tables keep every row; 0 changed without a re-baseline"
 }

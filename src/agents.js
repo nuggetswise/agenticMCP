@@ -40,6 +40,10 @@ export function claimDecision(db, ref, asOf = storyClock()) {
     return out('deduction', 'Claim Agent', c.case, asOf, { credit: u > 0 ? 'AP-4.1' : 'AP-4.2', authority: u > 0 ? 'Priya Raman approves each dispute (AP-4.1)' : 'No decision needed: the deal supports the deduction (AP-4.2)', policy: rule(db, 'AP-4.1'), po: c.po, charge: c.charge, amount: c.amount, dispute_window: c.dispute_window, evidence: c.promotion.records,
       decision_row: u > 0 ? 'The deal does not support the whole deduction' : 'The deduction matches its deal', next_step: u > 0 ? 'dispute_unsupported_amount' : 'no_decision_needed', dispute_amount: u, stands: c.promotion.supported_amount, reason: c.promotion.reason,
       rule_baseline: 'Accept every deduction carrying a promotion reason code', dollars_the_rule_gives_up: u, confirmed_by: 'The repayment matched in Ashby’s receivables' }); }
+  // A compliance chargeback (Northfield's January batch): Ashby's evidence rules are written for shortages, so they propose
+  // nothing; Priya Raman decides whether to dispute or accept, from the evidence Northfield put in the case.
+  if (c.kind === 'Compliance chargeback') return out('deduction', 'Claim Agent', c.case, asOf, { credit: null, authority: 'Priya Raman decides whether to dispute or accept the charge (AP-4.1)', policy: rule(db, 'AP-4.1'), po: c.po, charge: c.charge, amount: c.amount,
+    dispute_window: c.dispute_window, cause: c.cause, rule: c.rule, evidence: c.evidence, decision_row: 'Ashby’s evidence rules cover shortage charges; this compliance chargeback has no rule to propose a step', next_step: null });
   const st = Object.fromEntries(c.evidence.map((v) => [v.kind, v.state]));
   const scan = st['wms.load_scan'], tally = st['wms.load_tally']; const pod = db.prepare("SELECT data FROM events WHERE po = ? AND kind = 'carrier.delivery_receipt' ORDER BY at DESC").get(c.po);
   const exception = pod ? J(pod.data).exceptions : null;

@@ -65,10 +65,21 @@ export const items = [
   { sku: 'ASH-MUG-16', supplier_id: 'ASHBY', description: 'Stoneware mug 16 oz', gtin: '10614141000170', pack: 'Case of 12', case_price: 58.0, northfield_item: '448190', on_northfield_list: 0 },
   { sku: 'ASH-TRL-09', supplier_id: 'ASHBY', description: 'Trail runner', gtin: '10614141000163', pack: 'Pair', case_price: 38.0, northfield_item: '448130', on_northfield_list: 1 },
   { sku: 'AHP-8820', supplier_id: 'ASHBY', description: 'Pour-over coffee maker', gtin: '1061414100018' + gs1Check('1061414100018'), pack: 'Case of 6 required by Northfield', case_price: 72.0, northfield_item: 'NF-44721', on_northfield_list: 1 },
+  // P25 (20 November 2026): the shirt Ashby publishes to Northfield in January 2027, after the quarter, so no other
+  // prototype's moment sees it. Item references 00019 and 00020 under the GS1 example prefix; check digits computed.
+  // The X large (614141000210) is not here: it sits only in Ashby's Supplier ERP item master (world/stages/item-accuracy.js).
+  { sku: 'ASH-SHT-M', supplier_id: 'ASHBY', description: 'Shirt, Navy, Medium', gtin: '10614141000194', pack: 'Case of 12', case_price: 180.0, northfield_item: '448140', on_northfield_list: 1 },
+  { sku: 'ASH-SHT-L', supplier_id: 'ASHBY', description: 'Shirt, Navy, Large', gtin: '10614141000200', pack: 'Case of 12', case_price: 180.0, northfield_item: '448141', on_northfield_list: 1 },
   { sku: 'BRK-TWL-2', supplier_id: 'BROOKLINE', description: 'Cotton towel 2-pack', gtin: '10614141004017', pack: 'Case of 12', case_price: 41.0, northfield_item: '451010', on_northfield_list: 1 },
   { sku: 'CDP-CND-8', supplier_id: 'CEDARPINE', description: 'Soy candle 8 oz', gtin: '10614141005014', pack: 'Case of 24', case_price: 62.4, northfield_item: '452020', on_northfield_list: 1 },
 ];
 export const ITEM = Object.fromEntries(items.map((i) => [i.sku, i]));
+/** Items set up after the start of the history period: version 1 and the first price start on the day Northfield
+ *  accepted the item, not on HISTORY_START (P25's shirt, accepted from Ashby's catalogue of 11 January 2027). */
+export const ITEM_SETUP = {
+  'ASH-SHT-M': { valid_from: '2027-01-11', accepted_at: '2027-01-11T19:00:00.000Z' },
+  'ASH-SHT-L': { valid_from: '2027-01-11', accepted_at: '2027-01-11T19:00:00.000Z' },
+};
 /** Units of the base item in one ordering unit, read from the item's pack text. */
 export const unitsPerCase = (pack) => { const m = String(pack).match(/(\d+)/); return m ? Number(m[1]) : 1; };
 export const ITEM_BY_NF = Object.fromEntries(items.map((i) => [i.northfield_item, i]));
@@ -84,6 +95,8 @@ const SRC = {
   dsg: { title: 'Summary of the Dick’s Sporting Goods Domestic Vendor Routing and Supply Chain Guide (February 2025)', url: 'https://getproductiv.com/dicks-sporting-goods-compliance', kind: 'Third-party summary' },
   walmart: { title: 'Summary of Walmart supplier compliance and OTIF rules', url: 'https://www.shipcalm.com/blog/walmart-vendor-compliance-guide/', kind: 'Third-party summary' },
   x12: { title: 'ASC X12 004010 data element 324, Purchase Order Number, AN 1/22', url: null, kind: 'Standard' },
+  gs1: { title: 'GS1 General Specifications Change Notification 21-342: GTIN-12 and GTIN-13 data structure for retail point of sale', url: 'https://www.gs1.org/docs/barcodes/GSCN_21-342_RetailASP.pdf', kind: 'Standard' },
+  gs1prefix: { title: 'GS1 Prefixes: a 12-digit GTIN has an implied leading zero', url: 'https://gs1.org/prefixes', kind: 'Standard' },
   carmack: { title: '49 U.S.C. 14706 (Carmack Amendment): minimum periods for filing claims and bringing suit', url: 'https://www.law.cornell.edu/uscode/text/49/14706', kind: 'Statute' },
 };
 const pub = (k, says) => ({ ...SRC[k], says });
@@ -119,7 +132,11 @@ export const rules = [
   R('NF-4.8', 'ship notice', '856', 'Line numbers match the current PO', { code: 'AS04', charge: '$150' }),
   R('NF-4.9', 'item', '856', 'Units per case match Northfield’s item setup', { charge: '$150 per ship notice' }),
   R('NF-4.10', 'reference', '856,810', 'The PO reference (ship notice PRF01, invoice BIG04) is the Northfield PO number, at most 22 characters', { owner: 'Industry standard', limit: '22 characters', check: 'po_reference', basis: 'public', pub: [pub('x12', 'Element 324 is at most 22 characters, so a longer value fails syntax and is rejected on the 997')] }),
-  R('NF-4.11', 'item', '856,810', 'Every item is on Northfield’s item list for the supplier; a substitute needs the buyer’s approval first', { check: 'item_on_list' }),
+  R('NF-4.11', 'item', '856,810', 'Every item is on Northfield’s item list for the supplier; a substitute needs the buyer’s approval first', { check: 'item_on_list', basis: 'adapted', pub: [pub('dxl', 'Suppliers are 100% UPC marked and give the retailer access to their UPC catalogue; the retailer prefers to receive UPCs from the supplier (pp. 1 to 2)')] }),
+  // P25 (20 November 2026): the item check before a ship notice is released, and the item accuracy charge.
+  R('NF-4.16', 'item', '856', 'Every ship notice line carries a UPC that the supplier’s catalogue records hold for Northfield, and that UPC is the order line’s item; a ship notice with item errors is charged', { code: 'IA01', charge: '$100 per order plus $1 per carton', check: 'item_in_catalogue', basis: 'adapted', pub: [pub('dxl', 'A ship notice that is incorrect is charged $100 per purchase order plus $1 per carton (p. 3); the ship notice SKU and quantity are what the retailer receives against and verifies the invoice with (p. 2)')] }),
+  R('GS1-1', 'item', '832,856', 'Every item number has the length and check digit GS1 sets: 12 digits for a UPC, 14 for a case GTIN, the last digit a check digit', { owner: 'Industry standard', check: 'gtin_length_and_check_digit', basis: 'public', pub: [pub('gs1', 'A GTIN-12 is a U.P.C. Company Prefix, an item reference and a check digit, 12 digits in all'), pub('gs1prefix', 'A 12-digit GTIN carries an implied leading zero, so it is 12 digits, not 13')] }),
+  R('GS1-2', 'item', '832,856', 'Every item number carries the GS1 company prefix of the company that assigned it', { owner: 'Industry standard', check: 'gtin_company_prefix', basis: 'public', pub: [pub('gs1', 'A GTIN-12 begins with the U.P.C. Company Prefix of the company that issued it')] }),
   R('NF-4.12', 'location', '856', 'The ship-to GLN is an active Northfield location', { check: 'ship_to_active' }),
   R('NF-4.13', 'ship notice', '856', 'The carton count in the ship notice equals the cartons listed under it', { check: 'carton_count' }),
   R('NF-4.14', 'item', '856', 'Quantities are in cases (CA)', { limit: 'CA', check: 'uom_cases' }),

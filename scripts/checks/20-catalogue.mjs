@@ -31,7 +31,7 @@ export default function ({ db, ash, nf, ok, eq, none, n, D, ROOT }) {
 
   // ---------- the messages and Northfield's decisions ----------
   eq('catalogue.documents', db.prepare("SELECT doc_type, reference, sender_id, receiver_id, status FROM documents WHERE doc_type IN ('832','888','879') ORDER BY sent_at").all().map((r) => `${r.doc_type} ${r.reference} ${r.sender_id}>${r.receiver_id} ${r.status}`),
-    ['832 CAT-ASH-2026-01 ASHBY>NORTHFIELD Delivered', '888 IM-ASH-2026-12-29 ASHBY>NORTHFIELD Delivered', '879 PL-ASH-2027-02 ASHBY>NORTHFIELD Delivered']);
+    ['832 CAT-ASH-2026-01 ASHBY>NORTHFIELD Delivered', '888 IM-ASH-2026-12-29 ASHBY>NORTHFIELD Delivered', '879 PL-ASH-2027-02 ASHBY>NORTHFIELD Delivered', '832 CAT-ASH-2027-01 ASHBY>NORTHFIELD Delivered']);
   none('catalogue.every_message_line_has_a_northfield_decision', "SELECT message, sku FROM item_setup_messages WHERE decided_by IS NULL OR decided_at IS NULL OR status NOT IN ('Accepted','Not accepted','Returned') OR decided_at < sent_at");
   none('catalogue.every_accepted_ashby_version_has_its_accepted_message', "SELECT v.sku, v.version FROM item_versions v JOIN items i ON i.sku = v.sku AND i.supplier_id = 'ASHBY' AND i.sku IN " + inRef + " WHERE v.accepted_by IS NOT NULL AND NOT EXISTS (SELECT 1 FROM item_setup_messages m WHERE m.sku = v.sku AND m.status = 'Accepted' AND m.decided_at = v.accepted_at AND (m.item_version IS NULL OR m.item_version = v.version))");
   none('catalogue.item_not_on_the_list_is_not_accepted', "SELECT m.sku FROM item_setup_messages m JOIN items i ON i.sku = m.sku WHERE i.on_northfield_list = 0 AND m.status = 'Accepted'");
@@ -62,9 +62,9 @@ export default function ({ db, ash, nf, ok, eq, none, n, D, ROOT }) {
 
   // ---------- views ----------
   eq('catalogue.ashby_sees_only_its_own_catalogue', [ash.prepare("SELECT count(*) n FROM packaging_levels WHERE supplier_id <> 'ASHBY'").get().n, ash.prepare("SELECT count(*) n FROM item_setup_messages WHERE supplier_id <> 'ASHBY'").get().n,
-    ash.prepare('SELECT count(*) n FROM packaging_levels').get().n, ash.prepare("SELECT count(*) n FROM documents WHERE doc_type IN ('832','888','879')").get().n], [0, 0, n("SELECT count(*) n FROM packaging_levels WHERE supplier_id = 'ASHBY'"), 3]);
+    ash.prepare('SELECT count(*) n FROM packaging_levels').get().n, ash.prepare("SELECT count(*) n FROM documents WHERE doc_type IN ('832','888','879')").get().n], [0, 0, n("SELECT count(*) n FROM packaging_levels WHERE supplier_id = 'ASHBY'"), 4]);
   eq('catalogue.northfield_sees_every_catalogue', [nf.prepare('SELECT count(*) n FROM packaging_levels').get().n, nf.prepare('SELECT count(*) n FROM item_setup_messages').get().n, nf.prepare("SELECT count(*) n FROM documents WHERE doc_type IN ('832','888','879')").get().n],
-    [n('SELECT count(*) n FROM packaging_levels'), n('SELECT count(*) n FROM item_setup_messages'), 3]);
+    [n('SELECT count(*) n FROM packaging_levels'), n('SELECT count(*) n FROM item_setup_messages'), 4]);
 
   // ---------- the EDI Review Pack marks every value ----------
   { const pack = JSON.parse(readFileSync(join(ROOT, 'registry', 'catalogue-pack.json'), 'utf8')).catalogue || {};

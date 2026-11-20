@@ -65,6 +65,11 @@ const SPEC = [
   // AHP-8820: Northfield requires a case of 6 from 27 September (item version 1). Ashby's NetSuite item held a case of
   // 12 (AHP-8820-C12) until the trade-test correction on 23 November 2026 (event test.correction); that case had its own GTIN.
   { sku: 'AHP-8820', ref: '00018', from: '2026-09-27', each: [9.4, 7.6, 10.5, 3.4], cases: [C(1, '2026-09-27', null, 6, [23.4, 15.6, 11.2, 22.0], { ti: 5, hi: 5 }), C(2, '2026-09-27', '2026-11-23', 12, [23.4, 15.6, 21.6, 43.1], { pallet: false })] },
+  // P25's shirt, published to Northfield on 11 January 2027 (world/stages/item-accuracy.js). A case of 12 folded shirts
+  // in the solid-size carton a public apparel guide sets as standard (21.5 x 15.5 x 12.5 in, DXL Group vendor manual,
+  // p. 6); the each, the weights and the pallet are Invented.
+  { sku: 'ASH-SHT-M', ref: '00019', from: '2027-01-11', each: [14.0, 10.0, 1.5, 0.7], cases: [C(1, '2027-01-11', null, 12, [21.5, 15.5, 12.5, 10.0], { ti: 4, hi: 5 })] },
+  { sku: 'ASH-SHT-L', ref: '00020', from: '2027-01-11', each: [14.0, 10.0, 1.5, 0.7], cases: [C(1, '2027-01-11', null, 12, [21.5, 15.5, 12.5, 10.0], { ti: 4, hi: 5 })] },
   { sku: 'BRK-TWL-2', ref: '00401', each: [11.0, 8.0, 4.2, 1.9], cases: [C(1, HISTORY_START, null, 12, [22.4, 16.4, 12.8, 23.8], { ti: 5, hi: 4 })] },
   { sku: 'CDP-CND-8', ref: '00501', each: [3.6, 3.6, 4.1, 0.9], inner: [6, [11.2, 7.5, 4.4, 5.8]], cases: [C(1, HISTORY_START, null, 4, [15.4, 11.6, 9.0, 23.9], { ti: 10, hi: 6 })] },
 ];
@@ -150,6 +155,8 @@ const DOCS = {
 const itemLine = (sku, at, line) => { const it = ITEM[sku]; const c = caseOf(sku, at); const each = levelsOf(sku, at).find((l) => l.level === 'Each'); const inner = levelsOf(sku, at).find((l) => l.level === 'Inner');
   return { line, sku, gtin: c.gtin, upc: each.gtin.slice(2), description: it.description, pack: c.child_qty, inner: inner ? inner.child_qty : null, uom: /pair/i.test(it.pack) ? 'PR' : 'EA', cost: it.case_price, cost_from: HISTORY_START, levels: levelsFor(sku, at) }; };
 const ev = (L, at, kind, party, system, data) => L.event({ at, kind, po: null, system, party, channel: 'Trading Grid', data });
+/** One catalogue (832) item line for an item, its cost in force from `costFrom`. Used by a later stage that publishes items. */
+export const catalogueLine = (sku, at, line, costFrom = HISTORY_START) => ({ ...itemLine(sku, at, line), cost_from: costFrom });
 
 function generate(L) {
   const head = { from: 'ASHBY', to: 'NORTHFIELD', vendor_name: ASH.name, vendor_gln: ASH.gln, buyer_name: NF.name, buyer_gln: NF.gln };

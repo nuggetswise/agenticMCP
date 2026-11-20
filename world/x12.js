@@ -20,7 +20,8 @@ export const FUNC = { 850: 'PO', 855: 'PR', 860: 'PC', 865: 'CA', 856: 'SH', 810
  * (753 and 754 are in bots-grammars from 004030). ISA12 stays 00401, as NEXCOM's 754 samples send GS08 004030 under ISA12 00401. */
 const VERSION = {};
 
-export const itemIds = (l) => ['IN', l.nf_item, 'VN', l.sku, ...(l.gtin ? ['UK', l.gtin] : [])];
+// UP (the 12-digit UPC) is written only where a line carries one: P25's ship notice lines (20 November 2026).
+export const itemIds = (l) => ['IN', l.nf_item, 'VN', l.sku, ...(l.gtin ? ['UK', l.gtin] : []), ...(l.upc ? ['UP', l.upc] : [])];
 
 /** Body segments (between ST and SE) for one document. */
 const BODY = {

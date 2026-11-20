@@ -47,11 +47,12 @@ export function ruleRows(rules) {
 export function itemRows() {
   const base = ref.items;
   const item_versions = base.map((i) => {
-    const marketplace = i.sku === 'AHP-8820';
+    const marketplace = i.sku === 'AHP-8820'; const later = ref.ITEM_SETUP[i.sku];
+    if (later) return { sku: i.sku, version: 1, valid_from: later.valid_from, valid_to: null, description: i.description, pack: i.pack, units_per_case: unitsPerCase(i.pack), accepted_by: 'NORTHFIELD', accepted_at: later.accepted_at };
     return { sku: i.sku, version: 1, valid_from: marketplace ? '2026-09-27' : HISTORY_START, valid_to: null, description: i.description, pack: i.pack, units_per_case: unitsPerCase(i.pack),
       accepted_by: i.on_northfield_list && !marketplace ? 'NORTHFIELD' : null, accepted_at: i.on_northfield_list && !marketplace ? '2026-02-27T15:00:00.000Z' : null };
   });
-  const item_prices = base.map((i) => ({ sku: i.sku, price_list: 'Northfield cost', uom: 'CA', amount: i.case_price, valid_from: i.sku === 'AHP-8820' ? '2026-09-27' : HISTORY_START, valid_to: null, source: 'Item setup' }));
+  const item_prices = base.map((i) => ({ sku: i.sku, price_list: 'Northfield cost', uom: 'CA', amount: i.case_price, valid_from: ref.ITEM_SETUP[i.sku]?.valid_from || (i.sku === 'AHP-8820' ? '2026-09-27' : HISTORY_START), valid_to: null, source: 'Item setup' }));
   // Later versions and prices a stage adds (T1.12 catalogue): each closes the open row before it at its own valid_from,
   // as ERPNext ends an Item Price with Valid Upto when the next one starts.
   for (const s of STAGES) {

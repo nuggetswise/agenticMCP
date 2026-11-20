@@ -141,7 +141,10 @@ function buildRelease(db, side, a, T) {
   const after = (kind) => db.prepare('SELECT at FROM events WHERE po = ? AND kind = ? AND at > ? AND at <= ? ORDER BY at').get(hold.po, kind, hold.at, T);
   let fixed = true, open = '';
   if (/departure scan/i.test(hold.d.closes_on || '')) { const dep = db.prepare("SELECT at FROM events WHERE po = ? AND kind = 'wms.departure_scan' AND at <= ?").get(hold.po, T); fixed = !!dep; open = `${hold.d.finding}. ${hold.d.owner || 'The owner'} fixes it in ${hold.d.fix_in || 'its own system'}; the hold closes on the ${hold.d.closes_on}`; }
-  else if (Array.isArray(hold.d.findings)) { fixed = !!after('erp.correction'); open = hold.d.findings.map((f) => `${f.finding} (${f.owner})`).join('; '); }
+  else if (Array.isArray(hold.d.findings)) {
+    const fixes = db.prepare("SELECT data FROM events WHERE po = ? AND kind = 'erp.correction' AND at > ? AND at <= ? ORDER BY at").all(hold.po, hold.at, T).map((e) => J(e.data));
+    const left = hold.d.findings.filter((f) => !fixes.some((x) => x.rule === f.rule && (f.line == null || x.line == null || x.line === f.line)));
+    fixed = !left.length; open = left.map((f) => `${f.finding} (${f.owner})`).join('; '); }
   if (!fixed) return { ok: false, message: `${doc} stays held: ${open}. A held ship notice is released only after every failure on it is fixed (AP-1.3).` };
   return { ok: true, card: { record: doc, po: hold.po, to: 'Northfield Retailer', args: { document: doc, po: hold.po },
     detail: { document: doc, document_kind: 'Ship notice', po: hold.po, held_at: fmtET(hold.at), failures_fixed: true } } };

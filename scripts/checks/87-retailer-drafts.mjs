@@ -6,7 +6,11 @@ export default function ({ nf, ok, eq, NR }) {
   const cl4 = drafts.filter((d) => /retailer/.test(d.basis));
   eq('drafts.change_list_4_scheduled_from_4_january_2027', [...new Set(cl4.map((d) => `${d.state}:${d.in_force_from}`))], ['Scheduled:2027-01-04T05:00:00.000Z']);
   eq('drafts.change_list_4_count', cl4.length, 13);
-  eq('drafts.no_shipment_on_or_after_the_in_force_date', nf.prepare('SELECT count(*) n FROM shipments WHERE shipped_at >= ?').get('2027-01-04T05:00:00.000Z').n, 0);
+  // P25 (20 November 2026) ships on 13 January 2027, after P22's moment and so after the in-force date: it is the only
+  // shipment that falls under change list 4, and it passes every draft (the replay to P22's moment fails as many as the whole replay).
+  eq('drafts.only_p25_ships_on_or_after_the_in_force_date', nf.prepare('SELECT shipment_id FROM shipments WHERE shipped_at >= ? ORDER BY shipment_id').all('2027-01-04T05:00:00.000Z').map((r) => r.shipment_id), ['ASN-47300']);
+  { const p22 = nf.prepare("SELECT as_of FROM calendar WHERE id = 'P22'").get().as_of; const fails = (x) => x.failing_with_draft ?? x.failing_now ?? null;
+    eq('drafts.p25_shipment_passes_every_draft', drafts.filter((d) => fails(NR.replayRule(nf, { draft: d.id })) !== fails(NR.replayRule(nf, { draft: d.id, as_of: p22 }))).map((d) => d.id), []); }
   eq('drafts.nfd1_nfd2_still_drafts', drafts.filter((d) => ['NFD-1', 'NFD-2'].includes(d.id)).map((d) => d.state), ['Draft', 'Draft']);
   const bad = []; const res = {};
   for (const d of drafts) { const a = JSON.stringify(NR.replayRule(nf, { draft: d.id })); const b = JSON.stringify(NR.replayRule(nf, { draft: d.id })); if (a !== b) bad.push(`${d.id} not deterministic`); res[d.id] = JSON.parse(a); }

@@ -349,9 +349,63 @@
    "statement": "Every item is on Northfield’s item list for the supplier; a substitute needs the buyer’s approval first",
    "implements": [],
    "charge": "",
-   "basis": "Invented",
-   "source": "",
-   "links": []
+   "basis": "Adapted",
+   "source": "DXL Group Branded and Footwear Vendor Manual, 28 March 2025",
+   "links": [
+    {
+     "title": "DXL Group Branded and Footwear Vendor Manual, 28 March 2025",
+     "url": "https://images.dxl.com/is/content/CasualMale/PDF/Branded_Vendor_manual_032825.pdf"
+    }
+   ]
+  },
+  {
+   "id": "NF-4.16",
+   "owner": "Northfield",
+   "statement": "Every ship notice line carries a UPC that the supplier’s catalogue records hold for Northfield, and that UPC is the order line’s item; a ship notice with item errors is charged",
+   "implements": [],
+   "charge": "IA01 $100 per order plus $1 per carton",
+   "basis": "Adapted",
+   "source": "DXL Group Branded and Footwear Vendor Manual, 28 March 2025",
+   "links": [
+    {
+     "title": "DXL Group Branded and Footwear Vendor Manual, 28 March 2025",
+     "url": "https://images.dxl.com/is/content/CasualMale/PDF/Branded_Vendor_manual_032825.pdf"
+    }
+   ]
+  },
+  {
+   "id": "GS1-1",
+   "owner": "Industry standard",
+   "statement": "Every item number has the length and check digit GS1 sets: 12 digits for a UPC, 14 for a case GTIN, the last digit a check digit",
+   "implements": [],
+   "charge": "",
+   "basis": "Public",
+   "source": "GS1 General Specifications Change Notification 21-342: GTIN-12 and GTIN-13 data structure for retail point of sale; GS1 Prefixes: a 12-digit GTIN has an implied leading zero",
+   "links": [
+    {
+     "title": "GS1 General Specifications Change Notification 21-342: GTIN-12 and GTIN-13 data structure for retail point of sale",
+     "url": "https://www.gs1.org/docs/barcodes/GSCN_21-342_RetailASP.pdf"
+    },
+    {
+     "title": "GS1 Prefixes: a 12-digit GTIN has an implied leading zero",
+     "url": "https://gs1.org/prefixes"
+    }
+   ]
+  },
+  {
+   "id": "GS1-2",
+   "owner": "Industry standard",
+   "statement": "Every item number carries the GS1 company prefix of the company that assigned it",
+   "implements": [],
+   "charge": "",
+   "basis": "Public",
+   "source": "GS1 General Specifications Change Notification 21-342: GTIN-12 and GTIN-13 data structure for retail point of sale",
+   "links": [
+    {
+     "title": "GS1 General Specifications Change Notification 21-342: GTIN-12 and GTIN-13 data structure for retail point of sale",
+     "url": "https://www.gs1.org/docs/barcodes/GSCN_21-342_RetailASP.pdf"
+    }
+   ]
   },
   {
    "id": "NF-4.12",

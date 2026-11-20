@@ -33,6 +33,7 @@ export const CALENDAR = () => [
   { id: 'P5', stage: STAGE.ful, week: 11, moment: 'Five fulfilment risks before departure', seen_by: PRIYA, prototype: 'P5 Shipment Watch', as_of: '2026-12-08T22:12:00.000Z', anchor: 'NR-460207 to NR-460288' },
   { id: 'P11', stage: STAGE.ful, week: 10, moment: 'A live ship notice held in NetSuite and corrected before it leaves', seen_by: PRIYA, prototype: 'P11 NetSuite Chargeback Avoidance', as_of: '2026-11-30T15:25:00.000Z', anchor: 'ASN-78260' },
   { id: 'P24', stage: STAGE.ful, week: 11, moment: 'Inbound orders that will miss their delivery window, seen before receipt', seen_by: JORDAN, prototype: 'P24 Inbound order risk', as_of: '2026-12-09T22:30:00.000Z', anchor: 'NR-46539 to NR-46616' },
+  { id: 'P25', stage: STAGE.ful, week: 16, moment: 'A ship notice with three item numbers Northfield cannot match, checked before release', seen_by: PRIYA, prototype: 'P25 Unknown item on a ship notice', as_of: '2027-01-13T19:05:00.000Z', anchor: 'NR-47300' },
   { id: 'P9', stage: STAGE.sell, week: 5, moment: 'Store activity becomes a refill order', seen_by: PRIYA, prototype: 'P9 Shelf Recovery', as_of: '2026-10-26T12:07:00.000Z', anchor: 'Store 114, NR-451207' },
   { id: 'P14', stage: STAGE.inv, week: 7, moment: 'An invoice that does not match its order and receipt', seen_by: JORDAN, prototype: 'P14 Invoice Variance', as_of: '2026-11-10T14:00:00.000Z', anchor: 'INV-7731' },
   { id: 'P8', stage: STAGE.inv, week: 7, moment: 'Open-order value from purchase order to payment', seen_by: JORDAN, prototype: 'P8 Money in Motion', as_of: '2026-11-09T04:59:00.000Z', anchor: 'NR-450118 and 339 other orders' },
@@ -213,10 +214,12 @@ export function buildWorld({ quiet = false } = {}) {
   // Records added on 17 November 2026 (stage `records`) take a third range, so no earlier stage record is renumbered either.
   // Records added on 18 November 2026 (`batch: 2`) take a fourth range: some are dated before records the third range already holds.
   // A withdrawn record keeps its place in the numbering and is not stored.
-  const events = [...sorted.filter((e) => !e.stage).map((e, i) => ({ ...e, id: i + 1 })), ...sorted.filter((e) => e.stage && e.stage !== 'records' && e.stage !== 'compliance').map((e, i) => ({ ...e, id: 1000001 + i })),
+  const events = [...sorted.filter((e) => !e.stage).map((e, i) => ({ ...e, id: i + 1 })), ...sorted.filter((e) => e.stage && e.stage !== 'records' && e.stage !== 'compliance' && e.stage !== 'item-accuracy').map((e, i) => ({ ...e, id: 1000001 + i })),
     ...sorted.filter((e) => e.stage === 'records' && e.batch !== 2).map((e, i) => ({ ...e, id: 2000001 + i })), ...sorted.filter((e) => e.stage === 'records' && e.batch === 2).map((e, i) => ({ ...e, id: 3000001 + i })),
     // Records added on 20 November 2026 (stage `compliance`, Northfield's January chargeback batch) take a fifth range.
-    ...sorted.filter((e) => e.stage === 'compliance').map((e, i) => ({ ...e, id: 4000001 + i }))].filter((e) => !e.retired);
+    ...sorted.filter((e) => e.stage === 'compliance').map((e, i) => ({ ...e, id: 4000001 + i })),
+    // Records added on 20 November 2026 (stage `item-accuracy`, P25) take a sixth range.
+    ...sorted.filter((e) => e.stage === 'item-accuracy').map((e, i) => ({ ...e, id: 5000001 + i }))].filter((e) => !e.retired);
   const T = derive(files, events);
   const db = new DatabaseSync(MAIN_DB);
   db.exec(SCHEMA());

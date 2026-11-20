@@ -3,6 +3,7 @@
 import { PRECEDENCE } from '../world/ref.js';
 import { addD, etDay, fmtET, et } from '../world/lib.js';
 import { quantitiesIn } from './score.js';
+import { COMPLIANCE, isCompliance } from '../world/stages/compliance.js';
 
 export const COMPANY = 'ASHBY';
 export const NOT_AVAILABLE = 'Not available to Ashby';
@@ -294,7 +295,9 @@ export function promotionOf(db, deduction) {
 
 export function deductionCase(db, ref, asOf = storyClock()) {
   const key = ref.trim().toUpperCase();
-  const opened = db.prepare("SELECT * FROM events WHERE kind = 'case.opened'").all().map((e) => ({ ...e, d: J(e.data) })).find((e) => e.d.case === key || e.d.deduction === key || e.po === normPo(key));
+  // A compliance chargeback (Northfield's January batch) is not there before it is opened, so a lookup by PO at an earlier
+  // moment reads as it always did.
+  const opened = db.prepare("SELECT * FROM events WHERE kind = 'case.opened'").all().map((e) => ({ ...e, d: J(e.data) })).find((e) => (e.d.case === key || e.d.deduction === key || e.po === normPo(key)) && !(isCompliance(e.d.charge) && e.at > asOf.toISOString()));
   if (!opened) return { found: false, message: `No deduction case ${ref} in Ashby’s records` };
   if (ownsOrder(db, opened.po) !== 'own') return { found: false, not_available: true, message: NOT_AVAILABLE };
   if (opened.at > asOf.toISOString()) return { found: false, message: `Case ${opened.d.case} was not yet opened at ${fmtET(asOf)}` };
@@ -313,11 +316,33 @@ export function deductionCase(db, ref, asOf = storyClock()) {
     evidence: promo.records.map((r) => ({ evidence: r, kind: 'document', state: 'On record in Trading Grid', holder: 'Trading Grid', at: null })),
     history: evs.filter((e) => (e.kind.startsWith('case.') || e.kind === 'erp.receivables_match') && (e.d.case === c.case || e.d.matched_to === c.deduction)).map((e) => ({ at: fmtET(e.at), record: e.kind, ...e.d })),
     repaid_on: repaid ? { payment: repaid.payment, at: fmtET(repaid.paid_at), amount: repaid.amount } : null, as_of: fmtET(asOf), other_charges_on_this_order: [], link: `order/${encodeURIComponent(po)}` };
+  if (isCompliance(c.charge)) return { found: true, ...complianceCase(db, c, po, T), withheld_on: taken ? { payment: taken.payment, at: fmtET(taken.paid_at), invoice: taken.invoice } : null,
+    dispute_deadline: due ? fmtET(due) : null, dispute_window: due && asOf >= new Date(taken.paid_at) ? timeLeft(due, asOf) : null, evidence_rule: rule(db, 'NF-7.3'),
+    history: evs.filter((e) => e.kind.startsWith('case.') && e.d.case === c.case).map((e) => ({ at: fmtET(e.at), record: e.kind, ...e.d })),
+    repaid_on: repaid ? { payment: repaid.payment, at: fmtET(repaid.paid_at), amount: repaid.amount } : null, as_of: fmtET(asOf), link: `order/${encodeURIComponent(po)}` };
   return { found: true, case: c.case, po, charge: c.charge, amount: c.amount, line: c.line, cartons: c.cartons, deduction: c.deduction, rule: rule(db, 'SH01'), evidence_rule: rule(db, 'NF-7.4'),
     withheld_on: taken ? { payment: taken.payment, at: fmtET(taken.paid_at) } : null, dispute_deadline: due ? fmtET(due) : null, dispute_window: due && asOf >= new Date(taken.paid_at) ? timeLeft(due, asOf) : null,
     evidence, history: evs.filter((e) => e.kind.startsWith('case.') || e.kind === 'erp.receivables_match' || e.kind === 'carrier.claim_filed').map((e) => ({ at: fmtET(e.at), record: e.kind, ...e.d })),
     repaid_on: repaid ? { payment: repaid.payment, at: fmtET(repaid.paid_at), amount: repaid.amount } : null,
     as_of: fmtET(asOf), other_charges_on_this_order: db.prepare('SELECT * FROM adjustments WHERE po = ? AND reference <> ? AND paid_at <= ? ORDER BY paid_at').all(po, c.deduction, T).map((a) => ({ payment: a.payment, at: fmtET(a.paid_at), amount: a.amount, reference: a.reference, note: a.note })), link: `order/${encodeURIComponent(po)}` };
+}
+
+/** A compliance chargeback from Northfield's January batch: its rule and charge, the cause it is reported under, where in the
+ *  order's life it began, and the records Northfield put in the case, each read from the world. Shared by both sides. */
+export function complianceCase(db, c, po, T) {
+  const R = COMPLIANCE[c.charge]; const r = db.prepare('SELECT id, statement, charge_code, charge, basis FROM rules WHERE id = ?').get(R.rule);
+  const audit = db.prepare("SELECT * FROM events WHERE kind = 'receiving.compliance_audit' AND po = ? AND at <= ?").all(po, T).map((e) => ({ ...e, d: J(e.data) })).find((e) => e.d.in_case === c.case);
+  const evidence = [];
+  if (audit) evidence.push({ evidence: 'Northfield DC compliance audit', state: 'In the case', holder: 'Northfield DC compliance audit', at: fmtET(audit.at), finding: audit.d.finding, observed: fmtET(audit.d.observed_at), cartons: audit.d.cartons, cartons_received: audit.d.cartons_received, receipt: audit.d.receipt, ship_notice: audit.d.ship_notice });
+  if (c.charge === 'RT01') { const miss = db.prepare("SELECT * FROM events WHERE kind = 'carrier.pickup_missed' AND po = ? AND at <= ? ORDER BY at").all(po, T).pop();
+    const ri = db.prepare('SELECT load_id, pickup_from, pickup_to FROM routing_requests WHERE po = ?').get(po);
+    if (ri) evidence.push({ evidence: `Routing instructions ${ri.load_id}`, state: 'On record in Trading Grid', holder: 'Trading Grid', pickup_from: fmtET(ri.pickup_from), pickup_to: fmtET(ri.pickup_to) });
+    if (miss) evidence.push({ evidence: 'Carrier missed-pickup status', state: 'In the case', holder: miss.system, at: fmtET(miss.at), note: J(miss.data).note }); }
+  if (c.charge === 'IV01') { const inv = db.prepare("SELECT reference, sent_at FROM documents WHERE doc_type = '810' AND reference = ? ORDER BY sent_at").get(c.invoice); const aa = db.prepare("SELECT reference, sent_at FROM documents WHERE doc_type = '824' AND reference = ?").get(c.advice);
+    if (inv) evidence.push({ evidence: `Invoice ${inv.reference}`, state: 'On record in Trading Grid', holder: 'Trading Grid', at: fmtET(inv.sent_at) });
+    if (aa) evidence.push({ evidence: `Application advice ${aa.reference}`, state: 'On record in Trading Grid', holder: 'Trading Grid', at: fmtET(aa.sent_at) }); }
+  return { case: c.case, po, charge: c.charge, kind: 'Compliance chargeback', cause: R.cause, began_at: R.where, amount: c.amount, deduction: c.deduction, cartons: c.cartons ?? null,
+    rule: r ? { id: r.id, statement: r.statement, charge: r.charge, basis: r.basis } : null, evidence };
 }
 
 export function deductions(db, asOf = storyClock(), from = null) {

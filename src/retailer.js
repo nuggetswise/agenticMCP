@@ -3,7 +3,8 @@
 // warehouse, ERP, carrier and agent records stay Ashby's; Northfield's payables, draft rules and reviewer notes stay
 // Northfield's. Every answer is read as of a time; nothing here sends or changes anything.
 import { fmtET, etDay } from '../world/lib.js';
-import { normPo, rule, param, paramAt, chargeOf, storyClock, timeLeft, notYet, promotionOf, asOfDate, weekOf } from './domain.js';
+import { normPo, rule, param, paramAt, chargeOf, storyClock, timeLeft, notYet, promotionOf, asOfDate, weekOf, complianceCase } from './domain.js';
+import { isCompliance } from '../world/stages/compliance.js';
 import { otif, scorecardAsOf, supplierRanking, QUARTER, quantitiesIn } from './score.js';
 import { foundBy } from './credit.js';
 import { et } from '../world/lib.js';
@@ -103,7 +104,9 @@ export function openOrders(db, asOf = storyClock(), { period = null, supplier = 
     by_supplier: Object.values(bySup).sort((a, b) => b.open_value - a.open_value), ...(list || sup ? { open_order_list: rows.sort((a, b) => b.value - a.value).slice(0, 200) } : {}) };
 }
 
-const caseOpened = (db, key) => db.prepare("SELECT * FROM events WHERE kind = 'case.opened'").all().map((e) => ({ ...e, d: J(e.data) })).find((e) => e.d.case === key || e.d.deduction === key || e.po === normPo(key));
+// A compliance chargeback (Northfield's January batch) is skipped before it is opened, so a lookup by PO at an earlier moment
+// reads as it always did.
+const caseOpened = (db, key, T = null) => db.prepare("SELECT * FROM events WHERE kind = 'case.opened'").all().map((e) => ({ ...e, d: J(e.data) })).find((e) => (e.d.case === key || e.d.deduction === key || e.po === normPo(key)) && !(T && isCompliance(e.d.charge) && e.at > T));
 
 /** Deduction cases Northfield has opened, all suppliers. */
 export function casesNF(db, asOf = storyClock(), from = null) {
@@ -128,7 +131,7 @@ export function recommendationFor(db, c, charge) {
 
 /** One case from Northfield's side: charges, what the supplier put in the case, what NF-7.4 needs, reviewer notes and decisions. */
 export function caseNF(db, ref, asOf = storyClock()) {
-  const key = ref.trim().toUpperCase(); const opened = caseOpened(db, key); const T = asOf.toISOString();
+  const key = ref.trim().toUpperCase(); const T = asOf.toISOString(); const opened = caseOpened(db, key, T);
   if (!opened) return { found: false, message: `No deduction case ${ref} at Northfield` };
   if (opened.at > T) return { found: false, message: `Case ${opened.d.case} was not yet opened at ${fmtET(asOf)}` };
   const c = opened.d; const po = opened.po;
@@ -143,6 +146,11 @@ export function caseNF(db, ref, asOf = storyClock()) {
   const promo = c.charge === 'PROMO' ? promotionOf(db, c.deduction) : null;
   // The recommendation is credited to the evidence rule that produced it; no agent is named.
   const rec0 = reviewRecommendation(db, { charge: c.charge, shared: [...shared], disputes, decided, promo }); const review = rec0.charge ? { found_by: foundBy('Review Agent', rec0.rule?.id), ...rec0 } : rec0;
+  if (isCompliance(c.charge)) { const x = complianceCase(db, c, po, T);
+    return { found: true, ...x, supplier: supplierName(db, db.prepare('SELECT supplier_id FROM orders WHERE po = ?').get(po)?.supplier_id), as_of: fmtET(asOf),
+      withheld: db.prepare('SELECT * FROM adjustments WHERE reference = ? AND paid_at <= ? AND amount < 0 ORDER BY paid_at').all(c.deduction, T).map((a) => ({ payment: a.payment, at: fmtET(a.paid_at), amount: a.amount, reference: a.reference, invoice: a.invoice })),
+      repaid: repaidOn(db, decided, { ...c, po }, T), evidence_required: `The evidence for ${x.rule?.id}: ${x.rule?.statement}`, evidence_in_case: [...shared, ...x.evidence.map((e) => e.evidence)], disputes, decisions: decided, reviewer_notes: notes, review_agent: review,
+      authority: 'Jordan Ellis decides each charge in the case (NF-7.7). Northfield’s evidence rules check the evidence and recommend; they decide nothing.', link: `order/${encodeURIComponent(po)}` }; }
   if (promo) return { found: true, case: c.case, supplier: supplierName(db, db.prepare('SELECT supplier_id FROM orders WHERE po = ?').get(po)?.supplier_id), po, as_of: fmtET(asOf), charge: c.charge, kind: 'Promotion deduction', amount: c.amount, deduction: c.deduction, deal: promo.deal, promotion: promo,
     withheld: adj.filter((a) => a.amount < 0).map((a) => ({ payment: a.payment, at: fmtET(a.paid_at), amount: a.amount, reference: a.reference, invoice: a.invoice })), repaid: repaidOn(db, decided, { ...c, po }, T),
     evidence_required: 'The deal Northfield announced (889) and the record the claimed amount rests on: store activity (852), ship notices (856) or the invoice (810)', evidence_in_case: [...shared], disputes, decisions: decided, reviewer_notes: notes, review_agent: review,

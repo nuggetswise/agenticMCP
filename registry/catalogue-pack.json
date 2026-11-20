@@ -29,6 +29,63 @@
    ]
   },
   {
+   "id": "NF-6.1",
+   "owner": "Northfield",
+   "statement": "Every selling unit carries a scannable price ticket showing the retail on the order; a carton received without one is re-ticketed at the DC",
+   "implements": [],
+   "charge": "TK01 $100 per PO plus $1 per carton re-ticketed",
+   "basis": "Adapted",
+   "source": "Specialty Retailers (Gordmans) Vendor Routing and Compliance Manual, effective 1 March 2018; DXL Group Branded and Footwear Vendor Manual, 28 March 2025",
+   "links": [
+    {
+     "title": "Specialty Retailers (Gordmans) Vendor Routing and Compliance Manual, effective 1 March 2018",
+     "url": "https://mimage.opentext.com/alt_content/binary/businessnetwork/gordmans/Gordmans-Guide-2-14-18.pdf"
+    },
+    {
+     "title": "DXL Group Branded and Footwear Vendor Manual, 28 March 2025",
+     "url": "https://images.dxl.com/is/content/CasualMale/PDF/Branded_Vendor_manual_032825.pdf"
+    }
+   ]
+  },
+  {
+   "id": "NF-6.2",
+   "owner": "Northfield",
+   "statement": "A carton holds one PO and one case pack, weighs at most 60 lb and is at most 25.5 in high; a carton outside this is reworked at the DC",
+   "implements": [],
+   "charge": "PK01 $100 per PO plus $1 per carton reworked",
+   "basis": "Adapted",
+   "source": "Specialty Retailers (Gordmans) Vendor Routing and Compliance Manual, effective 1 March 2018; DXL Group Branded and Footwear Vendor Manual, 28 March 2025",
+   "links": [
+    {
+     "title": "Specialty Retailers (Gordmans) Vendor Routing and Compliance Manual, effective 1 March 2018",
+     "url": "https://mimage.opentext.com/alt_content/binary/businessnetwork/gordmans/Gordmans-Guide-2-14-18.pdf"
+    },
+    {
+     "title": "DXL Group Branded and Footwear Vendor Manual, 28 March 2025",
+     "url": "https://images.dxl.com/is/content/CasualMale/PDF/Branded_Vendor_manual_032825.pdf"
+    }
+   ]
+  },
+  {
+   "id": "NF-6.3",
+   "owner": "Northfield",
+   "statement": "Full loads ship on 40 x 48 in four-way pallets, stretch-wrapped",
+   "implements": [],
+   "charge": "PL01 $100 per load",
+   "basis": "Adapted",
+   "source": "Specialty Retailers (Gordmans) Vendor Routing and Compliance Manual, effective 1 March 2018; DXL Group Branded and Footwear Vendor Manual, 28 March 2025",
+   "links": [
+    {
+     "title": "Specialty Retailers (Gordmans) Vendor Routing and Compliance Manual, effective 1 March 2018",
+     "url": "https://mimage.opentext.com/alt_content/binary/businessnetwork/gordmans/Gordmans-Guide-2-14-18.pdf"
+    },
+    {
+     "title": "DXL Group Branded and Footwear Vendor Manual, 28 March 2025",
+     "url": "https://images.dxl.com/is/content/CasualMale/PDF/Branded_Vendor_manual_032825.pdf"
+    }
+   ]
+  },
+  {
    "id": "NF-11.1",
    "owner": "Northfield",
    "statement": "A draft rule is published to suppliers only after it is replayed against the quarter's exchanged documents",

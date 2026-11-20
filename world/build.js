@@ -213,8 +213,10 @@ export function buildWorld({ quiet = false } = {}) {
   // Records added on 17 November 2026 (stage `records`) take a third range, so no earlier stage record is renumbered either.
   // Records added on 18 November 2026 (`batch: 2`) take a fourth range: some are dated before records the third range already holds.
   // A withdrawn record keeps its place in the numbering and is not stored.
-  const events = [...sorted.filter((e) => !e.stage).map((e, i) => ({ ...e, id: i + 1 })), ...sorted.filter((e) => e.stage && e.stage !== 'records').map((e, i) => ({ ...e, id: 1000001 + i })),
-    ...sorted.filter((e) => e.stage === 'records' && e.batch !== 2).map((e, i) => ({ ...e, id: 2000001 + i })), ...sorted.filter((e) => e.stage === 'records' && e.batch === 2).map((e, i) => ({ ...e, id: 3000001 + i }))].filter((e) => !e.retired);
+  const events = [...sorted.filter((e) => !e.stage).map((e, i) => ({ ...e, id: i + 1 })), ...sorted.filter((e) => e.stage && e.stage !== 'records' && e.stage !== 'compliance').map((e, i) => ({ ...e, id: 1000001 + i })),
+    ...sorted.filter((e) => e.stage === 'records' && e.batch !== 2).map((e, i) => ({ ...e, id: 2000001 + i })), ...sorted.filter((e) => e.stage === 'records' && e.batch === 2).map((e, i) => ({ ...e, id: 3000001 + i })),
+    // Records added on 20 November 2026 (stage `compliance`, Northfield's January chargeback batch) take a fifth range.
+    ...sorted.filter((e) => e.stage === 'compliance').map((e, i) => ({ ...e, id: 4000001 + i }))].filter((e) => !e.retired);
   const T = derive(files, events);
   const db = new DatabaseSync(MAIN_DB);
   db.exec(SCHEMA());

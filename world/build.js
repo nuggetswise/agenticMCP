@@ -34,6 +34,7 @@ export const CALENDAR = () => [
   { id: 'P11', stage: STAGE.ful, week: 10, moment: 'A live ship notice held in NetSuite and corrected before it leaves', seen_by: PRIYA, prototype: 'P11 NetSuite Chargeback Avoidance', as_of: '2026-11-30T15:25:00.000Z', anchor: 'ASN-78260' },
   { id: 'P24', stage: STAGE.ful, week: 11, moment: 'Inbound orders that will miss their delivery window, seen before receipt', seen_by: JORDAN, prototype: 'P24 Inbound order risk', as_of: '2026-12-09T22:30:00.000Z', anchor: 'NR-46539 to NR-46616' },
   { id: 'P25', stage: STAGE.ful, week: 16, moment: 'A ship notice with three item numbers Northfield cannot match, checked before release', seen_by: PRIYA, prototype: 'P25 Catalogue data mismatch', as_of: '2027-01-13T19:05:00.000Z', anchor: 'NR-47300' },
+  { id: 'P26', stage: STAGE.ful, week: 17, moment: 'A honey ship notice held for cartons with no lot, and one recalled lot traced to the DCs that received it', seen_by: BOTH, prototype: 'P26 Lot data and recall reach', as_of: '2027-01-18T15:20:00.000Z', anchor: 'NR-47400' },
   { id: 'P9', stage: STAGE.sell, week: 5, moment: 'Store activity becomes a refill order', seen_by: PRIYA, prototype: 'P9 Shelf Recovery', as_of: '2026-10-26T12:07:00.000Z', anchor: 'Store 114, NR-451207' },
   { id: 'P14', stage: STAGE.inv, week: 7, moment: 'An invoice that does not match its order and receipt', seen_by: JORDAN, prototype: 'P14 Invoice Variance', as_of: '2026-11-10T14:00:00.000Z', anchor: 'INV-7731' },
   { id: 'P8', stage: STAGE.inv, week: 7, moment: 'Open-order value from purchase order to payment', seen_by: JORDAN, prototype: 'P8 Money in Motion', as_of: '2026-11-09T04:59:00.000Z', anchor: 'NR-450118 and 339 other orders' },
@@ -90,7 +91,7 @@ function derive(files, events) {
     read.forEach((d, i) => { d.raw = raws[i]; d.test = /\*0\*T\*>~/.test(raws[i]); docs.push(d); });
   }
   docs.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
-  const T = { documents: [], orders: [], order_lines: [], order_changes: [], shipments: [], shipment_lines: [], cartons: [], receipts: [], invoices: [], invoice_lines: [], remittance_items: [], adjustments: [], errors: [], warehouse_orders: [], store_activity: [] };
+  const T = { documents: [], orders: [], order_lines: [], order_changes: [], shipments: [], shipment_lines: [], cartons: [], receipts: [], invoices: [], invoice_lines: [], remittance_items: [], adjustments: [], errors: [], warehouse_orders: [], store_activity: [], carton_lots: [], receipt_lots: [] };
   const idCount = new Map(); const byCtl = new Map(); const byRef = new Map();
   for (const d of docs) {
     d.sender = ref.partyByIsa[d.isa_sender].id; d.receiver = ref.partyByIsa[d.isa_receiver].id;
@@ -169,14 +170,17 @@ function derive(files, events) {
       for (const l of d.lines) { const r = line.get(lineKey(d.po, l.line)); if (r) { r.qty_accepted = l.qty; if (l.date) r.delivery_date = l.date; } }
     } else if (d.type === '856') {
       const prev = shipByRef.get(d.ref);
-      if (prev) { for (const k of ['shipments', 'shipment_lines', 'cartons']) T[k] = T[k].filter((r) => r.shipment_id !== d.ref); }
+      if (prev) { for (const k of ['shipments', 'shipment_lines', 'cartons', 'carton_lots']) T[k] = T[k].filter((r) => r.shipment_id !== d.ref); }
       const s = { shipment_id: d.ref, po: d.po, doc_id: d.doc_id, sent_at: d.at, shipped_at: d.shipped_at, delivery_date: d.delivery_date, cartons: d.carton_count, ship_from: loc(d.parties.SF.gln), ship_to: loc(d.parties.ST.gln), bol: d.bol, seal: d.seal, complete: d.complete ? 1 : 0 };
       shipByRef.set(d.ref, s); T.shipments.push(s);
       for (const l of d.lines) T.shipment_lines.push({ shipment_id: d.ref, po: d.po, line: l.line, sku: l.sku, qty: l.qty, uom: l.uom });
       for (const c of d.cartons) T.cartons.push({ sscc: c.sscc, shipment_id: d.ref, po: d.po, line: c.line, sku: c.sku, qty: c.qty, received: 1 });
+      // Lot and best-before date as each carton carries them on the ship notice (P26).
+      for (const c of d.cartons) if (c.lot) T.carton_lots.push({ sscc: c.sscc, shipment_id: d.ref, po: d.po, line: c.line, sku: c.sku, qty: c.qty, lot: c.lot, best_before: c.best_before || null });
     } else if (d.type === '861') {
       const missing = new Set();
-      for (const l of d.lines) { T.receipts.push({ receipt: d.ref, po: d.po, shipment_id: d.asn_ref, received_at: d.received_at, location: loc(d.parties.ST.gln), line: l.line, qty: l.qty, short: l.short }); l.not_scanned.forEach((x) => missing.add(x)); }
+      for (const l of d.lines) { T.receipts.push({ receipt: d.ref, po: d.po, shipment_id: d.asn_ref, received_at: d.received_at, location: loc(d.parties.ST.gln), line: l.line, qty: l.qty, short: l.short }); l.not_scanned.forEach((x) => missing.add(x));
+        if (l.lot) T.receipt_lots.push({ receipt: d.ref, po: d.po, shipment_id: d.asn_ref, received_at: d.received_at, location: loc(d.parties.ST.gln), line: l.line, sku: l.sku, qty: l.qty, lot: l.lot, best_before: l.best_before || null }); }
       if (missing.size) for (const c of T.cartons) if (c.shipment_id === d.asn_ref && missing.has(c.sscc)) c.received = 0;
     } else if (d.type === '810') {
       T.invoices.push({ invoice: d.ref, po: d.po, doc_id: d.doc_id, sent_at: d.at, total: d.total, status: d.status, replaces: d.replaces, terms_days: d.terms_days });
@@ -214,12 +218,14 @@ export function buildWorld({ quiet = false } = {}) {
   // Records added on 17 November 2026 (stage `records`) take a third range, so no earlier stage record is renumbered either.
   // Records added on 18 November 2026 (`batch: 2`) take a fourth range: some are dated before records the third range already holds.
   // A withdrawn record keeps its place in the numbering and is not stored.
-  const events = [...sorted.filter((e) => !e.stage).map((e, i) => ({ ...e, id: i + 1 })), ...sorted.filter((e) => e.stage && e.stage !== 'records' && e.stage !== 'compliance' && e.stage !== 'item-accuracy').map((e, i) => ({ ...e, id: 1000001 + i })),
+  const events = [...sorted.filter((e) => !e.stage).map((e, i) => ({ ...e, id: i + 1 })), ...sorted.filter((e) => e.stage && e.stage !== 'records' && e.stage !== 'compliance' && e.stage !== 'item-accuracy' && e.stage !== 'lot-trace').map((e, i) => ({ ...e, id: 1000001 + i })),
     ...sorted.filter((e) => e.stage === 'records' && e.batch !== 2).map((e, i) => ({ ...e, id: 2000001 + i })), ...sorted.filter((e) => e.stage === 'records' && e.batch === 2).map((e, i) => ({ ...e, id: 3000001 + i })),
     // Records added on 20 November 2026 (stage `compliance`, Northfield's January chargeback batch) take a fifth range.
     ...sorted.filter((e) => e.stage === 'compliance').map((e, i) => ({ ...e, id: 4000001 + i })),
     // Records added on 20 November 2026 (stage `item-accuracy`, P25) take a sixth range.
-    ...sorted.filter((e) => e.stage === 'item-accuracy').map((e, i) => ({ ...e, id: 5000001 + i }))].filter((e) => !e.retired);
+    ...sorted.filter((e) => e.stage === 'item-accuracy').map((e, i) => ({ ...e, id: 5000001 + i })),
+    // Records added on 20 November 2026 (stage `lot-trace`, P26) take a seventh range.
+    ...sorted.filter((e) => e.stage === 'lot-trace').map((e, i) => ({ ...e, id: 6000001 + i }))].filter((e) => !e.retired);
   const T = derive(files, events);
   const db = new DatabaseSync(MAIN_DB);
   db.exec(SCHEMA());
@@ -292,7 +298,7 @@ function buildAshbyView() {
     INSERT INTO remittance_items SELECT * FROM m.remittance_items WHERE payee_id = 'ASHBY'; INSERT INTO adjustments SELECT * FROM m.adjustments WHERE payee_id = 'ASHBY';
     INSERT INTO errors SELECT e.* FROM m.errors e JOIN m.documents d ON d.doc_id = e.doc_id WHERE d.supplier_id = 'ASHBY';
     INSERT INTO warehouse_orders SELECT * FROM m.warehouse_orders; INSERT INTO store_activity SELECT * FROM m.store_activity;
-    INSERT INTO events SELECT * FROM m.events WHERE po IS NULL OR po IN ${own} OR po NOT LIKE 'NR-%';
+    INSERT INTO events SELECT * FROM m.events WHERE (po IS NULL OR po IN ${own} OR po NOT LIKE 'NR-%') AND system <> 'Northfield quality records';
     INSERT INTO rule_sets SELECT * FROM m.rule_sets; INSERT INTO rule_versions SELECT * FROM m.rule_versions;
     INSERT INTO item_versions SELECT * FROM m.item_versions WHERE sku IN (SELECT sku FROM items); INSERT INTO item_prices SELECT * FROM m.item_prices WHERE sku IN (SELECT sku FROM items);
     INSERT INTO document_links SELECT * FROM m.document_links WHERE doc_id IN (SELECT doc_id FROM documents) AND prev_doc_id IN (SELECT doc_id FROM documents);

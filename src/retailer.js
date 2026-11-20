@@ -309,3 +309,33 @@ export function draftRules(db) { return { drafts: db.prepare('SELECT * FROM draf
 export { timeLeft };
 
 export const JOBS = { three_way_match: (db, r, t) => threeWayMatch(db, r, t) };
+
+/** Lot reach (P26): one lot of a food item traced to the DCs that received it. A Trading Grid rule: a lot reaches a DC
+ *  when a receiving advice at that DC matches a ship notice carton carrying the lot. Shared documents only; what a DC
+ *  sent on to stores is Northfield's own record and is not in Trading Grid. Without a lot: every lot, by cases. */
+export function lotReach(db, { lot, supplier, asOf = storyClock() } = {}) {
+  const T = asOf.toISOString(); const s = supplier ? findSupplier(db, supplier) : null;
+  if (supplier && !s) return { found: false, message: `No supplier ${supplier} trades with Northfield` };
+  const scope = s ? 'AND o.supplier_id = ?' : ''; const args = s ? [s.id] : [];
+  const lots = db.prepare(`SELECT c.lot, c.sku, i.description item, c.best_before, o.supplier_id, count(DISTINCT c.shipment_id) ship_notices, sum(c.qty) cases_shipped, count(DISTINCT sh.ship_to) dcs, min(sh.shipped_at) first_shipped, max(sh.shipped_at) last_shipped
+    FROM carton_lots c JOIN shipments sh ON sh.shipment_id = c.shipment_id JOIN orders o ON o.po = c.po LEFT JOIN items i ON i.sku = c.sku WHERE sh.sent_at <= ? ${scope} GROUP BY c.lot, c.sku ORDER BY min(sh.shipped_at)`).all(T, ...args);
+  const rule = 'A lot reaches a DC when a receiving advice at that DC matches a ship notice carton carrying the lot (Trading Grid rule)';
+  const row = (l) => ({ lot: l.lot, item: l.item, best_before: l.best_before, supplier: supplierName(db, l.supplier_id), ship_notices: l.ship_notices, cases_shipped: l.cases_shipped, dcs: l.dcs, first_shipped: fmtET(l.first_shipped), last_shipped: fmtET(l.last_shipped) });
+  if (!lot) return { found: true, as_of: fmtET(asOf), lots: lots.map(row), rule };
+  const key = String(lot).trim().toUpperCase(); const hit = lots.find((l) => l.lot.toUpperCase() === key);
+  if (!hit) return { found: false, message: `No ship notice Northfield received by ${fmtET(asOf)} carries lot ${lot}`, lots_on_record: lots.map((l) => l.lot) };
+  const ships = db.prepare(`SELECT c.shipment_id, c.po, sh.ship_to, sh.shipped_at, sh.sent_at, sum(c.qty) cases FROM carton_lots c JOIN shipments sh ON sh.shipment_id = c.shipment_id WHERE c.lot = ? AND c.sku = ? AND sh.sent_at <= ? GROUP BY c.shipment_id ORDER BY sh.shipped_at, c.shipment_id`).all(hit.lot, hit.sku, T);
+  const rcv = new Map(db.prepare('SELECT shipment_id, receipt, received_at, location, sum(qty) cases FROM receipt_lots WHERE lot = ? AND sku = ? AND received_at <= ? GROUP BY shipment_id, receipt').all(hit.lot, hit.sku, T).map((r) => [r.shipment_id, r]));
+  const name = (id) => db.prepare('SELECT name FROM locations WHERE id = ?').get(id)?.name || id;
+  const by = new Map();
+  for (const x of ships) { const r = rcv.get(x.shipment_id); const dc = r?.location || x.ship_to; const g = by.get(dc) || by.set(dc, { dc: name(dc), orders: new Set(), ship_notices: 0, cases_shipped: 0, receiving_advices: 0, cases_received: 0, cases_in_transit: 0, shipments: [] }).get(dc);
+    g.orders.add(x.po); g.ship_notices++; g.cases_shipped += x.cases; if (r) { g.receiving_advices++; g.cases_received += r.cases; } else g.cases_in_transit += x.cases;
+    g.shipments.push({ po: x.po, ship_notice: x.shipment_id, shipped: fmtET(x.shipped_at), cases_shipped: x.cases, receiving_advice: r?.receipt || null, received: r ? fmtET(r.received_at) : null, cases_received: r ? r.cases : null }); }
+  const by_dc = [...by.values()].map((g) => ({ ...g, orders: g.orders.size })).sort((a, b) => b.cases_received - a.cases_received);
+  const sum = (k) => by_dc.reduce((t, g) => t + g[k], 0);
+  const notice = db.prepare("SELECT at, data FROM events WHERE kind = 'recall.notice' AND at <= ? ORDER BY at").all(T).map((e) => ({ at: e.at, d: typeof e.data === 'string' ? JSON.parse(e.data) : e.data })).find((e) => String(e.d.lot).toUpperCase() === key);
+  return { found: true, as_of: fmtET(asOf), ...row(hit), recall_notice: notice ? { recorded: fmtET(notice.at), told_by: notice.d.told_by, received_as: notice.d.received_as, scope: notice.d.scope } : null,
+    totals: { dcs: by_dc.length, orders: sum('orders'), ship_notices: sum('ship_notices'), cases_shipped: sum('cases_shipped'), receiving_advices: sum('receiving_advices'), cases_received: sum('cases_received'), cases_in_transit: sum('cases_in_transit') },
+    by_dc, other_lots: lots.filter((l) => l.sku === hit.sku && l.lot !== hit.lot).map((l) => ({ lot: l.lot, best_before: l.best_before, cases_shipped: l.cases_shipped, dcs: l.dcs })),
+    rule, not_in_trading_grid: 'What each DC sent on to stores is Northfield’s own record and is not in Trading Grid.' };
+}

@@ -703,6 +703,48 @@
     "finding_outcomes"
    ],
    "ends_at": "Both sides hold the same account of which findings were acted on, by whom, how fast and what money moved; the page writes nothing"
+  },
+  {
+   "id": "P26",
+   "name": "P26 Lot data and recall reach",
+   "status": "Not built",
+   "calendar": "P26",
+   "seen_by": "Priya Raman, then Jordan Ellis",
+   "agency": {
+    "verdict": "rule-based",
+    "agent": null,
+    "job": "Hold a food ship notice whose cartons carry no lot or best-before date, and trace one lot to the DCs that received it",
+    "reason": "Both are matches against records: a carton carries a lot or it does not, and a receiving advice matches a ship notice carton or it does not",
+    "would_reverse": "A lot whose reach needs judgement, such as lots relabelled or mixed after receipt"
+   },
+   "customer_agent": {
+    "supplier": "Which cartons carry no lot, and which open orders ship from the same lot, in Priya's own assistant",
+    "retailer": "Lot reach by DC in Jordan's own assistant"
+   },
+   "erp_placement": "None",
+   "decisions": [],
+   "tools": [
+    "get_order",
+    "get_document",
+    "lookup_retailer_rules",
+    "release_ship_notice"
+   ],
+   "tools_northfield": [
+    "supplier_document_trail",
+    "get_document",
+    "lookup_rules",
+    "lot_reach"
+   ],
+   "anchors": [
+    "order:NR-47400",
+    "document:ASN-47400",
+    "document:RCV-DC2-47400",
+    "recall.notice:recall.notice"
+   ],
+   "acceptance": [],
+   "capability_status": "planned",
+   "owner": "Unassigned",
+   "ends_at": "Ashby: Northfield's receiving advice matches the corrected ship notice and no lot charge is raised. Northfield: the recalled lot's DCs and cases are listed, each traced to its receiving advice"
   }
  ],
  "other_inventory": [

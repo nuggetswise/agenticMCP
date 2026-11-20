@@ -30,9 +30,10 @@ import returns from './returns.js';
 import records from './records.js';
 import compliance from './compliance.js';
 import itemAccuracy from './item-accuracy.js';
+import lotTrace from './lot-trace.js';
 
 // Order is fixed: masters first (partner setup, catalogue), then the trade stages. A stage added later goes at the end.
-export const STAGES = [partnerSetup, catalogue, planning, transport, warehouse, promotions, returns, records, compliance, itemAccuracy];
+export const STAGES = [partnerSetup, catalogue, planning, transport, warehouse, promotions, returns, records, compliance, itemAccuracy, lotTrace];
 
 for (const s of STAGES) for (const [code, def] of Object.entries(s.docs || {})) { registerType(code, def); docNames[code] = def.name; }
 export const STAGE_BY_TYPE = Object.fromEntries(STAGES.flatMap((s) => Object.keys(s.docs || {}).map((c) => [c, s])));

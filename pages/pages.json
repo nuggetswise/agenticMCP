@@ -107,6 +107,23 @@
    ],
    "token": "p24-UxsKXEzu0S_N"
   },
+  "p25": {
+   "calendar": "P25",
+   "sides": [
+    "ashby"
+   ],
+   "token": "p25-D8r7IJXrQl8w",
+   "through": "2027-01-14T07:30:00-05:00"
+  },
+  "p26": {
+   "calendar": "P26",
+   "sides": [
+    "ashby",
+    "northfield"
+   ],
+   "token": "p26-Lk3vQ9tRw2Hd",
+   "through": "2027-01-19T07:40:00-05:00"
+  },
   "_test": {
    "calendar": "P9",
    "sides": [
@@ -116,13 +133,5 @@
    "token": "test-C3PPJLhbsFo1",
    "through": "2027-01-09T23:59:00-05:00"
   }
- },
- "p25": {
-  "calendar": "P25",
-  "sides": [
-   "ashby"
-  ],
-  "token": "p25-D8r7IJXrQl8w",
-  "through": "2027-01-14T07:30:00-05:00"
  }
 }

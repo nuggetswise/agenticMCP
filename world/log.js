@@ -2,6 +2,7 @@
 // adds the technical acknowledgment each receiver returns, and renders every document to X12 text.
 import { writeInterchange } from './x12.js';
 import { PARTY, ITEM, locations } from './ref.js';
+import { lotOf } from './lots.js';
 
 export const iso = (d) => { const x = new Date(d); x.setMilliseconds(0); return x.toISOString(); };
 const LOC = Object.fromEntries(locations.map((l) => [l.id, l]));
@@ -55,7 +56,8 @@ export class Log {
     // 950,000,000 up): they are dated before records the stage already held, and would otherwise renumber them.
     // Records added on 20 November 2026 (stage `item-accuracy`, P25) take their own range too (870,000,000 up;
     // acknowledgments 970,000,000 up), so they renumber nothing on a pair other stages share.
-    const nextCtl = (d, k, base) => (d.stage === 'item-accuracy' ? next(`${k}:IA`, /:FA/.test(k) ? 970000000 : 870000000) : d.batch === 2 ? next(`${k}:R2`, /:FA/.test(k) ? 950000000 : 850000000) : d.stage === 'records' ? next(`${k}:R`, /:FA/.test(k) ? 900000000 : 800000000) : d.stage ? next(`${k}:S`, k.endsWith(':FA') ? 600000000 : 700000000) : d.hist ? next(`${k}:H`, base - histN.get(k)) : next(k, base));
+    // Records added on 20 November 2026 (stage `lot-trace`, P26) likewise: 880,000,000 up; acknowledgments 980,000,000 up.
+    const nextCtl = (d, k, base) => (d.stage === 'lot-trace' ? next(`${k}:LT`, /:FA/.test(k) ? 980000000 : 880000000) : d.stage === 'item-accuracy' ? next(`${k}:IA`, /:FA/.test(k) ? 970000000 : 870000000) : d.batch === 2 ? next(`${k}:R2`, /:FA/.test(k) ? 950000000 : 850000000) : d.stage === 'records' ? next(`${k}:R`, /:FA/.test(k) ? 900000000 : 800000000) : d.stage ? next(`${k}:S`, k.endsWith(':FA') ? 600000000 : 700000000) : d.hist ? next(`${k}:H`, base - histN.get(k)) : next(k, base));
     const out = []; const acks = [];
     for (const d of docs) {
       const from = PARTY[d.from], to = PARTY[d.to];
@@ -109,7 +111,9 @@ export const D = {
   },
   asn(L, O, at, o) {
     const site = o.shipFrom || LOC[o.site || O.site || 'ASH-WH1']; const st = LOC[o.shipTo || O.shipTo];
-    const lines = (o.lines || O.lines.map((l) => ({ line: l.line, sku: l.sku, qty: o.qty?.[l.line] ?? l.qty }))).filter((l) => l.qty > 0).map((l) => ({ ...lineOf({ ...O.lines.find((x) => x.line === l.line), ...l }) }));
+    // A food line carries its lot and best-before date (P26): the lot it shipped from, world/lots.js.
+    const lines = (o.lines || O.lines.map((l) => ({ line: l.line, sku: l.sku, qty: o.qty?.[l.line] ?? l.qty }))).filter((l) => l.qty > 0).map((l) => { const x = lineOf({ ...O.lines.find((y) => y.line === l.line), ...l }); return { ...x, ...(lotOf(x.sku, o.shippedAt) || {}) }; });
+    (L.shippedAt ??= new Map()).set(o.ref, iso(o.shippedAt));
     return L.doc({ type: '856', from: O.supplier, to: 'NORTHFIELD', at, ref: o.ref, resend: !!o.resend, po_ref: o.poRef || O.po, carton_count: o.cartonCount ?? (o.cartons ? o.cartons.length : lines.reduce((a, l) => a + l.qty, 0)), scac: o.scac ?? 'LKLF', bol: o.bol || null, seal: o.seal || null,
       shipped_at: iso(o.shippedAt), delivery_date: o.deliveryDate, ship_to_name: st.name, ship_to_gln: o.shipToGln || st.gln, ship_from_name: site.name, ship_from_gln: site.gln, lines, cartons: o.cartons || null, status: o.status || 'CC', fault: o.fault || null });
   },
@@ -122,7 +126,8 @@ export const D = {
   receipt(L, O, at, o) {
     const st = LOC[o.location || O.shipTo];
     return L.doc({ type: '861', from: 'NORTHFIELD', to: O.supplier, at, ...(o.numAt ? { numAt: iso(o.numAt) } : {}), ref: o.ref, po: O.po, asn_ref: o.asnRef, received_at: iso(at), location_name: st.name, location_gln: st.gln,
-      lines: Object.entries(o.qty).map(([line, q]) => ({ ...lineOf(O.lines.find((l) => l.line === +line)), qty: q, short: o.short?.[line] || 0, not_scanned: o.notScanned?.[line] || [] })) });
+      // A food line repeats the lot and best-before date of the ship notice it was received against (P26).
+      lines: Object.entries(o.qty).map(([line, q]) => { const x = lineOf(O.lines.find((l) => l.line === +line)); return { ...x, qty: q, short: o.short?.[line] || 0, not_scanned: o.notScanned?.[line] || [], ...(lotOf(x.sku, L.shippedAt?.get(o.asnRef)) || {}) }; }) });
   },
   advice(L, target, at, { action = 'TR', errors }) {
     return L.doc({ type: '824', from: target.to, to: target.from, at, ref: `AA-${target.ref}${target.resend ? '-2' : ''}`, action, answers_ref: target.ref, answers_gs: () => target.ctl, answers_st: '0001', answers_set: target.type, errors, _target: target });

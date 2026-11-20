@@ -23,6 +23,9 @@ const VERSION = {};
 // UP (the 12-digit UPC) is written only where a line carries one: P25's ship notice lines (20 November 2026).
 export const itemIds = (l) => ['IN', l.nf_item, 'VN', l.sku, ...(l.gtin ? ['UK', l.gtin] : []), ...(l.upc ? ['UP', l.upc] : [])];
 
+/** Lot and best-before date of a food line: REF*LT and DTM*036. Nothing for a line that carries neither. */
+const lotSegs = (l) => [...(l.lot ? [seg('REF', 'LT', l.lot)] : []), ...(l.best_before ? [seg('DTM', '036', d8(l.best_before))] : [])];
+
 /** Body segments (between ST and SE) for one document. */
 const BODY = {
   850: (d) => [
@@ -76,7 +79,8 @@ const BODY = {
       seg('PRF', d.po_ref),
     ];
     let h = 2;
-    const item = (parent, l, qty) => { h++; s.push(seg('HL', h, parent, 'I'), seg('LIN', l.line, ...itemIds(l)), seg('SN1', l.line, qty, l.uom || 'CA', '', '', '', '', d.status || 'CC')); };
+    // A food item carries its lot (REF*LT) and best-before date (DTM*036) under the item, after SN1 (P26).
+    const item = (parent, l, qty) => { h++; s.push(seg('HL', h, parent, 'I'), seg('LIN', l.line, ...itemIds(l)), seg('SN1', l.line, qty, l.uom || 'CA', '', '', '', '', d.status || 'CC'), ...lotSegs(l)); };
     if (d.cartons) for (const c of d.cartons) { h++; const p = h; s.push(seg('HL', p, 2, 'P'), seg('MAN', 'GM', c.sscc)); item(p, d.lines.find((l) => l.line === c.line), c.qty ?? 1); }
     else for (const l of d.lines) item(2, l, l.qty);
     s.push(seg('CTT', h));
@@ -101,6 +105,7 @@ const BODY = {
     ...d.lines.flatMap((l) => [
       seg('RCD', l.line, l.qty, 'CA', '', '', l.short ? l.short : '', l.short ? 'CA' : '', l.short ? '02' : ''),
       seg('LIN', l.line, ...itemIds(l)),
+      ...lotSegs(l),
       ...(l.not_scanned || []).map((x) => seg('MAN', 'GM', x)),
     ]),
   ],
@@ -214,19 +219,22 @@ const READ = {
   865: (S) => { const b = first(S, 'BCA'); const lines = []; for (const e of S) { if (e[0] === 'POC') lines.push({ line: +e[1], qty_ordered: +e[3], price: +e[6], ...items(e, 8) }); if (e[0] === 'ACK') Object.assign(lines[lines.length - 1], { code: e[1], qty: +e[2], date: day8(e[5]) }); } return { po: b[3], seq: +b[5], ref: first(S, 'REF', 'ZZ')[2], lines }; },
   856: (S) => {
     const b = first(S, 'BSN'); const dep = first(S, 'DTM', '011');
-    const cartons = []; const lines = new Map(); let sscc = null; let level = null; let status = null;
+    const cartons = []; const lines = new Map(); let sscc = null; let level = null; let status = null; let carton = null;
     for (const e of S) {
+      if (level === 'I' && e[0] === 'REF' && e[1] === 'LT') { const l = lines.get(lines._cur); l.lot ??= e[2]; if (carton) carton.lot = e[2]; }
+      if (level === 'I' && e[0] === 'DTM' && e[1] === '036') { const l = lines.get(lines._cur); l.best_before ??= day8(e[2]); if (carton) carton.best_before = day8(e[2]); }
       if (e[0] === 'HL') { level = e[3]; if (level !== 'I') sscc = null; }
       if (e[0] === 'MAN' && e[1] === 'GM') sscc = e[2];
       if (e[0] === 'LIN') { const l = { line: +e[1], ...items(e, 2), qty: 0 }; if (!lines.has(l.line)) lines.set(l.line, l); lines._cur = l.line; }
-      if (e[0] === 'SN1') { const l = lines.get(lines._cur); l.qty += +e[2]; l.uom = e[3]; if (e[8]) status = e[8]; if (sscc) cartons.push({ sscc, line: l.line, sku: l.sku, qty: +e[2] }); }
+      if (e[0] === 'SN1') { const l = lines.get(lines._cur); l.qty += +e[2]; l.uom = e[3]; if (e[8]) status = e[8]; carton = sscc ? { sscc, line: l.line, sku: l.sku, qty: +e[2] } : null; if (carton) cartons.push(carton); }
     }
     return { ref: b[2], resend: b[1] === '05', structure: b[5], po: first(S, 'PRF')[1], po_ref: first(S, 'PRF')[1], carton_count: +first(S, 'TD1')[2], scac: first(S, 'TD5')?.[3] || null, bol: first(S, 'REF', 'BM')?.[2] || null, seal: first(S, 'REF', 'SN')?.[2] || null,
       shipped_at: iso8(dep[2], dep[3] + '00'), delivery_date: day8(first(S, 'DTM', '017')[2]), parties: n1(S), lines: [...lines.values()], cartons, complete: status !== 'BP', hl_count: +first(S, 'CTT')[1] };
   },
   810: (S) => { const b = first(S, 'BIG'); return { ref: b[2], po: b[4], po_ref: b[4], replaces: first(S, 'REF', 'OI')?.[2] || null, parties: n1(S), terms_days: +first(S, 'ITD')[7],
     lines: S.filter((e) => e[0] === 'IT1').map((e) => ({ line: +e[1], qty: +e[2], uom: e[3], price: +e[4], ...items(e, 6) })), total: +first(S, 'TDS')[1] / 100 }; },
-  861: (S) => { const b = first(S, 'BRA'); const dt = first(S, 'DTM', '050'); const lines = []; for (const e of S) { if (e[0] === 'RCD') lines.push({ line: +e[1], qty: +e[2], short: e[6] ? +e[6] : 0, not_scanned: [] }); if (e[0] === 'LIN') Object.assign(lines[lines.length - 1], items(e, 2)); if (e[0] === 'MAN') lines[lines.length - 1].not_scanned.push(e[2]); }
+  861: (S) => { const b = first(S, 'BRA'); const dt = first(S, 'DTM', '050'); const lines = []; for (const e of S) { if (e[0] === 'RCD') lines.push({ line: +e[1], qty: +e[2], short: e[6] ? +e[6] : 0, not_scanned: [] }); if (e[0] === 'LIN') Object.assign(lines[lines.length - 1], items(e, 2)); if (e[0] === 'MAN') lines[lines.length - 1].not_scanned.push(e[2]);
+      if (lines.length && e[0] === 'REF' && e[1] === 'LT') lines[lines.length - 1].lot = e[2]; if (lines.length && e[0] === 'DTM' && e[1] === '036') lines[lines.length - 1].best_before = day8(e[2]); }
     return { ref: b[1], po: first(S, 'PRF')[1], asn_ref: first(S, 'REF', 'SI')[2], received_at: iso8(dt[2], dt[3] + '00'), parties: n1(S), lines }; },
   824: (S) => { const b = first(S, 'BGN'); const o = first(S, 'OTI'); const errors = []; for (const e of S) { if (e[0] === 'TED') errors.push({ code: e[1], cause: e[2], seg: e[3] || null, elem: e[5] || null, bad: e[7] || null, allowed: null }); if (e[0] === 'NTE' && errors.length) { const x = errors[errors.length - 1]; if (x.allowed == null) x.allowed = e[2]; else { x.notes ||= [x.allowed]; x.notes.push(e[2]); x.allowed = e[2]; } } }
     return { ref: b[2], action: o[1], answers_ref: o[3], answers_gs: +o[8], answers_st: o[9], answers_set: o[10], errors }; },

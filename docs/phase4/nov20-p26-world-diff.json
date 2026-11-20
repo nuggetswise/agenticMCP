@@ -1,0 +1,83 @@
+{
+ "base": "e2ebd87",
+ "tables_added": [
+  "carton_lots",
+  "receipt_lots"
+ ],
+ "tables": {
+  "calendar": {
+   "rows_changed_or_removed": 7,
+   "rows_added_or_changed": 8,
+   "sample": [
+    "{\"id\":\"P9\",\"seq\":10,\"stage\":\"Sell-through and replenishment\",\"week\":5,\"moment\":\"Store activity becomes a refill order\",\"seen_by\":\"Priya Raman\",\"prototype\":\"P9 Shelf Recovery\",\"as_of\":\"2026-10-26T12:07:00.000Z\",\"anchor\":\"Store 114, NR-451207\"}",
+    "{\"id\":\"P14\",\"seq\":11,\"stage\":\"Invoice and payment\",\"week\":7,\"moment\":\"An invoice that does not match its order and receipt\",\"seen_by\":\"Jordan Ellis\",\"prototype\":\"P14 Invoice Variance\",\"as_of\":\"2026-11-10T14:00:00.000Z\",\"anchor\":\"INV-7731\"}",
+    "{\"id\":\"P8\",\"seq\":12,\"stage\":\"Invoice and payment\",\"week\":7,\"moment\":\"Open-order value from purchase order to payment\",\"seen_by\":\"Jordan Ellis\",\"prototype\":\"P8 Money in Motion\",\"as_of\":\"2026-11-09T04:59:00.000Z\",\"anchor\":\"NR-450118 and 339 other orders\"}"
+   ]
+  },
+  "cartons": {
+   "rows_changed_or_removed": 0,
+   "rows_added_or_changed": 60,
+   "sample": []
+  },
+  "document_links": {
+   "rows_changed_or_removed": 0,
+   "rows_added_or_changed": 13,
+   "sample": []
+  },
+  "documents": {
+   "rows_changed_or_removed": 2342,
+   "rows_added_or_changed": 2358,
+   "changed_by_set": {
+    "856": 1182,
+    "861": 1160
+   },
+   "changed_outside_text_and_body": 0
+  },
+  "events": {
+   "rows_changed_or_removed": 0,
+   "rows_added_or_changed": 12,
+   "sample": []
+  },
+  "order_lines": {
+   "rows_changed_or_removed": 0,
+   "rows_added_or_changed": 3,
+   "sample": []
+  },
+  "orders": {
+   "rows_changed_or_removed": 0,
+   "rows_added_or_changed": 3,
+   "sample": []
+  },
+  "receipts": {
+   "rows_changed_or_removed": 0,
+   "rows_added_or_changed": 1,
+   "sample": []
+  },
+  "rule_versions": {
+   "rows_changed_or_removed": 0,
+   "rows_added_or_changed": 2,
+   "sample": []
+  },
+  "rules": {
+   "rows_changed_or_removed": 0,
+   "rows_added_or_changed": 1,
+   "sample": []
+  },
+  "shipment_lines": {
+   "rows_changed_or_removed": 0,
+   "rows_added_or_changed": 1,
+   "sample": []
+  },
+  "shipments": {
+   "rows_changed_or_removed": 0,
+   "rows_added_or_changed": 1,
+   "sample": []
+  },
+  "warehouse_scans": {
+   "rows_changed_or_removed": 0,
+   "rows_added_or_changed": 5,
+   "sample": []
+  }
+ },
+ "note": "Main database, every table, new build against the build of e2ebd87. Left out: tables the test scripts write to after the build (access_log, agent_changes, proposals, rule_replays, connections, sqlite_sequence). documents: the 2,342 changed rows are honey ship notices (856, resends included) and receiving advices (861), changed in X12 text and readable body only (the lot and best-before date); the other 16 are new. calendar: the seven rows after P26 move one place."
+}

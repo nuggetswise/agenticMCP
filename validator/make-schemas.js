@@ -70,7 +70,7 @@ const SET = {
   865: ['BCA!', 'REF+', L('POC!+', L('ACK+')), 'CTT'],
   856: ['BSN!', L('HL!+', 'LIN', 'SN1', 'PRF', 'TD1+', 'TD5+', 'REF+', 'MAN+', 'DTM+', L('N1+')), 'CTT'],
   810: ['BIG!', 'REF+', L('N1+'), 'ITD+', L('IT1!+'), 'TDS!', 'CTT'],
-  861: ['BRA!', 'REF+', 'DTM+', 'PRF', L('N1+'), L('RCD!+', 'LIN+', 'MAN+')],
+  861: ['BRA!', 'REF+', 'DTM+', 'PRF', L('N1+'), L('RCD!+', 'LIN+', 'REF+', 'DTM+', 'MAN+')], // REF*LT and DTM*036 under a food line (P26)
   824: ['BGN!', L('OTI!+', L('TED+', 'NTE+'))],
   997: ['AK1!', L('AK2+', L('AK3+', 'AK4+'), 'AK5!'), 'AK9!'],
   820: ['BPR!', 'TRN', L('N1+'), L('ENT+', L('RMR+', 'REF+', L('ADX+', 'NTE+')))],

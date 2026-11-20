@@ -374,6 +374,16 @@
    ]
   },
   {
+   "id": "NF-4.17",
+   "owner": "Northfield",
+   "statement": "Every food carton on a ship notice carries a lot and a best-before date; a ship notice with cartons that carry neither is charged",
+   "implements": [],
+   "charge": "LT01 $150 per ship notice plus $5 per carton without a lot",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
    "id": "GS1-1",
    "owner": "Industry standard",
    "statement": "Every item number has the length and check digit GS1 sets: 12 digits for a UPC, 14 for a case GTIN, the last digit a check digit",

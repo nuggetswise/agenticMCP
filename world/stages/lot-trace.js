@@ -30,6 +30,7 @@ import { et } from '../lib.js';
 import { D } from '../log.js';
 import { ITEM } from '../ref.js';
 import { lotOf } from '../lots.js';
+import { generateSecondHold } from './lot-hold.js';
 
 const day = (d, hm) => et(d, hm);
 const PRIYA = 'Priya Raman';
@@ -100,6 +101,9 @@ function generate(L, ctx) {
   ev(L, AT.departed, 'wms.departure_scan', P26_PO, KIN, { shipment, carrier: 'Lakeline Freight' });
   D.asn(L, ORDER, AT.sent, { ref: doc, shippedAt: AT.departed, deliveryDate: '2027-01-19', site: 'KIN-JOL', cartons });
   D.receipt(L, ORDER, AT.received, { ref: `RCV-DC2-${P26_PO.slice(3)}`, asnRef: doc, qty: { 1: 60 } });
+
+  // The second hold (owner decision, 20 November 2026, second pass): world/stages/lot-hold.js.
+  generateSecondHold(L, ctx);
 }
 
 export default {

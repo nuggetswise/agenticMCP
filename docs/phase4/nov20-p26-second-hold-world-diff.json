@@ -1,0 +1,942 @@
+{
+ "base": "91d6772",
+ "tables": {
+  "tg.adjustments": {
+   "base_rows": 121,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.calendar": {
+   "base_rows": 17,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.carrier_events": {
+   "base_rows": 1944,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.carrier_rates": {
+   "base_rows": 4,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.carton_lots": {
+   "base_rows": 17256,
+   "changed_or_lost": 0,
+   "added": 36
+  },
+  "tg.cartons": {
+   "base_rows": 57147,
+   "changed_or_lost": 0,
+   "added": 48
+  },
+  "tg.catalogue_records": {
+   "base_rows": 4,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.credit_debit_adjustments": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.credit_debit_lines": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.deal_settlements": {
+   "base_rows": 5,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.deals": {
+   "base_rows": 5,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.deduction_repayments": {
+   "base_rows": 18,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.document_links": {
+   "base_rows": 37442,
+   "changed_or_lost": 6,
+   "added": 13
+  },
+  "tg.documents": {
+   "base_rows": 38400,
+   "changed_or_lost": 12,
+   "added": 20,
+   "rebaselined": "D80: Kinross Groveport stock of ASH-MUG-12 at the 8 December inventory read moves from 520 to 590, against 619 ordered on three named orders (was 640 on three unnamed orders). Only this read, the stock positions pinned to it and the inventory advice that reports them move; no order, shipment, invoice or charge changes (docs/phase4/p5-world-diff.json). 17 November 2026 (call 140): ASN-450118-1 is sent at 18:20 ET on 6 November, after the 17:30 load scan and the 18:00 departure, and its 997 follows; both keep their control numbers. Ship notices and receiving advice added for other suppliers are new rows only. 18 November 2026 (call 152): application advice AA-INV-7731 is sent at 09:04 ET on 10 November on Jordan Ellis's approval and rejects lines 1 and 2; its 997 follows; both keep their control numbers. The routing request, routing instructions, four store activity reports and their 997s are new rows only (docs/phase4/nov18-fixes-world-diff.json). 20 November 2026: Northfield's January chargeback batch (world/stages/compliance.js) takes 27 compliance deductions on remittance PMT-990170 of Friday 8 January 2027, so that remittance's paid amounts and its 820 change; no other remittance, invoice, order, shipment, receipt or case changes, and every other record the stage adds is a new row (docs/phase4/nov20-compliance-world-diff.json)."
+  },
+  "tg.draft_rules": {
+   "base_rows": 15,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.errors": {
+   "base_rows": 59,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.events": {
+   "base_rows": 9790,
+   "changed_or_lost": 11,
+   "added": 21,
+   "rebaselined": "D80: Kinross Groveport stock of ASH-MUG-12 at the 8 December inventory read moves from 520 to 590, against 619 ordered on three named orders (was 640 on three unnamed orders). Only this read, the stock positions pinned to it and the inventory advice that reports them move; no order, shipment, invoice or charge changes (docs/phase4/p5-world-diff.json). 17 November 2026 (calls 139 to 141): the channel label of Lakeline's bill of lading and delivery receipt records changes from Scanned document to Portal API, image (every value kept); the hold on the ASN-450118-1 draft names Priya Raman and is released at 18:20; two store recommendations and three promotion disputes are credited to a rule set instead of an agent. No id, time or other value moves (docs/phase4/nov17-fixes-world-diff.json). 18 November 2026 (calls 147, 150, 151): the 15:00 missed-pickup records for NR-46602, NR-46609 and NR-46616 are withdrawn (replaced by Lakeline's 14:45 arrival and 15:30 missed pickup, EDI 214); the 2 November store 207 recommendation is withdrawn (recorded once, on 26 October); store 114's recommendation drops store 207 and sent_to; invoice draft INV-8012 reads 176 to ship. No other id, time or value moves (docs/phase4/nov18-fixes-world-diff.json)."
+  },
+  "tg.finding_actions": {
+   "base_rows": 1044,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.findings": {
+   "base_rows": 319,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.forecast_lines": {
+   "base_rows": 288,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.forecasts": {
+   "base_rows": 6,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.freight_invoices": {
+   "base_rows": 580,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.freight_terms": {
+   "base_rows": 5,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.invoice_lines": {
+   "base_rows": 4323,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.invoices": {
+   "base_rows": 2378,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.item_prices": {
+   "base_rows": 12,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.item_setup_messages": {
+   "base_rows": 13,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.item_versions": {
+   "base_rows": 12,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.items": {
+   "base_rows": 80,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.loads": {
+   "base_rows": 1083,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.location_versions": {
+   "base_rows": 44,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.locations": {
+   "base_rows": 71,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.order_changes": {
+   "base_rows": 13,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.order_lines": {
+   "base_rows": 4370,
+   "changed_or_lost": 0,
+   "added": 2
+  },
+  "tg.order_status": {
+   "base_rows": 40,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.orders": {
+   "base_rows": 2410,
+   "changed_or_lost": 0,
+   "added": 1
+  },
+  "tg.packaging_levels": {
+   "base_rows": 37,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.parties": {
+   "base_rows": 29,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.people": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.planning_periods": {
+   "base_rows": 6,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.receipt_lots": {
+   "base_rows": 1161,
+   "changed_or_lost": 0,
+   "added": 1
+  },
+  "tg.receipts": {
+   "base_rows": 4361,
+   "changed_or_lost": 0,
+   "added": 2
+  },
+  "tg.receiving_discrepancies": {
+   "base_rows": 92,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.remittance_items": {
+   "base_rows": 1673,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.return_authorisations": {
+   "base_rows": 3,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.return_lines": {
+   "base_rows": 3,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.review_notes": {
+   "base_rows": 49,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.routing_requests": {
+   "base_rows": 503,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.rule_sets": {
+   "base_rows": 5,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.rule_versions": {
+   "base_rows": 147,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.rules": {
+   "base_rows": 85,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.shipment_lines": {
+   "base_rows": 4402,
+   "changed_or_lost": 0,
+   "added": 2
+  },
+  "tg.shipment_plans": {
+   "base_rows": 1896,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.shipment_status": {
+   "base_rows": 4364,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.shipments": {
+   "base_rows": 2441,
+   "changed_or_lost": 0,
+   "added": 1
+  },
+  "tg.stock_positions": {
+   "base_rows": 1197,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.stock_transfers": {
+   "base_rows": 7,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.store_activity": {
+   "base_rows": 240,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.supplier_item_records": {
+   "base_rows": 9,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.transfer_lines": {
+   "base_rows": 21,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.transfer_stock_moves": {
+   "base_rows": 36,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.warehouse_orders": {
+   "base_rows": 1010,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "tg.warehouse_scans": {
+   "base_rows": 3851,
+   "changed_or_lost": 4,
+   "added": 7
+  },
+  "ashby.adjustments": {
+   "base_rows": 79,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.calendar": {
+   "base_rows": 17,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.carrier_events": {
+   "base_rows": 1944,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.carrier_rates": {
+   "base_rows": 4,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.carton_lots": {
+   "base_rows": 17256,
+   "changed_or_lost": 0,
+   "added": 36
+  },
+  "ashby.cartons": {
+   "base_rows": 57147,
+   "changed_or_lost": 0,
+   "added": 48
+  },
+  "ashby.catalogue_records": {
+   "base_rows": 4,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.credit_debit_adjustments": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.credit_debit_lines": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.deal_settlements": {
+   "base_rows": 5,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.deals": {
+   "base_rows": 4,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.deduction_repayments": {
+   "base_rows": 18,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.document_links": {
+   "base_rows": 32455,
+   "changed_or_lost": 6,
+   "added": 13
+  },
+  "ashby.documents": {
+   "base_rows": 32920,
+   "changed_or_lost": 12,
+   "added": 20,
+   "rebaselined": "D80: Kinross Groveport stock of ASH-MUG-12 at the 8 December inventory read moves from 520 to 590, against 619 ordered on three named orders (was 640 on three unnamed orders). Only this read, the stock positions pinned to it and the inventory advice that reports them move; no order, shipment, invoice or charge changes (docs/phase4/p5-world-diff.json). 17 November 2026 (call 140): ASN-450118-1 is sent at 18:20 ET on 6 November, after the 17:30 load scan and the 18:00 departure, and its 997 follows; both keep their control numbers. Ship notices and receiving advice added for other suppliers are new rows only. 18 November 2026 (call 152): application advice AA-INV-7731 is sent at 09:04 ET on 10 November on Jordan Ellis's approval and rejects lines 1 and 2; its 997 follows; both keep their control numbers. The routing request, routing instructions, four store activity reports and their 997s are new rows only (docs/phase4/nov18-fixes-world-diff.json). 20 November 2026: Northfield's January chargeback batch (world/stages/compliance.js) takes 27 compliance deductions on remittance PMT-990170 of Friday 8 January 2027, so that remittance's paid amounts and its 820 change; no other remittance, invoice, order, shipment, receipt or case changes, and every other record the stage adds is a new row (docs/phase4/nov20-compliance-world-diff.json)."
+  },
+  "ashby.errors": {
+   "base_rows": 57,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.events": {
+   "base_rows": 9532,
+   "changed_or_lost": 10,
+   "added": 20,
+   "rebaselined": "D80: Kinross Groveport stock of ASH-MUG-12 at the 8 December inventory read moves from 520 to 590, against 619 ordered on three named orders (was 640 on three unnamed orders). Only this read, the stock positions pinned to it and the inventory advice that reports them move; no order, shipment, invoice or charge changes (docs/phase4/p5-world-diff.json). 17 November 2026 (calls 139 to 141): the channel label of Lakeline's bill of lading and delivery receipt records changes from Scanned document to Portal API, image (every value kept); the hold on the ASN-450118-1 draft names Priya Raman and is released at 18:20; two store recommendations and three promotion disputes are credited to a rule set instead of an agent. No id, time or other value moves (docs/phase4/nov17-fixes-world-diff.json). 18 November 2026 (calls 147, 150, 151): the 15:00 missed-pickup records for NR-46602, NR-46609 and NR-46616 are withdrawn (replaced by Lakeline's 14:45 arrival and 15:30 missed pickup, EDI 214); the 2 November store 207 recommendation is withdrawn (recorded once, on 26 October); store 114's recommendation drops store 207 and sent_to; invoice draft INV-8012 reads 176 to ship. No other id, time or value moves (docs/phase4/nov18-fixes-world-diff.json)."
+  },
+  "ashby.finding_actions": {
+   "base_rows": 606,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.findings": {
+   "base_rows": 195,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.forecast_lines": {
+   "base_rows": 288,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.forecasts": {
+   "base_rows": 6,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.freight_invoices": {
+   "base_rows": 580,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.freight_terms": {
+   "base_rows": 5,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.invoice_lines": {
+   "base_rows": 3733,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.invoices": {
+   "base_rows": 1912,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.item_prices": {
+   "base_rows": 10,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.item_setup_messages": {
+   "base_rows": 13,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.item_versions": {
+   "base_rows": 10,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.items": {
+   "base_rows": 8,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.loads": {
+   "base_rows": 1083,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.location_versions": {
+   "base_rows": 44,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.locations": {
+   "base_rows": 46,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.order_changes": {
+   "base_rows": 8,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.order_lines": {
+   "base_rows": 3740,
+   "changed_or_lost": 0,
+   "added": 2
+  },
+  "ashby.order_status": {
+   "base_rows": 40,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.orders": {
+   "base_rows": 1917,
+   "changed_or_lost": 0,
+   "added": 1
+  },
+  "ashby.packaging_levels": {
+   "base_rows": 30,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.parties": {
+   "base_rows": 4,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.people": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.planning_periods": {
+   "base_rows": 6,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.receipt_lots": {
+   "base_rows": 1161,
+   "changed_or_lost": 0,
+   "added": 1
+  },
+  "ashby.receipts": {
+   "base_rows": 3733,
+   "changed_or_lost": 0,
+   "added": 2
+  },
+  "ashby.receiving_discrepancies": {
+   "base_rows": 92,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.remittance_items": {
+   "base_rows": 1366,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.return_authorisations": {
+   "base_rows": 3,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.return_lines": {
+   "base_rows": 3,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.routing_requests": {
+   "base_rows": 503,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.rule_sets": {
+   "base_rows": 5,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.rule_versions": {
+   "base_rows": 147,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.rules": {
+   "base_rows": 85,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.shipment_lines": {
+   "base_rows": 3733,
+   "changed_or_lost": 0,
+   "added": 2
+  },
+  "ashby.shipment_plans": {
+   "base_rows": 1896,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.shipment_status": {
+   "base_rows": 4364,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.shipments": {
+   "base_rows": 1913,
+   "changed_or_lost": 0,
+   "added": 1
+  },
+  "ashby.stock_positions": {
+   "base_rows": 1197,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.stock_transfers": {
+   "base_rows": 7,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.store_activity": {
+   "base_rows": 240,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.supplier_item_records": {
+   "base_rows": 9,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.transfer_lines": {
+   "base_rows": 21,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.transfer_stock_moves": {
+   "base_rows": 36,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.warehouse_orders": {
+   "base_rows": 1010,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "ashby.warehouse_scans": {
+   "base_rows": 3851,
+   "changed_or_lost": 4,
+   "added": 7
+  },
+  "northfield.adjustments": {
+   "base_rows": 121,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.calendar": {
+   "base_rows": 17,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.carrier_events": {
+   "base_rows": 66,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.carrier_rates": {
+   "base_rows": 0,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.carton_lots": {
+   "base_rows": 17256,
+   "changed_or_lost": 0,
+   "added": 36
+  },
+  "northfield.cartons": {
+   "base_rows": 57147,
+   "changed_or_lost": 0,
+   "added": 48
+  },
+  "northfield.catalogue_records": {
+   "base_rows": 4,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.credit_debit_adjustments": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.credit_debit_lines": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.deal_settlements": {
+   "base_rows": 5,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.deals": {
+   "base_rows": 5,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.deduction_repayments": {
+   "base_rows": 18,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.document_links": {
+   "base_rows": 26771,
+   "changed_or_lost": 6,
+   "added": 13
+  },
+  "northfield.documents": {
+   "base_rows": 30328,
+   "changed_or_lost": 12,
+   "added": 20,
+   "rebaselined": "17 November 2026 (call 140): ASN-450118-1 is sent at 18:20 ET on 6 November, after the 17:30 load scan and the 18:00 departure, and its 997 follows; both keep their control numbers. Ship notices and receiving advice added for other suppliers are new rows only. 18 November 2026 (call 152): application advice AA-INV-7731 is sent at 09:04 ET on 10 November on Jordan Ellis's approval and rejects lines 1 and 2; its 997 follows; both keep their control numbers. The routing request, routing instructions, four store activity reports and their 997s are new rows only (docs/phase4/nov18-fixes-world-diff.json). 20 November 2026: Northfield's January chargeback batch (world/stages/compliance.js) takes 27 compliance deductions on remittance PMT-990170 of Friday 8 January 2027, so that remittance's paid amounts and its 820 change; no other remittance, invoice, order, shipment, receipt or case changes, and every other record the stage adds is a new row (docs/phase4/nov20-compliance-world-diff.json)."
+  },
+  "northfield.draft_rules": {
+   "base_rows": 15,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.errors": {
+   "base_rows": 59,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.events": {
+   "base_rows": 464,
+   "changed_or_lost": 1,
+   "added": 1,
+   "rebaselined": "17 November 2026 (calls 139 to 141): the channel label of Lakeline's bill of lading and delivery receipt records changes from Scanned document to Portal API, image (every value kept); the hold on the ASN-450118-1 draft names Priya Raman and is released at 18:20; two store recommendations and three promotion disputes are credited to a rule set instead of an agent. No id, time or other value moves (docs/phase4/nov17-fixes-world-diff.json). 18 November 2026 (calls 147, 152): the three 15:00 missed-pickup records are replaced as on Ashby's side, and the application advice events move with AA-INV-7731. No other id, time or value moves (docs/phase4/nov18-fixes-world-diff.json)."
+  },
+  "northfield.finding_actions": {
+   "base_rows": 438,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.findings": {
+   "base_rows": 124,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.forecast_lines": {
+   "base_rows": 288,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.forecasts": {
+   "base_rows": 6,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.freight_invoices": {
+   "base_rows": 0,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.freight_terms": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.invoice_lines": {
+   "base_rows": 4323,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.invoices": {
+   "base_rows": 2378,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.item_prices": {
+   "base_rows": 12,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.item_setup_messages": {
+   "base_rows": 13,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.item_versions": {
+   "base_rows": 12,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.items": {
+   "base_rows": 80,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.loads": {
+   "base_rows": 0,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.location_versions": {
+   "base_rows": 44,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.locations": {
+   "base_rows": 71,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.order_changes": {
+   "base_rows": 13,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.order_lines": {
+   "base_rows": 4370,
+   "changed_or_lost": 0,
+   "added": 2
+  },
+  "northfield.order_status": {
+   "base_rows": 40,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.orders": {
+   "base_rows": 2410,
+   "changed_or_lost": 0,
+   "added": 1
+  },
+  "northfield.packaging_levels": {
+   "base_rows": 37,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.parties": {
+   "base_rows": 27,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.people": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.planning_periods": {
+   "base_rows": 6,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.receipt_lots": {
+   "base_rows": 1161,
+   "changed_or_lost": 0,
+   "added": 1
+  },
+  "northfield.receipts": {
+   "base_rows": 4361,
+   "changed_or_lost": 0,
+   "added": 2
+  },
+  "northfield.receiving_discrepancies": {
+   "base_rows": 92,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.remittance_items": {
+   "base_rows": 1673,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.return_authorisations": {
+   "base_rows": 3,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.return_lines": {
+   "base_rows": 3,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.review_notes": {
+   "base_rows": 49,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.routing_requests": {
+   "base_rows": 503,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.rule_sets": {
+   "base_rows": 2,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.rule_versions": {
+   "base_rows": 124,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.rules": {
+   "base_rows": 62,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.shipment_lines": {
+   "base_rows": 4402,
+   "changed_or_lost": 0,
+   "added": 2
+  },
+  "northfield.shipment_plans": {
+   "base_rows": 0,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.shipment_status": {
+   "base_rows": 0,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.shipments": {
+   "base_rows": 2441,
+   "changed_or_lost": 0,
+   "added": 1
+  },
+  "northfield.stock_positions": {
+   "base_rows": 0,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.stock_transfers": {
+   "base_rows": 0,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.store_activity": {
+   "base_rows": 240,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.supplier_item_records": {
+   "base_rows": 0,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.transfer_lines": {
+   "base_rows": 0,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.transfer_stock_moves": {
+   "base_rows": 0,
+   "changed_or_lost": 0,
+   "added": 0
+  },
+  "northfield.warehouse_scans": {
+   "base_rows": 14,
+   "changed_or_lost": 0,
+   "added": 0
+  }
+ },
+ "summary": "175 of 186 base tables keep every row; 5 changed without a re-baseline"
+}

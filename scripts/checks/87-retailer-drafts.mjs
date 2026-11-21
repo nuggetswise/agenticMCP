@@ -9,7 +9,7 @@ export default function ({ nf, ok, eq, NR }) {
   // P25 (20 November 2026) ships on 13 January 2027, after P22's moment and so after the in-force date: it is the only
   // shipment that falls under change list 4, and it passes every draft (the replay to P22's moment fails as many as the whole replay).
   // P26 (20 November 2026) ships on 18 January 2027, the second shipment under change list 4; it passes every draft too.
-  eq('drafts.only_p25_and_p26_ship_on_or_after_the_in_force_date', nf.prepare('SELECT shipment_id FROM shipments WHERE shipped_at >= ? ORDER BY shipment_id').all('2027-01-04T05:00:00.000Z').map((r) => r.shipment_id), ['ASN-47300', 'ASN-47400']);
+  eq('drafts.only_p25_and_p26_ship_on_or_after_the_in_force_date', nf.prepare('SELECT shipment_id FROM shipments WHERE shipped_at >= ? ORDER BY shipment_id').all('2027-01-04T05:00:00.000Z').map((r) => r.shipment_id), ['ASN-47300', 'ASN-47400', 'ASN-47403']);
   { const p22 = nf.prepare("SELECT as_of FROM calendar WHERE id = 'P22'").get().as_of; const fails = (x) => x.failing_with_draft ?? x.failing_now ?? null;
     eq('drafts.p25_shipment_passes_every_draft', drafts.filter((d) => fails(NR.replayRule(nf, { draft: d.id })) !== fails(NR.replayRule(nf, { draft: d.id, as_of: p22 }))).map((d) => d.id), []); }
   eq('drafts.nfd1_nfd2_still_drafts', drafts.filter((d) => ['NFD-1', 'NFD-2'].includes(d.id)).map((d) => d.state), ['Draft', 'Draft']);

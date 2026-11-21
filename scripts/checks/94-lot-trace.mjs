@@ -3,13 +3,14 @@
 // corrected ship notice, the receiving advice, the recalled lot's reach by DC, and nothing dated before P25's last record.
 import { lotOf } from '../../world/lots.js';
 import { P26_LOT, RECALLED, lotCharge } from '../../world/stages/lot-trace.js';
+import { P26_SECOND } from '../../world/stages/lot-hold.js';
 import * as NR from '../../src/retailer.js';
 
 export default function ({ db, ash, nf, ok, eq, none, n }) {
   const P25_AT = db.prepare("SELECT as_of FROM calendar WHERE id = 'P25'").get().as_of;
   const cal = db.prepare("SELECT * FROM calendar WHERE id = 'P26'").get();
   eq('p26.calendar_row', [cal?.stage, cal?.seen_by, cal?.anchor, cal?.as_of > P25_AT], ['Fulfillment', 'Priya Raman, then Jordan Ellis', 'NR-47400', true]);
-  const POS = "('NR-47400','NR-47407','NR-47414')";
+  const POS = "('NR-47400','NR-47403','NR-47407','NR-47414')";
   const LAST = db.prepare("SELECT max(sent_at) t FROM documents WHERE po IN ('NR-47300','NR-47304','NR-47311','NR-47318')").get().t;
   none('p26.no_record_before_p25_ends', `SELECT doc_id FROM documents WHERE po IN ${POS} AND sent_at <= '${LAST}' UNION ALL SELECT id FROM events WHERE id >= 6000001 AND at <= '${LAST}'`);
 
@@ -41,9 +42,22 @@ export default function ({ db, ash, nf, ok, eq, none, n }) {
   eq('p26.sent_ship_notice', [n("SELECT count(*) n FROM carton_lots WHERE shipment_id = 'ASN-47400' AND lot = ?".replace('?', `'${P26_LOT.lot}'`)), n("SELECT count(*) n FROM documents WHERE reference = 'ASN-47400' AND doc_type = '856'"),
     db.prepare("SELECT (julianday(sent_at) - julianday(shipped_at)) * 24 < 1 ok FROM shipments WHERE shipment_id = 'ASN-47400'").get().ok], [60, 1, 1]);
   eq('p26.receipt_matches', db.prepare("SELECT r.qty qty, r.short short, x.lot lot FROM receipts r JOIN receipt_lots x ON x.receipt = r.receipt AND x.line = r.line WHERE r.receipt = 'RCV-DC2-47400'").all().map((r) => `${r.qty} ${r.short} ${r.lot}`), [`60 0 ${P26_LOT.lot}`]);
-  none('p26.no_lot_charge', "SELECT po FROM adjustments WHERE po IN ('NR-47400','NR-47407','NR-47414') UNION ALL SELECT po FROM events WHERE kind = 'case.opened' AND po IN ('NR-47400','NR-47407','NR-47414')");
+  none('p26.no_lot_charge', `SELECT po FROM adjustments WHERE po IN ${POS} UNION ALL SELECT po FROM events WHERE kind = 'case.opened' AND po IN ${POS}`);
   // The open orders are allocated from the same lot and have not shipped.
-  eq('p26.open_orders_same_lot_not_shipped', db.prepare("SELECT po, data FROM events WHERE kind = 'wms.lot_allocation' AND po <> 'NR-47400' ORDER BY po").all().map((e) => `${e.po} ${JSON.parse(e.data).lot} ${n(`SELECT count(*) n FROM shipments WHERE po = '${e.po}'`)}`), [`NR-47407 ${P26_LOT.lot} 0`, `NR-47414 ${P26_LOT.lot} 0`]);
+  eq('p26.open_orders_same_lot_not_shipped', db.prepare(`SELECT po, data FROM events WHERE kind = 'wms.lot_allocation' AND po NOT IN ('NR-47400', '${P26_SECOND}') ORDER BY po`).all().map((e) => `${e.po} ${JSON.parse(e.data).lot} ${n(`SELECT count(*) n FROM shipments WHERE po = '${e.po}'`)}`), [`NR-47407 ${P26_LOT.lot} 0`, `NR-47414 ${P26_LOT.lot} 0`]);
+
+  // The second hold: a mixed honey and napkin order to DC 4. The lot is on every honey carton and the best-before date on
+  // none, because Ashby's ship notice map leaves it off on a ship notice with more than one item. Owner EDI operations.
+  const h2 = JSON.parse(db.prepare('SELECT data FROM events WHERE kind = ? AND po = ?').get('tg.hold', P26_SECOND).data); const f2 = h2.findings[0];
+  eq('p26.second_hold', [h2.findings.length, h2.sent_to_northfield, f2.rule, f2.cartons.length, f2.cartons_checked, f2.owner, f2.fix_in, f2.exposure_estimate, lotCharge(36)], [1, false, 'NF-4.17', 36, 36, 'EDI operations', 'Ashby’s ship notice map', 330, 330]);
+  const v2 = db.prepare("SELECT data FROM events WHERE kind = 'erp.ship_notice' AND po = ? ORDER BY at").all(P26_SECOND).map((e) => JSON.parse(e.data));
+  eq('p26.second_first_version_has_lots_and_no_dates', v2.map((x) => [x.version, x.carton_lots.filter((c) => !c.lot).length, x.carton_lots.filter((c) => !c.best_before).length]), [[1, 0, 36], [2, 0, 0]]);
+  ok('p26.second_hold_open_at_the_moment', db.prepare('SELECT at FROM events WHERE kind = ? AND po = ?').get('tg.hold', P26_SECOND).at < cal.as_of && db.prepare("SELECT min(at) t FROM events WHERE kind = 'erp.correction' AND po = ?").get(P26_SECOND).t > cal.as_of);
+  const seq2 = db.prepare("SELECT kind FROM events WHERE po = ? AND id >= 6000001 AND at >= (SELECT at FROM events WHERE kind = 'tg.hold' AND po = ?) ORDER BY at").all(P26_SECOND, P26_SECOND).map((e) => e.kind);
+  eq('p26.second_fix_then_corrected_notice_then_check_then_release', seq2, ['tg.hold', 'erp.correction', 'erp.ship_notice', 'tg.check', 'approval', 'wms.departure_scan']);
+  eq('p26.second_receipt_matches', db.prepare("SELECT r.line line, r.qty qty, r.short short FROM receipts r WHERE r.receipt = 'RCV-DC4-47403' ORDER BY r.line").all().map((r) => `${r.line} ${r.qty} ${r.short}`), ['1 36 0', '2 12 0']);
+  eq('p26.second_sent_ship_notice_carries_lot_and_date', n(`SELECT count(*) n FROM carton_lots WHERE shipment_id = 'ASN-47403' AND lot = '${P26_LOT.lot}' AND best_before = '${P26_LOT.best_before}'`), 36);
+  ok('p26.map_change_ashby_only', ash.prepare("SELECT count(*) n FROM events WHERE kind = 'erp.map_change'").get().n === 1 && nf.prepare("SELECT count(*) n FROM events WHERE kind = 'erp.map_change'").get().n === 0);
 
   // Recall reach: the recalled lot, by DC, each row traced to its receiving advice; more than one DC; other lots listed.
   const at = new Date(cal.as_of); const r = NR.lotReach(nf, { lot: RECALLED.lot, asOf: at });

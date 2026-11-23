@@ -416,7 +416,9 @@
    ],
    "capability_status": "planned",
    "owner": "Unassigned",
-   "tools_northfield": [],
+   "tools_northfield": [
+    "store_sell_through"
+   ],
    "ends_at": "The next store activity report showing the shelf refilled"
   },
   {

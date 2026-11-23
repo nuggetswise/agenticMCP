@@ -25,7 +25,8 @@ CREATE TABLE remittance_items (payment TEXT NOT NULL, paid_at TEXT NOT NULL, pay
 CREATE TABLE adjustments (payment TEXT NOT NULL, paid_at TEXT NOT NULL, payee_id TEXT NOT NULL REFERENCES parties(id), invoice TEXT NOT NULL REFERENCES invoices(invoice), po TEXT REFERENCES orders(po), amount REAL NOT NULL, reason TEXT, reference TEXT, note TEXT);
 CREATE TABLE errors (error_id TEXT PRIMARY KEY, doc_id TEXT NOT NULL REFERENCES documents(doc_id), reported_by TEXT NOT NULL REFERENCES documents(doc_id), channel TEXT NOT NULL, code TEXT, cause TEXT NOT NULL, field TEXT, sent_value TEXT, allowed TEXT, rule_id TEXT REFERENCES rules(id), status TEXT NOT NULL, corrected_by TEXT REFERENCES documents(doc_id));
 CREATE TABLE warehouse_orders (ref TEXT PRIMARY KEY, po TEXT NOT NULL REFERENCES orders(po), site TEXT REFERENCES locations(id), sent_at TEXT NOT NULL, advice_at TEXT, shipped_at TEXT);
-CREATE TABLE store_activity (period_start TEXT NOT NULL, period_end TEXT NOT NULL, sent_at TEXT NOT NULL, sku TEXT NOT NULL REFERENCES items(sku), store TEXT NOT NULL REFERENCES locations(store_number), sold INTEGER NOT NULL, on_hand INTEGER NOT NULL);
+CREATE TABLE store_activity (period_start TEXT NOT NULL, period_end TEXT NOT NULL, sent_at TEXT NOT NULL, sku TEXT NOT NULL REFERENCES items(sku), store TEXT NOT NULL REFERENCES locations(store_number), sold INTEGER NOT NULL, on_hand INTEGER NOT NULL,
+  received INTEGER, transfer_in INTEGER, transfer_out INTEGER); -- 852 QR and QZ (23 November 2026); null where a report carries none
 -- Records that do not travel as EDI: Supplier ERP postings, warehouse scans, carrier documents, case entries, phone calls.
 CREATE TABLE events (id INTEGER PRIMARY KEY, at TEXT NOT NULL, kind TEXT NOT NULL, po TEXT, system TEXT NOT NULL, party TEXT NOT NULL, channel TEXT NOT NULL, data TEXT NOT NULL);
 

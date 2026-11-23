@@ -108,12 +108,17 @@
   {
    "id": "NF-1.4",
    "owner": "Northfield",
-   "statement": "Send the order acknowledgment within 24 hours of the purchase order",
+   "statement": "Send the order acknowledgment within 24 hours of the purchase order; a missing or late acknowledgment is charged",
    "implements": [],
-   "charge": "",
-   "basis": "Invented",
-   "source": "",
-   "links": []
+   "charge": "$100 per order",
+   "basis": "Adapted",
+   "source": "SPS Commerce: Compliance Tips for New Ulta Beauty Vendors",
+   "links": [
+    {
+     "title": "SPS Commerce: Compliance Tips for New Ulta Beauty Vendors",
+     "url": "https://www.spscommerce.com/community/articles/compliance-tips-for-new-ulta-beauty-vendors"
+    }
+   ]
   },
   {
    "id": "NF-1.5",
@@ -255,12 +260,16 @@
   {
    "id": "NF-4.2",
    "owner": "Northfield",
-   "statement": "Send the ship notice within 1 hour of departure; a corrected ship notice must be received before the shipment reaches the DC",
+   "statement": "Send the ship notice within 1 hour of departure; a corrected ship notice must be received before the shipment reaches the DC; a missing or late ship notice is charged",
    "implements": [],
-   "charge": "",
+   "charge": "$7.50 per carton, $50 minimum per order",
    "basis": "Public, third-party summary",
-   "source": "Summary of the Dick’s Sporting Goods Domestic Vendor Routing and Supply Chain Guide (February 2025); Amazon North American Vendor Shipment Preparation and Transportation Manual, 2016 Q2; Specialty Retailers (Gordmans) Vendor Routing and Compliance Manual, effective 1 March 2018; DXL Group Branded and Footwear Vendor Manual, 28 March 2025",
+   "source": "Designer Brands (DSW Canada) Vendor Chargeback Policy, 27 March 2023; Summary of the Dick’s Sporting Goods Domestic Vendor Routing and Supply Chain Guide (February 2025); Amazon North American Vendor Shipment Preparation and Transportation Manual, 2016 Q2; Specialty Retailers (Gordmans) Vendor Routing and Compliance Manual, effective 1 March 2018; DXL Group Branded and Footwear Vendor Manual, 28 March 2025",
    "links": [
+    {
+     "title": "Designer Brands (DSW Canada) Vendor Chargeback Policy, 27 March 2023",
+     "url": "https://images.dsw.ca/is/content/dswca/S2_0_Vendor_Chargeback_Policy_03272023"
+    },
     {
      "title": "Summary of the Dick’s Sporting Goods Domestic Vendor Routing and Supply Chain Guide (February 2025)",
      "url": "https://getproductiv.com/dicks-sporting-goods-compliance"
@@ -594,12 +603,16 @@
   {
    "id": "NF-7.9",
    "owner": "Northfield",
-   "statement": "Send the invoice within 2 days of shipment",
+   "statement": "Send the invoice within 2 days of shipment; a missing or late invoice is charged",
    "implements": [],
-   "charge": "",
+   "charge": "$100 per invoice",
    "basis": "Adapted",
-   "source": "Specialty Retailers (Gordmans) Vendor Routing and Compliance Manual, effective 1 March 2018; Summary of the Dick’s Sporting Goods Domestic Vendor Routing and Supply Chain Guide (February 2025)",
+   "source": "DXL Group Branded and Footwear Vendor Manual, 28 March 2025; Specialty Retailers (Gordmans) Vendor Routing and Compliance Manual, effective 1 March 2018; Summary of the Dick’s Sporting Goods Domestic Vendor Routing and Supply Chain Guide (February 2025)",
    "links": [
+    {
+     "title": "DXL Group Branded and Footwear Vendor Manual, 28 March 2025",
+     "url": "https://images.dxl.com/is/content/CasualMale/PDF/Branded_Vendor_manual_032825.pdf"
+    },
     {
      "title": "Specialty Retailers (Gordmans) Vendor Routing and Compliance Manual, effective 1 March 2018",
      "url": "https://mimage.opentext.com/alt_content/binary/businessnetwork/gordmans/Gordmans-Guide-2-14-18.pdf"
@@ -821,7 +834,7 @@
   {
    "id": "AP-1.4",
    "owner": "Ashby",
-   "statement": "Never edit a ship notice to match the order; correct the shipment or ask the buyer for an order change",
+   "statement": "Never edit a ship notice to match the order; correct the shipment",
    "implements": [
     "NF-1.6",
     "NF-4.5"
@@ -926,7 +939,7 @@
   {
    "id": "AP-3.2",
    "owner": "Ashby",
-   "statement": "Warehouse tasks, ERP writes, EDI to Northfield and email to Northfield need a person’s approval",
+   "statement": "Trading Grid sends only business documents to Northfield, each when a person presses its button; it sends no warehouse task, ERP write or email",
    "implements": [],
    "charge": "",
    "basis": "Adapted",

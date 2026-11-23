@@ -33,7 +33,7 @@ const PUBLISHED = { 'CAT-ASH-2026-01': '2026-02-23T19:00:00.000Z', [CATALOGUE_20
 const UPC = { 'ASH-TRL-09': upcOf('00016'), 'ASH-NAP-4': upcOf('00013'), 'ASH-SHT-M': upcOf('00019'), 'ASH-SHT-L': upcOf('00020'), 'ASH-SHT-XL': upcOf('00021') };
 /** Fields follow the catalogue export: product, item number and type, description, NRF colour and size, brand line. */
 export const CATALOGUE_RECORDS = [
-  { sku: 'ASH-TRL-09', product: 'Trail runner', description: 'Trail runner', colour_code: '001', colour: 'Black', size_code: '30001', size: 'One size', message: 'CAT-ASH-2026-01' },
+  { sku: 'ASH-TRL-09', product: 'Trail runner', description: 'Trail runner', colour_code: '001', colour: 'Black', size_code: '50555', size: '11 Medium', message: 'CAT-ASH-2026-01' }, // NRF size code from the GS1 US size code table (23 November 2026)
   { sku: 'ASH-NAP-4', product: 'Linen napkin 4-pack', description: 'Linen napkin 4-pack', colour_code: '260', colour: 'Ivory', size_code: '30001', size: 'One size', message: 'CAT-ASH-2026-01' },
   { sku: 'ASH-SHT-M', product: 'Shirt', description: 'Shirt', colour_code: '410', colour: 'Navy', size_code: '10970', size: 'Medium', message: CATALOGUE_2027 },
   { sku: 'ASH-SHT-L', product: 'Shirt', description: 'Shirt', colour_code: '410', colour: 'Navy', size_code: '10975', size: 'Large', message: CATALOGUE_2027 },

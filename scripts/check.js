@@ -236,7 +236,11 @@ ok('p9.store_activity', n("SELECT count(*) n FROM store_activity WHERE store = '
   // Round trip: the Money in Motion order records, written as X12, read back and rebuilt, equal the records the screen computes from.
   // The ship notices and receiving advice added after the fixture's last day (world/data/buyer-shipments.json) are part of each order's record.
   const later = JSON.parse(readFileSync(join(ROOT, 'world', 'data', 'buyer-shipments.json'), 'utf8')).ev; const whole = (p) => ({ ...p, ev: [...p.ev, ...(later[p.id] || [])] });
-  eq('p8.engine_equal', fx.pos.filter((p, i) => normOrder(whole(p)) !== normOrder(mine[i])).map((p) => p.id), []);
+  // 23 November 2026: the payments of the week's other disputes (world/stages/disputes-week.js, P6) fall after the fixture's
+  // last day, 23 November; they are new records outside the Money in Motion fixture, so the round trip leaves them out.
+  const weekPaid = new Set(db.prepare("SELECT invoice FROM remittance_items WHERE payment LIKE 'PMT-W%'").all().map((r) => r.invoice));
+  const own = (o) => (o ? { ...o, ev: o.ev.filter((e) => !(e[0] === 'pay' && weekPaid.has(e[2]))) } : o);
+  eq('p8.engine_equal', fx.pos.filter((p, i) => normOrder(whole(p)) !== normOrder(own(mine[i]))).map((p) => p.id), []);
   eq('buyer.no_overdue_order_with_neither_ship_notice_nor_receipt', db.prepare("SELECT o.po FROM orders o WHERE o.supplier_id <> 'ASHBY' AND o.requested_delivery <= '2026-12-26' AND o.order_value > 0 AND EXISTS (SELECT 1 FROM order_lines l WHERE l.po = o.po AND l.qty_ordered > 0) AND NOT EXISTS (SELECT 1 FROM shipments s WHERE s.po = o.po) AND NOT EXISTS (SELECT 1 FROM receipts r WHERE r.po = o.po)").all().map((r) => r.po), []);
   // Orders Northfield cancelled with an order change (every line at 0) count nowhere: not in a rate, not Open, not failing, not past due.
   { const canc = db.prepare("SELECT o.po FROM orders o WHERE o.supplier_id <> 'ASHBY' AND NOT EXISTS (SELECT 1 FROM order_lines l WHERE l.po = o.po AND l.qty_ordered > 0)").all().map((r) => r.po);

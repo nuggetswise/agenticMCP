@@ -196,8 +196,16 @@ function generate(L, { W, buyerShipments }) {
     // Every other store sold its usual weekly figure give or take two pairs, and held the stock it holds on 24 October.
     const WEEKS = [['2026-09-20', '2026-09-26', '2026-09-27'], ['2026-09-27', '2026-10-03', '2026-10-04'], ['2026-10-04', '2026-10-10', '2026-10-11'], ['2026-10-11', '2026-10-17', '2026-10-18']];
     const S114 = [[44, 136], [41, 95], [43, 52], [40, 12]], S207 = [[3, 60], [4, 56], [2, 54], [3, 51]], SWING = [2, -1, 1, -2];
+    // 23 November 2026 (rebuild plan Step 3, P9): units received (852 QR) per store per week, derived from the stock
+    // balances, with one set opening balance for the 20 to 26 September week. That week follows each store's pattern in
+    // the three weeks after it: stores 114 and 207 receive nothing (opening 180 and 63 pairs), and every other store
+    // receives what it sells, so it opens at the stock it holds. No transfers in these four weeks.
+    const OPENING = { 114: S114[0][0] + S114[0][1], 207: S207[0][0] + S207[0][1] };
     WEEKS.forEach(([from, to, sent], w) => L.doc({ batch: 2, type: '852', from: 'NORTHFIELD', to: 'ASHBY', at: et(sent, '06:10'), period_start: from, period_end: to, buyer_name: 'Northfield Retailer', buyer_gln: '0614141000050', vendor_name: 'Ashby Supplier', vendor_gln: '0614141002085',
-      items: [{ upc: '614141000166', sku: 'ASH-TRL-09', uom: 'EA', stores: W.storeWeeks.w1.map((r) => (r.n === 114 ? { store: '114', sold: S114[w][0], on_hand: S114[w][1] } : r.n === 207 ? { store: '207', sold: S207[w][0], on_hand: S207[w][1] } : { store: String(r.n), sold: r.avg + SWING[(w + r.n) % 4], on_hand: r.oh })) }] }));
+      items: [{ upc: '614141000166', sku: 'ASH-TRL-09', uom: 'EA', stores: W.storeWeeks.w1.map((r) => {
+        const [sold, oh] = r.n === 114 ? S114[w] : r.n === 207 ? S207[w] : [r.avg + SWING[(w + r.n) % 4], r.oh];
+        const prev = w === 0 ? (OPENING[r.n] ?? r.oh) : r.n === 114 ? S114[w - 1][1] : r.n === 207 ? S207[w - 1][1] : r.oh;
+        return { store: String(r.n), sold, on_hand: oh, received: oh - prev + sold, transfer_in: 0, transfer_out: 0 }; }) }] }));
   }
 
   // ---------- 9. P14 (10 November): Jordan Ellis approves the application advice ----------

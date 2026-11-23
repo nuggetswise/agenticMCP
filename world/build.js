@@ -24,13 +24,16 @@ export const X12_DIR = join(BUILD, 'x12');
  *  not the dates), each with its stage, opening time, anchor and who sees it. `seq` is the row's place in that table. */
 export const STAGE = { req: 'Partner requirements', ful: 'Fulfillment', sell: 'Sell-through and replenishment', inv: 'Invoice and payment', ded: 'Deductions and recovery', perf: 'Performance' };
 const PRIYA = 'Priya Raman', JORDAN = 'Jordan Ellis', BOTH = 'Priya Raman, then Jordan Ellis';
+// 23 November 2026 (rebuild plan, decisions of 23 November): P5 opens at 17:21 ET on 8 December, with Kinross's damage
+// scan (17:21) already on the page; P23 opens at 15:30 ET on 2 November, with order change 3 (13:05) and the Supplier ERP
+// stock read (15:30) already there. The rules still raise P5's findings at 17:12 (world/p5-physical.js, branch_at).
 export const CALENDAR = () => [
   { id: 'P2', stage: STAGE.req, week: 3, moment: 'Drop-ship and warehouse readiness', seen_by: PRIYA, prototype: 'P2 Programme Readiness', as_of: '2026-10-12T13:00:00.000Z', anchor: 'Drop-ship programme' },
   { id: 'P21', stage: STAGE.req, week: 8, moment: 'Each company sets its own rules and sees the effect of a change before it applies', seen_by: BOTH, prototype: 'P21 Admin and rules', as_of: '2026-11-17T16:00:00.000Z', anchor: "Both companies' rules" },
   { id: 'P15', stage: STAGE.req, week: 14, moment: 'A draft rule replayed against the quarter before publishing', seen_by: JORDAN, prototype: 'P15 Rule Replay', as_of: '2026-12-28T16:00:00.000Z', anchor: 'NFD-1' },
-  { id: 'P23', stage: STAGE.ful, week: 6, moment: 'Northfield changes an order twice before it ships; order change 3 arrives', seen_by: PRIYA, prototype: 'P23 Order change before shipment', as_of: '2026-11-02T18:05:00.000Z', anchor: 'NR-450118' },
+  { id: 'P23', stage: STAGE.ful, week: 6, moment: 'Northfield changes an order twice before it ships; order change 3 arrives', seen_by: PRIYA, prototype: 'P23 Order change before shipment', as_of: '2026-11-02T20:30:00.000Z', anchor: 'NR-450118' },
   { id: 'P13', stage: STAGE.ful, week: 8, moment: 'Silent order watch', seen_by: PRIYA, prototype: 'P13 Silent order watch', as_of: '2026-11-18T14:00:00.000Z', anchor: 'NR-46210 to NR-46231' },
-  { id: 'P5', stage: STAGE.ful, week: 11, moment: 'Five fulfilment risks before departure', seen_by: PRIYA, prototype: 'P5 Shipment Watch', as_of: '2026-12-08T22:12:00.000Z', anchor: 'NR-460207 to NR-460288' },
+  { id: 'P5', stage: STAGE.ful, week: 11, moment: 'Five fulfilment risks before departure', seen_by: PRIYA, prototype: 'P5 Shipment Watch', as_of: '2026-12-08T22:21:00.000Z', anchor: 'NR-460207 to NR-460288' },
   { id: 'P11', stage: STAGE.ful, week: 10, moment: 'A live ship notice held in NetSuite and corrected before it leaves', seen_by: PRIYA, prototype: 'P11 NetSuite Chargeback Avoidance', as_of: '2026-11-30T15:25:00.000Z', anchor: 'ASN-78260' },
   { id: 'P24', stage: STAGE.ful, week: 11, moment: 'Inbound orders that will miss their delivery window, seen before receipt', seen_by: JORDAN, prototype: 'P24 Inbound order risk', as_of: '2026-12-09T22:30:00.000Z', anchor: 'NR-46539 to NR-46616' },
   { id: 'P25', stage: STAGE.ful, week: 16, moment: 'A ship notice with three item numbers Northfield cannot match, checked before release', seen_by: PRIYA, prototype: 'P25 Catalogue data mismatch', as_of: '2027-01-13T19:05:00.000Z', anchor: 'NR-47300' },
@@ -192,7 +195,7 @@ function derive(files, events) {
     } else if (d.type === '945') {
       const w = T.warehouse_orders.find((x) => x.po === d.po); if (w) { w.advice_at = d.at; w.shipped_at = d.shipped_at; }
     } else if (d.type === '852') {
-      for (const it of d.items) for (const s of it.stores) T.store_activity.push({ period_start: d.period_start, period_end: d.period_end, sent_at: d.at, sku: it.sku, store: s.store, sold: s.sold, on_hand: s.on_hand });
+      for (const it of d.items) for (const s of it.stores) T.store_activity.push({ period_start: d.period_start, period_end: d.period_end, sent_at: d.at, sku: it.sku, store: s.store, sold: s.sold, on_hand: s.on_hand, received: s.received ?? null, transfer_in: s.received == null ? null : s.transfer_in || 0, transfer_out: s.received == null ? null : s.transfer_out || 0 });
     } else if (STAGE_BY_TYPE[d.type]) STAGE_BY_TYPE[d.type].derive(d, T, ctx);
   }
   for (const st of STAGES) if (st.finish) st.finish(T, ctx);
@@ -218,14 +221,16 @@ export function buildWorld({ quiet = false } = {}) {
   // Records added on 17 November 2026 (stage `records`) take a third range, so no earlier stage record is renumbered either.
   // Records added on 18 November 2026 (`batch: 2`) take a fourth range: some are dated before records the third range already holds.
   // A withdrawn record keeps its place in the numbering and is not stored.
-  const events = [...sorted.filter((e) => !e.stage).map((e, i) => ({ ...e, id: i + 1 })), ...sorted.filter((e) => e.stage && e.stage !== 'records' && e.stage !== 'compliance' && e.stage !== 'item-accuracy' && e.stage !== 'lot-trace').map((e, i) => ({ ...e, id: 1000001 + i })),
+  const events = [...sorted.filter((e) => !e.stage).map((e, i) => ({ ...e, id: i + 1 })), ...sorted.filter((e) => e.stage && e.stage !== 'records' && e.stage !== 'compliance' && e.stage !== 'item-accuracy' && e.stage !== 'lot-trace' && e.stage !== 'disputes-week').map((e, i) => ({ ...e, id: 1000001 + i })),
     ...sorted.filter((e) => e.stage === 'records' && e.batch !== 2).map((e, i) => ({ ...e, id: 2000001 + i })), ...sorted.filter((e) => e.stage === 'records' && e.batch === 2).map((e, i) => ({ ...e, id: 3000001 + i })),
     // Records added on 20 November 2026 (stage `compliance`, Northfield's January chargeback batch) take a fifth range.
     ...sorted.filter((e) => e.stage === 'compliance').map((e, i) => ({ ...e, id: 4000001 + i })),
     // Records added on 20 November 2026 (stage `item-accuracy`, P25) take a sixth range.
     ...sorted.filter((e) => e.stage === 'item-accuracy').map((e, i) => ({ ...e, id: 5000001 + i })),
     // Records added on 20 November 2026 (stage `lot-trace`, P26) take a seventh range.
-    ...sorted.filter((e) => e.stage === 'lot-trace').map((e, i) => ({ ...e, id: 6000001 + i }))].filter((e) => !e.retired);
+    ...sorted.filter((e) => e.stage === 'lot-trace').map((e, i) => ({ ...e, id: 6000001 + i })),
+    // Records added on 23 November 2026 (stage `disputes-week`, P6's other disputes) take an eighth range.
+    ...sorted.filter((e) => e.stage === 'disputes-week').map((e, i) => ({ ...e, id: 7000001 + i }))].filter((e) => !e.retired);
   const T = derive(files, events);
   const db = new DatabaseSync(MAIN_DB);
   db.exec(SCHEMA());

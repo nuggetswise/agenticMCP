@@ -71,6 +71,39 @@ export function testDecision(db, document, asOf = storyClock()) {
   return out('trade_test', 'Test Agent', a.document, asOf, { evidence, decision_row: row, next_step: next, ...detail, rule: rule(db, 'NF-4.9'), rule_baseline: 'Shows "Pack 12 submitted, 6 expected" and one fixed suggestion: change the pack configuration', confirmed_by: 'A passed retest, then the receiving advice on the first live shipment' });
 }
 
+/** Sell-through for one store's report week (rebuild plan Step 3, decided 23 November 2026): units sold ÷ units received
+ *  in the week, from Northfield's store activity report (852 QS and QR). Transfers between stores are recorded apart and
+ *  are not receipts. Measured when every figure is the report's own; Estimated for the first week on record, whose
+ *  receipts rest on the set opening balance. No rate when nothing was received that week. Shared by both sides. */
+export function sellThrough(db, wk) {
+  if (!wk || wk.received == null) return { sell_through: null, sell_through_basis: 'Not available', sell_through_reason: 'The report carries no units received' };
+  const first = db.prepare('SELECT min(period_end) p FROM store_activity WHERE sku = ? AND store = ?').get(wk.sku, wk.store).p;
+  const flows = { received: wk.received, transfer_in: wk.transfer_in, transfer_out: wk.transfer_out }; const unitsSold = wk.sold; // a measure, not a threshold
+  if (!wk.received) return { ...flows, sell_through: null, sell_through_basis: 'Not available', sell_through_reason: 'Nothing received that week', formula: 'Units sold ÷ units received in the week' };
+  return { ...flows, sell_through: Math.round((unitsSold / wk.received) * 1000) / 10, sell_through_unit: 'percent', sell_through_basis: wk.period_end === first ? 'Estimated' : 'Measured',
+    ...(wk.period_end === first ? { sell_through_reason: 'First week on record: units received rest on the set opening balance' } : {}), formula: 'Units sold ÷ units received in the week' };
+}
+
+/** Northfield's store read (P9): one store's or every store's figures from Northfield's own store activity reports, with
+ *  sell-through and weeks of supply. Ashby's stock and Ashby's rule recommendations are Ashby's records. */
+export function storeSellThroughNF(db, store, asOf = storyClock()) {
+  const t = asOf.toISOString();
+  const latest = db.prepare('SELECT max(period_end) p FROM store_activity WHERE sent_at <= ?').get(t).p;
+  if (!latest) return { found: false, message: `No store activity report at ${fmtET(asOf)}` };
+  const avgOf = (st, sku, end) => db.prepare('SELECT avg(sold) a, count(*) n FROM (SELECT sold FROM store_activity WHERE store = ? AND sku = ? AND period_end < ? AND sent_at <= ? ORDER BY period_end DESC LIMIT 4)').get(st, sku, end, t);
+  const row = (wk) => { const a = avgOf(wk.store, wk.sku, wk.period_end); const avg = a.n ? a.a : wk.sold; const weeks = avg ? wk.on_hand / avg : null;
+    return { store: wk.store, sku: wk.sku, week: `${wk.period_start} to ${wk.period_end}`, report_sent: fmtET(wk.sent_at), sold: wk.sold, on_hand: wk.on_hand, ...sellThrough(db, wk),
+      weekly_average: Math.round(avg * 10) / 10, weeks_averaged: a.n || 1, weeks_of_supply: weeks == null ? null : Math.round(weeks * 10) / 10 }; };
+  const NA = { ashby_available_stock: 'Not available to Northfield', ashby_recommendation: 'Not available to Northfield' };
+  if (store != null) { const s = String(store).replace(/^store\s*/i, '');
+    const wk = db.prepare('SELECT * FROM store_activity WHERE store = ? AND sent_at <= ? ORDER BY period_end DESC').get(s, t);
+    if (!wk) return { found: false, message: `No store activity for store ${s} at ${fmtET(asOf)}` };
+    const weeks = db.prepare('SELECT * FROM store_activity WHERE store = ? AND sku = ? AND sent_at <= ? ORDER BY period_end').all(s, wk.sku, t).map((w) => ({ week: `${w.period_start} to ${w.period_end}`, sold: w.sold, on_hand: w.on_hand, ...sellThrough(db, w) }));
+    return { as_of: fmtET(asOf), source: 'Northfield store activity reports (EDI 852)', ...row(wk), weeks, ...NA }; }
+  const stores = db.prepare('SELECT * FROM store_activity WHERE period_end = ? ORDER BY store').all(latest).map(row);
+  return { as_of: fmtET(asOf), source: 'Northfield store activity reports (EDI 852)', week_ending: latest, count: stores.length, stores, ...NA };
+}
+
 /** Shelf Agent: a store shelf is empty or slow. Order, transfer, or wait for goods already on the way? */
 export function shelfDecision(db, store, asOf = storyClock()) {
   const t = asOf.toISOString(); const s = String(store);
@@ -88,7 +121,7 @@ export function shelfDecision(db, store, asOf = storyClock()) {
   const transit = gln ? db.prepare("SELECT sh.shipment_id, sh.sent_at FROM shipments sh JOIN orders o ON o.po = sh.po WHERE o.supplier_id = 'ASHBY' AND sh.ship_to = ? AND sh.sent_at <= ? AND EXISTS (SELECT 1 FROM shipment_lines l WHERE l.shipment_id = sh.shipment_id AND l.sku = ?) AND NOT EXISTS (SELECT 1 FROM receipts r WHERE r.shipment_id = sh.shipment_id AND r.received_at <= ?)").get(gln, t, wk.sku, t) : null;
   const stock = db.prepare("SELECT data FROM events WHERE kind = 'erp.inventory_read' AND at <= ? AND data LIKE ? ORDER BY at DESC").get(t, `%${wk.sku}%`);
   const weeks = avg ? wk.on_hand / avg : Infinity;
-  const evidence = { week_ending: wk.period_end, sold: wk.sold, weekly_average: Math.round(avg * 10) / 10, weeks_averaged: periods.length, on_hand: wk.on_hand, chain_median_weekly_average: median, weeks_of_supply: Number.isFinite(weeks) ? Math.round(weeks * 10) / 10 : null, ship_notice_in_transit: transit ? transit.shipment_id : 'None', ashby_available: stock ? J(stock.data).available : 'Not read' };
+  const evidence = { week_ending: wk.period_end, sold: wk.sold, weekly_average: Math.round(avg * 10) / 10, weeks_averaged: periods.length, on_hand: wk.on_hand, chain_median_weekly_average: median, weeks_of_supply: Number.isFinite(weeks) ? Math.round(weeks * 10) / 10 : null, ship_notice_in_transit: transit ? transit.shipment_id : 'None', ashby_available: stock ? J(stock.data).available : 'Not read', ...sellThrough(db, wk) };
   let row, next, detail = {};
   const minAvg = param(db, 'AP-6.1', 'min_weekly_avg'), slowWeeks = param(db, 'AP-6.2', 'min_weeks_supply'), slowPct = param(db, 'AP-6.2', 'pct_of_median') / 100, keep = param(db, 'AP-6.3', 'keep_weeks'), carton = param(db, 'AP-6.4', 'carton');
   if (wk.on_hand === 0 && avg < minAvg) { row = 'Empty shelf below the minimum weekly sales'; next = 'nothing_to_do'; }

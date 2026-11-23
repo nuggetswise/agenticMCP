@@ -160,8 +160,9 @@ const BODY = {
     seg('N1', 'VN', clean(d.vendor_name), 'UL', d.vendor_gln),
     ...d.items.flatMap((it) => [
       seg('LIN', '', 'UP', it.upc, 'VN', it.sku),
-      ...['QS', 'QA'].flatMap((k) => {
-        const rows = it.stores.map((s) => [s.store, k === 'QS' ? s.sold : s.on_hand]);
+      // QS sold, QA on hand; QR received and QZ transferred (positive in, negative out) when the report carries them.
+      ...['QS', 'QA', ...(it.stores.some((s) => s.received != null) ? ['QR'] : []), ...(it.stores.some((s) => s.transfer_in || s.transfer_out) ? ['QZ'] : [])].flatMap((k) => {
+        const rows = (k === 'QZ' ? it.stores.filter((s) => s.transfer_in || s.transfer_out) : it.stores).map((s) => [s.store, k === 'QS' ? s.sold : k === 'QA' ? s.on_hand : k === 'QR' ? s.received : (s.transfer_in || 0) - (s.transfer_out || 0)]);
         const out = [seg('ZA', k)];
         for (let i = 0; i < rows.length; i += 10) out.push(seg('SDQ', it.uom || 'EA', '92', ...rows.slice(i, i + 10).flat()));
         return out;
@@ -245,7 +246,8 @@ const READ = {
     return { ref: first(S, 'TRN')[2], amount: +first(S, 'BPR')[2], pay_date: day8(first(S, 'BPR')[16]), parties: n1(S), items: itemsOut, po: itemsOut[0]?.po || null }; },
   940: (S) => { const w = first(S, 'W05'); return { ref: w[2], po: w[3], parties: n1(S), ship_date: day8(first(S, 'G62', '10')[2]), lines: S.filter((e) => e[0] === 'W01').map((e) => ({ qty: +e[1], sku: e[5] })) }; },
   945: (S) => { const w = first(S, 'W06'); const g = first(S, 'G62', '11'); return { ref: w[2], po: w[6], shipment_id: w[4], parties: n1(S), shipped_at: iso8(g[2], g[4] + '00'), lines: S.filter((e) => e[0] === 'W12').map((e) => ({ ordered: +e[2], shipped: +e[3], sku: e[8] })), units: +first(S, 'W03')[1] }; },
-  852: (S) => { const x = first(S, 'XQ'); const its = []; let k = null; for (const e of S) { if (e[0] === 'LIN') its.push({ upc: e[3], sku: e[5], stores: new Map() }); if (e[0] === 'ZA') k = e[1]; if (e[0] === 'SDQ') for (let i = 3; i + 1 < e.length; i += 2) { const m = its[its.length - 1].stores; const r = m.get(e[i]) || { store: e[i], sold: 0, on_hand: 0 }; r[k === 'QS' ? 'sold' : 'on_hand'] = +e[i + 1]; m.set(e[i], r); } }
+  852: (S) => { const x = first(S, 'XQ'); const its = []; let k = null; for (const e of S) { if (e[0] === 'LIN') its.push({ upc: e[3], sku: e[5], stores: new Map() }); if (e[0] === 'ZA') k = e[1]; if (e[0] === 'SDQ') for (let i = 3; i + 1 < e.length; i += 2) { const m = its[its.length - 1].stores; const r = m.get(e[i]) || { store: e[i], sold: 0, on_hand: 0 }; const q = +e[i + 1];
+      if (k === 'QS') r.sold = q; else if (k === 'QA') r.on_hand = q; else if (k === 'QR') r.received = q; else if (k === 'QZ') { r.transfer_in = q > 0 ? q : 0; r.transfer_out = q < 0 ? -q : 0; } m.set(e[i], r); } }
     return { ref: `PA-${x[2]}-${x[3]}`, po: null, period_start: day8(x[2]), period_end: day8(x[3]), parties: n1(S), items: its.map((i) => ({ ...i, stores: [...i.stores.values()] })) }; },
 };
 

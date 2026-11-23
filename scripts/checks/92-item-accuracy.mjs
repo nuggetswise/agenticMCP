@@ -11,13 +11,13 @@ export default function ({ db, ash, nf, ok, eq, none, n }) {
 
   // Nothing this stage adds is dated at or before P22's moment, so no other prototype's moment sees it.
   none('p25.no_record_before_p22', `SELECT doc_id FROM documents WHERE (po IN ${POS} OR reference = 'CAT-ASH-2027-01') AND sent_at <= '${P22_AT}'
-    UNION ALL SELECT id FROM events WHERE id >= 5000001 AND at <= '${P22_AT}'`);
+    UNION ALL SELECT id FROM events WHERE id BETWEEN 5000001 AND 5999999 AND at <= '${P22_AT}'`);
   none('p25.items_set_up_after_p22', `SELECT sku FROM item_versions WHERE sku IN ('ASH-SHT-M','ASH-SHT-L') AND valid_from <= substr('${P22_AT}', 1, 10)`);
 
   // The catalogue records Northfield receives: four, each a valid 12-digit UPC under Ashby's prefix, each its own item's.
   const recs = db.prepare('SELECT * FROM catalogue_records ORDER BY item_number').all();
   eq('p25.catalogue_records', recs.map((r) => `${r.item_number} ${r.product} ${r.colour_code} ${r.colour} ${r.size_code} ${r.size}`),
-    ['614141000135 Linen napkin 4-pack 260 Ivory 30001 One size', '614141000166 Trail runner 001 Black 30001 One size', '614141000197 Shirt 410 Navy 10970 Medium', '614141000203 Shirt 410 Navy 10975 Large']);
+    ['614141000135 Linen napkin 4-pack 260 Ivory 30001 One size', '614141000166 Trail runner 001 Black 50555 11 Medium', '614141000197 Shirt 410 Navy 10970 Medium', '614141000203 Shirt 410 Navy 10975 Large']);
   none('p25.catalogue_upcs_valid', "SELECT item_number FROM catalogue_records WHERE length(item_number) <> 12 OR substr(item_number, 1, 6) <> '614141'");
   eq('p25.catalogue_upcs_check_digit', recs.filter((r) => !gs1Valid(r.item_number)).map((r) => r.item_number), []);
   none('p25.catalogue_upc_is_the_each_level', "SELECT r.sku FROM catalogue_records r WHERE NOT EXISTS (SELECT 1 FROM packaging_levels p WHERE p.sku = r.sku AND p.level = 'Each' AND p.gtin = '00' || r.item_number)");

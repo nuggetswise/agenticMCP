@@ -12,7 +12,7 @@ export default function ({ db, ash, nf, ok, eq, none, n }) {
   eq('p26.calendar_row', [cal?.stage, cal?.seen_by, cal?.anchor, cal?.as_of > P25_AT], ['Fulfillment', 'Priya Raman, then Jordan Ellis', 'NR-47400', true]);
   const POS = "('NR-47400','NR-47403','NR-47407','NR-47414')";
   const LAST = db.prepare("SELECT max(sent_at) t FROM documents WHERE po IN ('NR-47300','NR-47304','NR-47311','NR-47318')").get().t;
-  none('p26.no_record_before_p25_ends', `SELECT doc_id FROM documents WHERE po IN ${POS} AND sent_at <= '${LAST}' UNION ALL SELECT id FROM events WHERE id >= 6000001 AND at <= '${LAST}'`);
+  none('p26.no_record_before_p25_ends', `SELECT doc_id FROM documents WHERE po IN ${POS} AND sent_at <= '${LAST}' UNION ALL SELECT id FROM events WHERE id BETWEEN 6000001 AND 6999999 AND at <= '${LAST}'`);
 
   // Every honey carton carries a lot and a best-before date, read back from the ship notice; nothing else does.
   none('p26.every_honey_carton_has_a_lot', "SELECT c.sscc FROM cartons c WHERE c.sku = 'ASH-HNY-340' AND NOT EXISTS (SELECT 1 FROM carton_lots l WHERE l.sscc = c.sscc AND l.shipment_id = c.shipment_id AND l.lot <> '' AND l.best_before IS NOT NULL)");

@@ -57,7 +57,8 @@ export class Log {
     // Records added on 20 November 2026 (stage `item-accuracy`, P25) take their own range too (870,000,000 up;
     // acknowledgments 970,000,000 up), so they renumber nothing on a pair other stages share.
     // Records added on 20 November 2026 (stage `lot-trace`, P26) likewise: 880,000,000 up; acknowledgments 980,000,000 up.
-    const nextCtl = (d, k, base) => (d.stage === 'lot-trace' ? next(`${k}:LT`, /:FA/.test(k) ? 980000000 : 880000000) : d.stage === 'item-accuracy' ? next(`${k}:IA`, /:FA/.test(k) ? 970000000 : 870000000) : d.batch === 2 ? next(`${k}:R2`, /:FA/.test(k) ? 950000000 : 850000000) : d.stage === 'records' ? next(`${k}:R`, /:FA/.test(k) ? 900000000 : 800000000) : d.stage ? next(`${k}:S`, k.endsWith(':FA') ? 600000000 : 700000000) : d.hist ? next(`${k}:H`, base - histN.get(k)) : next(k, base));
+    // Records added on 23 November 2026 (stage `disputes-week`, P6) likewise: 890,000,000 up; acknowledgments 990,000,000 up.
+    const nextCtl = (d, k, base) => (d.stage === 'disputes-week' ? next(`${k}:DW`, /:FA/.test(k) ? 990000000 : 890000000) : d.stage === 'lot-trace' ? next(`${k}:LT`, /:FA/.test(k) ? 980000000 : 880000000) : d.stage === 'item-accuracy' ? next(`${k}:IA`, /:FA/.test(k) ? 970000000 : 870000000) : d.batch === 2 ? next(`${k}:R2`, /:FA/.test(k) ? 950000000 : 850000000) : d.stage === 'records' ? next(`${k}:R`, /:FA/.test(k) ? 900000000 : 800000000) : d.stage ? next(`${k}:S`, k.endsWith(':FA') ? 600000000 : 700000000) : d.hist ? next(`${k}:H`, base - histN.get(k)) : next(k, base));
     const out = []; const acks = [];
     for (const d of docs) {
       const from = PARTY[d.from], to = PARTY[d.to];

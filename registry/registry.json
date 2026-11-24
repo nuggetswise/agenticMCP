@@ -317,6 +317,7 @@
    "acceptance": [
     "scorecard.cases",
     "scorecard.failing",
+    "scorecard.components",
     "scorecard.lines",
     "agent.scorecard"
    ],

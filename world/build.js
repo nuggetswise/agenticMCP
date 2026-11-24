@@ -43,7 +43,7 @@ export const CALENDAR = () => [
   { id: 'P8', stage: STAGE.inv, week: 11, moment: 'Open-order value from purchase order to payment, with the orders in transit at risk of missing their window', seen_by: JORDAN, prototype: 'P8 Money in Motion', as_of: '2026-12-09T22:30:00.000Z', anchor: 'NR-450118 and 358 other orders' },
   { id: 'P6', stage: STAGE.ded, week: 10, moment: 'Deductions and an invoice exception', seen_by: BOTH, prototype: 'P6 Charge Resolution', as_of: '2026-12-01T14:00:00.000Z', anchor: 'DC-40877 on NR-450118' },
   { id: 'P20', stage: STAGE.ded, week: 15, moment: 'A remittance takes five promotion deductions', seen_by: BOTH, prototype: 'P20 Promotion deductions', as_of: '2027-01-06T14:00:00.000Z', anchor: 'PMT-990168' },
-  { id: 'P7', stage: STAGE.perf, week: 14, moment: 'On-time, in-full 91.0%, calculated by Trading Grid', seen_by: BOTH, prototype: 'P7 Performance Improvement', as_of: '2026-12-28T14:00:00.000Z', anchor: '108 failing lines' },
+  { id: 'P7', stage: STAGE.perf, week: 14, moment: 'On-time, in-full 91.8%, calculated by Trading Grid', seen_by: BOTH, prototype: 'P7 Performance Improvement', as_of: '2026-12-28T14:00:00.000Z', anchor: '104 failing order items' },
   { id: 'P22', stage: STAGE.perf, week: 15, moment: 'What happened to the quarter’s findings', seen_by: BOTH, prototype: 'P22 Finding Outcomes', as_of: '2027-01-09T22:00:00.000Z', anchor: 'NR-46215' },
 ].map((m, i) => ({ seq: i + 1, ...m }));
 

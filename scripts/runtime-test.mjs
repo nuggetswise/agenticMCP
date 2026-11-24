@@ -61,7 +61,7 @@ const act = (rt, d, s, by = 'Test agent') => (action, args) => { const r = rt.pr
 
 // ---------- Pace ----------
 { const b = Pace.startSession(db, {}); const o = Pace.runBaseline(db, b);
-  ok(o.rate === '91.0%' && o.formula === '43,680 ÷ 48,000 = 91.0%' && o.failing_lines === 108 && o.unattributed.length === 6 && o.sent === 'Nothing' && !o.plan_or_task_drafted, `pace baseline groups by reason code only: nothing attributed, drafted or sent (${o.rate}, ${o.unattributed.length} open)`);
+  ok(o.rate === '91.8%' && o.formula === '44,046 ÷ 48,000 = 91.8%' && o.failing_lines === 104 && o.unattributed.length === 6 && o.sent === 'Nothing' && !o.plan_or_task_drafted, `pace baseline groups by reason code only: nothing attributed, drafted or sent (${o.rate}, ${o.unattributed.length} open)`);
   const a = Pace.startSession(db, {}); const go = act(Pace, db, a);
   ok(Object.keys(Pace.ACTIONS).join() === 'record_attribution' && Pace.ACTIONS.record_attribution.mode === 'policy', 'pace: one action, an attribution on Ashby’s own view; no task, plan or message');
   ok(Pace.propose(db, a, 'x', 'record_attribution', { record: 'short_shipped', attributed_to: 'Kinross', first_record: 'Kinross short pick', basis: 'x' }).state === 'Refused', 'pace: no attribution before the records are read');
@@ -78,7 +78,7 @@ const act = (rt, d, s, by = 'Test agent') => (action, args) => { const r = rt.pr
   go('record_attribution', { record: 'received_below', attributed_to: 'Northfield receiving', first_record: 'Receiving advice', basis: 'Ship notice, load scan and delivery receipt agree; the receiving advice counts less' });
   go('record_attribution', { record: 'week_nov22', causes: [{ warehouse: 'Kinross Joliet', cause: 'Short picks' }, { warehouse: 'Kinross Groveport', cause: 'Short picks' }] });
   const o2 = Pace.outcome(db, a); ok(!o2.violations.length && !o2.unattributed.length && o2.attributions.week_nov22.causes.length === 2 && o2.sent === 'Nothing' && !o2.improvement_claimed && a.proposals.every((p) => p.needs === 'policy'), `pace agent path: six groups attributed across systems, the split week as two causes, nothing sent (${JSON.stringify(o2.violations)})`);
-  const m = Pace.startSession(db, { variation: Pace.branchWith('end_november') }); const om = Pace.outcome(db, m); ok(om.rate !== '91.0%' && om.failing_lines < 108 && om.failing_lines > 0, `pace: at 30 November the rate to date differs from the quarter (${om.rate}, ${om.failing_lines} lines)`); }
+  const m = Pace.startSession(db, { variation: Pace.branchWith('end_november') }); const om = Pace.outcome(db, m); ok(om.rate !== '91.8%' && om.failing_lines < 104 && om.failing_lines > 0, `pace: at 30 November the rate to date differs from the quarter (${om.rate}, ${om.failing_lines} lines)`); }
 
 // ---------- Shelf ----------
 { const b = Shelf.startSession(db, { variation: Shelf.branchWith('in_transit') }); Shelf.runBaseline(db, b); ok(Shelf.outcome(db, b).violations.length > 0, 'shelf baseline orders while goods are in transit');

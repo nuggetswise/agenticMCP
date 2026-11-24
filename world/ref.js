@@ -164,7 +164,7 @@ export const rules = [
   R('NF-7.2', 'deductions', null, "Northfield sends no debit memos; supplier corrections travel as a credit memo or corrected invoice"),
   R('NF-7.7', 'deductions', null, "Northfield’s claims reviewer decides each charge in the case; settlement and write-off are the supplier’s own authorities"),
   R('NF-8.1', 'scorecard', null, "On time. Prepaid: DC arrival inside the must-arrive-by window. Collect: freight ready by the assigned pickup"),
-  R('NF-8.3', 'scorecard', null, "Counting unit: cases. Score is compliant cases over all cases in the period"),
+  R('NF-8.3', 'scorecard', null, "Counting unit: cases. Score is compliant cases over all cases in the period, counted per order item: a short order item earns credit for the cases received, a late order item earns none, and cases above the order are not counted"),
   R('NF-8.5', 'scorecard', null, "Exclusions: Northfield’s routed carrier late on collect freight; DC refusal or closure; a PO changed after the routing request"),
   R('NF-9.1', 'scorecard', null, "Scorecard published monthly as a file, with definition version, period and counting unit"),
   R('NF-9.3', 'scorecard', null, "The supplier’s plan states the cause, actions with owners and timing, baseline, definition, comparison population, minimum observations and required evidence. Northfield accepts it and keeps it with the scorecard"),

@@ -666,7 +666,7 @@
   {
    "id": "NF-8.3",
    "owner": "Northfield",
-   "statement": "Counting unit: cases. Score is compliant cases over all cases in the period",
+   "statement": "Counting unit: cases. Score is compliant cases over all cases in the period, counted per order item: a short order item earns credit for the cases received, a late order item earns none, and cases above the order are not counted",
    "implements": [],
    "charge": "",
    "basis": "Invented",

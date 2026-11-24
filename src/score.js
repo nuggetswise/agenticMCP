@@ -34,6 +34,10 @@ export function otif(db, { supplier = 'ASHBY', from = QUARTER.start, to = QUARTE
   const sh = new Map(); for (const r of db.prepare(`SELECT l.po, l.line, sum(l.qty) q, min(l.shipment_id) asn FROM shipment_lines l JOIN shipments s ON s.shipment_id = l.shipment_id WHERE s.sent_at <= ? AND l.po IN ${pos} GROUP BY l.po, l.line`).all(T)) sh.set(`${r.po}|${r.line}`, r);
   const missed = new Set(db.prepare("SELECT po FROM events WHERE kind = 'carrier.pickup_missed' AND at <= ?").all(T).map((r) => r.po));
   const sites = new Map(db.prepare(`SELECT po, ship_from FROM shipments WHERE po IN ${pos}`).all().map((r) => [r.po, r.ship_from]));
+  // Freight terms per order (NF-8.1): on collect freight Northfield's carrier moves the load, so the supplier is on time when the
+  // freight is ready at the assigned pickup; a late arrival after an on-time pickup is the carrier's and is not counted against it.
+  let collect = new Set(); try { collect = new Set(db.prepare(`SELECT DISTINCT po FROM loads WHERE terms = 'Collect' AND po IN ${pos}`).all().map((r) => r.po)); } catch { collect = new Set(db.prepare(`SELECT DISTINCT po FROM documents WHERE doc_type = '754' AND po IN ${pos}`).all().map((r) => r.po)); }
+  const comp = { prepaid: { cases: 0, late: 0 }, collect: { cases: 0, late: 0 }, short: 0 }; const carrierLate = [];
   let cases = 0, failing = 0; const rows = []; const open = [];
   // The unit a line counts in, from the records only: cases where the order is in cases; cases again where the item has a
   // Case packaging level (its units per case, the level in force at the measurement time); otherwise the order's own unit.
@@ -47,9 +51,12 @@ export function otif(db, { supplier = 'ASHBY', from = QUARTER.start, to = QUARTE
     if (!r && !missed.has(l.po)) { if (l.qty_ordered > 0) open.push({ po: l.po, line: l.line, item: l.sku, status: 'Open', cases: inCases(l, l.qty_ordered), delivery_date: l.requested_delivery, ship_notice: s ? s.asn : null, state: s ? 'Shipped, no receiving advice yet' : 'No ship notice or receiving advice yet' }); continue; }
     const ord = inCases(l, l.qty_ordered); cases += ord; units.add(unitOf(l));
     const et = r ? fmtET(r.at) : null; const hour = et ? Number(et.slice(11, 13)) + Number(et.slice(14, 16)) / 60 : null; const [wOpen, wClose] = l.ship_to === 'DC4' ? [7, 15] : [6, 14];
-    if (missed.has(l.po)) { reason = 'Collect freight not ready'; bad = ord; first = 'Carrier pickup record'; }
-    else if (r && (etDay(new Date(r.at)) > l.requested_delivery || hour < wOpen || hour > wClose)) { reason = 'Prepaid arrived outside window'; bad = ord; first = `Receiving advice ${r.receipt}`; }
-    else if (got < l.qty_ordered) { bad = Math.max(1, ord - inCases(l, got));
+    const mode = collect.has(l.po) ? 'collect' : 'prepaid'; comp[mode].cases += ord;
+    const late = !!r && (etDay(new Date(r.at)) > l.requested_delivery || hour < wOpen || hour > wClose);
+    if (late && mode === 'collect' && !missed.has(l.po)) carrierLate.push({ po: l.po, line: l.line, item: l.sku, cases: ord, received_at: fmtET(r.at), receiving_advice: r.receipt, carrier: 'Lakeline Freight', tendered_by: 'Northfield Retailer' });
+    if (missed.has(l.po)) { reason = 'Collect freight not ready'; bad = ord; first = 'Carrier pickup record'; comp.collect.late += ord; }
+    else if (late && mode === 'prepaid') { reason = 'Prepaid arrived outside window'; bad = ord; first = `Receiving advice ${r.receipt}`; comp.prepaid.late += ord; }
+    else if (got < l.qty_ordered) { bad = Math.max(1, ord - inCases(l, got)); comp.short += bad;
       if (l.qty_accepted != null && l.qty_accepted < l.qty_ordered) { reason = 'Allocation cut'; first = 'Order acknowledgment'; }
       else if (s && s.q < l.qty_ordered) { reason = 'Short shipped, remainder cancelled'; first = `Ship notice ${s.asn}`; }
       else { reason = 'Received below ship notice'; first = `Receiving advice ${r.receipt}`; } }
@@ -58,9 +65,15 @@ export function otif(db, { supplier = 'ASHBY', from = QUARTER.start, to = QUARTE
   const counted = lines.filter((l) => rc.has(`${l.po}|${l.line}`) || missed.has(l.po)).length;
   const by = {}; for (const r of rows) { (by[r.reason] ||= { reason: r.reason, lines: 0, cases: 0 }); by[r.reason].lines++; by[r.reason].cases += r.cases; }
   const compliant = cases - failing; const score = cases ? `${((compliant / cases) * 100).toFixed(1)}%` : null;
-  return { calculated_by: 'Trading Grid', period: `${from} to ${to}`, definition: 'Northfield supplier guide 2026.2 (NF-8.2, NF-8.3): compliant cases ÷ all cases, counted per order line', programme: own ? 'DC replenishment' : 'All orders with a delivery date in the period',
+  const pct = (n, d) => (d ? `${((n / d) * 100).toFixed(1)}%` : null);
+  const components = { in_full: { cases, short_cases: comp.short, rate: pct(cases - comp.short, cases), target: '95%', rule: 'NF-8.2' },
+    prepaid_on_time: { cases: comp.prepaid.cases, late_cases: comp.prepaid.late, rate: pct(comp.prepaid.cases - comp.prepaid.late, comp.prepaid.cases), target: '90%', rule: 'NF-8.1' },
+    collect_ready: { cases: comp.collect.cases, not_ready_cases: comp.collect.late, rate: pct(comp.collect.cases - comp.collect.late, comp.collect.cases), target: '98%', rule: 'NF-8.1' },
+    split: { cases_short: comp.short, cases_late_or_not_ready: comp.prepaid.late + comp.collect.late, note: 'Failing cases are either short (never received) or late (received in full, outside the window, or not ready at a collect pickup); targets from NF-8.4' } };
+  return { calculated_by: 'Trading Grid', period: `${from} to ${to}`, definition: 'Northfield supplier guide 2026.2 (NF-8.1 to NF-8.5): compliant cases ÷ all cases, counted per order line', programme: own ? 'DC replenishment' : 'All orders with a delivery date in the period',
     counting_unit: [...units].join(', ') || 'Cases', ...([...units].some((u) => u !== 'Cases') ? { case_pack: 'No case pack is recorded for these items (no Case packaging level), so their lines count in the unit on the order. The field names say cases; the counting unit governs.' } : {}), order_lines: counted, cases, failing_cases: failing, compliant_cases: compliant, score,
-    formula: cases ? `${money0(compliant)} ÷ ${money0(cases)} = ${score}` : null, failing_lines: rows.length, by_reason: Object.values(by).sort((a, b) => b.cases - a.cases),
+    formula: cases ? `${money0(compliant)} ÷ ${money0(cases)} = ${score}` : null, failing_lines: rows.length, by_reason: Object.values(by).sort((a, b) => b.cases - a.cases), components,
+    late_on_northfield_carrier: { lines: carrierLate.length, cases: carrierLate.reduce((t, c) => t + c.cases, 0), counted: false, note: 'Collect freight ready at the assigned pickup and delivered late by Northfield\'s carrier: on time for the supplier under NF-8.1 and excluded by NF-8.5, so not counted against the rate', ...(carrierLate.length ? { list: carrierLate } : {}) },
     open_lines: { lines: open.length, cases: open.reduce((t, o) => t + o.cases, 0), status: 'Open', note: 'No receiving advice at the measurement time: shown as Open and left out of the rate, neither compliant nor failing', ...(open.length ? { list: open.slice(0, 50) } : {}) }, lines: rows.sort((a, b) => b.cases - a.cases) };
 }
 

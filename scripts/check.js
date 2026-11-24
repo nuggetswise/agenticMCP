@@ -144,8 +144,9 @@ eq('p13.queue', a13.items.map((i) => i.po), ['NR-46215', 'NR-46220', 'NR-462412'
 eq('p13.nothing_to_chase', a13.checked_nothing_to_chase.map((i) => i.po), ['NR-46231']);
 // P7 scorecard
 const sc = scorecard(ash);
-eq('scorecard.cases', sc.cases, 48000); eq('scorecard.failing', [sc.failing_cases, sc.score], [4320, '91.0%']);
-eq('scorecard.lines', [sc.failing_lines, sc.by_reason.map((r) => [r.lines, r.cases])], [108, [[31, 1794], [18, 1260], [9, 720], [6, 480], [44, 66]]]);
+eq('scorecard.cases', sc.cases, 48000); eq('scorecard.failing', [sc.failing_cases, sc.score], [3954, '91.8%']);
+eq('scorecard.components', [sc.components.in_full.rate, sc.components.prepaid_on_time.rate, sc.components.collect_ready.rate, sc.components.split.cases_short, sc.components.split.cases_late_or_not_ready, sc.late_on_northfield_carrier.lines, sc.late_on_northfield_carrier.cases], ['94.6%', '99.6%', '92.0%', 2580, 1374, 4, 366]);
+eq('scorecard.lines', [sc.failing_lines, sc.by_reason.map((r) => [r.lines, r.cases])], [104, [[31, 1794], [18, 1260], [9, 720], [2, 114], [44, 66]]]);
 // Order story and the money trail
 const st = D.lifecycle(ash, 'NR-450118');
 // 18 November 2026: get_order with as_of returns the order as it stood then. At the P5 moment (17:12 on 8 December) NR-460207 shows nothing dated later:
@@ -162,14 +163,14 @@ const st = D.lifecycle(ash, 'NR-450118');
   const e = db.prepare("SELECT status, corrected_by FROM errors WHERE doc_id = '810:INV-7731' AND allowed LIKE '%line 2%'").get();
   eq('invoice.line2_closed_by_shortage_deduction', [e.status, e.corrected_by, st2('2026-11-30T09:00:00-05:00'), st2('2026-12-01T09:00:00-05:00'), db.prepare("SELECT count(*) n FROM errors WHERE status = 'Open' AND doc_id LIKE '810:INV-7731%'").get().n],
     ['Closed by deduction', '820:PMT-990412', ['Corrected', 'Open'], ['Closed by deduction', 'Corrected'], 0]); }
-// Ashby is counted in cases and every other supplier in its own unit (Each); at 28 December Ashby ranks 17 of 23, rates 79.5% to 100.0%.
+// Ashby is counted in cases and every other supplier in its own unit (Each); at 28 December Ashby ranks 16 of 23, rates 79.5% to 100.0%.
 { const rk = SC.supplierRanking(db, T('2026-12-28T09:00:00-05:00')).ranking; const a = rk.find((r) => r.supplier_id === 'ASHBY'); const sc = rk.map((r) => parseFloat(r.score));
-  eq('scorecard.ashby_rank_and_rate_range', [rk.length, a.rank, a.score, a.counting_unit, [...new Set(rk.filter((r) => r.supplier_id !== 'ASHBY').map((r) => r.counting_unit))], Math.min(...sc), Math.max(...sc)], [23, 17, '91.0%', 'Cases', ['Each'], 79.5, 100]); }
+  eq('scorecard.ashby_rank_and_rate_range', [rk.length, a.rank, a.score, a.counting_unit, [...new Set(rk.filter((r) => r.supplier_id !== 'ASHBY').map((r) => r.counting_unit))], Math.min(...sc), Math.max(...sc)], [23, 16, '91.8%', 'Cases', ['Each'], 79.5, 100]); }
 // 18 November 2026: the three Aviator questions answered wrongly that day, pinned to the records.
 { const at = T('2026-12-28T09:00:00-05:00'); const wk = SC.otif(db, { from: '2026-11-22', to: '2026-11-28', asOf: at }); const f = SC.failingLines(db, at, { from: '2026-11-22', to: '2026-11-28' });
   eq('scorecard.week_of_22_november', [wk.failing_lines, wk.score, wk.by_reason.map((r) => [r.reason, r.lines, r.cases]), f.by_warehouse.map((w) => [w.warehouse, w.lines, w.cases])], [10, '83.6%', [['Short shipped, remainder cancelled', 6, 379], ['Received below ship notice', 4, 4]], [['Kinross Groveport', 6, 260], ['Kinross Joliet', 4, 123]]]);
   const g = SC.failingLines(db, at, null, 'Groveport'); const grv = new Set(db.prepare("SELECT po FROM shipments WHERE ship_from = 'KIN-GRV'").all().map((r) => r.po));
-  eq('scorecard.groveport_lines', [g.warehouse, g.lines.length, g.lines.reduce((n, l) => n + l.cases, 0), g.lines.every((l) => grv.has(l.po)), SC.failingLines(db, at, null).lines.length], ['Kinross Groveport', 44, 1581, true, 108]);
+  eq('scorecard.groveport_lines', [g.warehouse, g.lines.length, g.lines.reduce((n, l) => n + l.cases, 0), g.lines.every((l) => grv.has(l.po)), SC.failingLines(db, at, null).lines.length], ['Kinross Groveport', 44, 1581, true, 104]);
   // What falls due in the week holding Sunday 8 November 23:59 (8 to 14 November): invoices on open buyer orders, invoice date plus terms.
   const t8 = '2026-11-09T04:59:00.000Z'; const due = db.prepare("SELECT count(*) n, round(sum(i.total), 2) v, count(DISTINCT i.po) o FROM invoices i JOIN orders o ON o.po = i.po WHERE o.stream = 'buyer' AND o.received_at >= '2026-06-28' AND i.sent_at <= ? AND i.po NOT IN (SELECT po FROM remittance_items WHERE paid_at <= ?) AND date(i.sent_at, '-5 hours', '+' || i.terms_days || ' days') BETWEEN '2026-11-08' AND '2026-11-14'").get(t8, t8);
   const oo = NR.openOrders(db, T(t8)); eq('open_orders.due_this_week', [due.n, due.v, due.o, oo.due_in_period.invoices, oo.due_in_period.value, oo.period_covered.from, oo.period_covered.to, oo.orders, oo.open_orders, oo.open_value, oo.unfilled_at_acknowledgment.orders, oo.unfilled_at_acknowledgment.value], [10, 1056413.3, 10, 10, 1056413.3, '2026-11-08', '2026-11-14', 342, 201, 28980937.9, 13, 199223.2]); }

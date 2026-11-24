@@ -1,6 +1,6 @@
 // Pace Agent runtime for P7 Performance Improvement (Ashby side). A session branches at 28 December 2026 09:00 ET, after the
 // quarter's last receiving advice, when Trading Grid has calculated Ashby's on-time, in-full rate from the documents it
-// carries (91.0%: 43,680 compliant cases of 48,000; 108 failing order lines).
+// carries (91.8%: 44,046 compliant cases of 48,000; 104 failing order lines).
 // Pace Agent explains the rate: for each group of failing lines it finds the first record where the lines went wrong and
 // attributes the group to Kinross, Ashby or Northfield's receiving. Where a period's short shipments split across Kinross
 // Joliet and Kinross Groveport it shows each cause, never one. It drafts no corrective plan and no task, and nothing is

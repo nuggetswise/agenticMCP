@@ -361,6 +361,16 @@ body{overflow:hidden}
 .next:hover{background:var(--surface-subtle)}
 @media (prefers-reduced-motion:reduce){.emph,.drow.enter{animation:none}}
 </style>
+<style id="p23-orders">
+.orow{padding:var(--space-2);border-bottom:1px solid var(--border-default)}
+.orow .r1{display:flex;justify-content:space-between;align-items:center;gap:var(--space-2)}
+.orow .nm{font-weight:600;color:var(--text-heading)}
+.orow .r2{color:var(--text-muted);font-size:var(--ui-fs-small);margin-top:2px}
+.orow.cur{background:var(--action-soft);border-radius:var(--radius-md);border-bottom:0}
+.orow.cur .r2{color:var(--text-body)}
+.docs{margin:0 0 var(--space-2) var(--space-3);border-left:2px solid var(--border-default);padding-left:var(--space-2)}
+.drow.sub{padding:6px var(--space-2)}
+</style>
 <style id="avc-style">
 /* Aviator chat: live answers from the demo server's model on the hosted page; one link line elsewhere */
 .avc{display:flex;flex-direction:column;gap:var(--space-3)}
@@ -571,6 +581,9 @@ const ITEMS = [
   {n:2, sku:"ASH-NAP-4", name:"Linen napkin 4-pack, case of 24", price:38.40, first:120},
   {n:3, sku:"ASH-HNY-340", name:"Wildflower honey, case of 12", price:46.80, first:80}];
 const AVAIL = 270, EXPOSURE = 150;
+/* Ashby's open Northfield orders at the opening moment: received, not yet shipped (demo world) */
+const OPEN = [["45985","DC 4","2026-11-03",1306.8,2],["45986","DC 2","2026-11-04",1431.6,2],["45987","DC 2","2026-11-04",1225.2,2],["45988","DC 2","2026-11-04",1741.2,2],["45989","DC 2","2026-11-04",2274,3],["45990","DC 4","2026-11-04",378,1],["45991","DC 4","2026-11-04",864,1],["45992","DC 2","2026-11-04",1123.2,1],["45993","DC 4","2026-11-04",648,1],["45994","DC 4","2026-11-04",2198.4,3],["45995","DC 4","2026-11-04",519.6,2],["45996","DC 2","2026-11-04",648,2],["45997","DC 2","2026-11-05",1972.8,2],["45998","DC 2","2026-11-05",936,1],["45999","DC 2","2026-11-05",1134,1],["46000","DC 4","2026-11-05",2390.4,3],["46001","DC 4","2026-11-05",1081.2,2],["46002","DC 4","2026-11-05",884.4,2]];
+const WD = d => ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date(d + "T12:00:00Z").getUTCDay()];
 const DOCS = {
   po:   {name:"Purchase order", ref:"NR-450118", iface:"EDI 850", from:"Northfield Retailer", to:"Ashby Supplier", at:T(0,9,12), kv:[["Ship to","Northfield DC 2"],["Requested delivery","Saturday"],["Order item 1","ASH-MUG-12 · 300 cases at $54.00"],["Order item 2","ASH-NAP-4 · 120 cases at $38.40"],["Order item 3","ASH-HNY-340 · 80 cases at $46.80"],["Order value","$24,552.00"]]},
   c2:   {name:"Order change 2", ref:"NR-450118 change 2", iface:"EDI 860", from:"Northfield Retailer", to:"Ashby Supplier", at:T(0,10,40), kv:[["Order item 1","Quantity decrease to 250 cases"],["State","Superseded by order change 3"]]},
@@ -627,8 +640,8 @@ document.body.insertAdjacentHTML("afterbegin", `
   <div class="head"><div class="tx"><h1 id="title"></h1><p class="ev" id="evline"></p><p class="goal" id="goal"></p></div><div class="strip" id="strip"></div></div>
   <section class="map mapov" aria-label="Route map" id="mapcard"></section>
   <div class="split">
-    <section class="pane" aria-label="Order documents">
-      <div class="ph"><div class="h"><span class="lab">Order documents</span><span id="cnt"></span></div><div class="readbar" id="readbar"><i></i></div></div>
+    <section class="pane" aria-label="Open orders">
+      <div class="ph"><div class="h"><span class="lab">Open orders</span><span id="cnt"></span></div><div class="readbar" id="readbar"><i></i></div></div>
       <div class="list" id="list"></div>
     </section>
     <section class="pane det" aria-label="Order" id="det"></section>
@@ -731,10 +744,15 @@ function listChip(k){
   return LISTLINE[k][3];
 }
 function renderList(){
-  $("#cnt").textContent = F.docs.length + " records";
-  $("#list").innerHTML = F.docs.slice().reverse().map(k => { const l = LISTLINE[k], c = listChip(k);
+  const unanswered = F.st === 0 || F.st === 1 ? 1 : 0;
+  $("#cnt").textContent = F.st <= 2 ? `${unanswered} of 19 with an unanswered change` : "19 open orders";
+  const docs = F.docs.slice().reverse().map(k => { const l = LISTLINE[k], c = listChip(k);
     const line = k === "draft" && F.st >= 4 ? "Order item 1 · 270 cases, from the load scan" : l[1];
-    return `<button class="drow${F.fresh[k] ? " enter" : ""}" type="button" data-doc="${k}" aria-current="${F.cur === k}"><div class="r1"><span class="nm">${esc(l[0])}</span>${c ? `<span class="chip ${c[1]}">${esc(c[0])}</span>` : ""}</div><div class="r2">${esc(line)}</div><div class="r3">${esc(when(DOCS[k].at))} · ${esc(l[2])}</div></button>`; }).join("");
+    return `<button class="drow sub${F.fresh[k] ? " enter" : ""}" type="button" data-doc="${k}" aria-current="${F.cur === k}"><div class="r1"><span class="nm">${esc(l[0])}</span>${c ? `<span class="chip ${c[1]}">${esc(c[0])}</span>` : ""}</div><div class="r2">${esc(line)}</div><div class="r3">${esc(when(DOCS[k].at))} · ${esc(l[2])}</div></button>`; }).join("");
+  const hc = [["Unanswered change","amber"],["270 offered","live"],["Accepted","brand"],["Ship notice held","red"],["Ready to release","live"],["Received at DC 2","brand"]][F.st];
+  const top = `<div class="orow cur"><div class="r1"><span class="nm">PO 450118</span><span class="chip ${hc[1]}">${esc(hc[0])}</span></div><div class="r2">3 order items · ${money(value())} · DC 2 · delivery Sat</div></div><div class="docs">${docs}</div>`;
+  const rest = OPEN.map(o => `<div class="orow"><div class="r1"><span class="nm">PO ${o[0]}</span></div><div class="r2">${o[4]} order item${o[4] > 1 ? "s" : ""} · ${money(o[3])} · ${o[1]} · delivery ${WD(o[2])}</div></div>`).join("");
+  $("#list").innerHTML = top + rest;
   F.fresh = {};
 }
 

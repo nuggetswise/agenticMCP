@@ -292,7 +292,7 @@ export function replayRule(db, { draft, check, value, charge, as_of }) {
   // as_of (18 November 2026): replay only the documents exchanged by that time, for a page that opens before the quarter ends.
   const TO = as_of ? (asOfDate(as_of) || new Date('9999-01-01')).toISOString() : '9999'; const upTo = as_of ? { documents_up_to: fmtET(TO) } : {};
   let d = null;
-  if (draft) { d = db.prepare('SELECT * FROM draft_rules WHERE id = ?').get(draft.trim().toUpperCase()); if (!d) return { found: false, message: `No draft rule ${draft}` }; check = d.check_kind; value = d.value; charge = d.charge; }
+  if (draft) { d = db.prepare('SELECT * FROM draft_rules WHERE id = ?').get(draft.trim().toUpperCase()); if (!d) return { found: false, message: `No draft rule ${draft}` }; check = d.check_kind; value = value ?? d.value; charge = d.charge; } // a value with a draft replays the draft's revised value at its own charge (Revise draft)
   const C = REPLAY_CHECKS[check]; if (!C) return { found: false, message: `Replay checks: ${Object.keys(REPLAY_CHECKS).join(', ')}` };
   const v = Number(value); if (!Number.isFinite(v) || v < 0) return { found: false, message: 'value must be a number' };
   if (C.needs) return { found: true, ...upTo, draft: d ? { id: d.id, statement: d.statement, state: d.state } : null, check: C.what.replace('N', String(v)), replayable: false, needs: C.needs, note: 'Not replayed: the quarter’s records cannot show this check yet. Nothing is published.' };
@@ -304,13 +304,26 @@ export function replayRule(db, { draft, check, value, charge, as_of }) {
     return { found: true, ...upTo, draft: d ? { id: d.id, statement: d.statement, state: d.state, basis: d.basis } : null, check: C.what.replace('N', String(v)), compared_with: C.current ? `${C.current} in force` : 'No such rule in force today',
       documents_replayed: db.prepare("SELECT count(*) n FROM documents WHERE doc_type = ? AND status <> 'Superseded' AND sent_at >= ? AND sent_at <= ?").get(C.set, QUARTER_FROM, TO).n, failing_with_draft: then.length, charge: perFail == null ? 'To set' : basis.startsWith('percent') ? `${perFail}% of the ${basis.replace(/^percent of (the )?/, '')}` : `$${perFail.toFixed(2)} ${basis}`,
       exposure_with_draft: cost(then) == null ? 'To set' : cost(then),
-      by_supplier: Object.keys(B).map((s) => ({ supplier: supplierName(db, s), with_draft: B[s].length, documents: B[s].slice(0, 5) })).sort((a, b) => b.with_draft - a.with_draft),
+      by_supplier: Object.keys(B).map((s) => { const c = cost(then.filter((r) => r.sup === s)); return { supplier: supplierName(db, s), with_draft: B[s].length, exposure_with_draft: c == null ? 'To set' : c, documents: B[s].slice(0, 5), documents_with_draft: [...new Set(B[s])] }; }).sort((a, b) => b.with_draft - a.with_draft),
       note: 'Replayed against the quarter’s exchanged records only. Nothing is published; publishing needs this replay on record and Jordan Ellis’s approval.' }; }
   const by = (rows) => { const m = {}; for (const r of rows) (m[r.sup] ||= []).push(r.reference); return m; };
   const A = by(now), B = by(then); const sups = [...new Set([...Object.keys(A), ...Object.keys(B)])];
+  // 24 November 2026: a charge with an order minimum ("$7.50 per carton, $50 minimum per order", NF-4.2's own) is costed per order:
+  // cartons from each failing ship notice's carton count, a resent reference counted once, and each order charged max(minimum, rate × cartons).
+  // Any other basis is costed per failing document. Added exposure is the cost with the draft minus the cost under the rule in force.
+  const minimum = (basis.match(/\$(\d+(?:\.\d+)?) minimum per order/) || [])[1]; const perOrder = minimum != null && basis.startsWith('per carton');
+  const costOf = (rows) => { if (!perOrder) return { cost: Math.round(rows.length * perFail * 100) / 100, orders: new Set(rows.map((r) => r.po)).size, cartons: null };
+    const po = new Map(); for (const r of rows) { const m = po.get(r.po) || po.set(r.po, new Map()).get(r.po); m.set(r.reference, Number(J(r.body).carton_count) || 0); }
+    let cost = 0, cartons = 0; for (const m of po.values()) { const c = [...m.values()].reduce((t, n) => t + n, 0); cartons += c; cost += Math.max(Number(minimum), perFail * c); }
+    return { cost: Math.round(cost * 100) / 100, orders: po.size, cartons }; };
+  const cNow = costOf(now), cThen = costOf(then); const r2 = (x) => Math.round(x * 100) / 100;
   return { found: true, ...upTo, draft: d ? { id: d.id, statement: d.statement, state: d.state } : null, check: C.what.replace('N', String(v)), compared_with: `${C.current} at ${C.currentValue}`, documents_replayed: db.prepare("SELECT count(*) n FROM documents WHERE doc_type = ? AND status <> 'Superseded' AND sent_at >= ? AND sent_at <= ?").get(C.set, QUARTER_FROM, TO).n,
-    failing_now: now.length, failing_with_draft: then.length, charge_per_failure: perFail, added_exposure: (then.length - now.length) * perFail,
-    by_supplier: sups.map((s) => ({ supplier: supplierName(db, s), now: (A[s] || []).length, with_draft: (B[s] || []).length, newly_failing: (B[s] || []).filter((x) => !(A[s] || []).includes(x)).slice(0, 5) })).sort((a, b) => b.with_draft - a.with_draft),
+    failing_now: now.length, failing_with_draft: then.length, charge: `$${perFail.toFixed(2)} ${basis}`, charge_per_failure: perOrder ? null : perFail,
+    orders_failing_now: cNow.orders, orders_failing_with_draft: cThen.orders, ...(perOrder ? { cartons_now: cNow.cartons, cartons_with_draft: cThen.cartons } : {}),
+    cost_now: cNow.cost, cost_with_draft: cThen.cost, added_exposure: r2(cThen.cost - cNow.cost),
+    by_supplier: sups.map((s) => { const rn = now.filter((r) => r.sup === s), rt = then.filter((r) => r.sup === s); const a = costOf(rn), b = costOf(rt);
+      return { supplier: supplierName(db, s), now: rn.length, with_draft: rt.length, orders_with_draft: b.orders, ...(perOrder ? { cartons_with_draft: b.cartons } : {}), cost_now: a.cost, cost_with_draft: b.cost, added_exposure: r2(b.cost - a.cost),
+        newly_failing: (B[s] || []).filter((x) => !(A[s] || []).includes(x)).slice(0, 5), documents_now: [...new Set(A[s] || [])], documents_with_draft: [...new Set(B[s] || [])] }; }).sort((a, b) => b.with_draft - a.with_draft || b.added_exposure - a.added_exposure),
     note: 'Replayed against the quarter’s exchanged X12 only. Nothing is published; publishing needs this replay on record and Jordan Ellis’s approval.' };
 }
 export function draftRules(db) { return { drafts: db.prepare('SELECT * FROM draft_rules ORDER BY id').all().map((r) => ({ ...r })) }; }

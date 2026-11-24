@@ -50,7 +50,22 @@ CREATE TABLE findings (finding_id TEXT PRIMARY KEY, side TEXT NOT NULL CHECK (si
 CREATE TABLE finding_actions (finding_id TEXT NOT NULL REFERENCES findings(finding_id), stage TEXT NOT NULL CHECK (stage IN ('Raised','Opened','Decided','Owner fixed','Confirmed','Money settled')), at TEXT NOT NULL, actor TEXT NOT NULL,
   record TEXT NOT NULL, record_kind TEXT NOT NULL, detail TEXT, decision TEXT CHECK (decision IN ('Approved as proposed','Edited','Declined')), change TEXT, amount REAL, written INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (finding_id, stage));
+-- Ashby's findings closed before the document left (P22 Caught before shipment): the cause, the rule, the charge Northfield's
+-- guide schedules for that failure (computed from the rule's charge text and the cartons on the document that left), and the
+-- record that closed the finding. A scheduled charge is what the guide sets for the failure; nothing here says it was avoided.
+CREATE TABLE findings_caught (finding_id TEXT PRIMARY KEY REFERENCES findings(finding_id), cause TEXT NOT NULL, rule TEXT NOT NULL, charge TEXT, cartons INTEGER, scheduled_charge REAL,
+  document TEXT NOT NULL, document_left_at TEXT NOT NULL, closing_record TEXT NOT NULL, closing_kind TEXT NOT NULL, closed_at TEXT NOT NULL);
 `;
+
+export const CAUGHT_CAUSES = ['Ship notice held and corrected', 'Invoice corrected before the batch', 'Missing document sent before its deadline', 'Order changed before shipment'];
+/** The charge Northfield's guide schedules for one failure, from the rule's charge text: a fixed amount per order, invoice,
+ * ship notice or load; a fixed amount plus a rate per carton; or a rate per carton with a minimum per order. Anything else
+ * (a share of cost of goods, carton cost) is not a per-failure amount and gives null. */
+export const scheduledCharge = (text, cartons = 0) => { if (!text) return null; let m;
+  if ((m = text.match(/^\$(\d+(?:\.\d+)?) per carton, \$(\d+(?:\.\d+)?) minimum per order$/))) return r2(Math.max(Number(m[1]) * cartons, Number(m[2])));
+  if ((m = text.match(/^\$(\d+(?:\.\d+)?)(?: per (?:order|invoice|ship notice|PO|load))? plus \$(\d+(?:\.\d+)?) per carton(?: [a-z -]+)?$/))) return r2(Number(m[1]) + Number(m[2]) * cartons);
+  if ((m = text.match(/^\$(\d+(?:\.\d+)?)(?: per (?:order|invoice|ship notice|PO|load))?$/))) return Number(m[1]);
+  return null; };
 
 export function buildFindingLog(db) {
   const F = [];
@@ -232,9 +247,29 @@ export function buildFindingLog(db) {
     const at = Math.max(Date.parse(f.raised_at), Date.parse(d.at) - (3 + (hash(`${f.side}|${f.use_case}|${f.record}|${f.rule}`) % 27)) * MIN);
     f.act('Opened', at, d.actor, `${d.actor} opened ${f.record}`, 'Trading Grid view', { written: 1 }); }
 
+  // ───────── Ashby: caught before shipment, findings closed before their document left ─────────
+  // A missing document sent before its deadline; a ship notice the rules held, corrected before it left and not later rejected
+  // or sent late; an invoice draft corrected before it went; an order changed before shipment. Rejections Northfield returned
+  // and ship notices sent late are not here: the document had already left.
+  const chargeText = q('SELECT charge FROM rules WHERE id = ?'); const cartonsOf = q('SELECT cartons FROM shipments WHERE shipment_id = ?');
+  const errsOn = q("SELECT count(*) n FROM errors e JOIN documents d ON d.doc_id = e.doc_id WHERE d.reference = ?"); const lateOf = q("SELECT 1 x FROM events WHERE kind = 'tg.late_document' AND json_extract(data, '$.document') = ?");
+  const MISSING = { 'Order acknowledgment not sent': 1, 'Invoice not sent': 1, 'Ship notice not sent; the truck has left': 1 };
+  for (const f of F) { if (f.side !== 'Ashby') continue; const raised = f.actions.find((a) => a.stage === 'Raised'); if (!raised || raised.actor !== 'Trading Grid') continue;
+    const fix = f.actions.find((a) => a.stage === 'Owner fixed'); if (!fix) continue; let cause = null, doc = null, closing = fix;
+    if (f.use_case === 'Missing documents' && MISSING[f.problem]) { if (f.deadline && fix.at <= f.deadline) { cause = 'Missing document sent before its deadline'; doc = { reference: fix.record, sent_at: fix.at }; } }
+    else if (f.use_case === 'Shipment checks') {
+      if (/^Invoice draft/.test(f.problem)) { cause = 'Invoice corrected before the batch'; doc = { reference: fix.record, sent_at: fix.at }; }
+      else if (/^Collect freight/.test(f.problem)) { if (f.deadline && fix.at <= f.deadline) { cause = 'Missing document sent before its deadline'; doc = { reference: fix.record, sent_at: fix.at }; } }
+      else if (/ free against /.test(f.problem)) { const asn = shipNotice(f.po, fix.at); if (asn) { cause = 'Order changed before shipment'; doc = asn; } }
+      else { const asn = shipNotice(f.po, f.raised_at); if (asn && asn.sent_at >= fix.at) { cause = 'Ship notice held and corrected'; doc = asn; if (fix.record_kind !== 'Ship notice (856)') closing = { record: asn.reference, record_kind: 'Ship notice (856)', at: asn.sent_at }; } } }
+    if (!cause || !doc) continue;
+    if (/^ASN-/.test(doc.reference) && (errsOn.get(doc.reference).n > 0 || lateOf.get(doc.reference))) continue;
+    const text = chargeText.get(f.rule)?.charge || null; const cartons = /^ASN-/.test(doc.reference) ? cartonsOf.get(doc.reference)?.cartons ?? null : null;
+    f.caught = { cause, rule: f.rule, charge: text, cartons, scheduled_charge: scheduledCharge(text, cartons || 0), document: doc.reference, document_left_at: iso(doc.sent_at), closing_record: closing.record, closing_kind: closing.record_kind, closed_at: iso(closing.at) }; }
+
   // ───────── ids and rows ─────────
   const kept = F.filter((f) => periodOf(f.raised_at)).sort((a, b) => (a.side < b.side ? -1 : a.side > b.side ? 1 : a.raised_at < b.raised_at ? -1 : a.raised_at > b.raised_at ? 1 : `${a.use_case}|${a.record}|${a.rule}|${a.problem}` < `${b.use_case}|${b.record}|${b.rule}|${b.problem}` ? -1 : 1));
-  const n = { Ashby: 0, Northfield: 0 }; const insF = q('INSERT INTO findings VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'); const insA = q('INSERT INTO finding_actions VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+  const n = { Ashby: 0, Northfield: 0 }; const insF = q('INSERT INTO findings VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'); const insA = q('INSERT INTO finding_actions VALUES (?,?,?,?,?,?,?,?,?,?,?)'); const insC = q('INSERT INTO findings_caught VALUES (?,?,?,?,?,?,?,?,?,?,?)');
   db.exec('BEGIN');
   // A finding recorded before 18 November 2026 keeps its number (registry/finding-ids.json, keyed by side, use case, record and rule), so a
   // finding added or moved in time renumbers no other. A finding with no number there takes the next one after the highest.
@@ -243,7 +278,8 @@ export function buildFindingLog(db) {
   for (const p of Object.values(FINDING_IDS)) { const side = p[1] === 'A' ? 'Ashby' : 'Northfield'; top[side] = Math.max(top[side], Number(p.slice(3))); }
   for (const f of kept) { n[f.side]++; const id = idOf.get(f) || `F${f.side[0]}-${String(++top[f.side]).padStart(4, '0')}`;
     insF.run(id, f.side, periodOf(f.raised_at), f.use_case, f.rule, f.record, f.po ?? null, f.problem, f.owner, f.raised_at, f.deadline ?? null, f.decision_needed, f.proposed_by, f.proposal ?? null, f.rule_baseline ?? null, f.amount ?? null);
-    for (const a of f.actions.sort((x, y) => STAGES.indexOf(x.stage) - STAGES.indexOf(y.stage))) insA.run(id, a.stage, a.at, a.actor, a.record, a.record_kind, a.detail, a.decision, a.change, a.amount, a.written); }
+    for (const a of f.actions.sort((x, y) => STAGES.indexOf(x.stage) - STAGES.indexOf(y.stage))) insA.run(id, a.stage, a.at, a.actor, a.record, a.record_kind, a.detail, a.decision, a.change, a.amount, a.written);
+    if (f.caught) { const c = f.caught; insC.run(id, c.cause, c.rule, c.charge, c.cartons, c.scheduled_charge, c.document, c.document_left_at, c.closing_record, c.closing_kind, c.closed_at); } }
   db.exec('COMMIT');
   return { findings: kept.length, ...n };
 }
@@ -304,7 +340,20 @@ export function findingOutcomes(db, side, { asOf, period = 'quarter', use_case =
     findings: V.length, decision_needed: count(V, (v) => v.decision_needed), stages: stageTotals(V), leaks: leaks(V), by_use_case: by, owner_response: owners, proposals: { decisions: ['Approved as proposed', 'Edited', 'Declined'], by_rule_set: agents }, value_proven: value,
     visibility: side === 'Ashby' ? 'Ashby’s findings only. Northfield’s payables and reviewer notes: Not available to Ashby.' : 'Northfield’s findings only. A supplier’s ERP, warehouse and carrier records: Not available to Northfield.',
     how_to_reproduce: 'Every total counts rows of findings and finding_actions for this side (run_readonly_sql): a stage total is the number of findings with that stage at or before as_of.' };
+  if (side === 'Ashby') out.caught_before_shipment = caughtBefore(db, V, T);
   if (use_case) { const u = USE_CASES.find((x) => x.toLowerCase() === String(use_case).toLowerCase()); if (!u) return { found: false, message: `use_case is one of: ${USE_CASES.join(', ')}` }; const xs = V.filter((v) => v.use_case === u); out.use_case = { use_case: u, stages: stageTotals(xs), leaks: leaks(xs), findings: xs.slice(0, 200).map(strip) }; }
   else if (list) out.finding_list = V.slice(0, 200).map(strip);
   return out;
+}
+
+/** Ashby's findings closed before their document left, by cause, for the findings in view and closed by as_of. Kept apart
+ * from every deductions figure: a scheduled charge is what Northfield's guide sets for the failure, never a saving. */
+function caughtBefore(db, V, T) {
+  const ids = new Map(V.map((v) => [v.finding, v])); const rows = db.prepare('SELECT * FROM findings_caught WHERE closed_at <= ? ORDER BY finding_id').all(T).filter((c) => ids.has(c.finding_id));
+  const item = (c) => { const v = ids.get(c.finding_id); return { finding: c.finding_id, record: v.record, po: v.po, problem: v.problem, owner: v.owner, rule: c.rule, charge: c.charge || 'No charge in Northfield’s guide', cartons: c.cartons, scheduled_charge: c.scheduled_charge,
+    document: c.document, document_left: fmtET(c.document_left_at), closed_by: { record: c.closing_record, kind: c.closing_kind, at: fmtET(c.closed_at) }, link: v.po ? `order/${encodeURIComponent(v.po)}` : null }; };
+  const sum = (xs) => r2(xs.reduce((t, c) => t + (c.scheduled_charge || 0), 0)); const orders = (xs) => new Set(xs.map((c) => ids.get(c.finding_id).po || ids.get(c.finding_id).record)).size;
+  return { what: 'Findings closed before their document left: the cause, the rule, the charge Northfield’s guide schedules for that failure and the record that closed it.', findings: rows.length, orders: orders(rows), scheduled_charge: sum(rows),
+    kept_apart: 'Never added to deductions, waived or repaid. A scheduled charge is what the guide sets for the failure; no record shows a charge prevented.',
+    by_cause: CAUGHT_CAUSES.map((cause) => { const xs = rows.filter((c) => c.cause === cause); return xs.length ? { cause, findings: xs.length, orders: orders(xs), scheduled_charge: sum(xs), not_a_fixed_charge: xs.filter((c) => c.scheduled_charge == null).length, list: xs.map(item) } : null; }).filter(Boolean) };
 }

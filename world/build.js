@@ -310,6 +310,7 @@ function buildAshbyView() {
     INSERT INTO shipment_plans SELECT * FROM m.shipment_plans WHERE event_id IN (SELECT id FROM events); INSERT INTO warehouse_scans SELECT * FROM m.warehouse_scans WHERE event_id IN (SELECT id FROM events);
     INSERT INTO carrier_events SELECT * FROM m.carrier_events WHERE event_id IN (SELECT id FROM events);
     INSERT INTO findings SELECT * FROM m.findings WHERE side = 'Ashby'; INSERT INTO finding_actions SELECT * FROM m.finding_actions WHERE finding_id IN (SELECT finding_id FROM findings);
+    INSERT INTO findings_caught SELECT * FROM m.findings_caught WHERE finding_id IN (SELECT finding_id FROM findings);
     ${STAGES.flatMap((st) => st.views?.ashby || []).join(';\n')}${STAGES.some((st) => st.views?.ashby?.length) ? ';' : ''}
     COMMIT;`);
   db.exec('DETACH DATABASE m'); db.exec('DROP TABLE connections; DROP TABLE access_log; DROP TABLE proposals; DROP TABLE review_notes; DROP TABLE draft_rules; DROP TABLE rule_replays; DROP TABLE agent_changes;'); db.exec('VACUUM'); db.close();

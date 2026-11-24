@@ -27,6 +27,7 @@ const PRIYA = 'Priya Raman', JORDAN = 'Jordan Ellis', BOTH = 'Priya Raman, then 
 // 23 November 2026 (rebuild plan, decisions of 23 November): P5 opens at 17:21 ET on 8 December, with Kinross's damage
 // scan (17:21) already on the page; P23 opens at 15:30 ET on 2 November, with order change 3 (13:05) and the Supplier ERP
 // stock read (15:30) already there. The rules still raise P5's findings at 17:12 (world/p5-physical.js, branch_at).
+// P24 merges into P8 (decided 23 November): P8 opens at 17:30 ET on 9 December, the moment P24 used, and P24's row retires.
 export const CALENDAR = () => [
   { id: 'P2', stage: STAGE.req, week: 3, moment: 'Drop-ship and warehouse readiness', seen_by: PRIYA, prototype: 'P2 Programme Readiness', as_of: '2026-10-12T13:00:00.000Z', anchor: 'Drop-ship programme' },
   { id: 'P21', stage: STAGE.req, week: 8, moment: 'Each company sets its own rules and sees the effect of a change before it applies', seen_by: BOTH, prototype: 'P21 Admin and rules', as_of: '2026-11-17T16:00:00.000Z', anchor: "Both companies' rules" },
@@ -35,12 +36,11 @@ export const CALENDAR = () => [
   { id: 'P13', stage: STAGE.ful, week: 8, moment: 'Silent order watch', seen_by: PRIYA, prototype: 'P13 Silent order watch', as_of: '2026-11-18T14:00:00.000Z', anchor: 'NR-46210 to NR-46231' },
   { id: 'P5', stage: STAGE.ful, week: 11, moment: 'Five fulfilment risks before departure', seen_by: PRIYA, prototype: 'P5 Shipment Watch', as_of: '2026-12-08T22:21:00.000Z', anchor: 'NR-460207 to NR-460288' },
   { id: 'P11', stage: STAGE.ful, week: 10, moment: 'A live ship notice held in NetSuite and corrected before it leaves', seen_by: PRIYA, prototype: 'P11 NetSuite Chargeback Avoidance', as_of: '2026-11-30T15:25:00.000Z', anchor: 'ASN-78260' },
-  { id: 'P24', stage: STAGE.ful, week: 11, moment: 'Inbound orders that will miss their delivery window, seen before receipt', seen_by: JORDAN, prototype: 'P24 Inbound order risk', as_of: '2026-12-09T22:30:00.000Z', anchor: 'NR-46539 to NR-46616' },
   { id: 'P25', stage: STAGE.ful, week: 16, moment: 'A ship notice with three item numbers Northfield cannot match, checked before release', seen_by: PRIYA, prototype: 'P25 Catalogue data mismatch', as_of: '2027-01-13T19:05:00.000Z', anchor: 'NR-47300' },
   { id: 'P26', stage: STAGE.ful, week: 17, moment: 'A honey ship notice held for cartons with no lot, and one recalled lot traced to the DCs that received it', seen_by: BOTH, prototype: 'P26 Lot data and recall reach', as_of: '2027-01-18T15:20:00.000Z', anchor: 'NR-47400' },
   { id: 'P9', stage: STAGE.sell, week: 5, moment: 'Store activity becomes a refill order', seen_by: PRIYA, prototype: 'P9 Shelf Recovery', as_of: '2026-10-26T12:07:00.000Z', anchor: 'Store 114, NR-451207' },
   { id: 'P14', stage: STAGE.inv, week: 7, moment: 'An invoice that does not match its order and receipt', seen_by: JORDAN, prototype: 'P14 Invoice Variance', as_of: '2026-11-10T14:00:00.000Z', anchor: 'INV-7731' },
-  { id: 'P8', stage: STAGE.inv, week: 7, moment: 'Open-order value from purchase order to payment', seen_by: JORDAN, prototype: 'P8 Money in Motion', as_of: '2026-11-09T04:59:00.000Z', anchor: 'NR-450118 and 339 other orders' },
+  { id: 'P8', stage: STAGE.inv, week: 11, moment: 'Open-order value from purchase order to payment, with the orders in transit at risk of missing their window', seen_by: JORDAN, prototype: 'P8 Money in Motion', as_of: '2026-12-09T22:30:00.000Z', anchor: 'NR-450118 and 358 other orders' },
   { id: 'P6', stage: STAGE.ded, week: 10, moment: 'Deductions and an invoice exception', seen_by: BOTH, prototype: 'P6 Charge Resolution', as_of: '2026-12-01T14:00:00.000Z', anchor: 'DC-40877 on NR-450118' },
   { id: 'P20', stage: STAGE.ded, week: 15, moment: 'A remittance takes five promotion deductions', seen_by: BOTH, prototype: 'P20 Promotion deductions', as_of: '2027-01-06T14:00:00.000Z', anchor: 'PMT-990168' },
   { id: 'P7', stage: STAGE.perf, week: 14, moment: 'On-time, in-full 91.0%, calculated by Trading Grid', seen_by: BOTH, prototype: 'P7 Performance Improvement', as_of: '2026-12-28T14:00:00.000Z', anchor: '108 failing lines' },

@@ -1136,6 +1136,21 @@
      "url": "https://www.spscommerce.com/community/articles/3pl-selection-checklist-what-new-brands-need-to-score-before-signing"
     }
    ]
+  },
+  {
+   "id": "KN-1",
+   "owner": "Ashby agreement",
+   "statement": "Kanmon advances 100% of an Ashby invoice to Northfield that is clean: Northfield's receiving advice covers every order item in full, no application advice rejects it and it is not held. The fee is 1.5% per 30 days, prorated by day until Northfield's payment, and the advance and fee are repaid from that payment when it arrives. Agreement between Ashby and Kanmon",
+   "implements": [],
+   "charge": "1.5% per 30 days, prorated",
+   "basis": "Invented",
+   "source": "Terms set for this world; Kanmon publishes a 2% to 4.5% fee for a 30-day advance repaid by bank debit (SPS Commerce Invoice Financing, powered by Kanmon)",
+   "links": [
+    {
+     "title": "SPS Commerce Invoice Financing, powered by Kanmon",
+     "url": "https://spscommerce.com/products/invoice-financing"
+    }
+   ]
   }
  ],
  "rule_sets": [

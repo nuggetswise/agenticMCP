@@ -24,7 +24,8 @@ export const parties = [
   { id: 'NORTHFIELD', name: 'Northfield Retailer', kind: 'Retailer', gln: '0614141000050', isa: 'NORTHFIELD' },
   { id: 'ASHBY', name: 'Ashby Supplier', kind: 'Supplier', gln: '0614141002085', isa: 'ASHBYSUP' },
   { id: 'KINROSS', name: 'Kinross Logistics', kind: '3PL warehouse', gln: '0614141003006', isa: 'KINROSS' },
-  { id: 'LAKELINE', name: 'Lakeline Freight', kind: 'Carrier', gln: gln(3900), isa: 'LAKELINE' }, // T1.15: interchange id so it exchanges 204, 214 and 210 with Ashby
+  { id: 'LAKELINE', name: 'Lakeline Freight', kind: 'Carrier', gln: gln(3900), isa: 'LAKELINE' },
+  { id: 'KANMON', name: 'Kanmon', kind: 'Lender', gln: null, isa: null }, // P27: funds clean invoices by API; no EDI interchange // T1.15: interchange id so it exchanges 204, 214 and 210 with Ashby
   { id: 'BROOKLINE', name: 'Brookline Goods', kind: 'Supplier', gln: '0614141004003', isa: 'BROOKLINE' },
   { id: 'CEDARPINE', name: 'Cedar & Pine Home', kind: 'Supplier', gln: '0614141005000', isa: 'CEDARPINE' },
   // The other suppliers in Northfield's open-order view (Money in Motion). Index matches the order fixtures.
@@ -176,6 +177,7 @@ export const rules = [
   R('NF-10.2', 'claims', null, 'On prepaid freight the supplier files loss or damage claims with its carrier: at least 9 months to file and 2 years to sue', { owner: 'US law', basis: 'public', pub: [pub('carmack', 'A carrier may not set less than 9 months to file a claim or 2 years to bring suit')] }),
   R('SH01', 'charges', '861,820', 'Shortage: invoice cost of each short carton plus $50', { code: 'SH01', charge: 'Carton cost plus $50' }),
   { id: 'KX-945', owner: 'Ashby agreement', implements: null, params: { hours: 48 }, rule_set: 'kinross', topic: 'warehouse', doc_type: '945', statement: "Kinross returns the warehouse shipping advice (945) within 48 hours of Ashby’s warehouse shipping order (940). Agreement between Ashby and its warehouse, Kinross", window_hours: 48, limit_value: null, charge_code: null, charge: null, check: null, source: 'Ashby warehouse agreement with Kinross. Searched; no standard 945 turnaround is published. SPS Commerce, 3PL selection checklist, Sep 2026 (get a written service level; no standard turnaround)', basis: 'invented', public_sources: [] },
+  { id: 'KN-1', owner: 'Ashby agreement', implements: null, params: { advance: 1, fee_pct_per_30_days: 1.5, prorated: 'daily', repaid_from: 'Northfield payment' }, rule_set: 'kanmon', topic: 'financing', doc_type: '810', statement: "Kanmon advances 100% of an Ashby invoice to Northfield that is clean: Northfield's receiving advice covers every order item in full, no application advice rejects it and it is not held. The fee is 1.5% per 30 days, prorated by day until Northfield's payment, and the advance and fee are repaid from that payment when it arrives. Agreement between Ashby and Kanmon", window_hours: null, limit_value: null, charge_code: null, charge: '1.5% per 30 days, prorated', check: null, source: 'Ashby invoice financing agreement with Kanmon. Terms set for this world; Kanmon publishes a 2% to 4.5% fee for a 30-day advance repaid by bank debit (SPS Commerce Invoice Financing, powered by Kanmon)', basis: 'invented', public_sources: [] },
   R('NF-7.11', 'invoice', '810', "Invoice line prices within 0.5% of the acknowledged order price are paid without review; beyond that the line is held", { limit: '0.5%', params: { tolerance: 0.005 } }),
   // Adapted 20 November 2026 for Northfield's January chargeback batch (world/stages/compliance.js): the patterns are in
   // public retailer manuals; the charges are set for this world. In force all quarter.
@@ -227,6 +229,7 @@ export const ruleSets = [
   { id: 'ashby-policy', owner: 'Ashby', published_at: '2026-02-20', valid_from: HISTORY_START, valid_to: null, note: 'Ashby’s own policies.' },
   { id: 'ashby-agreement', owner: 'Ashby agreement', published_at: '2026-02-20', valid_from: HISTORY_START, valid_to: null, note: 'Agreements Ashby has signed.' },
   { id: 'kinross', owner: 'Ashby agreement', published_at: '2026-02-20', valid_from: HISTORY_START, valid_to: null, note: 'Ashby’s warehouse agreement with Kinross.' },
+  { id: 'kanmon', owner: 'Ashby agreement', published_at: '2026-11-02', valid_from: '2026-11-02', valid_to: null, note: 'Ashby’s invoice financing agreement with Kanmon (P27).' },
 ];
 /** Rules that read differently in an earlier rule set. Wording and basis are mirrored in registry/catalogue-pack.json (rule_sets). */
 export const earlierVersions = PACK.rule_sets?.flatMap((rs) => rs.changes.map((c) => ({ rule_id: c.id, rule_set: rs.id, statement: c.statement, params: c.params || null, limit_value: c.limit ?? null }))) || [];

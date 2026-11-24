@@ -18,6 +18,14 @@ const J = (s) => (s ? JSON.parse(s) : {});
 const H = 3600000;
 /** Document sets Northfield is a party to. The 940 and 945 pass between Ashby and its warehouse only. */
 export const SHARED_SETS = ['850', '855', '856', '810', '860', '865', '861', '824', '997', '820', '852'];
+/** Collect freight (NF-3.3): Northfield routes the load, so the routing request (753) and routing instructions (754) it
+ * exchanged with the supplier, and Lakeline's shipment status (214) on a load Northfield routed, are Northfield's records
+ * too (owner decision of 20 November 2026). The supplier's own carrier exchanges (204, 210, and 214 on a prepaid load)
+ * and its warehouse's documents stay the supplier's. */
+export const ROUTING_SETS = ['753', '754'];
+const NF_DOC = `((partner_id = 'NORTHFIELD' AND doc_type IN (${[...SHARED_SETS, ...ROUTING_SETS].map((x) => `'${x}'`).join(',')}))
+  OR (doc_type = '214' AND partner_id = 'LAKELINE' AND po IN (SELECT po FROM routing_requests)))`;
+const isNfDoc = (db, d) => !!db.prepare(`SELECT 1 x FROM documents WHERE doc_id = ? AND ${NF_DOC}`).get(d.doc_id);
 const ASHBY_SYSTEMS = /^(Supplier ERP|Kinross|Lakeline|Trading Grid trade testing)/;
 const supplierName = (db, id) => db.prepare('SELECT name FROM parties WHERE id = ?').get(id)?.name || id;
 const findSupplier = (db, s) => { if (!s) return null; const k = String(s).trim().toLowerCase(); return db.prepare("SELECT id, name FROM parties WHERE kind = 'Supplier' AND (lower(id) = ? OR lower(name) = ? OR lower(name) LIKE ?)").get(k, k, `${k}%`) || null; };
@@ -30,14 +38,14 @@ export function trail(db, { po: poIn, supplier, days = 30, asOf = storyClock() }
   const T = asOf.toISOString();
   if (poIn) {
     const po = normPo(poIn); const o = db.prepare('SELECT * FROM orders WHERE po = ?').get(po); if (!o) return { found: false, message: `No order ${po} at Northfield` }; if (o.received_at > T) return notYet(po, asOf);
-    const docs = db.prepare(`SELECT * FROM documents WHERE po = ? AND sent_at <= ? AND doc_type IN (${SHARED_SETS.map(() => '?').join(',')}) ORDER BY sent_at`).all(po, T, ...SHARED_SETS);
+    const docs = db.prepare(`SELECT * FROM documents WHERE po = ? AND sent_at <= ? AND ${NF_DOC} ORDER BY sent_at`).all(po, T);
     const errs = db.prepare('SELECT e.*, d.reference FROM errors e JOIN documents d ON d.doc_id = e.doc_id JOIN documents r ON r.doc_id = e.reported_by WHERE d.po = ? AND r.sent_at <= ?').all(po, T);
     return { found: true, po, supplier: supplierName(db, o.supplier_id), as_of: fmtET(asOf), order_value: o.order_value, requested_delivery: o.requested_delivery, quantities_in: quantitiesIn(db, po),
       documents: docs.map((d) => ({ sent: fmtET(d.sent_at), set: d.doc_type, document: d.name, reference: d.reference, from: d.sender_id === 'NORTHFIELD' ? 'Northfield' : supplierName(db, d.sender_id), status: d.status, link: `document/${encodeURIComponent(d.reference)}` })),
       rejections: errs.map((e) => ({ document: e.reference, cause: e.cause, rule: e.rule_id, channel: e.channel, status: e.status })),
       receipts: db.prepare('SELECT receipt, received_at, line, qty, short FROM receipts WHERE po = ? AND received_at <= ? ORDER BY received_at').all(po, T).map((r) => ({ ...r, received_at: fmtET(r.received_at) })),
       invoices: db.prepare('SELECT invoice, sent_at, total, status, replaces FROM invoices WHERE po = ? AND sent_at <= ? ORDER BY sent_at').all(po, T).map((i) => ({ ...i, sent_at: fmtET(i.sent_at) })),
-      not_shown: 'The supplier’s ERP, warehouse and carrier records are the supplier’s own and are not shown.' };
+      not_shown: 'The supplier’s ERP and warehouse records, and its own carrier exchanges on loads it tenders, are the supplier’s own and are not shown. On collect freight Northfield routes the load, so the routing instructions and Lakeline’s shipment status are Northfield’s records.' };
   }
   const s = findSupplier(db, supplier); if (!s) return { found: false, message: `No supplier ${supplier} trades with Northfield` };
   const from = new Date(asOf.getTime() - days * 24 * H).toISOString();
@@ -54,7 +62,7 @@ export function documentNF(db, reference) {
   const ref = reference.trim().toUpperCase();
   const d = db.prepare('SELECT * FROM documents WHERE upper(doc_id) = ? OR upper(reference) = ? ORDER BY sent_at DESC').get(ref, ref);
   if (!d) return { found: false, message: `No document ${reference} at Northfield` };
-  if (!SHARED_SETS.includes(d.doc_type)) return ashbyPrivate(`${d.name} ${d.reference}, a document between Ashby and its warehouse,`);
+  if (!isNfDoc(db, d)) return ashbyPrivate(`${d.name} ${d.reference}, a document between Ashby and its warehouse or its own carrier,`);
   return { found: true, document: d.name, set: d.doc_type, reference: d.reference, from: supplierName(db, d.sender_id), to: supplierName(db, d.receiver_id), sent: fmtET(d.sent_at), status: d.status, po: d.po, x12: d.raw.length > 6000 ? `${d.raw.slice(0, 6000)}\n... (${d.raw.length} characters in the file)` : d.raw, link: `document/${encodeURIComponent(d.reference)}` };
 }
 

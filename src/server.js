@@ -287,7 +287,7 @@ const INSTRUCTIONS = {
     'Records of other suppliers are not available, and Northfield’s payables, draft rules and reviewer notes are Northfield’s: say "Not available to Ashby".'].join(' '),
   [NF]: () => ['This is Northfield Retailer’s connection to Trading Grid for Jordan Ellis’s own assistant. All data is fictional.',
     'It holds the same quarter of trade as its suppliers see, 27 September to 26 December 2026, settlement to 9 January 2027. Times are US Eastern; the default as_of is Tuesday 17 November 2026 11:00 Eastern.',
-    'Documents exchanged with suppliers are shared: both sides see the same X12. A supplier’s ERP, warehouse and carrier records are the supplier’s: say "Not available to Northfield" unless the supplier shared them into a case.',
+    'Documents exchanged with suppliers are shared: both sides see the same X12. A supplier’s ERP, warehouse and carrier records are the supplier’s: say "Not available to Northfield" unless the supplier shared them into a case. On collect freight Northfield routes the load, so the routing request and routing instructions (753, 754) and Lakeline’s shipment status (214) on that load are Northfield’s records.',
     WRITES ? 'Writes follow Northfield’s guide: decide_charge and publish_rule record proposals Jordan Ellis approves in Trading Grid. Jordan decides every charge (NF-7.7). A rule is published only after replay_draft_rule.' : 'This connection is read-only.',
     'Answer only from tool results and cite each record with its link.'].join(' '),
 };

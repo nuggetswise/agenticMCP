@@ -681,7 +681,8 @@ async function pageAviator(page, req, res) {
   const { session } = S.sessionFor({ id: b.session, page: page.id, address: addr }); const sideName = side;
   const context = typeof b.context === 'string' ? b.context.slice(0, 300) : b.context ? JSON.stringify(b.context).slice(0, 300) : '';
   const history = turns.filter((h) => h && typeof h.text === 'string').map((h) => ({ role: h.role === 'model' || h.role === 'aviator' ? 'model' : 'user', text: h.text.slice(0, 2000) }));
-  const readTools = cid === AS ? TOOLS : NF_TOOLS; const SD = SIDE[cid]; const asked = askedPeriod(question, at);
+  // A tool that names its pages (fill_rate and ship_notice_timeliness: P7 and P22) is offered to Aviator on those pages only.
+  const readTools = (cid === AS ? TOOLS : NF_TOOLS).filter((t) => !t.pages || t.pages.includes(page.id)); const SD = SIDE[cid]; const asked = askedPeriod(question, at);
   // Facts the server sets for this turn. Outside Trading Grid: the guard is that no card can be raised (propose_action is
   // not offered); the model writes the reply from the owner and the place. Ashby asked for an 824: Ashby answers Northfield's
   // 824 with a 997 and the corrected invoice. A message a carried record holds: the person's words go into that record.

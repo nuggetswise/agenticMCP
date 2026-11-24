@@ -762,6 +762,192 @@
     }
    }
   },
+  "/v1/fill-rate": {
+   "get": {
+    "operationId": "fill_rate",
+    "summary": "Fill rate, calculated by Trading Grid",
+    "description": "Ashby’s fill rate, calculated by Trading Grid from the start of trading: cases shipped on the supplier’s ship notices ÷ cases ordered after accepted order changes, per order line, with the invoiced quantity as a cross-check, the short lines by reason (short shipped, cut at acknowledgment, not shipped) and the formula. Counts the lines due up to the day before as_of. Pass from and to, or period (quarter, this_week, last_week), to narrow it. Trading Grid’s own calculation, read from the purchase order, order changes, order acknowledgment, ship notices and invoices: no retailer record is needed.",
+    "tags": [
+     "Performance review"
+    ],
+    "x-mcp-tool": "fill_rate",
+    "x-required-scopes": [
+     "orders",
+     "documents"
+    ],
+    "x-optional-scopes": [],
+    "x-read-only": true,
+    "parameters": [
+     {
+      "name": "lines",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "description": "Include every short line (fill rate) or every late ship notice (timeliness)"
+      },
+      "description": "Include every short line (fill rate) or every late ship notice (timeliness)"
+     },
+     {
+      "name": "from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "First day of the period, a date such as 2026-11-22. Give from and to when the question names a week or dates"
+      },
+      "description": "First day of the period, a date such as 2026-11-22. Give from and to when the question names a week or dates"
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Last day of the period, a date such as 2026-11-28"
+      },
+      "description": "Last day of the period, a date such as 2026-11-28"
+     },
+     {
+      "name": "period",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "enum": [
+        "this_week",
+        "last_week",
+        "next_week",
+        "quarter"
+       ],
+       "description": "A named week instead of dates, resolved from as_of: this_week, last_week or next_week; or quarter for the whole quarter, the same as leaving period out. Weeks run Sunday to Saturday"
+      },
+      "description": "A named week instead of dates, resolved from as_of: this_week, last_week or next_week; or quarter for the whole quarter, the same as leaving period out. Weeks run Sunday to Saturday"
+     },
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+      },
+      "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    }
+   }
+  },
+  "/v1/ship-notice-timeliness": {
+   "get": {
+    "operationId": "ship_notice_timeliness",
+    "summary": "Timely ship notices, calculated by Trading Grid",
+    "description": "Ashby’s timely ship notices, calculated by Trading Grid from the start of trading on Northfield’s guide rule NF-4.2 (ship notice within 1 hour of departure): ship notices whose first transmission was on time ÷ all ship notices, with every late ship notice and how late. Departure is the departure scan in Ashby’s and Kinross’s own records. Pass from and to, or period, to narrow it.",
+    "tags": [
+     "Performance review"
+    ],
+    "x-mcp-tool": "ship_notice_timeliness",
+    "x-required-scopes": [
+     "orders",
+     "documents"
+    ],
+    "x-optional-scopes": [],
+    "x-read-only": true,
+    "parameters": [
+     {
+      "name": "lines",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "description": "Include every short line (fill rate) or every late ship notice (timeliness)"
+      },
+      "description": "Include every short line (fill rate) or every late ship notice (timeliness)"
+     },
+     {
+      "name": "from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "First day of the period, a date such as 2026-11-22. Give from and to when the question names a week or dates"
+      },
+      "description": "First day of the period, a date such as 2026-11-22. Give from and to when the question names a week or dates"
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Last day of the period, a date such as 2026-11-28"
+      },
+      "description": "Last day of the period, a date such as 2026-11-28"
+     },
+     {
+      "name": "period",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "enum": [
+        "this_week",
+        "last_week",
+        "next_week",
+        "quarter"
+       ],
+       "description": "A named week instead of dates, resolved from as_of: this_week, last_week or next_week; or quarter for the whole quarter, the same as leaving period out. Weeks run Sunday to Saturday"
+      },
+      "description": "A named week instead of dates, resolved from as_of: this_week, last_week or next_week; or quarter for the whole quarter, the same as leaving period out. Weeks run Sunday to Saturday"
+     },
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+      },
+      "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    }
+   }
+  },
   "/v1/next-step": {
    "post": {
     "operationId": "recommend_next_step",

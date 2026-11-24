@@ -203,6 +203,9 @@ function generate(L, { W, buyerShipments }) {
     const OPENING = { 114: S114[0][0] + S114[0][1], 207: S207[0][0] + S207[0][1] };
     WEEKS.forEach(([from, to, sent], w) => L.doc({ batch: 2, type: '852', from: 'NORTHFIELD', to: 'ASHBY', at: et(sent, '06:10'), period_start: from, period_end: to, buyer_name: 'Northfield Retailer', buyer_gln: '0614141000050', vendor_name: 'Ashby Supplier', vendor_gln: '0614141002085',
       items: [{ upc: '614141000166', sku: 'ASH-TRL-09', uom: 'EA', stores: W.storeWeeks.w1.map((r) => {
+        // 24 November 2026: stores other than 114, 207 and 118 take their weeks from W.storeWeeks.prior (world/anchors.js).
+        const P = W.storeWeeks.prior[r.n];
+        if (P) { const prev = w === 0 ? W.storeWeeks.prior.open[r.n] : P[w - 1][1]; return { store: String(r.n), sold: P[w][0], on_hand: P[w][1], received: P[w][1] - prev + P[w][0], transfer_in: 0, transfer_out: 0 }; }
         const [sold, oh] = r.n === 114 ? S114[w] : r.n === 207 ? S207[w] : [r.avg + SWING[(w + r.n) % 4], r.oh];
         const prev = w === 0 ? (OPENING[r.n] ?? r.oh) : r.n === 114 ? S114[w - 1][1] : r.n === 207 ? S207[w - 1][1] : r.oh;
         return { store: String(r.n), sold, on_hand: oh, received: oh - prev + sold, transfer_in: 0, transfer_out: 0 }; }) }] }));

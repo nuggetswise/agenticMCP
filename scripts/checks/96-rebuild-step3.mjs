@@ -18,7 +18,7 @@ export default function ({ db, ash, nf, ok, eq }) {
   { const at = new Date('2026-11-01T12:00:00Z');
     const a = A.shelfDecision(ash, '114', at).evidence; const n = A.storeSellThroughNF(nf, '114', at);
     eq('step3.p9_both_sides_return_the_rate', [a.sell_through, a.sell_through_basis, n.sell_through, n.sell_through_basis], [77.5, 'Measured', 77.5, 'Measured']);
-    eq('step3.p9_first_week_estimated', A.storeSellThroughNF(nf, '101', at).weeks[0].sell_through_basis, 'Estimated');
+    eq('step3.p9_first_week_estimated', A.storeSellThroughNF(nf, '106', at).weeks[0].sell_through_basis, 'Estimated');
     eq('step3.p9_northfield_read_leaves_out_ashby_stock', [n.ashby_available_stock, n.ashby_recommendation, JSON.stringify(n).includes('980'), JSON.stringify(n).includes('ashby_available"')], ['Not available to Northfield', 'Not available to Northfield', false, false]); }
 
   // 3. P13: a charge per missing document, each on its rule.

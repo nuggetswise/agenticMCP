@@ -47,7 +47,7 @@ body{background:var(--surface-page);color:var(--text-body);font-family:var(--fon
 button{font:inherit;color:inherit}
 .mono{font-family:var(--mono-ui);font-size:var(--ui-fs-small)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.wrap{padding:0 max(16px,env(safe-area-inset-right)) 96px max(16px,env(safe-area-inset-left));max-width:var(--container-max);margin:0 auto}
+.wrap{padding:0 max(20px,env(safe-area-inset-right)) 24px max(20px,env(safe-area-inset-left));max-width:none;margin:0}
 /* header */
 .top{display:flex;flex-wrap:wrap;row-gap:var(--space-2);align-items:center;gap:var(--space-4);min-height:52px;border-bottom:1px solid var(--border-default);background:var(--surface-card);padding:0 max(16px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left))}
 .mark{white-space:nowrap;display:flex;align-items:center;gap:var(--space-2);font-weight:700;color:var(--text-heading);font-size:var(--ui-fs-body-lg)}
@@ -64,6 +64,12 @@ button{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--color-action);outline-offset:2px}
 /* page head */
 .pagehead{padding:var(--space-4) 0 var(--space-3)}
+.pagehead{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:var(--space-4);align-items:end}
+.pagehead>h1{grid-column:1 / -1}
+.pagehead>.ev,.pagehead>.goal{grid-column:1}
+.pagehead>.ev{align-self:end}.pagehead>.goal{align-self:start}
+.pagehead>.tiles{grid-column:2;grid-row:2 / span 2;margin-top:var(--space-2)}
+@media (max-width:1100px){.pagehead>.tiles{grid-column:1;grid-row:auto}}
 .pagehead h1{margin:0;font-size:var(--ui-fs-title);font-weight:700;line-height:1.25;color:var(--text-heading)}
 .ev{margin:var(--space-1) 0 0;color:var(--text-body)}
 .goal{margin:2px 0 0;color:var(--text-muted);font-size:var(--ui-fs-small)}
@@ -89,7 +95,8 @@ button{font:inherit;color:inherit}
 /* workspace */
 .grid>*{min-width:0}
 .tw{overflow-x:auto;max-width:100%}
-.grid{display:grid;grid-template-columns:5fr 7fr;gap:var(--space-3);align-items:start}
+.grid{display:grid;grid-template-columns:minmax(340px,30%) minmax(0,1fr);gap:var(--space-3);align-items:start}
+.grid>.src,.grid>.rec{position:sticky;top:var(--space-3);max-height:calc(100vh - 2 * var(--space-3));overflow:auto}
 .card{background:var(--surface-card);border:1px solid var(--border-default);border-radius:var(--radius-lg)}
 .lab{font-size:var(--ui-fs-label);font-weight:600;letter-spacing:var(--ls-eyebrow);text-transform:uppercase;color:var(--color-primary)}
 .src{padding:var(--space-3)}
@@ -683,7 +690,7 @@ function rec207(){
       detailsDone:readList(["DMG-207","SCAN-207-2","ERP-COR-207","DEP-207"]) + whoList([["Load fixed by","Kinross"],["Ship-to fixed by","Ashby order desk"],["Fixes confirmed by","Priya Raman"]])});
   const act = {id:"rel207", button:"Release ship notice", rows:[{action:"Release ship notice", now:"Held", after:"Sent", goesTo:"Northfield", via:"EDI 856"}],
     says:"Sends the ship notice to Northfield: 660 cartons to DC 2, with the bill of lading and seal.", nodecision:"Not sent by 19:00: the ship notice is late.", ruleTag:"A person releases"};
-  if (F.rel207 === "sent") stages.push({key:"rel", state:"done", summary:"Ship notice delivered to Northfield", sub:"Technically acknowledged · FA-N2997",
+  if (F.rel207 === "sent") stages.push({key:"rel", state:"done", summary:"Ship notice delivered to Northfield", sub:"Technically acknowledged by Northfield",
       detailsDone:readList(["856:ASN-460207","997:FA-N2997","945:WSA-460207"]) + whoList([["Recommended by","Rule · Ashby rule"],["Released by","Priya Raman"],["Carried by","Trading Grid"]])});
   else if (F.dep) stages.push({key:"rel", state:"now", title:"Release ship notice", chip:["Ready for review","amber"], amber:true,
       body:E.nowAfter(act) + `<p class="reason"><b>Reason.</b> Kinross's load scan shows 660 of 660 cartons and the trailer left at 18:00.</p>` + E.decision(act),

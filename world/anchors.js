@@ -66,11 +66,29 @@ export function anchors(L, W) {
     // from 12 and 51, world/stages/records.js). In the 25 to 31 October week store 207's 24 pairs move to store 118 (the
     // recorded transfer recommendation) and store 114 receives NR-451207's 40 pairs.
     const PREV_W1 = { 114: 12, 207: 51 };
+    // 24 November 2026 (owner decision, P9): sell-through follows SPS, units sold / units received in the week, so a store
+    // that receives exactly what it sells reads 100% every week. Every store except 114, 207 and 118 now receives in whole
+    // cartons of 40 pairs (0, 40 or 80 a week), chosen so its stock stays near the level it holds on 24 October. Weeks are
+    // worked back from that level; units sold are unchanged. The four earlier weeks are written by world/stages/records.js
+    // from W.storeWeeks.prior.
+    const SWING = [2, -1, 1, -2], prior = {};
+    for (const r of w1) {
+      if (r.n === 114 || r.n === 207 || r.n === 118) continue;
+      const sold = [0, 1, 2, 3].map((w) => r.avg + SWING[(w + r.n) % 4]).concat([r.sold]);
+      const oh = [], rec = []; oh[4] = r.oh;
+      for (let j = 4; j >= 0; j--) {
+        let best = null;
+        for (const c of [0, 40, 80]) { const before = oh[j] - c + sold[j]; const score = Math.abs(before - r.oh) + (c === 40 && (r.n + j) % 3 === 0 ? 6 : 0); if (before > 0 && (best == null || score < best.score)) best = { c, before, score }; }
+        rec[j] = best.c; if (j > 0) oh[j - 1] = best.before; else prior.open = prior.open || {}, prior.open[r.n] = best.before;
+      }
+      prior[r.n] = [0, 1, 2, 3].map((w) => [sold[w], oh[w], rec[w]]);
+      PREV_W1[r.n] = oh[3];
+    }
     const flows = (prev, r, moved = {}) => { const net = r.oh - prev + r.sold; const t = moved[r.n] || 0; return { received: net - t, transfer_in: t > 0 ? t : 0, transfer_out: t < 0 ? -t : 0 }; };
     const act = (at, s, e, rows, fl) => L.doc({ type: '852', from: 'NORTHFIELD', to: 'ASHBY', at, period_start: s, period_end: e, buyer_name: 'Northfield Retailer', buyer_gln: '0614141000050', vendor_name: 'Ashby Supplier', vendor_gln: '0614141002085', items: [{ upc: '614141000166', sku: 'ASH-TRL-09', uom: 'EA', stores: rows.map((r) => ({ store: String(r.n), sold: r.sold, on_hand: r.oh, ...fl(r) })) }] });
     act(day('2026-10-25', '06:10'), '2026-10-18', '2026-10-24', w1, (r) => flows(PREV_W1[r.n] ?? r.oh, r));
     act(day('2026-11-01', '06:10'), '2026-10-25', '2026-10-31', w2, (r) => flows(w1.find((x) => x.n === r.n).oh, r, { 207: -24, 118: 24 }));
-    W.storeWeeks = { w1, w2 };
+    W.storeWeeks = { w1, w2, prior };
     ev(L, day('2026-10-26', '08:05'), 'erp.inventory_read', null, 'Supplier ERP', 'ASHBY', 'API', { sku: 'ASH-TRL-09', available: 980, unit: 'Pairs', meaning: 'Available' });
     ev(L, day('2026-10-26', '08:07'), 'rule.recommendation', null, 'Trading Grid', 'ASHBY', 'API', { found_by: 'Ashby replenishment rule AP-6.1', acting_for: 'Priya Raman', store: 114, finding: 'Empty shelf', recommend: 'New order', pairs: 40, approved_by: 'Priya Raman' });
     const po = A.p9 = 'NR-451207'; const O = { po, supplier: 'ASHBY', shipTo: 'STORE114', site: 'ASH-WH1', programme: 'STORE', requested: '2026-10-27', poDate: iso(day('2026-10-26', '10:20')), stream: 'store', lines: [{ line: 1, sku: 'ASH-TRL-09', qty: 40, price: 38, uom: 'PR' }] };

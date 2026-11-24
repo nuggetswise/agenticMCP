@@ -226,457 +226,94 @@ table.t td{border-top:1px solid var(--border-default);padding:6px;color:var(--te
 }
 
 </style>
-</head>
-<body>
-<script>
-/* Shared page engine for TG for Retail pass 1 prototypes. No network, no storage, no server calls. */
-(function(){
-"use strict";
-const E = window.E = {};
-const $ = E.$ = s => document.querySelector(s);
-E.esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const esc = E.esc;
-E.RM = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-E.money = n => "$" + Number(n).toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2});
-E.int = n => Number(n).toLocaleString("en-US");
-const pad = n => String(n).padStart(2, "0");
-/* time: minutes from 00:00 ET on the page's first day */
-E.hm = t => { const d = ((t % 1440) + 1440) % 1440; return pad(Math.floor(d / 60)) + ":" + pad(d % 60); };
-E.day = t => Math.floor(t / 1440);
-E.clockText = t => E.cfg.days[E.day(t)] + " " + E.hm(t) + " ET";
-E.when = t => { /* history column: weekday and time */ return E.cfg.days[E.day(t)] + " " + E.hm(t); };
-E.dur = min => { min = Math.max(0, Math.round(min)); const h = Math.floor(min / 60), m = min % 60; return h && m ? `${h} h ${m} m` : h ? `${h} h` : `${m} m`; };
-E.left = (deadline, now) => deadline - now;
-
-const S = E.S = {clock:0, sel:null, open:{}, edit:{}, busy:false, run:0, seen:{}, hist:[], lines:{}, pending:{}, drawerFrom:null};
-
-/* ---------- header and page shell ---------- */
-E.shell = function(cfg){
-  E.cfg = cfg;
-  S.clock = cfg.start;
-  document.title = cfg.docTitle;
-  const ws = cfg.switcher ? `<div class="seg" role="group" aria-label="Workspace">${cfg.switcher.map(w => `<button data-ws="${w.id}" aria-pressed="false">${esc(w.label)}</button>`).join("")}</div>` : "";
-  document.body.insertAdjacentHTML("afterbegin", `
-<div class="top" role="banner">
-  <div class="mark"><i aria-hidden="true"></i>Trading Grid</div>
-  <div class="ws" id="wslabel"></div>
-  ${ws}
-  <div class="sp"></div>
-  <div class="clock" id="clock" aria-label="Business clock"></div>
-  <div class="who" id="who"></div>
-  <button class="tb" id="bHist" type="button">History</button>
-  <button class="tb" id="bRules" type="button">Rules</button>
-</div>
-<main class="wrap">
-  <div class="pagehead">
-    <h1 id="title"></h1>
-    <p class="ev" id="evline"></p>
-    <p class="goal" id="goal"></p>
-  </div>
-  <div id="banner"></div>
-  <section class="map" aria-label="Route map" id="mapcard"></section>
-  <div class="grid">
-    <section class="card src" aria-label="${esc(cfg.listLabel)}"><div class="h"><span class="lab">${esc(cfg.listLabel)}</span><span id="cnt"></span></div><div id="list"></div></section>
-    <section class="card rec" aria-label="Record" id="rec"></section>
-  </div>
-</main>
-<div class="scrim" id="scrim"></div>
-<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dtitle"><header><h3 id="dtitle"></h3><button class="tb" id="dclose" type="button">Close</button></header><div class="db" id="dbody"></div></aside>
-<button class="avb" id="avb" type="button" aria-expanded="false" aria-controls="avp"><span class="avi" aria-hidden="true"></span>Aviator</button>
-<aside class="avp" id="avp" role="dialog" aria-label="Aviator"><header><b class="avh"><span class="avi" aria-hidden="true"></span>Aviator</b><button class="tb" id="avclose" type="button">Close</button></header><div class="ab" id="avbody"></div></aside>
-<div class="sr" aria-live="polite" id="live"></div>`);
-  $("#bHist").onclick = () => E.openHistory();
-  $("#bRules").onclick = () => E.openRules();
-  $("#dclose").onclick = E.closeDrawer; $("#scrim").onclick = E.closeDrawer;
-  document.addEventListener("keydown", e => { if (e.key === "Escape") { if ($("#avp").classList.contains("on")) E.toggleAv(false); else E.closeDrawer(); } });
-  $("#avb").onclick = () => E.toggleAv(); $("#avclose").onclick = () => E.toggleAv(false);
-  document.body.addEventListener("click", E.onClick);
-};
-E.setHead = (title, ev, goal) => { $("#title").textContent = title; if (ev != null) E.event(ev, true); if (goal != null) $("#goal").textContent = goal; };
-E.event = (txt, quiet) => { const e = $("#evline"); e.textContent = txt; if (!quiet) { e.classList.remove("enter"); void e.offsetWidth; e.classList.add("enter"); } };
-E.say = txt => { const l = $("#live"); l.textContent = ""; setTimeout(() => { l.textContent = txt; }, 30); };
-E.tick = () => { $("#clock").textContent = E.clockText(S.clock); };
-E.hist = (t, text, by, doc, rec) => { S.hist.push({t, text, by, doc, rec}); };
-
-/* ---------- route map ---------- */
-E.buildMap = function(spec){
-  E.mapSpec = spec;
-  const NS = "http://www.w3.org/2000/svg";
-  let s = `<svg id="svg" viewBox="0 0 ${spec.w} ${spec.h}" role="img" aria-labelledby="mapsum"><title id="mapsum">Route map</title>
-  <defs><linearGradient id="gb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--ot-grad-from)"/><stop offset="1" stop-color="var(--ot-grad-to)"/></linearGradient></defs>`;
-  spec.lines.forEach(l => { s += `<path id="L-${l.id}" class="line" d="${l.d}"/>`; S.lines[l.id] = {label:l.label, state:"rest", from:l.from, to:l.to, doc:l.label}; });
-  s += `<g id="arrows"></g>`;
-  spec.lines.forEach(l => { s += `<text id="T-${l.id}" class="lbl" x="${l.lx}" y="${l.ly}" text-anchor="middle">${esc(l.label)}</text>`; });
-  spec.nodes.forEach(n => {
-    s += `<g transform="translate(${n.x},${n.y})"><rect width="${n.w}" height="${n.h}" style="rx:var(--radius-lg)" fill="var(--surface-card)" stroke="var(--border-default)"/>
-    <text x="14" y="22" class="nt">${esc(n.title)}</text><text x="14" y="38" class="ns">${esc(n.sub)}</text><text x="14" y="${n.h - 12}" class="nr" id="R-${n.id}">${esc(n.rec || "")}</text></g>`;
-  });
-  const t = spec.tg;
-  s += `<g transform="translate(${t.x},${t.y})"><rect width="${t.w}" height="${t.h}" style="rx:var(--radius-xl)" fill="url(#gb)"/>
-  <text x="16" y="24" style="font-size:var(--ui-fs-card-title)" font-weight="700" fill="var(--text-on-dark)">Trading Grid</text>`;
-  t.subs.forEach((sb, i) => {
-    const y = 36 + i * 50, w = t.w - 32;
-    s += `<rect id="SB-${sb.id}" class="sub" x="16" y="${y}" width="${w}" height="${sb.h || 44}" style="rx:var(--radius-md)" fill="var(--surface-card)" fill-opacity="0.10" stroke="var(--text-on-dark)" stroke-opacity="0.25"/>
-    <text x="30" y="${y + 18}" style="font-size:var(--ui-fs-small)" font-weight="600" fill="var(--text-on-dark)">${esc(sb.label)}</text>
-    <text x="30" y="${y + 34}" style="font-size:var(--ui-fs-small)" fill="var(--text-on-dark)" id="R-${sb.id}">${esc(sb.rec || "")}</text>
-    <rect id="PB-${sb.id}" x="30" y="${y + (sb.h || 44) - 6}" width="0" height="2" fill="var(--text-on-dark)" fill-opacity="0.8"/>`;
-  });
-  s += `<text x="16" y="${t.h - 12}" style="font-size:var(--ui-fs-small)" fill="var(--text-on-dark)" fill-opacity="0.9" id="R-tgstatus"></text></g>`;
-  s += `<g id="fly"></g></svg><ul class="maplist" id="maplist" aria-label="Routes"></ul><p class="mapsum" id="mapsumtext"></p>`;
-  $("#mapcard").innerHTML = s;
-  E.mapList();
-};
-E.setRec = (id, txt) => { const el = document.getElementById("R-" + id); if (!el || el.textContent === txt) return; if (E.RM()) { el.textContent = txt; return; } el.style.opacity = 0; setTimeout(() => { el.textContent = txt; el.style.opacity = 1; }, 150); };
-E.light = (id, on, rec) => { const r = document.getElementById("SB-" + id); if (!r) return; r.setAttribute("fill-opacity", on ? "0.24" : "0.10"); r.setAttribute("stroke-opacity", on ? "0.7" : "0.25"); if (rec != null) E.setRec(id, rec); };
-E.status = txt => { const el = document.getElementById("R-tgstatus"); if (el) el.textContent = txt; };
-E.mapList = () => {
-  const L = $("#maplist"); if (!L) return;
-  L.innerHTML = E.mapSpec.lines.map(l => { const st = S.lines[l.id]; return `<li>${esc(st.from)} → ${esc(st.to)} · ${esc(st.doc)} <span>· ${st.state === "live" ? "travelling" : st.state === "settled" ? "arrived" : "idle"}</span></li>`; }).join("");
-  const sum = $("#mapsumtext"); if (sum) sum.textContent = E.mapSpec.summary();
-};
-E.settle = function(id, atEnd){
-  const p = document.getElementById("L-" + id); p.classList.add("settled");
-  const L = p.getTotalLength(), a = p.getPointAtLength(atEnd ? L : 0), b = p.getPointAtLength(atEnd ? L - 6 : 6);
-  const ang = Math.atan2(a.y - b.y, a.x - b.x), sz = 7;
-  const pts = [[a.x, a.y], [a.x - sz * Math.cos(ang - 0.45), a.y - sz * Math.sin(ang - 0.45)], [a.x - sz * Math.cos(ang + 0.45), a.y - sz * Math.sin(ang + 0.45)]].map(q => q.map(v => v.toFixed(1)).join(",")).join(" ");
-  let g = document.getElementById("A-" + id); if (!g) { g = document.createElementNS("http://www.w3.org/2000/svg", "polygon"); g.id = "A-" + id; g.setAttribute("class", "arrow"); $("#arrows").appendChild(g); }
-  g.setAttribute("points", pts);
-};
-function bez(x){ const x1 = .45, y1 = 0, x2 = .2, y2 = 1; let t = x; for (let i = 0; i < 8; i++) { const cx = 3*x1*t*(1-t)**2 + 3*x2*t*t*(1-t) + t**3 - x; const dx = 3*x1*(1-t)**2 + 6*(x2-x1)*t*(1-t) + 3*(1-x2)*t*t; if (Math.abs(dx) < 1e-6) break; t -= cx/dx; t = Math.max(0, Math.min(1, t)); } return 3*y1*t*(1-t)**2 + 3*y2*t*t*(1-t) + t**3; }
-E.wait = ms => new Promise(r => setTimeout(r, E.RM() ? 0 : ms));
-/* one document travelling along one line; reverse = right-to-left / bottom-to-top along the path */
-E.travel = function(id, label, reverse, ms){
-  ms = ms || E.cfg.hopMs || 1500;
-  const run = S.run;
-  const st = S.lines[id]; st.state = "live"; st.doc = label; E.mapList();
-  const p = document.getElementById("L-" + id), lt = document.getElementById("T-" + id);
-  const finish = () => { if (run !== S.run) return; st.state = "settled"; E.settle(id, !reverse); lt.textContent = label; lt.style.opacity = 1; E.mapList(); };
-  if (E.RM()) { finish(); return Promise.resolve(); }
-  const NS = "http://www.w3.org/2000/svg", L = p.getTotalLength();
-  const tail = document.createElementNS(NS, "path"); tail.setAttribute("d", p.getAttribute("d")); tail.setAttribute("fill", "none"); tail.setAttribute("stroke", "var(--color-action)"); tail.setAttribute("stroke-width", "3"); tail.setAttribute("stroke-linecap", "round"); tail.setAttribute("stroke-opacity", "0.35");
-  const head = document.createElementNS(NS, "path"); head.setAttribute("d", p.getAttribute("d")); head.setAttribute("fill", "none"); head.setAttribute("stroke", "var(--color-action)"); head.setAttribute("stroke-width", "3.5"); head.setAttribute("stroke-linecap", "round");
-  const pill = document.createElementNS(NS, "g"); const tw = Math.round(label.length * 6.6 + 22);
-  pill.innerHTML = `<rect x="${-tw/2}" y="-24" width="${tw}" height="20" style="rx:var(--radius-md)" fill="var(--surface-dark)"/><text x="0" y="-10" text-anchor="middle" style="font-size:var(--ui-fs-small);font-weight:600" fill="var(--text-on-dark)">${esc(label)}</text>`;
-  $("#fly").append(tail, head, pill); lt.style.opacity = 0;
-  return new Promise(res => {
-    const t0 = performance.now();
-    function step(now){
-      if (run !== S.run || E.RM()) { tail.remove(); head.remove(); pill.remove(); finish(); return res(); }
-      const t = Math.max(0, Math.min(1, (now - t0) / ms)), e = bez(t), d = reverse ? L * (1 - e) : L * e;
-      const pt = p.getPointAtLength(d);
-      pill.setAttribute("transform", `translate(${pt.x.toFixed(1)},${pt.y.toFixed(1)})`);
-      const tl = Math.min(120, reverse ? L - d : d), hl = Math.min(22, reverse ? L - d : d);
-      if (!reverse) { tail.setAttribute("stroke-dasharray", `0 ${d - tl} ${tl} ${L}`); head.setAttribute("stroke-dasharray", `0 ${d - hl} ${hl} ${L}`); }
-      else { tail.setAttribute("stroke-dasharray", `0 ${d} ${tl} ${L}`); head.setAttribute("stroke-dasharray", `0 ${d} ${hl} ${L}`); }
-      if (t < 1) requestAnimationFrame(step); else { tail.remove(); head.remove(); pill.remove(); finish(); res(); }
-    }
-    requestAnimationFrame(step);
-  });
-};
-E.read = function(id, ms){ /* thin progress bar fills once while a record is read */
-  const pb = document.getElementById("PB-" + id); if (!pb) return Promise.resolve();
-  const full = +document.getElementById("SB-" + id).getAttribute("width") - 28;
-  if (E.RM()) { pb.setAttribute("width", 0); return Promise.resolve(); }
-  ms = ms || 900; const t0 = performance.now(); const run = S.run;
-  return new Promise(res => { function step(now){ const t = Math.max(0, Math.min(1, (now - t0) / ms)); pb.setAttribute("width", (full * t).toFixed(1)); if (t < 1 && run === S.run) requestAnimationFrame(step); else { pb.setAttribute("width", 0); res(); } } requestAnimationFrame(step); });
-};
-
-/* ---------- rendering helpers ---------- */
-E.chip = (txt, tone) => `<span class="chip ${tone || ""}">${esc(txt)}</span>`;
-E.tagBtn = (txt, doc) => doc ? `<button class="tag" type="button" data-doc="${esc(doc)}">${esc(txt)}</button>` : `<span class="tag" style="text-decoration:none;cursor:default">${esc(txt)}</span>`;
-E.details = (key, html) => {
-  const on = !!S.open[key];
-  return `<div class="det"><button class="lnk" type="button" data-det="${esc(key)}" aria-expanded="${on}">${on ? "Hide details" : "Details"}</button>${on ? `<div class="dbody">${html}</div>` : ""}</div>`;
-};
-E.who3 = (rows) => `<dl class="who3">${rows.map(r => `<dt>${esc(r[0])}</dt><dd>${r[1]}</dd>`).join("")}</dl>`;
-E.nowAfter = (act) => {
-  const ed = S.edit[act.id];
-  const rows = act.rows.filter((r, i) => !(ed && ed.removed.has(i)));
-  return `<table class="ow"><thead><tr><th>Action</th><th>Now</th><th>After</th><th>Goes to</th>${ed ? "<th></th>" : ""}</tr></thead><tbody>${act.rows.map((r, i) => (ed && ed.removed.has(i)) ? "" : `<tr><td>${esc(r.action)}</td><td>${esc(r.now)}</td><td class="af">${esc(r.after)}</td><td>${esc(r.goesTo)} <span class="via">· ${esc(r.via)}</span></td>${ed ? `<td><button class="rm" type="button" data-rm="${esc(act.id)}" data-i="${i}">Remove</button></td>` : ""}</tr>`).join("")}</tbody></table>`;
-};
-E.ownerTable = rows => `<table class="ow"><thead><tr><th>What is wrong</th><th>Owner</th><th>Where to fix</th></tr></thead><tbody>${rows.map(r => `<tr><td>${r[0]}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join("")}</tbody></table>`;
-E.decision = (act) => {
-  const pend = S.pending[act.id];
-  const ed = S.edit[act.id];
-  const left = act.rows.length - (ed ? ed.removed.size : 0);
-  return `<p class="says">${esc(act.says)}</p><div class="bar"><button class="btn" type="button" data-approve="${esc(act.id)}" ${pend || act.locked || (ed && left === 0) ? 'aria-disabled="true"' : ""}>${pend ? "Sending" : "Approve"}</button><button class="btn2" type="button" data-edit="${esc(act.id)}" ${pend || act.locked ? "disabled" : ""}>${ed ? "Finish editing" : "Edit suggestion"}</button>${act.ruleTag ? `<span class="rt">${esc(act.ruleTag)}</span>` : ""}</div>${ed && left === 0 ? `<p class="nod">Every action removed: approving sends nothing.</p>` : act.nodecision ? `<p class="nod">${esc(act.nodecision)}</p>` : ""}`;
-};
-E.stage = (st, i, recId) => {
-  const key = recId + ":" + st.key;
-  if (st.state === "done") {
-    const isNew = !S.seen[key]; S.seen[key] = 1;
-    return `<div class="st done${isNew && S.started ? " enter" : ""}" data-stage="${esc(key)}"><div class="mk" aria-hidden="true"></div><div class="box"><div class="th"><span class="tt">${esc(st.summary)}</span>${st.detailsDone ? `<button class="lnk" type="button" data-det="${esc(key)}" aria-expanded="${!!S.open[key]}">${S.open[key] ? "Hide details" : "Details"}</button>` : ""}</div>${st.sub ? `<div class="dd">${esc(st.sub)}</div>` : ""}${st.detailsDone && S.open[key] ? `<div class="dbody">${st.detailsDone}</div>` : ""}</div></div>`;
-  }
-  if (st.state === "next") return `<div class="st next" data-stage="${esc(key)}"><div class="mk" aria-hidden="true"></div><div class="box"><div class="tt">${esc(st.title)}</div></div></div>`;
-  return `<div class="st now${st.amber ? " amberbox" : ""}" data-stage="${esc(key)}"><div class="mk" aria-hidden="true"></div><div class="box"><div class="th"><span class="tt">${esc(st.title)}</span>${st.chip ? E.chip(st.chip[0], st.chip[1]) : ""}</div>${st.body || ""}${st.details ? E.details(key, st.details) : ""}</div></div>`;
-};
-
-/* ---------- list and record ---------- */
-E.renderList = function(){
-  const rows = E.page.listRows();
-  $("#list").innerHTML = rows.map(r => `<button class="row" type="button" data-sel="${esc(r.id)}" aria-current="${S.sel === r.id}"><div class="r1"><span class="po">${esc(r.title)}</span>${E.chip(r.chip[0], r.chip[1])}</div><div class="r2">${r.line}</div>${r.sub ? `<div class="r3${r.subRed ? " red" : ""}">${esc(r.sub)}</div>` : ""}</button>`).join("");
-  $("#cnt").textContent = E.page.listCount ? E.page.listCount() : "";
-};
-E.renderRec = function(){
-  const r = E.page.record(S.sel);
-  const act = document.activeElement;
-  const fk = act && $("#rec").contains(act) ? (act.getAttribute("data-approve") ? "[data-approve='" + act.getAttribute("data-approve") + "']" : act.getAttribute("data-det") ? "[data-det='" + act.getAttribute("data-det") + "']" : act.getAttribute("data-edit") ? "[data-edit='" + act.getAttribute("data-edit") + "']" : act.getAttribute("data-doc") ? "[data-doc='" + act.getAttribute("data-doc") + "']" : null) : null;
-  $("#rec").innerHTML = `
-  <div class="rh"><h2 id="rech" tabindex="-1">${esc(r.title)}</h2>${E.chip(r.chip[0], r.chip[1])}${r.deadline ? `<span class="dl ${r.deadline[1] || ""}">${esc(r.deadline[0])}</span>` : ""}</div>
-  <div class="meta">${r.meta}</div>
-  ${r.banner ? `<div class="card banner enter" style="margin-top:var(--space-3)"><div class="bt">${esc(r.banner[0])}</div>${r.banner.slice(1).map(p => `<p>${p}</p>`).join("")}</div>` : ""}
-  ${r.wrong && r.wrong.length ? `<div class="wrong"><span class="lab">${esc(r.wrongLabel || "What is wrong")}</span>${r.wrong.map(w => `<div class="wr"><div class="v">${w.v}</div><div class="tags">${w.tags.map(t => E.tagBtn(t[0], t[1])).join("")}</div></div>`).join("")}</div>` : ""}
-  <div class="stages">${r.stages.map((s, i) => E.stage(s, i, S.sel)).join("")}</div>`;
-  document.querySelectorAll("#rec table.ow").forEach(t => { if (!t.parentElement.classList.contains("tw")) { const w = document.createElement("div"); w.className = "tw"; t.replaceWith(w); w.appendChild(t); } });
-  if (fk) { const el = $("#rec " + fk); if (el) el.focus({preventScroll:true}); }
-};
-E.render = function(){ E.tick(); E.renderList(); E.renderRec(); if (E.page.after) E.page.after(); if ($("#avp").classList.contains("on")) E.renderAv(); };
-E.select = function(id, focus){
-  S.sel = id; E.render();
-  if (focus) $("#rech").focus({preventScroll:true});
-  const now = $("#rec .st.now"); if (now && S.started && !E.RM()) now.scrollIntoView({block:"nearest", behavior:"smooth"});
-};
-
-/* ---------- drawer ---------- */
-E.openDrawer = (title, html) => { S.drawerFrom = document.activeElement; $("#dtitle").textContent = title; $("#dbody").innerHTML = html; $("#drawer").classList.add("on"); $("#scrim").classList.add("on"); $("#dclose").focus(); };
-E.closeDrawer = () => { if (!$("#drawer").classList.contains("on")) return; $("#drawer").classList.remove("on"); $("#scrim").classList.remove("on"); if (S.drawerFrom && document.body.contains(S.drawerFrom)) S.drawerFrom.focus(); };
-E.docHTML = d => {
-  let h = `<dl class="kv"><dt>Document</dt><dd>${esc(d.name)} ${esc(d.ref || "")}</dd><dt>Interface</dt><dd>${esc(d.iface)}</dd><dt>From</dt><dd>${esc(d.from)}</dd><dt>To</dt><dd>${esc(d.to)}</dd>${d.at != null ? `<dt>Received</dt><dd>${esc(E.when(d.at))} ET</dd>` : ""}${(d.kv || []).map(k => `<dt>${esc(k[0])}</dt><dd>${esc(k[1])}</dd>`).join("")}</dl>`;
-  if (d.lines) h += `<table class="t"><thead><tr><th>Line</th><th>Item</th><th>Quantity</th><th>Price</th></tr></thead><tbody>${d.lines.map(l => `<tr><td>${esc(l[0])}</td><td class="mono">${esc(l[1])}</td><td>${esc(l[2])}</td><td>${esc(l[3] || "")}</td></tr>`).join("")}</tbody></table>`;
-  if (d.total) h += `<p style="margin-top:var(--space-2);color:var(--text-heading);font-weight:600">${esc(d.total)}</p>`;
-  return h;
-};
-E.openDoc = id => { const d = E.W.docs[id]; if (!d) return; E.openDrawer(d.name + (d.ref ? " " + d.ref : ""), E.docHTML(d)); };
-E.openHistory = () => {
-  const items = S.hist.filter(h => h.t <= S.clock && (!E.page.histFilter || E.page.histFilter(h))).slice().sort((a, b) => b.t - a.t);
-  E.openDrawer("History", `<ul class="hi">${items.map(h => `<li><span class="tm">${esc(E.when(h.t))}</span><span>${h.doc ? `<button class="tag" style="font-size:var(--ui-fs-body);color:var(--text-heading)" type="button" data-doc="${esc(h.doc)}">${esc(h.text)}</button>` : esc(h.text)}<br><span class="by">${esc(h.by)}</span></span></li>`).join("")}</ul>`);
-};
-E.openRules = () => {
-  const rs = E.page.rulesFor(S.sel);
-  E.openDrawer("Rules for " + S.sel, rs.map(r => `<div class="rl"><div class="s">${esc(r.src)}</div><div>${esc(r.text)}</div>${r.found ? `<div class="f">Here: ${esc(r.found)}</div>` : ""}</div>`).join(""));
-};
-
-/* ---------- Aviator: a chat answered live by the demo server's model on the hosted page; questions are starters ---------- */
-S.avOpen = null;
-E.renderAv = () => {
-  window.TG_AVIATOR.mount($("#avbody"), {questions: side => E.page.aviator().filter(q => S.clock >= q.at && (!q.side || q.side === side)).map(q => q.q)});
-};
-E.toggleAv = (on) => {
-  const p = $("#avp"), b = $("#avb"); on = on == null ? !p.classList.contains("on") : on;
-  if (on) E.renderAv();
-  p.classList.toggle("on", on); b.setAttribute("aria-expanded", on);
-  if (on) $("#avclose").focus(); else b.focus();
-};
-
-/* ---------- clicks ---------- */
-E.onClick = function(e){
-  const t = e.target.closest("button,[data-doc]"); if (!t) return;
-  if (t.dataset.avq != null) { if (t.getAttribute("aria-disabled") === "true") return; const i = +t.dataset.avq; S.avOpen = S.avOpen === i ? null : i; E.renderAv(); const el = document.querySelector(`[data-avq='${i}']`); if (el) el.focus(); E.say(S.avOpen === i ? "Answer shown" : "Answer hidden"); return; }
-  if (t.dataset.sel) { E.select(t.dataset.sel, true); return; }
-  if (t.dataset.doc) { E.openDoc(t.dataset.doc); return; }
-  if (t.dataset.det) { S.open[t.dataset.det] = !S.open[t.dataset.det]; E.renderRec(); return; }
-  if (t.dataset.ws) { E.page.switchWs && E.page.switchWs(t.dataset.ws); return; }
-  if (t.dataset.edit) { const id = t.dataset.edit; if (S.pending[id]) return; if (S.edit[id]) delete S.edit[id]; else S.edit[id] = {removed:new Set()}; E.renderRec(); return; }
-  if (t.dataset.rm) { const id = t.dataset.rm; S.edit[id].removed.add(+t.dataset.i); E.page.onEdited && E.page.onEdited(id); E.renderRec(); return; }
-  if (t.dataset.approve) { const id = t.dataset.approve; if (t.getAttribute("aria-disabled") === "true" || S.pending[id] || S.busy) return; S.pending[id] = 1; S.busy = true; E.renderRec(); E.page.approve(id).then(() => { delete S.pending[id]; S.busy = false; E.render(); const nw = $("#rec .st.now .bar .btn") || $("#rec .st.now"); if (nw && !E.RM()) nw.scrollIntoView({block:"nearest", behavior:"smooth"}); else if (nw) nw.scrollIntoView({block:"nearest"}); }); return; }
-  if (t.dataset.act) { E.page.act && E.page.act(t.dataset.act); return; }
-};
-})();
-
-</script>
-<script>
-/* P9 Shelf Recovery. Values from the shared demo world (RetailStrategy and SupplierRetail, read only) at the P9 moment,
-   Monday 26 October 2026 08:07 ET, and the records that follow it. t = minutes from 00:00 ET Monday. */
-(function(){
-"use strict";
-const {esc} = E;
-const T = (d, h, m) => d * 1440 + h * 60 + m;
-const WEEK1 = {"101":[30,105],"102":[33,152],"103":[37,194],"104":[41,206],"105":[43,200],"106":[45,137],"107":[42,265],"108":[41,218],"109":[50,255],"110":[44,251],"111":[33,210],"112":[31,138],"113":[34,229],"114":[12,0],"115":[41,240],"116":[25,135],"117":[37,140],"118":[44,207],"119":[36,215],"120":[35,169],"121":[32,149],"122":[34,177],"123":[36,149],"124":[48,248],
-  "201":[38,208],"202":[48,272],"203":[33,136],"204":[33,199],"205":[43,280],"206":[27,99],"207":[3,48],"208":[33,106],"209":[37,190],"210":[36,253],"211":[51,291],"212":[51,192],"213":[23,85],"214":[27,100],"215":[44,241],"216":[36,123]};
-const WEEK2 = {"114":[31,9],"207":[2,22],"118":[44,187]};
-const W = E.W = {
-  docs: {
-    "852:P1": {name:"Store activity report", ref:"4 weeks earlier", iface:"EDI 852", from:"Northfield Retailer", to:"Ashby Supplier", at:T(-29,6,10),
-      kv:[["Item","ASH-TRL-09 trail runner, sold by the pair"],["Stores","40"]], lines:[["Store 114","ASH-TRL-09","44 sold · 136 on hand",""],["Store 207","ASH-TRL-09","3 sold · 60 on hand",""]]},
-    "852:P2": {name:"Store activity report", ref:"3 weeks earlier", iface:"EDI 852", from:"Northfield Retailer", to:"Ashby Supplier", at:T(-22,6,10),
-      kv:[["Item","ASH-TRL-09 trail runner, sold by the pair"],["Stores","40"]], lines:[["Store 114","ASH-TRL-09","41 sold · 95 on hand",""],["Store 207","ASH-TRL-09","4 sold · 56 on hand",""]]},
-    "852:P3": {name:"Store activity report", ref:"2 weeks earlier", iface:"EDI 852", from:"Northfield Retailer", to:"Ashby Supplier", at:T(-15,6,10),
-      kv:[["Item","ASH-TRL-09 trail runner, sold by the pair"],["Stores","40"]], lines:[["Store 114","ASH-TRL-09","43 sold · 52 on hand",""],["Store 207","ASH-TRL-09","2 sold · 54 on hand",""]]},
-    "852:P4": {name:"Store activity report", ref:"1 week earlier", iface:"EDI 852", from:"Northfield Retailer", to:"Ashby Supplier", at:T(-8,6,10),
-      kv:[["Item","ASH-TRL-09 trail runner, sold by the pair"],["Stores","40"]], lines:[["Store 114","ASH-TRL-09","40 sold · 12 on hand",""],["Store 207","ASH-TRL-09","3 sold · 51 on hand",""]]},
-    "852:W1": {name:"Store activity report", ref:"this week", iface:"EDI 852", from:"Northfield Retailer", to:"Ashby Supplier", at:T(-1,6,10),
-      kv:[["Item","ASH-TRL-09 trail runner, sold by the pair"],["Stores","40"],["Sold in the week","1,447 pairs"],["On hand","7,212 pairs"]],
-      lines:[["Store 114","ASH-TRL-09","12 sold · 0 on hand",""],["Store 207","ASH-TRL-09","3 sold · 48 on hand",""],["Store 118","ASH-TRL-09","44 sold · 207 on hand",""]]},
-    "ERP-STOCK": {name:"Available stock", ref:"ASH-TRL-09", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(0,8,5), kv:[["Available","980 pairs"],["Read","08:05"]], side:"ashby"},
-    "850:NR-451207": {name:"Purchase order", ref:"NR-451207", iface:"EDI 850", from:"Northfield Retailer", to:"Ashby Supplier", at:T(0,10,20), kv:[["Ship to","Northfield Store 114"],["Programme","Wholesale, store order"],["Requested delivery","Tuesday"]], lines:[["1","ASH-TRL-09","40 pairs","$38.00"]], total:"40 pairs · $1,520.00"},
-    "855:ACK-451207": {name:"Order acknowledgment", ref:"ACK-451207", iface:"EDI 855", from:"Ashby Supplier", to:"Northfield Retailer", at:T(0,10,50), kv:[["Answers","Purchase order NR-451207"],["Acknowledgment","Accepted as ordered"]], lines:[["1","ASH-TRL-09","40 pairs accepted","$38.00"]]},
-    "856:ASN-451207-1": {name:"Ship notice", ref:"ASN-451207-1", iface:"EDI 856", from:"Ashby Supplier", to:"Northfield Retailer", at:T(0,16,5), kv:[["Ship from","Ashby warehouse ASH-WH1"],["Ship to","Northfield Store 114"],["Shipped","16:00"],["Carrier","Lakeline Freight"],["Cartons","1"]], lines:[["1","ASH-TRL-09","40 pairs",""]]},
-    "861:RCV-S114-51207": {name:"Receiving advice", ref:"RCV-S114-51207", iface:"EDI 861", from:"Northfield Retailer", to:"Ashby Supplier", at:T(1,9,10), kv:[["Ship notice","ASN-451207-1"],["Received at","Northfield Store 114"],["Short","0"]], lines:[["1","ASH-TRL-09","40 of 40 pairs",""]]},
-    "852:W2": {name:"Store activity report", ref:"next week", iface:"EDI 852", from:"Northfield Retailer", to:"Ashby Supplier", at:T(6,6,10),
-      kv:[["Item","ASH-TRL-09 trail runner"],["Stores","40"],["Sold in the week","1,465 pairs"],["On hand","7,030 pairs"]],
-      lines:[["Store 114","ASH-TRL-09","31 sold · 9 on hand",""],["Store 207","ASH-TRL-09","2 sold · 22 on hand",""],["Store 118","ASH-TRL-09","44 sold · 187 on hand",""]]}
-  },
-  rules: {
-    empty: {text:"Empty shelf: zero on hand and a weekly average of at least 1 pair.", src:"Ashby rule"},
-    order: {text:"An empty shelf with nothing in transit and stock available gets a new order recommendation.", src:"Ashby rule"},
-    wait: {text:"An empty shelf with goods in transit gets Wait: nothing is recommended.", src:"Ashby rule"},
-    carton: {text:"Replenish in whole cartons of 40 pairs, sized from the 4-week average.", src:"Ashby rule"},
-    slow: {text:"Slow sell-through: 12 or more weeks of supply and sales below 50% of the median store.", src:"Ashby rule"},
-    keep: {text:"A store-to-store transfer leaves 8 weeks of supply at the sending store.", src:"Ashby rule"},
-    decide: {text:"Northfield decides every order; nothing is reserved in the Supplier ERP until a purchase order arrives.", src:"Ashby rule"}
-  }
-};
-const D = {0:"Mon", 1:"Tue", 2:"Wed", 3:"Thu", 4:"Fri", 5:"Sat", 6:"Sun"}; [-1,-8,-15,-22,-29].forEach(d => D[d] = "Sun");
-E.shell({docTitle:"Shelf Recovery", start:T(0,8,7), days:D, listLabel:"Stores checked", hopMs:1500,
-  switcher:[{id:"ashby", label:"Ashby · Priya Raman"}, {id:"nf", label:"Northfield · Jordan Ellis"}]});
-const S = E.S;
-const F = S.f = {ws:"ashby", seen114:false, seen207:false, po:false, ack:false, asn:false, wait:false, rcv:false, w2:false, playing:false};
-const nf = () => F.ws === "nf";
-
-[[T(-29,6,10),"Store activity report · 4 weeks earlier","Northfield","852:P1"],
- [T(-22,6,10),"Store activity report · 3 weeks earlier","Northfield","852:P2"],
- [T(-15,6,10),"Store activity report · 2 weeks earlier","Northfield","852:P3"],
- [T(-8,6,10),"Store activity report · 1 week earlier","Northfield","852:P4"],
- [T(-1,6,10),"Store activity report · 40 stores","Northfield","852:W1"],
- [T(0,8,5),"Available stock read · ASH-TRL-09 · 980 pairs","Supplier ERP","ERP-STOCK"],
- [T(0,8,7),"Replenishment check · 40 stores · 2 need stock action","Rule"]].forEach(h => E.hist(h[0], h[1], h[2], h[3]));
-E.page = {histFilter:h => !(nf() && h.doc === "ERP-STOCK")};
-
-const ORDER = ["114","207","rest"];
-function chip(id){
-  if (id === "114") return F.w2 ? ["Refilled · 9 on hand","brand"] : F.rcv ? ["Received 40 pairs","brand"] : F.wait ? ["Wait · in transit",""] : F.po ? ["Ordered by Northfield","brand"] : ["Recommend order","amber"];
-  if (id === "207") return F.w2 ? ["Report updated",""] : ["Recommend transfer","amber"];
-  return ["No action",""];
-}
-const LINE = {
-  "114":() => F.w2 ? "31 sold · 9 on hand in the next report" : F.wait ? "0 on hand · 40 pairs in transit" : F.po ? "Purchase order NR-451207 · 40 pairs" : "12 sold · 0 on hand · nothing in transit",
-  "207":() => F.w2 ? "2 sold · 22 on hand in the next report" : "3 sold · 48 on hand · 16 weeks of supply",
-  "rest":() => "38 stores · on hand above 0, under 12 weeks of supply"
-};
-const listRows = () => ORDER.map(id => ({id, title:id === "rest" ? "Other stores" : "Store " + id, chip:chip(id), line:esc(LINE[id]()), sub:""}));
-const R = W.rules;
-const ruleList = keys => keys.map(k => `<p>${esc(R[k].text)} <span class="k">· ${esc(R[k].src)}</span></p>`).join("");
-const docName = d => W.docs[d].name + (W.docs[d].ref ? " " + W.docs[d].ref : "");
-const readList = docs => `<p class="k">Records read</p>` + docs.map(d => (nf() && W.docs[d].side === "ashby") ? `<p>${esc(W.docs[d].name)} <span class="k">· Not available to Northfield</span></p>` : `<p><button class="tag" type="button" data-doc="${esc(d)}">${esc(docName(d))}</button> <span class="k">· ${esc(W.docs[d].iface)}</span></p>`).join("");
-const recTable = rows => `<table class="ow"><thead><tr><th>Recommendation</th><th>Now</th><th>Recommended</th><th>Owner</th><th>Where to act</th></tr></thead><tbody>${rows.map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td class="af">${esc(r[2])}</td><td>${esc(r[3])}</td><td>${esc(r[4])}</td></tr>`).join("")}</tbody></table>`;
-const stockRow = () => nf() ? {v:`<b>Supplier stock</b> · Not available to Northfield`, tags:[]} : {v:`<b>Supplier stock</b> · 980 pairs available`, tags:[["Supplier ERP · API","ERP-STOCK"]]};
-
-function rec114(){
-  const st = [];
-  if (!F.po) st.push({key:"rec", state:"now", title:"Recommend new order", chip:["Northfield decides","amber"], amber:true,
-    body:recTable([["New order","0 on hand","40 pairs · 1 carton","Northfield buyer","Northfield ordering"]]) + `<p class="desc">${nf() ? "Order in Northfield's own ordering system." : "Shown to Jordan Ellis in Trading Grid. Northfield orders in its own system."}</p><div class="bar"><span class="rt">Empty shelf</span><span class="rt">Whole cartons of 40</span></div>`,
-    details:ruleList(["empty","order","carton","decide"]) + `<p class="k" style="margin-top:6px">Sizing</p><p>4-week average 42 pairs a week · 44, 41, 43, 40 · 1 carton of 40 pairs</p>` + readList(["852:P1","852:P2","852:P3","852:P4","852:W1","ERP-STOCK"]) + `<p class="k" style="margin-top:6px">Who did what</p>` + E.who3([["Recommended by","Rule · Ashby's replenishment rules"],["Decided by","Northfield buyer"],["Carried out by","Northfield ordering"]])});
-  else st.push({key:"rec", state:"done", summary:"Northfield ordered 40 pairs on purchase order NR-451207", sub:"Ordered in Northfield's own system", detailsDone:readList(["850:NR-451207"])});
-  if (F.wait && !F.rcv) st.push({key:"wait", state:"now", title:"Goods in transit", chip:["Wait",""],
-    body:recTable([["Wait","0 on hand","No order","Northfield buyer","Northfield ordering"]]) + `<p class="desc">Ship notice ASN-451207-1 carries 40 pairs to store 114.</p><div class="bar"><span class="rt">Goods in transit</span></div>`,
-    details:ruleList(["wait"]) + readList(["852:W1","856:ASN-451207-1"])});
-  else if (F.rcv) st.push({key:"wait", state:"done", summary:"Store 114 received 40 of 40 pairs", sub:"Receiving advice RCV-S114-51207", detailsDone:readList(["856:ASN-451207-1","861:RCV-S114-51207"])});
-  else st.push({key:"wait", state:"next", title:"Store 114 receives"});
-  if (F.w2) st.push({key:"res", state:"done", summary:"Next report: store 114 sold 31 and holds 9 pairs", sub:"Next store activity report", detailsDone:readList(["852:W2"])});
-  else st.push({key:"res", state:"next", title:"Next store activity report"});
-  const wr = [{v:`<b>Shelf</b> · <span class="st-red">0 on hand</span> · 12 sold last week · 4-week average 42`, tags:[["EDI 852","852:W1"]]}, stockRow(),
-    {v:`<b>In transit</b> · ${F.asn ? "40 pairs · ship notice ASN-451207-1" : "0 pairs"}`, tags:F.asn ? [["EDI 856","856:ASN-451207-1"]] : []}];
-  return {title:"Store 114", chip:chip("114"), deadline:null, meta:"Northfield Retailer · ASH-TRL-09 trail runner · $38.00 a pair",
-    banner:F.w2 ? ["Shelf refilled at store 114", "The next store activity report shows 31 sold and 9 pairs on hand.", "Northfield ordered 40 pairs; store 114 received 40 of 40."] : null,
-    wrongLabel:F.w2 ? "Records" : "What is wrong", wrong:wr, stages:st};
-}
-function rec207(){
-  const st = [{key:"rec", state:F.w2 ? "done" : "now", title:"Recommend transfer", chip:["Northfield decides","amber"], amber:true,
-    summary:"Transfer of 24 pairs to store 118 recommended", sub:"Decided in Northfield's own systems",
-    body:recTable([["Transfer to store 118","48 on hand","24 pairs · keep 24","Northfield store operations","Northfield store systems"]]) + `<p class="desc">Store 118 sold 44 last week and holds 207.</p><div class="bar"><span class="rt">12 weeks or more</span><span class="rt">Keep 8 weeks</span></div>`,
-    details:ruleList(["slow","keep","decide"]) + `<p class="k" style="margin-top:6px">Values</p><p>16 weeks of supply · 4-week average 3 against a median store of 38 · 3, 4, 2, 3</p>` + readList(["852:P1","852:P2","852:P3","852:P4","852:W1"]) + `<p class="k" style="margin-top:6px">Who did what</p>` + E.who3([["Recommended by","Rule · Ashby's replenishment rules"],["Decided by","Northfield store operations"]]),
-    detailsDone:readList(["852:W1"])}];
-  if (F.w2) st.push({key:"res", state:"done", summary:"Next report: store 207 holds 22 pairs; store 118 holds 187", sub:"Next store activity report", detailsDone:readList(["852:W2"])});
-  else st.push({key:"res", state:"next", title:"Next store activity report"});
-  return {title:"Store 207", chip:chip("207"), deadline:null, meta:"Northfield Retailer · ASH-TRL-09 trail runner · $38.00 a pair",
-    wrongLabel:F.w2 ? "Records" : "What is wrong",
-    wrong:[{v:`<b>Sell-through</b> · 3 sold · 4-week average 3 · 48 on hand · <span class="st-amber">16 weeks of supply</span>`, tags:[["EDI 852","852:W1"]]}, {v:`<b>Store 118</b> · 44 sold · 207 on hand`, tags:[["EDI 852","852:W1"]]}], stages:st};
-}
-function recRest(){
-  const ids = Object.keys(WEEK1).filter(k => k !== "114" && k !== "207");
-  const tbl = `<table class="ow"><thead><tr><th>Store</th><th>Sold</th><th>On hand</th><th>Weeks of supply</th></tr></thead><tbody>${ids.map(k => `<tr><td>${k}</td><td>${WEEK1[k][0]}</td><td>${WEEK1[k][1]}</td><td>${(WEEK1[k][1] / WEEK1[k][0]).toFixed(1)}</td></tr>`).join("")}</tbody></table>`;
-  return {title:"Other stores", chip:chip("rest"), deadline:null, meta:"38 stores · ASH-TRL-09 trail runner", wrongLabel:"Records",
-    wrong:[{v:`<b>Store activity</b> · 38 stores · 1,432 sold · 7,164 on hand`, tags:[["EDI 852","852:W1"]]}],
-    stages:[{key:"none", state:"now", title:"No action", chip:["No rule met",""], body:tbl, details:ruleList(["empty","slow"])}]};
-}
-const REC = {"114":rec114, "207":rec207, "rest":recRest};
-E.page = Object.assign(E.page, {
-  listRows, listCount:() => "40 stores",
-  record:id => REC[id](),
-  rulesFor:id => (id === "114" ? [["empty","0 on hand, 12 sold"],["order","Nothing in transit at 08:07"],["wait", F.wait ? "Ship notice in transit at 17:30" : "Not met at 08:07"],["carton","1 carton of 40 pairs"],["decide","Northfield orders"]]
-    : id === "207" ? [["slow","16 weeks of supply; average 3 against a median of 38"],["keep","Keeps 24 pairs"],["decide","Northfield transfers"]] : [["empty","Not met"],["slow","Not met"]]).map(r => ({text:R[r[0]].text, src:R[r[0]].src, found:r[1]})),
-  /* Suggested questions per side; at = the page moment a question first applies. Aviator answers them live on the hosted page. */
-  aviator:() => [
-    {side:"ashby", q:"Across the 40 stores, which can spare stock for the ones running empty?", at:T(0,8,7)},
-    {side:"ashby", q:"What would a fixed carton rule have ordered this week that is already in transit?", at:T(0,8,7)},
-    {side:"ashby", q:"Why does store 114 need 40 pairs?", at:T(0,8,7)},
-    {side:"ashby", q:"Why no order for store 114 at 17:30?", at:T(0,17,30)},
-    {side:"northfield", q:"Which stores have run empty on Ashby items this quarter?", at:T(0,8,7)},
-    {side:"northfield", q:"How much open-order value is with Ashby right now?", at:T(0,8,7)}
-  ],
-  approve:async () => {}, after:mapState,
-  switchWs:ws => { F.ws = ws; setWs(); E.closeDrawer(); E.render(); }
-});
-const baseSelect = E.select;
-E.select = function(id, focus){ baseSelect(id, focus); if (id === "114") F.seen114 = true; if (id === "207") F.seen207 = true; if (F.seen114 && F.seen207 && !F.playing) play(); };
-function setWs(){
-  document.querySelectorAll("[data-ws]").forEach(b => b.setAttribute("aria-pressed", b.dataset.ws === F.ws));
-  document.getElementById("wslabel").textContent = nf() ? "Northfield Retailer · Buyer and supplier operations" : "Ashby Supplier · Retail planning";
-  document.getElementById("who").textContent = nf() ? "Jordan Ellis" : "Priya Raman";
-  E.setHead(nf() ? "Ashby recommends stock action for 2 Northfield stores this week." : "2 Northfield stores need stock action this week.",
-    nf() ? "Ashby's replenishment rules read store activity for 40 stores. Order or transfer in Northfield's own systems." : "Checked 40 stores when Northfield's store activity report arrived. Nothing is sent: Northfield decides every order in its own system.",
-    "An empty shelf is refilled, shown by the next store activity report.");
-}
-E.buildMap({w:1100, h:150,
-  nodes:[{id:"erp", x:16, y:38, w:236, h:74, title:"Supplier ERP", sub:"Ashby stock and orders"},
-         {id:"nf", x:848, y:38, w:236, h:74, title:"Northfield Retailer", sub:"Stores and ordering"}],
-  tg:{x:438, y:14, w:236, h:122, subs:[{id:"dx", label:"Document exchange"}]},
-  lines:[{id:"erp", d:"M252 75 C 330 75, 360 75, 438 75", label:"Stock · API", lx:345, ly:67, from:"Supplier ERP", to:"Trading Grid"},
-         {id:"nf", d:"M674 75 C 750 75, 780 75, 848 75", label:"Store activity · EDI", lx:761, ly:67, from:"Trading Grid", to:"Northfield"}],
-  summary:() => "Supplier ERP stock reaches Trading Grid by API; store activity, orders and ship notices travel between Trading Grid and Northfield as EDI."});
-function mapState(){
-  E.setRec("erp", nf() ? "Not available to Northfield" : F.ack ? "Sales order NR-451207 · 40 pairs" : "ASH-TRL-09 · 980 pairs available");
-  E.setRec("nf", F.w2 ? "Next report · store 114 at 9" : F.rcv ? "Receiving advice · store 114" : F.asn ? "Ship notice to store 114" : F.po ? "Purchase order NR-451207" : "Store activity · 40 stores");
-  E.status(F.w2 ? "Store 114 refilled" : F.wait ? "Store 114 waits for goods in transit" : "2 stores with a recommendation");
-}
-const step = async (t, fn, text) => { S.clock = t; fn(); E.event(text); E.render(); };
-async function play(){
-  F.playing = true; const run = S.run;
-  await E.wait(1200); if (run !== S.run) return;
-  E.light("dx", true, "Purchase order · EDI 850");
-  await E.travel("nf", "Purchase order", true);
-  await step(T(0,10,20), () => { F.po = true; E.hist(S.clock, "Purchase order NR-451207 · 40 pairs to store 114", "Northfield", "850:NR-451207"); E.hist(T(0,10,26), "Technical acknowledgment FA-A601 for NR-451207", "Ashby"); }, "Northfield ordered 40 pairs for store 114 on purchase order NR-451207.");
-  await E.wait(900);
-  await step(T(0,10,50), () => { F.ack = true; E.hist(S.clock, "Order acknowledgment ACK-451207 delivered · 40 pairs accepted", "Ashby", "855:ACK-451207"); E.hist(T(0,10,57), "Technical acknowledgment FA-N886 for ACK-451207", "Northfield"); }, "Order acknowledgment ACK-451207 delivered to Northfield: 40 pairs accepted.");
-  await E.wait(250); E.light("dx", true, "Ship notice · EDI 856");
-  await E.travel("nf", "Ship notice");
-  await step(T(0,16,5), () => { F.asn = true; E.hist(T(0,16,0), "Shipment for NR-451207 left Ashby warehouse ASH-WH1 · 16:00", "Supplier ERP"); E.hist(S.clock, "Ship notice ASN-451207-1 delivered · 40 pairs to store 114", "Ashby", "856:ASN-451207-1"); }, "Ship notice ASN-451207-1 delivered to Northfield: 40 pairs to store 114.");
-  await E.wait(900);
-  await step(T(0,17,30), () => { F.wait = true; E.hist(S.clock, "Replenishment check · store 114 Wait · goods in transit", "Rule"); S.sel = "114"; }, "Rules re-read store 114 at 17:30: 40 pairs in transit, so it reads Wait.");
-  E.light("dx", false, "");
-  await E.wait(4500); if (run !== S.run) return;
-  E.light("dx", true, "Receiving advice · EDI 861");
-  await E.travel("nf", "Receiving advice", true);
-  await step(T(1,9,10), () => { F.rcv = true; E.hist(S.clock, "Receiving advice RCV-S114-51207 · 40 of 40 at store 114", "Northfield", "861:RCV-S114-51207"); }, "Store 114 received 40 of 40 pairs.");
-  await E.wait(250); E.light("dx", true, "Store activity · EDI 852");
-  await E.travel("nf", "Store activity", true);
-  await step(T(6,6,10), () => { F.w2 = true; E.hist(S.clock, "Next store activity report · store 114: 31 sold, 9 on hand", "Northfield", "852:W2"); }, "Next store activity report: store 114 sold 31 pairs and holds 9.");
-  E.light("dx", false, ""); E.say("The next store activity report shows store 114 refilled: 31 sold, 9 on hand.");
-}
-setWs();
-S.sel = "114"; F.seen114 = true;
-E.render();
-S.started = true;
-(async () => { E.light("dx", true, "Store activity · 40 stores"); await E.travel("nf", "Store activity", true); await E.read("dx"); E.light("dx", false, ""); })();
-})();
-
-</script>
-<script id="avc-config">window.TG_AVIATOR={"token": "p9-g0NeF0VsCC6O", "page": "p9", "sides": ["ashby", "northfield"], "hosted": "https://tg-retail-demo-mcp.onrender.com/p/p9"};</script>
-<script id="avc-moment">
-/* Aviator posts the page's story moment (as_of) and the open record (context). */
-window.TG_AVIATOR.asOf = function () { return new Date(Date.parse("2026-10-26T04:00:00Z") + E.S.clock * 60000).toISOString(); };
-window.TG_AVIATOR.context = function () { return E.S.sel ? "Store " + E.S.sel + " · ASH-TRL-09" : ""; };
-</script>
+<style id="p9-layout">
+/* P9 layout: full-width app shell, list and detail split, each pane scrolls on its own */
+html,body{height:100%}
+body{overflow:hidden}
+.top{position:relative;z-index:5}
+.acct{position:relative}
+.acctb{display:inline-flex;align-items:center;gap:var(--space-2);height:32px;padding:0 var(--space-3);border:1px solid var(--border-strong);border-radius:var(--radius-md);background:var(--surface-card);cursor:pointer;font-size:var(--ui-fs-small);font-weight:500;color:var(--text-heading);white-space:nowrap}
+.acctb:hover{background:var(--surface-subtle)}
+.acctb .co{color:var(--text-muted);font-weight:400}
+.acctb svg{width:12px;height:12px}
+.menu{position:absolute;right:0;top:38px;min-width:260px;background:var(--surface-card);border:1px solid var(--border-default);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:var(--space-1);display:none;z-index:30}
+.menu.on{display:block}
+.menu button{display:flex;flex-direction:column;align-items:flex-start;width:100%;text-align:left;border:0;background:none;padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);cursor:pointer}
+.menu button:hover,.menu button:focus-visible{background:var(--surface-subtle)}
+.menu button[aria-checked="true"]{background:var(--action-soft)}
+.menu .n{font-weight:600;color:var(--text-heading)}
+.menu .c{font-size:var(--ui-fs-small);color:var(--text-muted)}
+.app{display:flex;flex-direction:column;height:calc(100vh - 53px)}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:var(--space-6);padding:var(--space-3) var(--space-5) var(--space-3);flex-wrap:wrap}
+.head .tx{min-width:0;flex:1 1 520px}
+.head h1{margin:0;font-size:var(--ui-fs-title);font-weight:700;line-height:1.25;color:var(--text-heading)}
+.head .ev{margin:2px 0 0;color:var(--text-body)}
+.head .goal{margin:0;color:var(--text-muted);font-size:var(--ui-fs-small)}
+.strip{display:flex;gap:var(--space-2);flex-wrap:wrap}
+.fig{background:var(--surface-card);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:6px var(--space-3);min-width:118px}
+.fig .k{font-size:var(--ui-fs-small);color:var(--text-muted);white-space:nowrap}
+.fig .v{font-weight:700;color:var(--text-heading);white-space:nowrap}
+.fig .v.red{color:var(--ot-risk)}
+.fig .v.amber{color:var(--ot-warn)}
+.fig .e{font-size:11px;color:var(--text-muted);font-weight:500;margin-left:4px}
+.split{flex:1;min-height:0;display:grid;grid-template-columns:minmax(340px,30%) minmax(0,1fr);gap:var(--space-3);padding:0 var(--space-5) var(--space-4)}
+.pane{background:var(--surface-card);border:1px solid var(--border-default);border-radius:var(--radius-lg);display:flex;flex-direction:column;min-height:0}
+.ph{padding:var(--space-3) var(--space-3) var(--space-2);border-bottom:1px solid var(--border-default)}
+.ph .h{display:flex;justify-content:space-between;align-items:baseline;gap:var(--space-2)}
+.ph .h span{font-size:var(--ui-fs-small);color:var(--text-muted)}
+.tools{display:flex;gap:var(--space-2);margin-top:var(--space-2)}
+.tools input,.tools select{height:32px;border:1px solid var(--border-strong);border-radius:var(--radius-md);background:var(--surface-card);font:inherit;font-size:var(--ui-fs-small);color:var(--text-heading);padding:0 var(--space-2)}
+.tools input{flex:1;min-width:0}
+.readbar{height:2px;background:var(--border-default);border-radius:var(--radius-pill);overflow:hidden;margin-top:var(--space-2)}
+.readbar i{display:block;height:100%;width:100%;background:var(--color-action);transform-origin:left;animation:fill 900ms var(--ui-ease) both}
+.readbar.gone{visibility:hidden}
+@keyframes fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.list{flex:1;overflow:auto;padding:var(--space-2) var(--space-3)}
+.srow{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--border-default);background:none;padding:var(--space-2);cursor:pointer;border-radius:0}
+.srow:hover{background:var(--surface-subtle)}
+.srow[aria-current="true"]{background:var(--action-soft);border-radius:var(--radius-md)}
+.srow .r1{display:flex;justify-content:space-between;align-items:center;gap:var(--space-2)}
+.srow .nm{font-weight:600;color:var(--text-heading)}
+.srow .r2{color:var(--text-body);font-size:var(--ui-fs-small);margin-top:2px}
+.srow .r2 b{font-weight:600;color:var(--text-heading)}
+.empty{color:var(--text-muted);font-size:var(--ui-fs-small);padding:var(--space-3) var(--space-2)}
+.det{min-height:0}
+.dh{padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--border-default)}
+.dh .rh{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap}
+.dh h2{margin:0;font-size:var(--ui-fs-title);font-weight:700;color:var(--text-heading)}
+.dh .meta{color:var(--text-muted);font-size:var(--ui-fs-small);margin-top:2px}
+.db2{flex:1;overflow:auto;padding:var(--space-3) var(--space-4)}
+.ms{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--space-2);margin-bottom:var(--space-3)}
+.ms div{background:var(--surface-subtle);border-radius:var(--radius-md);padding:6px var(--space-3)}
+.ms .k{font-size:var(--ui-fs-small);color:var(--text-muted)}
+.ms .v{font-weight:700;color:var(--text-heading)}
+.ms .v.red{color:var(--ot-risk)}
+.ms .v.amber{color:var(--ot-warn)}
+.ms .v .e{display:block;font-size:11px;font-weight:500;color:var(--text-muted)}
+.sec{margin-top:var(--space-3)}
+.sec>.lab{display:block;margin-bottom:var(--space-1)}
+.wk{width:100%;border-collapse:collapse;font-size:var(--ui-fs-small)}
+.wk th{text-align:right;font-weight:600;color:var(--text-muted);padding:4px 6px;background:var(--surface-subtle);white-space:nowrap}
+.wk th:first-child,.wk td:first-child{text-align:left}
+.wk td{text-align:right;border-top:1px solid var(--border-default);padding:5px 6px;color:var(--text-heading);white-space:nowrap}
+.wk td.cur{font-weight:700}
+.wk td:first-child{color:var(--text-muted)}
+.reccard{margin-top:var(--space-3);border:1px solid var(--ot-warn-bar);border-radius:var(--radius-lg);padding:var(--space-3)}
+.reccard .th{display:flex;justify-content:space-between;align-items:center;gap:var(--space-2);flex-wrap:wrap}
+.reccard .tt{font-size:var(--ui-fs-card-title);font-weight:600;color:var(--text-heading)}
+.lost{margin-top:var(--space-2);color:var(--text-heading)}
+.lost .e{font-size:11px;color:var(--text-muted);border:1px solid var(--border-default);border-radius:var(--radius-pill);padding:0 6px;margin-left:4px}
+.na{margin-top:var(--space-3);color:var(--text-muted)}
+.na b{color:var(--text-heading);font-weight:600}
+.recs{margin:0;padding:0;list-style:none}
+.recs li{display:flex;justify-content:space-between;gap:var(--space-3);padding:6px 0;border-bottom:1px solid var(--border-default);color:var(--text-heading)}
+.ab2{border-top:1px solid var(--border-default);padding:var(--space-3) 190px var(--space-3) var(--space-4);display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap}
+.ab2 .says{margin:0;color:var(--text-body);font-size:var(--ui-fs-small);flex:1 1 260px}
+.ab2 .btn{flex:none}
+.avb{position:fixed;right:20px;bottom:20px;z-index:15}
+@media (max-width:960px){body{overflow:auto}.app{height:auto}.split{grid-template-columns:1fr}.list{max-height:420px}}
+@media (prefers-reduced-motion:reduce){.readbar i{animation:none}}
+</style>
 <style id="avc-style">
 /* Aviator chat: live answers from the demo server's model on the hosted page; one link line elsewhere */
 .avc{display:flex;flex-direction:column;gap:var(--space-3)}
@@ -726,6 +363,9 @@ window.TG_AVIATOR.context = function () { return E.S.sel ? "Store " + E.S.sel + 
 .avh{display:inline-flex;align-items:center;gap:var(--space-2)}.avh .avi{height:20px}
 .avp .ab{flex:1}
 </style>
+</head>
+<body>
+<script id="avc-config">window.TG_AVIATOR={"token": "p9-g0NeF0VsCC6O", "page": "p9", "sides": ["ashby", "northfield"], "hosted": "https://tg-retail-demo-mcp.onrender.com/p/p9"};</script>
 <script id="avc-script">
 (function () {
   "use strict";
@@ -858,6 +498,326 @@ window.TG_AVIATOR.context = function () { return E.S.sel ? "Store " + E.S.sel + 
   C.ask = function (q) { if (q) ask(String(q)); };
   // A workspace switch starts that side's own conversation.
   setInterval(function () { if (LIVE && cur && box && box.isConnected && sideOf() !== lastSide) draw(); }, 400);
+})();
+</script>
+<script id="p9-app">
+/* P9 Store sell-through. Read-only. Values: Northfield's weekly store activity reports (EDI 852) for ASH-TRL-09,
+   six weeks from the shared demo world (store_activity), Ashby's replenishment rules, and the order records on NR-451207.
+   t = minutes from midnight ET on the page's first day. Week index 4 = the report read at the opening moment; 5 = the next report. */
+(function(){
+"use strict";
+const DATA = {"101":[[25,105,25,0,0],[27,105,27,0,0],[24,105,24,0,0],[28,105,28,0,0],[30,105,30,0,0],[30,98,23,0,0]],"102":[[32,152,32,0,0],[29,152,29,0,0],[33,152,33,0,0],[30,152,30,0,0],[33,152,33,0,0],[33,147,28,0,0]],"103":[[32,194,32,0,0],[36,194,36,0,0],[33,194,33,0,0],[35,194,35,0,0],[37,194,37,0,0],[37,188,31,0,0]],"104":[[41,206,41,0,0],[38,206,38,0,0],[40,206,40,0,0],[37,206,37,0,0],[41,206,41,0,0],[41,200,35,0,0]],"105":[[45,200,45,0,0],[47,200,47,0,0],[44,200,44,0,0],[48,200,48,0,0],[43,200,43,0,0],[43,198,41,0,0]],"106":[[44,137,44,0,0],[41,137,41,0,0],[45,137,45,0,0],[42,137,42,0,0],[45,137,45,0,0],[45,131,39,0,0]],"107":[[40,265,40,0,0],[44,265,44,0,0],[41,265,41,0,0],[43,265,43,0,0],[42,265,42,0,0],[42,261,38,0,0]],"108":[[47,218,47,0,0],[44,218,44,0,0],[46,218,46,0,0],[43,218,43,0,0],[41,218,41,0,0],[41,218,41,0,0]],"109":[[47,255,47,0,0],[49,255,49,0,0],[46,255,46,0,0],[50,255,50,0,0],[50,255,50,0,0],[50,248,43,0,0]],"110":[[41,251,41,0,0],[38,251,38,0,0],[42,251,42,0,0],[39,251,39,0,0],[44,251,44,0,0],[44,243,36,0,0]],"111":[[33,210,33,0,0],[37,210,37,0,0],[34,210,34,0,0],[36,210,36,0,0],[33,210,33,0,0],[33,209,32,0,0]],"112":[[36,138,36,0,0],[33,138,33,0,0],[35,138,35,0,0],[32,138,32,0,0],[31,138,31,0,0],[31,138,31,0,0]],"113":[[35,229,35,0,0],[37,229,37,0,0],[34,229,34,0,0],[38,229,38,0,0],[34,229,34,0,0],[34,227,32,0,0]],"114":[[44,136,0,0,0],[41,95,0,0,0],[43,52,0,0,0],[40,12,0,0,0],[12,0,0,0,0],[31,9,40,0,0]],"115":[[37,240,37,0,0],[41,240,41,0,0],[38,240,38,0,0],[40,240,40,0,0],[41,240,41,0,0],[41,234,35,0,0]],"116":[[29,135,29,0,0],[26,135,26,0,0],[28,135,28,0,0],[25,135,25,0,0],[25,135,25,0,0],[25,134,24,0,0]],"117":[[37,140,37,0,0],[39,140,39,0,0],[36,140,36,0,0],[40,140,40,0,0],[37,140,37,0,0],[37,137,34,0,0]],"118":[[49,207,49,0,0],[46,207,46,0,0],[50,207,50,0,0],[47,207,47,0,0],[44,207,44,0,0],[44,187,0,24,0]],"119":[[32,215,32,0,0],[36,215,36,0,0],[33,215,33,0,0],[35,215,35,0,0],[36,215,36,0,0],[36,210,31,0,0]],"120":[[40,169,40,0,0],[37,169,37,0,0],[39,169,39,0,0],[36,169,36,0,0],[35,169,35,0,0],[35,168,34,0,0]],"121":[[32,149,32,0,0],[34,149,34,0,0],[31,149,31,0,0],[35,149,35,0,0],[32,149,32,0,0],[32,147,30,0,0]],"122":[[35,177,35,0,0],[32,177,32,0,0],[36,177,36,0,0],[33,177,33,0,0],[34,177,34,0,0],[34,174,31,0,0]],"123":[[30,149,30,0,0],[34,149,34,0,0],[31,149,31,0,0],[33,149,33,0,0],[36,149,36,0,0],[36,142,29,0,0]],"124":[[49,248,49,0,0],[46,248,46,0,0],[48,248,48,0,0],[45,248,45,0,0],[48,248,48,0,0],[48,242,42,0,0]],"201":[[37,208,37,0,0],[39,208,39,0,0],[36,208,36,0,0],[40,208,40,0,0],[38,208,38,0,0],[38,204,34,0,0]],"202":[[50,272,50,0,0],[47,272,47,0,0],[51,272,51,0,0],[48,272,48,0,0],[48,272,48,0,0],[48,268,44,0,0]],"203":[[30,136,30,0,0],[34,136,34,0,0],[31,136,31,0,0],[33,136,33,0,0],[33,136,33,0,0],[33,132,29,0,0]],"204":[[36,199,36,0,0],[33,199,33,0,0],[35,199,35,0,0],[32,199,32,0,0],[33,199,33,0,0],[33,197,31,0,0]],"205":[[46,280,46,0,0],[48,280,48,0,0],[45,280,45,0,0],[49,280,49,0,0],[43,280,43,0,0],[43,279,42,0,0]],"206":[[29,99,29,0,0],[26,99,26,0,0],[30,99,30,0,0],[27,99,27,0,0],[27,99,27,0,0],[27,97,25,0,0]],"207":[[3,60,0,0,0],[4,56,0,0,0],[2,54,0,0,0],[3,51,0,0,0],[3,48,0,0,0],[2,22,0,0,24]],"208":[[30,106,30,0,0],[27,106,27,0,0],[29,106,29,0,0],[26,106,26,0,0],[33,106,33,0,0],[33,98,25,0,0]],"209":[[40,190,40,0,0],[42,190,42,0,0],[39,190,39,0,0],[43,190,43,0,0],[37,190,37,0,0],[37,190,37,0,0]],"210":[[41,253,41,0,0],[38,253,38,0,0],[42,253,42,0,0],[39,253,39,0,0],[36,253,36,0,0],[36,253,36,0,0]],"211":[[45,291,45,0,0],[49,291,49,0,0],[46,291,46,0,0],[48,291,48,0,0],[51,291,51,0,0],[51,282,42,0,0]],"212":[[50,192,50,0,0],[47,192,47,0,0],[49,192,49,0,0],[46,192,46,0,0],[51,192,51,0,0],[51,184,43,0,0]],"213":[[25,85,25,0,0],[27,85,27,0,0],[24,85,24,0,0],[28,85,28,0,0],[23,85,23,0,0],[23,85,23,0,0]],"214":[[27,100,27,0,0],[24,100,24,0,0],[28,100,28,0,0],[25,100,25,0,0],[27,100,27,0,0],[27,96,23,0,0]],"215":[[42,241,42,0,0],[46,241,46,0,0],[43,241,43,0,0],[45,241,45,0,0],[44,241,44,0,0],[44,237,40,0,0]],"216":[[34,123,34,0,0],[31,123,31,0,0],[33,123,33,0,0],[30,123,30,0,0],[36,123,36,0,0],[36,116,29,0,0]]};
+const IDS = Object.keys(DATA).sort();
+const PRICE = 38, AVAIL = 980, CARTON = 40, KEEP = 8;
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const $ = s => document.querySelector(s);
+const RM = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const money = n => "$" + Number(n).toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2});
+const money0 = n => "$" + Number(n).toLocaleString("en-US");
+const pad = n => String(n).padStart(2, "0");
+const T = (d, h, m) => d * 1440 + h * 60 + m;
+const DAY = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const hm = t => { const d = ((t % 1440) + 1440) % 1440; return pad(Math.floor(d / 60)) + ":" + pad(d % 60); };
+const dayName = t => DAY[((Math.floor(t / 1440) % 7) + 7) % 7];
+const REPORT_AT = k => T(-1 + (k - 4) * 7, 6, 10);   /* report k arrives the day before the opening moment's week starts */
+const CLOCK = {4:T(0,8,7), 5:T(6,6,10)};
+
+const F = {ws:"ashby", k:4, sel:"114", q:"", filter:"all", sort:"risk", open:{}, fresh:false};
+const nf = () => F.ws === "nf";
+window.E = {S:{get sel(){ return F.sel; }}};
+
+/* ---------- figures Trading Grid calculates for both sides ---------- */
+function m(id, k){
+  const w = DATA[id], [sold, oh, rec, tin, tout] = w[k];
+  const start = oh + sold - rec - tin + tout;
+  const prev = w.slice(k - 4, k).map(x => x[0]), avg = prev.reduce((a, b) => a + b, 0) / 4;
+  return {sold, oh, rec, tin, tout, start, st: rec ? sold / rec : null, est: k === 0 && rec > 0, avg, prev, wos: avg ? oh / avg : null};
+}
+function median(k){ const a = IDS.map(id => m(id, k).avg).sort((x, y) => x - y); return (a[19] + a[20]) / 2; }
+/* Ashby's replenishment rules */
+function rules(id, k){
+  const x = m(id, k), med = median(k);
+  const empty = x.oh === 0 && x.avg >= 1;
+  const slow = x.wos != null && x.wos >= 12 && x.avg < 0.5 * med;
+  const transit = 0;
+  let rec = null;
+  if (empty && transit === 0 && AVAIL > 0) { const cartons = Math.max(1, Math.round(x.avg / CARTON)); rec = {kind:"order", pairs:cartons * CARTON, cartons}; }
+  else if (empty) rec = {kind:"wait"};
+  else if (slow) rec = {kind:"transfer", pairs:x.oh - Math.round(KEEP * x.avg)};
+  return {empty, slow, rec, med, transit};
+}
+const lost = (id, k) => { const x = m(id, k); return x.oh === 0 ? Math.max(0, Math.round(x.avg - x.sold)) : 0; };
+const pct = v => v == null ? "Not available" : Math.round(v * 100) + "%";
+const wks = v => v == null ? "No sales" : v.toFixed(1);
+
+/* ---------- records ---------- */
+const DOCS = {
+  "ERP": {name:"Available stock", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(0,8,5), side:"ashby", kv:[["Item","ASH-TRL-09 trail runner"],["Available","980 pairs"]]},
+  "850": {name:"Purchase order", ref:"NR-451207", iface:"EDI 850", from:"Northfield Retailer", to:"Ashby Supplier", at:T(0,10,20), kv:[["Ship to","Northfield Store 114"],["Item","ASH-TRL-09 trail runner"],["Quantity","40 pairs at $38.00"],["Total","$1,520.00"]]},
+  "855": {name:"Order acknowledgment", ref:"ACK-451207", iface:"EDI 855", from:"Ashby Supplier", to:"Northfield Retailer", at:T(0,10,50), kv:[["Answers","Purchase order NR-451207"],["Order item 1","40 pairs accepted"]]},
+  "856": {name:"Ship notice", ref:"ASN-451207-1", iface:"EDI 856", from:"Ashby Supplier", to:"Northfield Retailer", at:T(0,16,5), kv:[["Purchase order","NR-451207"],["Ship to","Northfield Store 114"],["Carrier","Lakeline Freight"],["Quantity","40 pairs · 1 carton"]]},
+  "810": {name:"Invoice", ref:"INV-451207", iface:"EDI 810", from:"Ashby Supplier", to:"Northfield Retailer", at:T(0,17,0), kv:[["Purchase order","NR-451207"],["Quantity","40 pairs at $38.00"],["Total","$1,520.00"]]},
+  "861": {name:"Receiving advice", ref:"RCV-S114-51207", iface:"EDI 861", from:"Northfield Retailer", to:"Ashby Supplier", at:T(1,9,10), kv:[["Ship notice","ASN-451207-1"],["Received at","Northfield Store 114"],["Received","40 of 40 pairs"]]}
+};
+for (let k = 0; k <= 5; k++) DOCS["852-" + k] = {name:"Store activity report", iface:"EDI 852", from:"Northfield Retailer", to:"Ashby Supplier", at:REPORT_AT(k), report:k};
+
+const HIST = [];
+for (let k = 0; k <= 5; k++) HIST.push({t:REPORT_AT(k), text:"Store activity report · 40 stores", by:"Northfield · EDI 852", doc:"852-" + k});
+HIST.push({t:T(0,8,5), text:"Available stock read · 980 pairs", by:"Supplier ERP · API", doc:"ERP", side:"ashby"});
+HIST.push({t:T(0,8,7), text:"Replenishment check · 2 stores need stock action", by:"Ashby's replenishment rules · Trading Grid", side:"ashby"});
+HIST.push({t:T(0,8,7), text:"Sell-through calculated · 40 stores", by:"Trading Grid", side:"nf"});
+[[T(0,10,20),"Purchase order · 40 pairs to store 114","Northfield · EDI 850","850"],
+ [T(0,10,26),"Technical acknowledgment of the purchase order","Ashby · EDI 997"],
+ [T(0,10,50),"Order acknowledgment · 40 pairs accepted","Ashby · EDI 855","855"],
+ [T(0,10,57),"Technical acknowledgment of the order acknowledgment","Northfield · EDI 997"],
+ [T(0,16,5),"Ship notice · 40 pairs to store 114","Ashby · EDI 856","856"],
+ [T(0,16,13),"Technical acknowledgment of the ship notice","Northfield · EDI 997"],
+ [T(0,17,0),"Invoice · 40 pairs · $1,520.00","Ashby · EDI 810","810"],
+ [T(0,17,9),"Technical acknowledgment of the invoice","Northfield · EDI 997"],
+ [T(1,9,10),"Receiving advice · 40 of 40 at store 114","Northfield · EDI 861","861"],
+ [T(1,9,12),"Technical acknowledgment of the receiving advice","Ashby · EDI 997"]].forEach(h => HIST.push({t:h[0], text:h[1], by:h[2], doc:h[3]}));
+HIST.push({t:T(6,6,10), text:"Replenishment check · no store needs stock action", by:"Ashby's replenishment rules · Trading Grid", side:"ashby"});
+HIST.push({t:T(6,6,10), text:"Sell-through calculated · 40 stores", by:"Trading Grid", side:"nf"});
+
+/* ---------- shell ---------- */
+const PEOPLE = {ashby:["Priya Raman","Ashby Supplier"], nf:["Jordan Ellis","Northfield Retailer"]};
+document.body.insertAdjacentHTML("afterbegin", `
+<div class="top" role="banner">
+  <div class="mark"><i aria-hidden="true"></i>Trading Grid</div>
+  <div class="ws" id="wslabel"></div>
+  <div class="sp"></div>
+  <div class="clock" id="clock" aria-label="Business clock"></div>
+  <button class="tb" id="bHist" type="button">History</button>
+  <button class="tb" id="bRules" type="button">Rules</button>
+  <div class="acct"><button class="acctb" id="acctb" type="button" aria-haspopup="menu" aria-expanded="false"><span id="acctn"></span><span class="co" id="acctc"></span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
+    <div class="menu" id="menu" role="menu" aria-label="Account">${["ashby","nf"].map(w => `<button type="button" role="menuitemradio" data-ws="${w}" aria-checked="false"><span class="n">${PEOPLE[w][0]}</span><span class="c">${PEOPLE[w][1]}</span></button>`).join("")}</div></div>
+</div>
+<div class="app">
+  <div class="head"><div class="tx"><h1 id="title"></h1><p class="ev" id="evline"></p><p class="goal" id="goal"></p></div><div class="strip" id="strip"></div></div>
+  <div class="split">
+    <section class="pane" aria-label="Stores">
+      <div class="ph"><div class="h"><span class="lab">Stores</span><span id="cnt"></span></div>
+        <div class="tools"><input id="q" type="search" placeholder="Search store" aria-label="Search store"><select id="flt" aria-label="Filter"><option value="all">All stores</option><option value="act">Needs action</option></select><select id="srt" aria-label="Sort"><option value="risk">Weeks of supply</option><option value="sold">Units sold</option><option value="store">Store</option></select></div>
+        <div class="readbar" id="readbar"><i></i></div></div>
+      <div class="list" id="list"></div>
+    </section>
+    <section class="pane det" aria-label="Store" id="det"></section>
+  </div>
+</div>
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dtitle"><header><h3 id="dtitle"></h3><button class="tb" id="dclose" type="button">Close</button></header><div class="db" id="dbody"></div></aside>
+<button class="avb" id="avb" type="button" aria-expanded="false" aria-controls="avp"><span class="avi" aria-hidden="true"></span>Aviator</button>
+<aside class="avp" id="avp" role="dialog" aria-label="Aviator"><header><b class="avh"><span class="avi" aria-hidden="true"></span>Aviator</b><button class="tb" id="avclose" type="button">Close</button></header><div class="ab" id="avbody"></div></aside>
+<div class="sr" aria-live="polite" id="live"></div>`);
+const say = t => { const l = $("#live"); l.textContent = ""; setTimeout(() => { l.textContent = t; }, 30); };
+
+/* ---------- header ---------- */
+function flagged(k){ return IDS.filter(id => { const r = rules(id, k); return r.empty || r.slow; }); }
+function head(){
+  const k = F.k, fl = flagged(k), empty = IDS.filter(id => rules(id, k).empty).length, slow = IDS.filter(id => rules(id, k).slow).length;
+  const before = k === 4;
+  $("#title").textContent = before
+    ? (nf() ? `${fl.length} of 40 stores have an empty shelf or too much stock this week.` : `${fl.length} of 40 Northfield stores need stock action this week.`)
+    : "Store 114 is restocked and selling again.";
+  $("#evline").textContent = before ? "Read when Northfield's store activity report arrived." : "Read when Northfield's next store activity report arrived.";
+  $("#goal").textContent = "Restock stores that sell out; move stock from stores that don't.";
+  const figs = [["Stores read","40",""], ["Empty shelf", String(empty), empty ? "red" : ""], ["Over 12 weeks", String(slow), slow ? "amber" : ""]];
+  if (before) { const l = lost("114", 4); figs.push(["Sales lost", money0(l * PRICE), "", "Estimated"]); }
+  else figs.push(["Store 114 sold", m("114", 5).sold + " pairs", ""]);
+  if (!nf() && before) figs.push(["Available to ship", AVAIL + " pairs", ""]);
+  $("#strip").innerHTML = figs.map(f => `<div class="fig"><div class="k">${esc(f[0])}</div><div class="v ${f[2]}">${esc(f[1])}${f[3] ? `<span class="e">${esc(f[3])}</span>` : ""}</div></div>`).join("");
+  $("#clock").textContent = dayName(CLOCK[k]) + " " + hm(CLOCK[k]) + " ET";
+  $("#wslabel").textContent = nf() ? "Northfield Retailer · Buying" : "Ashby Supplier · Retail planning";
+  $("#acctn").textContent = PEOPLE[F.ws][0]; $("#acctc").textContent = "· " + PEOPLE[F.ws][1];
+  document.querySelectorAll("#menu [data-ws]").forEach(b => b.setAttribute("aria-checked", b.dataset.ws === F.ws));
+}
+
+/* ---------- list ---------- */
+function chip(id, k){
+  const r = rules(id, k);
+  if (r.empty) return ["Empty shelf","red"];
+  if (r.slow) return ["Over 12 weeks","amber"];
+  if (k === 5) { const x = m(id, 5); if (id === "114" && x.rec) return ["Restocked","brand"]; if (x.tout) return ["Transfer sent","brand"]; if (x.tin) return ["Transfer received","brand"]; }
+  return null;
+}
+function rows(){
+  const k = F.k;
+  let ids = IDS.slice();
+  if (F.q) ids = ids.filter(id => id.includes(F.q.trim()));
+  if (F.filter === "act") ids = ids.filter(id => { const r = rules(id, k); return r.empty || r.slow; });
+  const rank = id => { const r = rules(id, k); return r.empty ? 0 : r.slow ? 1 : 2; };
+  ids.sort((a, b) => {
+    if (F.sort === "store") return a.localeCompare(b);
+    const ra = rank(a), rb = rank(b); if (ra !== rb) return ra - rb;
+    if (F.sort === "sold") return m(b, k).sold - m(a, k).sold;
+    return (m(a, k).wos ?? 99) - (m(b, k).wos ?? 99);
+  });
+  return ids;
+}
+function renderList(){
+  const k = F.k, ids = rows();
+  $("#cnt").textContent = ids.length === 40 ? "40 stores" : ids.length + " of 40 stores";
+  $("#list").innerHTML = ids.length ? ids.map(id => { const x = m(id, k), c = chip(id, k);
+    return `<button class="srow" type="button" data-sel="${id}" aria-current="${F.sel === id}"><div class="r1"><span class="nm">Store ${id}</span>${c ? `<span class="chip ${c[1]}">${esc(c[0])}</span>` : ""}</div><div class="r2">Sell-through <b>${pct(x.st)}</b> · <b>${wks(x.wos)}</b> weeks of supply · ${x.sold} sold</div></button>`; }).join("")
+    : `<div class="empty">No store matches.</div>`;
+}
+
+/* ---------- detail ---------- */
+const tag = (txt, doc) => doc ? `<button class="tag" type="button" data-doc="${doc}">${esc(txt)}</button>` : `<span class="tag" style="text-decoration:none;cursor:default">${esc(txt)}</span>`;
+const wr = (v, tags) => `<div class="wr"><div class="v">${v}</div><div class="tags">${tags || ""}</div></div>`;
+function weekTable(id){
+  const k = F.k, cols = [];
+  for (let i = 0; i <= k; i++) cols.push(i);
+  const lab = i => i === k ? "Latest" : (k - i) + (k - i === 1 ? " week before" : " weeks before");
+  const row = (name, f) => `<tr><td>${name}</td>${cols.map(i => `<td class="${i === k ? "cur" : ""}">${f(i)}</td>`).join("")}</tr>`;
+  const d = DATA[id];
+  return `<div class="tw"><table class="wk"><thead><tr><th>Week</th>${cols.map(i => `<th>${lab(i)}</th>`).join("")}</tr></thead><tbody>
+  ${row("Sold", i => d[i][0])}${row("On hand", i => d[i][1])}${row("Received", i => d[i][2])}${row("Transfers in", i => d[i][3])}${row("Transfers out", i => d[i][4])}
+  ${row("Sell-through", i => d[i][2] ? Math.round(d[i][0] / d[i][2] * 100) + "%" + (i === 0 ? " Estimated" : "") : "Not available")}</tbody></table></div>`;
+}
+function detBtn(key, html){ const on = !!F.open[key]; return `<div class="det"><button class="lnk" type="button" data-det="${key}" aria-expanded="${on}">${on ? "Hide details" : "Details"}</button>${on ? `<div class="dbody">${html}</div>` : ""}</div>`; }
+const readList = docs => `<p class="k">Records read</p>` + docs.map(d => `<p>${tag(DOCS[d].name, d)} <span class="k">· ${esc(DOCS[d].iface)}</span></p>`).join("");
+function recCard(id){
+  const k = F.k, r = rules(id, k), x = m(id, k);
+  if (!r.rec) return "";
+  if (nf()) return `<p class="na"><b>Ashby's recommendation</b> · Not available to Northfield</p>`;
+  const prev = x.prev.join(", ");
+  if (r.rec.kind === "order") {
+    const l = lost(id, k);
+    return `<div class="reccard"><div class="th"><span class="tt">Recommend new order</span><span class="chip amber">Northfield decides</span></div>
+    <div class="tw"><table class="ow"><thead><tr><th>Recommendation</th><th>Now</th><th>Recommended</th><th>Owner</th><th>Where to act</th></tr></thead><tbody><tr><td>New order</td><td>0 on hand</td><td class="af">${r.rec.pairs} pairs · ${r.rec.cartons} carton</td><td>Northfield buyer</td><td>Northfield ordering</td></tr></tbody></table></div>
+    <p class="lost">Sales lost this week · ${l} pairs · ${money(l * PRICE)}<span class="e">Estimated</span></p>
+    ${detBtn("rec" + id, `<p>Empty shelf: zero on hand and a weekly average of at least 1 pair. <span class="k">· Ashby's replenishment rules</span></p><p>An empty shelf with nothing in transit and stock available gets a new order recommendation. <span class="k">· Ashby's replenishment rules</span></p><p>Order in whole cartons of 40 pairs, sized from the 4-week average. <span class="k">· Ashby's replenishment rules</span></p><p class="k" style="margin-top:6px">Sizing</p><p>4-week average ${Math.round(x.avg)} pairs · ${prev} · 1 carton of 40 pairs</p><p class="k" style="margin-top:6px">Sales lost</p><p>4-week average ${Math.round(x.avg)} minus ${x.sold} sold · Estimated</p>${readList(["852-" + k, "ERP"])}<p class="k" style="margin-top:6px">Who does what</p><p>Rule recommends · Northfield buyer decides · Northfield ordering places the order</p>`)}</div>`;
+  }
+  if (r.rec.kind === "transfer") {
+    return `<div class="reccard"><div class="th"><span class="tt">Recommend transfer</span><span class="chip amber">Northfield decides</span></div>
+    <div class="tw"><table class="ow"><thead><tr><th>Recommendation</th><th>Now</th><th>Recommended</th><th>Owner</th><th>Where to act</th></tr></thead><tbody><tr><td>Transfer out</td><td>${x.oh} on hand</td><td class="af">${r.rec.pairs} pairs · keep ${x.oh - r.rec.pairs}</td><td>Northfield store operations</td><td>Northfield store systems</td></tr></tbody></table></div>
+    <p class="lost">Unsold at store ${id} · ${x.oh} pairs · ${money(x.oh * PRICE)}</p>
+    ${detBtn("rec" + id, `<p>Slow sell-through: 12 or more weeks of supply and sales below 50% of the median store. <span class="k">· Ashby's replenishment rules</span></p><p>A transfer leaves 8 weeks of supply at the sending store. <span class="k">· Ashby's replenishment rules</span></p><p class="k" style="margin-top:6px">Values</p><p>${wks(x.wos)} weeks of supply · 4-week average ${Math.round(x.avg)} against a median store of ${Math.round(r.med)} · ${prev}</p>${readList(["852-" + k])}<p class="k" style="margin-top:6px">Who does what</p><p>Rule recommends the quantity · Northfield store operations picks the receiving store and moves the stock</p>`)}</div>`;
+  }
+  return "";
+}
+function renderDet(){
+  const id = F.sel, k = F.k, x = m(id, k), r = rules(id, k), c = chip(id, k);
+  const wosCls = r.empty ? "red" : r.slow ? "amber" : "";
+  let banner = "", recs = "";
+  if (k === 5 && id === "114") {
+    banner = `<div class="card banner enter"><div class="bt">Restocked and selling</div><p>${x.sold} sold and ${x.oh} on hand after receiving ${x.rec} pairs.</p></div>`;
+    recs = `<div class="sec"><span class="lab">Order records</span><ul class="recs">${[["850","Purchase order · 40 pairs to store 114"],["855","Order acknowledgment · 40 pairs accepted"],["856","Ship notice · 40 pairs to store 114"],["861","Receiving advice · 40 of 40 at store 114"]].map(d => `<li><span>${esc(d[1])}</span>${tag(DOCS[d[0]].iface, d[0])}</li>`).join("")}</ul></div>`;
+  } else if (k === 5 && x.tout) banner = `<div class="card banner enter"><div class="bt">${x.tout} pairs transferred out</div><p>${x.oh} on hand and ${wks(x.wos)} weeks of supply after the transfer.</p></div>`;
+  else if (k === 5 && x.tin) banner = `<div class="card banner enter"><div class="bt">${x.tin} pairs received by transfer</div><p>${x.oh} on hand after ${x.sold} sold.</p></div>`;
+  const flag = r.empty || r.slow;
+  const stock = nf() ? wr(`<b>Supplier stock</b> · Not available to Northfield`) : wr(`<b>Supplier stock</b> · ${AVAIL} pairs available`, tag("Supplier ERP · API", "ERP"));
+  const shelf = r.empty ? `<b>Shelf</b> · <span class="st-red">0 on hand</span> · ${x.sold} sold against a ${Math.round(x.avg)}-pair average`
+    : r.slow ? `<b>Stock</b> · ${x.oh} on hand · <span class="st-amber">${wks(x.wos)} weeks of supply</span> · ${x.sold} sold`
+    : `<b>Shelf</b> · ${x.oh} on hand · ${x.sold} sold · ${Math.round(x.avg)}-pair average`;
+  const facts = [wr(shelf, tag("EDI 852", "852-" + k))];
+  if (flag && !nf() && r.empty) facts.push(stock);
+  if (flag && nf() && r.empty) facts.push(stock);
+  if (r.empty) facts.push(wr(`<b>In transit</b> · 0 pairs`, tag("EDI 856")));
+  const says = k === 4 ? "Reads Northfield's next weekly store activity report and recalculates all 40 stores." : "Latest store activity report read.";
+  $("#det").innerHTML = `<div class="dh"><div class="rh"><h2 id="rech" tabindex="-1">Store ${id}</h2>${c ? `<span class="chip ${c[1]}">${esc(c[0])}</span>` : ""}</div><div class="meta">Northfield Store ${id} · ASH-TRL-09 trail runner · $38.00 a pair</div></div>
+  <div class="db2">${banner}
+    <div class="ms"><div><div class="k">Sell-through</div><div class="v">${pct(x.st)}${x.st == null ? `<span class="e">Nothing received</span>` : ""}</div></div><div><div class="k">Weeks of supply</div><div class="v ${wosCls}">${wks(x.wos)}</div></div><div><div class="k">Sold</div><div class="v">${x.sold}</div></div><div><div class="k">On hand</div><div class="v">${x.oh}</div></div><div><div class="k">4-week average</div><div class="v">${Math.round(x.avg)}</div></div></div>
+    <div class="wrong" style="margin-top:0"><span class="lab">${flag ? "What is wrong" : "Records"}</span>${facts.join("")}</div>
+    ${recCard(id)}
+    ${recs}
+    <div class="sec"><span class="lab">Weeks on record</span>${weekTable(id)}</div>
+  </div>
+  <div class="ab2"><button class="btn" type="button" id="bNext" ${k === 5 ? 'aria-disabled="true"' : ""}>Next report</button><p class="says">${esc(says)}</p></div>`;
+  if (F.fresh) { document.querySelectorAll("#det .ms .v").forEach(v => { v.classList.add("enter"); }); }
+}
+function render(){ head(); renderList(); renderDet(); if ($("#avp").classList.contains("on")) mountAv(); }
+
+/* ---------- drawer ---------- */
+let from = null;
+function openDrawer(title, html){ from = document.activeElement; $("#dtitle").textContent = title; $("#dbody").innerHTML = html; $("#drawer").classList.add("on"); $("#scrim").classList.add("on"); $("#dclose").focus(); }
+function closeDrawer(){ if (!$("#drawer").classList.contains("on")) return; $("#drawer").classList.remove("on"); $("#scrim").classList.remove("on"); if (from && document.body.contains(from)) from.focus(); }
+function openDoc(id){
+  const d = DOCS[id]; if (!d) return;
+  if (d.side === "ashby" && nf()) { openDrawer(d.name, `<p>Not available to Northfield</p>`); return; }
+  let h = `<dl class="kv"><dt>Document</dt><dd>${esc(d.name)}${d.ref ? " " + esc(d.ref) : ""}</dd><dt>Interface</dt><dd>${esc(d.iface)}</dd><dt>From</dt><dd>${esc(d.from)}</dd><dt>To</dt><dd>${esc(d.to)}</dd><dt>Received</dt><dd>${esc(dayName(d.at) + " " + hm(d.at))} ET</dd>${(d.kv || []).map(r => `<dt>${esc(r[0])}</dt><dd>${esc(r[1])}</dd>`).join("")}</dl>`;
+  if (d.report != null) {
+    const k = d.report, tot = IDS.reduce((a, s) => [a[0] + DATA[s][k][0], a[1] + DATA[s][k][1]], [0, 0]);
+    h = h.replace("</dl>", `<dt>Item</dt><dd>ASH-TRL-09 trail runner</dd><dt>Sold in the week</dt><dd>${tot[0].toLocaleString("en-US")} pairs</dd><dt>On hand</dt><dd>${tot[1].toLocaleString("en-US")} pairs</dd></dl>`);
+    h += `<table class="t"><thead><tr><th>Store</th><th>Sold</th><th>On hand</th><th>Received</th><th>Transfers in</th><th>Transfers out</th></tr></thead><tbody>${IDS.map(s => `<tr><td>${s}</td>${DATA[s][k].map(v => `<td>${v}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+  }
+  openDrawer(d.name, h);
+}
+function openHistory(){
+  const now = CLOCK[F.k], cd = Math.floor(now / 1440);
+  const when = t => { const ago = Math.floor((cd - Math.floor(t / 1440)) / 7); return ago >= 1 ? ago + (ago === 1 ? " week ago" : " weeks ago") : dayName(t) + " " + hm(t); };
+  const items = HIST.filter(h => h.t <= now && (!h.side || h.side === F.ws) && !(nf() && h.doc === "ERP")).sort((a, b) => b.t - a.t);
+  openDrawer("History", `<ul class="hi">${items.map(h => `<li><span class="tm">${esc(when(h.t))}</span><span>${h.doc ? `<button class="tag" style="font-size:var(--ui-fs-body);color:var(--text-heading)" type="button" data-doc="${h.doc}">${esc(h.text)}</button>` : esc(h.text)}<br><span class="by">${esc(h.by)}</span></span></li>`).join("")}</ul>`);
+}
+function openRules(){
+  const id = F.sel, k = F.k, x = m(id, k), r = rules(id, k);
+  const calc = [["Sell-through: units sold ÷ units received in the week. Not available when nothing was received; the first week on record is Estimated.", pct(x.st)],
+                ["Weeks of supply: on hand ÷ average sold in the 4 weeks before.", wks(x.wos) + " weeks"],
+                ["Sales lost on an empty shelf: 4-week average minus units sold, Estimated.", x.oh === 0 ? lost(id, k) + " pairs" : "Shelf not empty"]];
+  const ash = [["Empty shelf: zero on hand and a weekly average of at least 1 pair.", r.empty ? "Met: 0 on hand" : "Not met"],
+               ["An empty shelf with nothing in transit and stock available gets a new order recommendation.", r.rec && r.rec.kind === "order" ? r.rec.pairs + " pairs" : "Not met"],
+               ["An empty shelf with goods in transit gets Wait.", "Not met"],
+               ["Order in whole cartons of 40 pairs, sized from the 4-week average.", r.rec && r.rec.kind === "order" ? r.rec.cartons + " carton" : "Not used"],
+               ["Slow sell-through: 12 or more weeks of supply and sales below 50% of the median store.", r.slow ? "Met: " + wks(x.wos) + " weeks" : "Not met"],
+               ["A transfer leaves 8 weeks of supply at the sending store.", r.rec && r.rec.kind === "transfer" ? "Keeps " + (x.oh - r.rec.pairs) + " pairs" : "Not used"],
+               ["Northfield decides every order and transfer and picks the receiving store.", ""]];
+  const blk = (rows, src) => rows.map(q => `<div class="rl"><div class="s">${esc(src)}</div><div>${esc(q[0])}</div>${q[1] ? `<div class="f">Here: ${esc(q[1])}</div>` : ""}</div>`).join("");
+  openDrawer("Rules for store " + id, blk(calc, "Trading Grid") + (nf() ? `<div class="rl"><div class="s">Ashby's replenishment rules</div><div>Not available to Northfield</div></div>` : blk(ash, "Ashby's replenishment rules")));
+}
+
+/* ---------- Aviator ---------- */
+const AVQ = {ashby:["Why does store 114 need 40 pairs?","Which stores can spare stock?"], northfield:["Which stores sold out this week?","Where is stock sitting unsold?"]};
+const C = window.TG_AVIATOR;
+C.side = () => nf() ? "northfield" : "ashby";
+C.asOf = () => F.k === 4 ? "2026-10-26T08:07:00-04:00" : "2026-11-01T06:10:00-05:00";
+C.context = () => "Store " + F.sel + " · ASH-TRL-09";
+function mountAv(){ C.mount($("#avbody"), {questions: s => AVQ[s] || []}); }
+function toggleAv(on){ const p = $("#avp"), b = $("#avb"); on = on == null ? !p.classList.contains("on") : on; if (on) mountAv(); p.classList.toggle("on", on); b.setAttribute("aria-expanded", on); if (on) $("#avclose").focus(); else b.focus(); }
+
+/* ---------- account menu ---------- */
+function menu(on){ const mn = $("#menu"), b = $("#acctb"); mn.classList.toggle("on", on); b.setAttribute("aria-expanded", on); if (on) (mn.querySelector('[aria-checked="true"]') || mn.querySelector("button")).focus(); }
+function switchWs(ws){ if (ws === F.ws) { menu(false); $("#acctb").focus(); return; } F.ws = ws; F.fresh = false; closeDrawer(); menu(false); render(); $("#acctb").focus(); say((nf() ? "Northfield Retailer" : "Ashby Supplier") + " workspace open."); }
+
+/* ---------- next report: the only control that moves the story clock ---------- */
+function nextReport(){
+  if (F.k === 5) return;
+  F.k = 5; F.fresh = true;
+  const bar = $("#readbar"); bar.classList.remove("gone"); bar.innerHTML = "<i></i>";
+  render(); F.fresh = false;
+  setTimeout(() => bar.classList.add("gone"), RM() ? 0 : 950);
+  $("#rech").focus({preventScroll:true});
+  say("Next store activity report read. Store 114 sold " + m("114", 5).sold + " and holds " + m("114", 5).oh + ".");
+}
+
+/* ---------- clicks ---------- */
+document.body.addEventListener("click", e => {
+  const t = e.target.closest("button"); if (!t) { if (!e.target.closest(".acct")) menu(false); return; }
+  if (t.closest("#avbody")) return;
+  if (t.id === "acctb") { menu(!$("#menu").classList.contains("on")); return; }
+  if (t.dataset.ws) { switchWs(t.dataset.ws); return; }
+  if (!t.closest(".acct")) menu(false);
+  if (t.dataset.sel) { F.sel = t.dataset.sel; renderList(); renderDet(); $("#rech").focus({preventScroll:true}); return; }
+  if (t.dataset.doc) { openDoc(t.dataset.doc); return; }
+  if (t.dataset.det) { F.open[t.dataset.det] = !F.open[t.dataset.det]; renderDet(); const b = document.querySelector(`[data-det='${t.dataset.det}']`); if (b) b.focus(); return; }
+  if (t.id === "bNext") { if (t.getAttribute("aria-disabled") !== "true") nextReport(); return; }
+  if (t.id === "bHist") { openHistory(); return; }
+  if (t.id === "bRules") { openRules(); return; }
+  if (t.id === "dclose") { closeDrawer(); return; }
+  if (t.id === "avb") { toggleAv(); return; }
+  if (t.id === "avclose") { toggleAv(false); return; }
+});
+$("#scrim").addEventListener("click", closeDrawer);
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") { if ($("#menu").classList.contains("on")) { menu(false); $("#acctb").focus(); } else if ($("#avp").classList.contains("on")) toggleAv(false); else closeDrawer(); }
+  if ($("#menu").classList.contains("on") && (e.key === "ArrowDown" || e.key === "ArrowUp")) { e.preventDefault(); const bs = [...document.querySelectorAll("#menu button")], i = bs.indexOf(document.activeElement); bs[(i + (e.key === "ArrowDown" ? 1 : bs.length - 1)) % bs.length].focus(); }
+});
+$("#q").addEventListener("input", e => { F.q = e.target.value; renderList(); });
+$("#flt").addEventListener("change", e => { F.filter = e.target.value; renderList(); });
+$("#srt").addEventListener("change", e => { F.sort = e.target.value; renderList(); });
+
+render();
+setTimeout(() => $("#readbar").classList.add("gone"), RM() ? 0 : 950);
 })();
 </script>
 <script>(function(){var u='https://tg-retail-demo-mcp.onrender.com/#uc-shelf-recovery';function add(){if(document.getElementById('tgAll'))return;var m=document.querySelector('.mark');var a=document.createElement('a');a.id='tgAll';a.href=u;a.textContent='All use cases';a.style.cssText='margin-left:16px;font:600 13px/1 Inter,"Helvetica Neue",Arial,sans-serif;color:#1163ff;text-decoration:none;white-space:nowrap';if(m&&m.parentNode){m.parentNode.insertBefore(a,m.nextSibling);}else{a.style.cssText+=';position:fixed;left:16px;bottom:16px;z-index:60;background:#fff;padding:8px 12px;border:1px solid #d3d7dd;border-radius:10px';document.body.appendChild(a);}}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',add);else add();window.addEventListener('load',add);})();</script></body>

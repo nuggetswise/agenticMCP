@@ -67,15 +67,19 @@ button{font:inherit;color:inherit}
 .pagehead h1{margin:0;font-size:var(--ui-fs-title);font-weight:700;line-height:1.25;color:var(--text-heading)}
 .ev{margin:var(--space-1) 0 0;color:var(--text-body)}
 .goal{margin:2px 0 0;color:var(--text-muted);font-size:var(--ui-fs-small)}
-/* route map */
+/* route map: opens only from Route map in the top bar */
+.mapov{position:absolute;left:-99999px;width:1100px;visibility:hidden}
+.mapov.open{position:static;left:auto;width:auto;visibility:visible}
+.maphead{display:flex;justify-content:space-between;align-items:center;padding:var(--space-1) 0 var(--space-2)}
 .map{background:var(--surface-card);border:1px solid var(--border-default);border-radius:var(--radius-lg);padding:var(--space-2) var(--space-3);margin-bottom:var(--space-3)}
 .map svg{display:block;width:100%;height:auto}
 .map .lbl{font-size:var(--ui-fs-small);fill:var(--text-muted);paint-order:stroke;stroke:var(--surface-card);stroke-width:5px;stroke-linejoin:round;transition:opacity var(--ui-dur-fast) var(--ui-ease)}
 .nt{font-size:var(--ui-fs-card-title);font-weight:600;fill:var(--color-primary)}
 .ns{font-size:var(--ui-fs-small);fill:var(--text-muted)}
 .nr{font-size:var(--ui-fs-small);font-weight:500;fill:var(--text-heading);transition:opacity var(--ui-dur-enter) var(--ui-ease)}
-.line{fill:none;stroke:var(--border-strong);stroke-width:2;transition:stroke var(--ui-dur-settle) var(--ui-ease)}
-.line.settled{stroke:color-mix(in srgb,var(--color-primary) 55%,var(--surface-card))}
+.line{fill:none;stroke:var(--border-strong);stroke-width:2;stroke-dasharray:5 5;transition:stroke var(--ui-dur-settle) var(--ui-ease)}
+.line.settled{stroke:color-mix(in srgb,var(--color-primary) 55%,var(--surface-card));stroke-dasharray:none}
+.arrow.rest{fill:var(--border-strong)}
 .arrow{fill:color-mix(in srgb,var(--color-primary) 55%,var(--surface-card))}
 .sub{transition:fill-opacity var(--ui-dur-enter) var(--ui-ease),stroke-opacity var(--ui-dur-enter) var(--ui-ease)}
 .maplist{display:none;margin:0;padding:0;list-style:none}
@@ -288,6 +292,7 @@ E.shell = function(cfg){
   <div class="who" id="who"></div>
   <button class="tb" id="bHist" type="button">History</button>
   <button class="tb" id="bRules" type="button">Rules</button>
+  <button class="tb" id="bMap" type="button" aria-expanded="false" aria-controls="mapcard">Route map</button>
 </div>
 <main class="wrap">
   <div class="pagehead">
@@ -296,7 +301,7 @@ E.shell = function(cfg){
     <p class="goal" id="goal"></p>
   </div>
   <div id="banner"></div>
-  <section class="map" aria-label="Route map" id="mapcard"></section>
+  <section class="map mapov" aria-label="Route map" id="mapcard"></section>
   <div class="grid">
     <section class="card src" aria-label="${esc(cfg.listLabel)}"><div class="h"><span class="lab">${esc(cfg.listLabel)}</span><span id="cnt"></span></div><div id="list"></div></section>
     <section class="card rec" aria-label="Record" id="rec"></section>
@@ -324,7 +329,7 @@ E.hist = (t, text, by, doc, rec) => { S.hist.push({t, text, by, doc, rec}); };
 E.buildMap = function(spec){
   E.mapSpec = spec;
   const NS = "http://www.w3.org/2000/svg";
-  let s = `<svg id="svg" viewBox="0 0 ${spec.w} ${spec.h}" role="img" aria-labelledby="mapsum"><title id="mapsum">Route map</title>
+  let s = `<div class="maphead"><span class="lab">Route map</span><button class="tb" id="mapclose" type="button">Close</button></div><svg id="svg" viewBox="0 0 ${spec.w} ${spec.h}" role="img" aria-labelledby="mapsum"><title id="mapsum">Route map</title>
   <defs><linearGradient id="gb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--ot-grad-from)"/><stop offset="1" stop-color="var(--ot-grad-to)"/></linearGradient></defs>`;
   spec.lines.forEach(l => { s += `<path id="L-${l.id}" class="line" d="${l.d}"/>`; S.lines[l.id] = {label:l.label, state:"rest", from:l.from, to:l.to, doc:l.label}; });
   s += `<g id="arrows"></g>`;
@@ -348,6 +353,9 @@ E.buildMap = function(spec){
   $("#mapcard").innerHTML = s;
   E.mapList();
 };
+E.SET = {"Ship notice":"EDI 856","Technical acknowledgment":"EDI 997","Receiving advice":"EDI 861","Order change":"EDI 860","Shipping advice":"EDI 945"};
+E.full = (id, label) => label + " · " + (E.SET[label] || "API");
+E.rest = function(id, back){ const p = document.getElementById("L-" + id), L = p.getTotalLength(), a = p.getPointAtLength(back ? 0 : L), b = p.getPointAtLength(back ? 6 : L - 6); const ang = Math.atan2(a.y - b.y, a.x - b.x), sz = 7; const pts = [[a.x, a.y], [a.x - sz * Math.cos(ang - 0.45), a.y - sz * Math.sin(ang - 0.45)], [a.x - sz * Math.cos(ang + 0.45), a.y - sz * Math.sin(ang + 0.45)]].map(q => q.map(v => v.toFixed(1)).join(",")).join(" "); const g = document.createElementNS("http://www.w3.org/2000/svg", "polygon"); g.id = "A-" + id; g.setAttribute("class", "arrow rest"); g.setAttribute("points", pts); document.getElementById("arrows").appendChild(g); };
 E.setRec = (id, txt) => { const el = document.getElementById("R-" + id); if (!el || el.textContent === txt) return; if (E.RM()) { el.textContent = txt; return; } el.style.opacity = 0; setTimeout(() => { el.textContent = txt; el.style.opacity = 1; }, 150); };
 E.light = (id, on, rec) => { const r = document.getElementById("SB-" + id); if (!r) return; r.setAttribute("fill-opacity", on ? "0.24" : "0.10"); r.setAttribute("stroke-opacity", on ? "0.7" : "0.25"); if (rec != null) E.setRec(id, rec); };
 E.status = txt => { const el = document.getElementById("R-tgstatus"); if (el) el.textContent = txt; };
@@ -361,7 +369,7 @@ E.settle = function(id, atEnd){
   const L = p.getTotalLength(), a = p.getPointAtLength(atEnd ? L : 0), b = p.getPointAtLength(atEnd ? L - 6 : 6);
   const ang = Math.atan2(a.y - b.y, a.x - b.x), sz = 7;
   const pts = [[a.x, a.y], [a.x - sz * Math.cos(ang - 0.45), a.y - sz * Math.sin(ang - 0.45)], [a.x - sz * Math.cos(ang + 0.45), a.y - sz * Math.sin(ang + 0.45)]].map(q => q.map(v => v.toFixed(1)).join(",")).join(" ");
-  let g = document.getElementById("A-" + id); if (!g) { g = document.createElementNS("http://www.w3.org/2000/svg", "polygon"); g.id = "A-" + id; g.setAttribute("class", "arrow"); $("#arrows").appendChild(g); }
+  let g = document.getElementById("A-" + id); if (g) g.setAttribute("class", "arrow"); if (!g) { g = document.createElementNS("http://www.w3.org/2000/svg", "polygon"); g.id = "A-" + id; g.setAttribute("class", "arrow"); $("#arrows").appendChild(g); }
   g.setAttribute("points", pts);
 };
 function bez(x){ const x1 = .45, y1 = 0, x2 = .2, y2 = 1; let t = x; for (let i = 0; i < 8; i++) { const cx = 3*x1*t*(1-t)**2 + 3*x2*t*t*(1-t) + t**3 - x; const dx = 3*x1*(1-t)**2 + 6*(x2-x1)*t*(1-t) + 3*(1-x2)*t*t; if (Math.abs(dx) < 1e-6) break; t -= cx/dx; t = Math.max(0, Math.min(1, t)); } return 3*y1*t*(1-t)**2 + 3*y2*t*t*(1-t) + t**3; }
@@ -372,7 +380,7 @@ E.travel = function(id, label, reverse, ms){
   const run = S.run;
   const st = S.lines[id]; st.state = "live"; st.doc = label; E.mapList();
   const p = document.getElementById("L-" + id), lt = document.getElementById("T-" + id);
-  const finish = () => { if (run !== S.run) return; st.state = "settled"; E.settle(id, !reverse); lt.textContent = label; lt.style.opacity = 1; E.mapList(); };
+  const finish = () => { if (run !== S.run) return; st.state = "settled"; E.settle(id, !reverse); lt.textContent = E.full(id, label); lt.style.opacity = 1; E.mapList(); };
   if (E.RM()) { finish(); return Promise.resolve(); }
   const NS = "http://www.w3.org/2000/svg", L = p.getTotalLength();
   const tail = document.createElementNS(NS, "path"); tail.setAttribute("d", p.getAttribute("d")); tail.setAttribute("fill", "none"); tail.setAttribute("stroke", "var(--color-action)"); tail.setAttribute("stroke-width", "3"); tail.setAttribute("stroke-linecap", "round"); tail.setAttribute("stroke-opacity", "0.35");
@@ -502,8 +510,8 @@ E.onClick = function(e){
 
 </script>
 <script>
-/* P5 Shipment Watch. Values from the shared demo world (RetailStrategy, read only) at the P5 moment,
-   Tuesday 8 December 2026 17:12 ET, and the records that follow it. t = minutes from 00:00 ET Tuesday. */
+/* P5 Shipment Watch. Values from the shared demo world (RetailStrategy, read only) at the P5 moment
+   in the story calendar, and the records that follow it. t = minutes from 00:00 ET Tuesday. */
 (function(){
 "use strict";
 const {esc, money} = E;
@@ -519,7 +527,7 @@ const W = E.W = {
     "SCAN-207-1": {name:"Load scan", ref:"SHP-460207", iface:"Kinross scan · API", from:"Kinross Groveport", to:"Trading Grid", at:T(0,16,48),
       kv:[["Cartons loaded","659 of 660, by SSCC"],["Not loaded","006141410006005172 · Staged"],["Bill of lading","BOL-91407"],["Seal","SL-4471026"],["Trailer seals","17:52"]]},
     "DMG-207": {name:"Damage scan", ref:"SHP-460207", iface:"Kinross scan · API", from:"Kinross Groveport", to:"Trading Grid", at:T(0,17,21),
-      kv:[["Carton","006141410006005172"],["Item","ASH-MUG-12, line 1"],["Condition","Crushed, contents damaged"],["State","Cannot be loaded"],["Cartons loaded","659 of 660"]]},
+      kv:[["Carton","006141410006005172"],["Item","ASH-MUG-12, order item 1"],["Condition","Crushed, contents damaged"],["State","Cannot be loaded"],["Cartons loaded","659 of 660"]]},
     "SCAN-207-2": {name:"Load scan", ref:"SHP-460207", iface:"Kinross scan · API", from:"Kinross Groveport", to:"Trading Grid", at:T(0,17,46),
       kv:[["Cartons loaded","660 of 660, by SSCC"],["Replacement carton","006141410009050018"],["Replaces","006141410006005172"],["From","Cases Kinross holds for damage replacement"],["Bill of lading","BOL-91407"],["Seal","SL-4471026"]]},
     "ERP-COR-207": {name:"Sales order correction", ref:"SO-460207", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(0,17,50),
@@ -583,7 +591,7 @@ const W = E.W = {
   }
 };
 const D = {0:"Tue", 1:"Wed", 2:"Thu", 3:"Fri"}; D[-1] = "Mon"; D[-2] = "Sun"; D[-3] = "Sat"; D[-4] = "Fri";
-E.shell({docTitle:"Shipment Watch", start:T(0,17,12), days:D, listLabel:"Shipments checked", hopMs:1600});
+E.shell({docTitle:"Shipment Watch", start:T(0,17,21), days:D, listLabel:"Shipments checked", hopMs:1600});
 document.getElementById("wslabel").textContent = "Ashby Supplier · Shipping operations";
 document.getElementById("who").textContent = "Priya Raman";
 document.querySelector(".pagehead").insertAdjacentHTML("beforeend", `<div class="tiles" id="tiles" aria-label="Shipment check"></div>`);
@@ -592,13 +600,13 @@ const S = E.S;
 const F = S.f = {dmg:false, c207load:false, c207ship:false, dep:false, rel207:"held", rcv207:false, c219:false, c262:false, c233:false};
 
 /* history before the moment, source time order */
-[[T(-4,9,0),"Purchase order NR-460207 received · 660 cases to DC 4","Northfield","850:NR-460207"],
- [T(-1,14,0),"Order change 1 on NR-460207 · ship-to DC 4 to DC 2","Northfield","860:NR-460207 Change 1"],
- [T(0,14,50),"Shipment quantity for NR-460219 · line 2: 176 of 180 allocated to ship","Supplier ERP","ERP-QTY-219"],
- [T(0,15,12),"Invoice draft INV-8012 · line 2 bills 180 · 176 allocated to ship","Supplier ERP","ERP-INV-8012"],
- [T(0,16,30),"Label scan on NR-460233 · 12 SSCCs used before","Kinross","LBL-233"],
+[[T(-4,9,0),"Purchase order PO 460207 received · 660 cases to DC 4","Northfield","850:NR-460207"],
+ [T(-1,14,0),"Order change 1 on PO 460207 · ship-to DC 4 to DC 2","Northfield","860:NR-460207 Change 1"],
+ [T(0,14,50),"Shipment quantity for PO 460219 · order item 2: 176 of 180 allocated to ship","Supplier ERP","ERP-QTY-219"],
+ [T(0,15,12),"Invoice draft INV-8012 · order item 2 bills 180 · 176 allocated to ship","Supplier ERP","ERP-INV-8012"],
+ [T(0,16,30),"Label scan on PO 460233 · 12 SSCCs used before","Kinross","LBL-233"],
  [T(0,16,42),"Inventory read at Kinross Groveport · 610 cases free","Kinross","INV-GRV"],
- [T(0,16,48),"Load scan on NR-460207 · 659 of 660 cartons","Kinross","SCAN-207-1"],
+ [T(0,16,48),"Load scan on PO 460207 · 659 of 660 cartons","Kinross","SCAN-207-1"],
  [T(0,17,12),"Shipment check · 123 open orders read · 4 break a Northfield rule","Rule"]
 ].forEach(h => E.hist(h[0], h[1], h[2], h[3]));
 
@@ -636,26 +644,26 @@ function deadline(id){
 }
 const LINE = {
   "NR-460207":() => F.rcv207 ? "660 of 660 received at DC 2" : `Load ${F.c207load ? "660" : "659"} of 660 · ship-to ${F.c207ship ? "DC 2" : "DC 4, order says DC 2"}`,
-  "NR-460219":() => F.c219 ? "Invoice line 2 bills 176 cases" : "Invoice line 2 bills 180 · 176 allocated to ship",
+  "NR-460219":() => F.c219 ? "Invoice order item 2 bills 176 cases" : "Invoice order item 2 bills 180 · 176 allocated to ship",
   "NR-460262":() => F.c262 ? "Order cut to 270 cases" : "Groveport 610 free · 640 ordered on 3 orders · 30 short",
   "NR-460233":() => F.c233 ? "0 of 96 cartons carry used SSCCs" : "12 of 96 cartons carry SSCCs already used"
 };
 const sub = id => { const c = charge(id), d = deadline(id); return (c ? money(c) + " at stake" : "No charge") + (d ? " · " + d[0] : ""); };
-const listRows = () => ORDER.map(id => ({id, title:id, chip:chip(id), line:esc(LINE[id]()), sub:sub(id), subRed:!!(deadline(id) && deadline(id)[1] === "red"), c:done(id) ? 1 : 0, d:DL[id]})).sort((a, b) => a.c - b.c || a.d - b.d);
+const listRows = () => ORDER.map(id => ({id, title:"PO " + id.slice(3), chip:chip(id), line:esc(LINE[id]()), sub:sub(id), subRed:!!(deadline(id) && deadline(id)[1] === "red"), c:done(id) ? 1 : 0, d:DL[id]})).sort((a, b) => a.c - b.c || a.d - b.d);
 
 /* ---------- record parts ---------- */
 const R = W.rules;
 const ruleList = keys => keys.map(k => `<p>${esc(R[k].text)} <span class="k">· ${esc(R[k].src)}</span></p>`).join("");
 const readList = docs => `<p class="k">Records read</p>` + docs.map(d => `<p><button class="tag" type="button" data-doc="${esc(d)}">${esc(W.docs[d].name + (W.docs[d].ref ? " " + W.docs[d].ref : ""))}</button> <span class="k">· ${esc(W.docs[d].iface)}</span></p>`).join("");
 const whoList = rows => `<p class="k" style="margin-top:6px">Who did what</p>` + E.who3(rows);
-/* owner fixes: what is wrong, owner, where to fix, charge, and Priya's Confirm fix */
+/* owner fixes: what is wrong, owner, where to fix, charge, and the supplier's Confirm fix */
 const fixTable = rows => `<table class="ow fx"><thead><tr><th>What is wrong</th><th>Owner</th><th>Where to fix</th><th>Charge</th><th></th></tr></thead><tbody>${rows.map(r => `<tr${r.ok ? ' class="ok enter"' : ""}><td>${r.what}</td><td>${esc(r.owner)}</td><td>${esc(r.where)}</td><td class="nw">${r.ok ? strike(money(r.charge), money(0)) : money(r.charge)}</td><td class="ac">${r.ok ? `<span class="by">Confirmed by Priya Raman</span>${r.undo ? `<button class="lnk" type="button" data-act="u:${esc(r.act)}" ${S.busy ? 'aria-disabled="true"' : ""}>Undo</button>` : ""}` : `<button class="btn sm" type="button" data-act="${esc(r.act)}" ${S.busy ? 'aria-disabled="true"' : ""}>Confirm fix</button>`}</td></tr>`).join("")}</tbody></table>`;
 const cash = id => { const now = charge(id); return `<div class="cash"><div class="cc${now ? " on" : ""}"><span>Not fixed</span><b>${money(FULL[id])}</b><em>${esc(CARRY[id])}</em></div><div class="cc${now ? "" : " on"}"><span>Fixed</span><b>${money(0)}</b></div><div class="cc"><span>At stake now</span><b>${money(now)}</b></div></div>`; };
 
 function rec207(){
   const wrong = [];
-  wrong.push(F.c207load ? {v:`<b>Load</b> · ${strike("659 of 660", "660 of 660")} cartons · replacement carton <span class="mono">006141410009050018</span>`, tags:[["Kinross scan · API","SCAN-207-2"]]}
-    : {v:`<b>Load</b> · 659 of 660 cartons · carton <span class="mono">006141410006005172</span> ${F.dmg ? '<span class="st-red">Crushed, cannot be loaded</span>' : '<span class="st-red">Staged, not loaded</span>'}`, tags:[["Kinross scan · API", F.dmg ? "DMG-207" : "SCAN-207-1"]]});
+  wrong.push(F.c207load ? {v:`<b>Load</b> · ${strike("659 of 660", "660 of 660")} cartons · replacement case loaded`, tags:[["Kinross scan · API","SCAN-207-2"]]}
+    : {v:`<b>Load</b> · 659 of 660 cartons · staged carton ${F.dmg ? '<span class="st-red">Crushed, cannot be loaded</span>' : '<span class="st-red">Staged, not loaded</span>'}`, tags:[["Kinross scan · API", F.dmg ? "DMG-207" : "SCAN-207-1"]]});
   wrong.push(F.c207ship ? {v:`<b>Ship-to</b> · ${strike("DC 4", "DC 2")} on the sales order, matching order change 1`, tags:[["Supplier ERP · API","ERP-COR-207"],["EDI 860","860:NR-460207 Change 1"]]}
     : {v:`<b>Ship-to</b> · sales order <span class="st-red">DC 4</span> · order change 1 says DC 2`, tags:[["Supplier ERP","ERP-SO-207"],["EDI 860","860:NR-460207 Change 1"]]});
   if (F.dep) wrong.push({v:`<b>Departure</b> · Kinross Groveport at 18:00 · Lakeline Freight`, tags:[["Kinross scan · API","DEP-207"]]});
@@ -666,25 +674,25 @@ function rec207(){
     stages.push({key:"fix", state:"now", title:both ? "Wait for departure" : "Fix the load and ship-to", chip:both ? ["Waiting on departure",""] : ["Owner fixes","red"],
       body:fixTable([
         {act:"c207load", ok:F.c207load, undo:true, charge:CH.load, owner:"Kinross", where:F.dmg ? "Replacement case at Kinross" : "Kinross loading",
-         what:F.c207load ? `Load · ${strike("659 of 660", "660 of 660")}` : `Carton <span class="mono">006141410006005172</span> · ${F.dmg ? "Crushed" : "Staged"}`},
+         what:F.c207load ? `Load · ${strike("659 of 660", "660 of 660")}` : `Staged carton · ${F.dmg ? "Crushed" : "Staged"}`},
         {act:"c207ship", ok:F.c207ship, undo:true, charge:CH.ship, owner:"Ashby order desk", where:"Supplier ERP",
          what:F.c207ship ? `Ship-to · ${strike("DC 4", "DC 2")}` : `Ship-to on the sales order · DC 4, should be DC 2`}])
         + `<p class="desc">${both ? "The ship notice waits for the departure scan." : F.c207load ? "Supplier ERP still reads DC 4." : F.dmg ? "The order ships 659 of 660 unless Kinross loads a replacement case." : "Not loaded before the seal: the order ships 659 of 660 cartons."}</p>` + cash("NR-460207"),
       details:ruleList(["carton","shipto","shortage"]) + readList(reads) + whoList([["Found by","Rule · Northfield guide"],["Load fixed by","Kinross"],["Ship-to fixed by","Ashby order desk"],["Fixes confirmed by","Priya Raman"]])});
   } else stages.push({key:"fix", state:"done", summary:"Load 660 of 660 and ship-to DC 2, confirmed by Priya Raman", sub:"Departed Kinross Groveport at 18:00 · charge at stake " + money(0),
       detailsDone:readList(["DMG-207","SCAN-207-2","ERP-COR-207","DEP-207"]) + whoList([["Load fixed by","Kinross"],["Ship-to fixed by","Ashby order desk"],["Fixes confirmed by","Priya Raman"]])});
-  const act = {id:"rel207", button:"Release ship notice", rows:[{action:"Release ship notice ASN-460207", now:"Held", after:"Sent", goesTo:"Northfield", via:"EDI 856"}],
-    says:"Sends ship notice ASN-460207 to Northfield: 660 cartons to DC 2, bill of lading BOL-91407, seal SL-4471026.", nodecision:"Not sent by 19:00: the ship notice is late.", ruleTag:"A person releases"};
-  if (F.rel207 === "sent") stages.push({key:"rel", state:"done", summary:"Ship notice ASN-460207 delivered to Northfield", sub:"Technically acknowledged · FA-N2997",
+  const act = {id:"rel207", button:"Release ship notice", rows:[{action:"Release ship notice", now:"Held", after:"Sent", goesTo:"Northfield", via:"EDI 856"}],
+    says:"Sends the ship notice to Northfield: 660 cartons to DC 2, with the bill of lading and seal.", nodecision:"Not sent by 19:00: the ship notice is late.", ruleTag:"A person releases"};
+  if (F.rel207 === "sent") stages.push({key:"rel", state:"done", summary:"Ship notice delivered to Northfield", sub:"Technically acknowledged · FA-N2997",
       detailsDone:readList(["856:ASN-460207","997:FA-N2997","945:WSA-460207"]) + whoList([["Recommended by","Rule · Ashby rule"],["Released by","Priya Raman"],["Carried by","Trading Grid"]])});
   else if (F.dep) stages.push({key:"rel", state:"now", title:"Release ship notice", chip:["Ready for review","amber"], amber:true,
       body:E.nowAfter(act) + `<p class="reason"><b>Reason.</b> Kinross's load scan shows 660 of 660 cartons and the trailer left at 18:00.</p>` + E.decision(act),
       details:ruleList(["release","asn1h","carton"]) + readList(["SCAN-207-2","DEP-207","860:NR-460207 Change 1","ERP-COR-207"]) + whoList([["Recommended by","Rule · Ashby rule"],["Released by","Priya Raman, on Release ship notice"],["Carried by","Trading Grid"]])});
   else stages.push({key:"rel", state:"next", title:"Release ship notice"});
-  if (F.rcv207) stages.push({key:"rcv", state:"done", summary:"Northfield received 660 cartons at DC 2", sub:"Receiving advice RCV-DC2-81420", detailsDone:readList(["861:RCV-DC2-81420"])});
+  if (F.rcv207) stages.push({key:"rcv", state:"done", summary:"Northfield received 660 cartons at DC 2", sub:"Receiving advice · 660 cartons at DC 2", detailsDone:readList(["861:RCV-DC2-81420"])});
   else stages.push({key:"rcv", state:"next", title:"Northfield receives at DC 2"});
-  return {title:"NR-460207", chip:chip("NR-460207"), deadline:deadline("NR-460207"), meta:"Northfield Retailer · Kinross Groveport to DC 2 · 660 cartons · Wholesale",
-    banner:F.rcv207 ? ["Received at DC 2 as the ship notice describes", "660 of 660 cartons, nothing short · receiving advice RCV-DC2-81420 matches ship notice ASN-460207.", "$405.00 in charges did not arise on NR-460207."] : null,
+  return {title:"PO 460207", chip:chip("NR-460207"), deadline:deadline("NR-460207"), meta:"Northfield Retailer · Kinross Groveport to DC 2 · 660 cartons · Wholesale",
+    banner:F.rcv207 ? ["Received at DC 2 as the ship notice describes", "660 of 660 cartons, nothing short · the receiving advice matches the ship notice.", "$405.00 in charges did not arise on PO 460207."] : null,
     wrongLabel:F.c207load && F.c207ship ? "Records" : "What is wrong", wrong, stages};
 }
 /* one owner fix: the card before and after Confirm fix */
@@ -694,32 +702,32 @@ function single(id, o){
     body:fixTable([{act:o.act, ok:o.ok, undo:true, charge:FULL[id], owner:o.owner, where:o.where, what:o.ok ? o.whatAfter : o.what}]) + (!o.ok && o.desc ? `<p class="desc">${o.desc}</p>` : "") + cash(id) + (!o.ok && o.extra ? o.extra : ""),
     details:ruleList(o.rules) + readList(o.ok ? o.reads.concat(o.after) : o.reads) + whoList([["Found by","Rule · Northfield guide"],["Fixed by",o.owner],["Fix confirmed by","Priya Raman"]])});
   stages.push({key:"next", state:"next", title:o.next});
-  return {title:id, chip:chip(id), deadline:deadline(id), meta:o.meta, wrongLabel:o.ok ? "Records" : "What is wrong", wrong:[o.ok ? o.wrongAfter : o.wrongBefore], stages};
+  return {title:"PO " + id.slice(3), chip:chip(id), deadline:deadline(id), meta:o.meta, wrongLabel:o.ok ? "Records" : "What is wrong", wrong:[o.ok ? o.wrongAfter : o.wrongBefore], stages};
 }
 const rec219 = () => single("NR-460219", {ok:F.c219, act:"c219", title:"Correct the invoice", owner:"Ashby billing", where:"Supplier ERP, before the invoice batch",
-  what:"Invoice draft INV-8012 · line 2 · 180 cases, 176 allocated to ship", rules:["invoice"], reads:["ERP-QTY-219","ERP-INV-8012"], after:["810:INV-8012"],
-  doneText:"Ashby billing corrected line 2", whatAfter:`Invoice draft INV-8012 · line 2 · ${strike("180", "176")} cases`, next:"Invoice goes in the 18:00 batch",
+  what:"Invoice draft · order item 2 · 180 cases, 176 allocated to ship", rules:["invoice"], reads:["ERP-QTY-219","ERP-INV-8012"], after:["810:INV-8012"],
+  doneText:"Ashby billing corrected order item 2", whatAfter:`Invoice draft · order item 2 · ${strike("180", "176")} cases`, next:"Invoice goes in the 18:00 batch",
   meta:"Northfield Retailer · Kinross Groveport to DC 2 · 2 lines · $11,772.00",
-  wrongBefore:{v:`<b>Invoice draft</b> · INV-8012 line 2 bills 180 cases · 176 allocated to ship · <span class="st-red">${money(153.6)} over</span>`, tags:[["Supplier ERP · API","ERP-INV-8012"]]},
-  wrongAfter:{v:`<b>Invoice</b> · INV-8012 line 2 bills ${strike("180", "176")} cases · ${money(11618.4)}`, tags:[["EDI 810","810:INV-8012"]]}});
+  wrongBefore:{v:`<b>Invoice draft</b> · order item 2 bills 180 cases · 176 allocated to ship · <span class="st-red">${money(153.6)} over</span>`, tags:[["Supplier ERP · API","ERP-INV-8012"]]},
+  wrongAfter:{v:`<b>Invoice</b> · order item 2 bills ${strike("180", "176")} cases · ${money(11618.4)}`, tags:[["EDI 810","810:INV-8012"]]}});
 const rec262 = () => single("NR-460262", {ok:F.c262, act:"c262", title:"Decide the short order", owner:"Ashby order desk", where:"Supplier ERP",
   what:"ASH-MUG-12 at Kinross Groveport · 610 free, 640 ordered · 30 short", rules:["backorder","fill"], reads:["INV-GRV"], after:["860:NR-460262 Change 1"],
   desc:"3 orders share the stock.",
-  extra:`<table class="ow"><thead><tr><th>Order</th><th>Ordered</th></tr></thead><tbody><tr><td>NR-460262</td><td>300 cases</td></tr><tr><td>NR-460274</td><td>300 cases</td></tr><tr><td>NR-46620</td><td>40 cases</td></tr></tbody></table>`,
-  doneText:"NR-460262 cut to 270 cases", whatAfter:`NR-460262 line 1 · ${strike("300", "270")} cases`, next:"Northfield receives at DC 2",
+  extra:`<table class="ow"><thead><tr><th>Order</th><th>Ordered</th></tr></thead><tbody><tr><td>PO 460262</td><td>300 cases</td></tr><tr><td>PO 460274</td><td>300 cases</td></tr><tr><td>PO 46620</td><td>40 cases</td></tr></tbody></table>`,
+  doneText:"NR-460262 cut to 270 cases", whatAfter:`NR-460262 order item 1 · ${strike("300", "270")} cases`, next:"Northfield receives at DC 2",
   meta:"Northfield Retailer · Kinross Groveport to DC 2 · ASH-MUG-12",
   wrongBefore:{v:`<b>Stock</b> · Kinross Groveport 610 cases free · 640 ordered on 3 orders · <span class="st-red">30 short</span>`, tags:[["Kinross inventory · API","INV-GRV"]]},
-  wrongAfter:{v:`<b>Order</b> · line 1 ${strike("300", "270")} cases · nothing short`, tags:[["EDI 860","860:NR-460262 Change 1"]]}});
+  wrongAfter:{v:`<b>Order</b> · order item 1 ${strike("300", "270")} cases · nothing short`, tags:[["EDI 860","860:NR-460262 Change 1"]]}});
 const rec233 = () => single("NR-460233", {ok:F.c233, act:"c233", title:"Relabel cartons", owner:"Kinross", where:"Kinross labelling",
-  what:"12 of 96 cartons · SSCCs first used on NR-449512", rules:["sscc"], reads:["LBL-233"], after:["856:ASN-460233"],
+  what:"12 of 96 cartons · SSCCs first used on an earlier order", rules:["sscc"], reads:["LBL-233"], after:["856:ASN-460233"],
   doneText:"Kinross relabelled the cartons", whatAfter:`Cartons with used SSCCs · ${strike("12 of 96", "0 of 96")}`, next:"Northfield receives at DC 2",
   meta:"Northfield Retailer · Kinross Joliet to DC 2 · 96 cartons ASH-HNY-340",
   wrongBefore:{v:`<b>Labels</b> · <span class="st-red">12 of 96</span> cartons carry SSCCs already used`, tags:[["Kinross scan · API","LBL-233"]]},
   wrongAfter:{v:`<b>Labels</b> · ${strike("12 of 96", "0 of 96")} cartons carry SSCCs already used`, tags:[["EDI 856","856:ASN-460233"]]}});
 const REC = {"NR-460207":rec207, "NR-460219":rec219, "NR-460262":rec262, "NR-460233":rec233};
 const RULES_FOR = {"NR-460207":[["carton","659 of 660 loaded"],["shipto","Supplier ERP shows DC 4; order change says DC 2"],["shortage","1 carton short if it ships"],["release","Release stays with Priya Raman"],["asn1h","Due within 1 hour of departure"]],
-  "NR-460219":[["invoice","Line 2 bills 180; 176 allocated to ship"]],
-  "NR-460262":[["backorder","30 cases short across 3 orders"],["fill","Line ships 30 short"]], "NR-460233":[["sscc","12 SSCCs first used on NR-449512"]]};
+  "NR-460219":[["invoice","Order item 2 bills 180; 176 allocated to ship"]],
+  "NR-460262":[["backorder","30 cases short across 3 orders"],["fill","Order item ships 30 short"]], "NR-460233":[["sscc","12 SSCCs first used on an earlier order"]]};
 
 /* ---------- header: title, tiles and total follow the findings ---------- */
 function head(){
@@ -733,25 +741,28 @@ E.page = {
   listRows, listCount:() => openN() + " open",
   record:id => REC[id](),
   rulesFor:id => RULES_FOR[id].map(r => ({text:R[r[0]].text, src:R[r[0]].src, found:r[1]})).concat([{text:R.order.text, src:R.order.src, found:"Sorts the list"}]),
-  questions:["Why is NR-460207 held?","What happens if Kinross can't load a replacement case?","What did rule breaks at Kinross cost Ashby in Northfield charges this quarter?"],
+  questions:["Why is PO 460207 held?","What happens if Kinross can't load a replacement case?","What did rule breaks at Kinross cost Ashby in Northfield charges this quarter?"],
   approve, act,
   after:() => { head(); mapState(); }
 };
 
 /* ---------- route map ---------- */
-E.buildMap({w:1100, h:166,
-  nodes:[{id:"erp", x:16, y:10, w:236, h:66, title:"Supplier ERP", sub:"Ashby orders and invoices"},
-         {id:"kin", x:16, y:90, w:236, h:66, title:"Kinross Logistics", sub:"3PL warehouse · Groveport, Joliet"},
-         {id:"nf", x:848, y:46, w:236, h:74, title:"Northfield Retailer", sub:"Retailer · DC 2"}],
-  tg:{x:438, y:22, w:236, h:122, subs:[{id:"dx", label:"Document exchange"}]},
-  lines:[{id:"erp", d:"M252 43 C 340 43, 360 72, 438 72", label:"Records · API", lx:345, ly:52, from:"Supplier ERP", to:"Trading Grid"},
-         {id:"kin", d:"M252 123 C 340 123, 360 98, 438 98", label:"Scans · API", lx:345, ly:120, from:"Kinross", to:"Trading Grid"},
-         {id:"nf", d:"M674 83 C 750 83, 780 83, 848 83", label:"Documents · EDI", lx:761, ly:75, from:"Trading Grid", to:"Northfield"}],
+E.buildMap({w:1100, h:160,
+  nodes:[{id:"erp", x:16, y:6, w:236, h:72, title:"Supplier ERP", sub:"Ashby orders and invoices"},
+         {id:"kin", x:16, y:84, w:236, h:72, title:"Kinross Logistics", sub:"3PL warehouse · Groveport, Joliet"},
+         {id:"nf", x:848, y:30, w:236, h:104, title:"Northfield Retailer", sub:"Retailer · DC 2"}],
+  tg:{x:438, y:34, w:236, h:100, subs:[]},
+  lines:[{id:"erp", d:"M252 42 C 345 42, 345 62, 438 62", label:"Sales order · API", lx:345, ly:40, from:"Supplier ERP", to:"Trading Grid"},
+         {id:"kin", d:"M252 120 C 345 120, 345 104, 438 104", label:"Load scan · API", lx:345, ly:138, from:"Kinross", to:"Trading Grid"},
+         {id:"nfin", d:"M848 62 L674 62", label:"Order change · EDI 860", lx:761, ly:54, from:"Northfield", to:"Trading Grid"},
+         {id:"nfout", d:"M674 112 L848 112", label:"Ship notice · EDI 856", lx:761, ly:130, from:"Trading Grid", to:"Northfield"}],
   summary:() => "Supplier ERP and Kinross reach Trading Grid by API; documents travel between Trading Grid and Northfield as EDI."});
+["kin","nfout"].forEach(id => E.rest(id));
+["erp","nfin"].forEach(id => { S.lines[id].state = "settled"; E.settle(id, true); });
 function mapState(){
-  E.setRec("erp", F.c207ship ? "Sales order NR-460207 · DC 2" : "Sales order NR-460207 · DC 4");
-  E.setRec("kin", F.dep ? "NR-460207 · departed 18:00" : F.c207load ? "NR-460207 · 660 of 660" : F.dmg ? "NR-460207 · carton crushed" : "NR-460207 · 659 of 660");
-  E.setRec("nf", F.rcv207 ? "Receiving advice · 660 at DC 2" : F.rel207 === "sent" ? "Ship notice ASN-460207" : "Order change · ship-to DC 2");
+  E.setRec("erp", F.c207ship ? "Sales order · DC 2" : "Sales order · DC 4");
+  E.setRec("kin", F.dep ? "Load · departed 18:00" : F.c207load ? "Load · 660 of 660" : F.dmg ? "Load · carton crushed" : "Load · 659 of 660");
+  E.setRec("nf", F.rcv207 ? "Receiving advice · 660 at DC 2" : F.rel207 === "sent" ? "Ship notice · 660 cartons" : "Order change · ship-to DC 2");
   const n = openN();
   E.status(n ? n + (n === 1 ? " shipment" : " shipments") + " with a finding" : "No open findings");
 }
@@ -759,12 +770,12 @@ function mapState(){
 /* ---------- world time: records arrive at their own source times ---------- */
 function advance(t){
   if (t > S.clock) S.clock = t;
-  if (!F.dmg && S.clock >= T(0,17,21)) { F.dmg = true; E.hist(T(0,17,21), "Damage scan on NR-460207 · carton 006141410006005172 crushed", "Kinross", "DMG-207"); }
+  if (!F.dmg && S.clock >= T(0,17,21)) { F.dmg = true; E.hist(T(0,17,21), "Damage scan on PO 460207 · carton 006141410006005172 crushed", "Kinross", "DMG-207"); }
 }
 const step = (t, fn, text) => { advance(t); fn(); E.event(text); E.render(); };
 
 /* Confirm fix: Priya records that the owner fixed it in its own system; Trading Grid sends nothing to the owner */
-const UNDO = {c207load:["c207load","SCAN-207-2","Load fix on NR-460207"], c207ship:["c207ship","ERP-COR-207","Ship-to fix on NR-460207"], c219:["c219",null,"Invoice fix on NR-460219"], c262:["c262",null,"Short-order fix on NR-460262"], c233:["c233",null,"Relabel fix on NR-460233"]};
+const UNDO = {c207load:["c207load","SCAN-207-2","Load fix on PO 460207"], c207ship:["c207ship","ERP-COR-207","Ship-to fix on PO 460207"], c219:["c219",null,"Invoice fix on PO 460219"], c262:["c262",null,"Short-order fix on PO 460262"], c233:["c233",null,"Relabel fix on PO 460233"]};
 function undo(id){
   const u = UNDO[id]; if (!u || !F[u[0]] || (F.dep && id.startsWith("c207"))) return;
   F[u[0]] = false;
@@ -782,25 +793,25 @@ async function act(id){
       if (!F.dmg) advance(T(0,17,21));
       E.light("dx", true, "Kinross scans · API");
       await E.travel("kin", "Load scan", false);
-      step(T(0,17,46), () => { F.c207load = true; E.hist(T(0,17,46), "Load scan on NR-460207 · 660 of 660 with a replacement case", "Kinross", "SCAN-207-2"); E.hist(S.clock, "Load fix on NR-460207 confirmed by Priya Raman", "Person"); }, "Kinross loaded the replacement case: 660 of 660 on NR-460207. " + money(CH.load) + " no longer at stake.");
+      step(T(0,17,46), () => { F.c207load = true; E.hist(T(0,17,46), "Load scan on PO 460207 · 660 of 660 with a replacement case", "Kinross", "SCAN-207-2"); E.hist(S.clock, "Load fix on PO 460207 confirmed by Priya Raman", "Person"); }, "Kinross loaded the replacement case: 660 of 660 on PO 460207. " + money(CH.load) + " no longer at stake.");
       E.light("dx", false, "");
     } else if (id === "c207ship") {
       E.light("dx", true, "Supplier ERP · API");
       await E.travel("erp", "Sales order", false);
-      step(T(0,17,50), () => { F.c207ship = true; E.hist(T(0,17,50), "Sales order for NR-460207 corrected · ship-to DC 4 to DC 2 by Ashby order desk", "Supplier ERP", "ERP-COR-207"); E.hist(S.clock, "Ship-to fix on NR-460207 confirmed by Priya Raman", "Person"); }, "Ashby order desk corrected the ship-to for NR-460207 to DC 2. " + money(CH.ship) + " no longer at stake.");
+      step(T(0,17,50), () => { F.c207ship = true; E.hist(T(0,17,50), "Sales order for PO 460207 corrected · ship-to DC 4 to DC 2 by Ashby order desk", "Supplier ERP", "ERP-COR-207"); E.hist(S.clock, "Ship-to fix on PO 460207 confirmed by Priya Raman", "Person"); }, "Ashby order desk corrected the ship-to for PO 460207 to DC 2. " + money(CH.ship) + " no longer at stake.");
       E.light("dx", false, "");
     } else if (id === "c219") {
-      step(S.clock, () => { F.c219 = true; E.hist(S.clock, "Invoice fix on NR-460219 confirmed by Priya Raman · line 2 at 176", "Person"); }, "Priya Raman confirmed the invoice fix on NR-460219. " + money(CH.inv) + " no longer at stake.");
+      step(S.clock, () => { F.c219 = true; E.hist(S.clock, "Invoice fix on PO 460219 confirmed by Priya Raman · order item 2 at 176", "Person"); }, "Priya Raman confirmed the invoice fix on PO 460219. " + money(CH.inv) + " no longer at stake.");
     } else if (id === "c262") {
-      step(S.clock, () => { F.c262 = true; E.hist(S.clock, "Short-order fix on NR-460262 confirmed by Priya Raman · 270 cases", "Person"); }, "Priya Raman confirmed the order fix on NR-460262. " + money(CH.fill) + " no longer at stake.");
+      step(S.clock, () => { F.c262 = true; E.hist(S.clock, "Short-order fix on PO 460262 confirmed by Priya Raman · 270 cases", "Person"); }, "Priya Raman confirmed the order fix on PO 460262. " + money(CH.fill) + " no longer at stake.");
     } else if (id === "c233") {
-      step(S.clock, () => { F.c233 = true; E.hist(S.clock, "Relabel fix on NR-460233 confirmed by Priya Raman", "Person"); }, "Priya Raman confirmed the relabel fix on NR-460233. " + money(CH.sscc) + " no longer at stake.");
+      step(S.clock, () => { F.c233 = true; E.hist(S.clock, "Relabel fix on PO 460233 confirmed by Priya Raman", "Person"); }, "Priya Raman confirmed the relabel fix on PO 460233. " + money(CH.sscc) + " no longer at stake.");
     }
     if (F.c207load && F.c207ship && !F.dep && (id === "c207load" || id === "c207ship")) {
       await E.wait(600);
       E.light("dx", true, "Kinross scans · API");
       await E.travel("kin", "Departure scan", false);
-      step(T(0,18,0), () => { F.dep = true; E.hist(T(0,18,0), "Departure scan on NR-460207 · 18:00", "Kinross", "DEP-207"); }, "Kinross departure scan: NR-460207 left at 18:00. The ship notice is ready to release.");
+      step(T(0,18,0), () => { F.dep = true; E.hist(T(0,18,0), "Departure scan on PO 460207 · 18:00", "Kinross", "DEP-207"); }, "Kinross departure scan: PO 460207 left at 18:00. The ship notice is ready to release.");
       E.light("dx", false, "");
       E.say("NR-460207 is ready for review: release the ship notice.");
     }
@@ -812,39 +823,40 @@ async function approve(id){
   if (id === "rel207") {
     const t = Math.max(S.clock, T(0,18,6));
     E.light("dx", true, "Ship notice · EDI 856");
-    await E.travel("nf", "Ship notice");
-    step(t, () => { F.rel207 = "sent"; E.hist(t, "Ship notice ASN-460207 delivered to Northfield · released by Priya Raman", "Trading Grid", "856:ASN-460207"); }, "Ship notice ASN-460207 delivered to Northfield.");
-    E.say("Ship notice ASN-460207 delivered to Northfield.");
+    await E.travel("nfout", "Ship notice");
+    step(t, () => { F.rel207 = "sent"; E.hist(t, "Ship notice ASN-460207 delivered to Northfield · released by Priya Raman", "Trading Grid", "856:ASN-460207"); }, "Ship notice delivered to Northfield.");
+    E.say("Ship notice delivered to Northfield.");
     await E.wait(500);
-    await E.travel("nf", "Technical acknowledgment", true);
-    step(t + 2, () => E.hist(t + 2, "Technical acknowledgment FA-N2997 for ASN-460207", "Northfield", "997:FA-N2997"), "Northfield technically acknowledged ship notice ASN-460207.");
+    await E.travel("nfin", "Technical acknowledgment", false);
+    step(t + 2, () => E.hist(t + 2, "Technical acknowledgment FA-N2997 for ASN-460207", "Northfield", "997:FA-N2997"), "Northfield technically acknowledged the ship notice.");
     await E.wait(250);
     await E.travel("kin", "Shipping advice", false);
-    step(t + 6, () => E.hist(t + 6, "Warehouse shipping advice WSA-460207 · 660 cartons", "Kinross", "945:WSA-460207"), "Kinross shipping advice for NR-460207: 660 cartons.");
+    step(t + 6, () => E.hist(t + 6, "Warehouse shipping advice WSA-460207 · 660 cartons", "Kinross", "945:WSA-460207"), "Kinross shipping advice for PO 460207: 660 cartons.");
     await E.wait(250);
-    await E.travel("nf", "Receiving advice", true);
-    step(T(1,8,20), () => { F.rcv207 = true; E.hist(T(1,8,20), "Receiving advice RCV-DC2-81420 · 660 of 660 at DC 2", "Northfield", "861:RCV-DC2-81420"); }, "Northfield received NR-460207 at DC 2: 660 of 660 cartons, as the ship notice describes.");
+    await E.travel("nfin", "Receiving advice", false);
+    step(T(1,8,20), () => { F.rcv207 = true; E.hist(T(1,8,20), "Receiving advice RCV-DC2-81420 · 660 of 660 at DC 2", "Northfield", "861:RCV-DC2-81420"); }, "Northfield received PO 460207 at DC 2: 660 of 660 cartons, as the ship notice describes.");
     E.light("dx", false, "");
     S.sel = "NR-460207";
-    E.say("Northfield received NR-460207 at DC 2. $405.00 in charges did not arise.");
+    E.say("Northfield received PO 460207 at DC 2. $405.00 in charges did not arise.");
     return;
   }
 }
 E.page.onEdited = () => {};
+E.mapToggle = o => { const m = document.getElementById("mapcard"), b = document.getElementById("bMap"); if (o == null) o = !m.classList.contains("open"); m.classList.toggle("open", o); b.setAttribute("aria-expanded", o); if (!o) b.focus(); };
+document.getElementById("bMap").addEventListener("click", () => E.mapToggle());
+document.getElementById("mapcard").addEventListener("click", e => { if (e.target.id === "mapclose") E.mapToggle(false); });
 
 /* ---------- first screen ---------- */
-E.setHead("", "Checked 123 open Northfield orders when the Kinross load scan arrived. Nothing reaches Northfield until Priya Raman sends it.",
+E.setHead("", "Checked when the Kinross load scan arrived: 123 open orders.",
   "A shipment that breaks a Northfield rule is corrected before departure.");
 S.sel = "NR-460207";
+advance(T(0,17,21));
 E.render();
 S.started = true;
 (async () => {
-  E.light("dx", true, "Load scan · NR-460207"); await E.travel("kin", "Load scan", false); await E.read("dx"); E.light("dx", false, "");
-  /* the next Kinross record arrives at its own time: the staged carton is crushed */
-  await E.wait(1800);
-  while (S.busy) await E.wait(300);
+  E.light("dx", true, "Load scan"); await E.travel("kin", "Load scan", false); await E.read("dx"); E.light("dx", false, "");
   if (!F.dmg) { E.light("dx", true, "Kinross scans · API"); await E.travel("kin", "Damage scan", false); E.light("dx", false, "");
-    if (!F.dmg) step(T(0,17,21), () => {}, "Kinross damage scan: carton 006141410006005172 crushed, cannot be loaded."); }
+    if (!F.dmg) step(T(0,17,21), () => {}, "Kinross damage scan: the staged carton is crushed and cannot be loaded."); }
 })();
 })();
 

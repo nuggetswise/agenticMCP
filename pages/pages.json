@@ -137,6 +137,13 @@
    "aviator": "read_only",
    "areas": true,
    "token": "overview-q5GA_wpE-rm7"
+  },
+  "p27": {
+   "calendar": "P27",
+   "sides": [
+    "ashby"
+   ],
+   "token": "p27-kodZbnmQdYj4"
   }
  }
 }

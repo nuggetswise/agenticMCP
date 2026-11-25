@@ -33,7 +33,7 @@ ok('a quarter answer naming no record lists nothing; the rest is in also_read', 
 const text = instruction({ person: 'Priya Raman', company: 'Ashby Supplier', other: 'Northfield Retailer', clock: 'x', cards: true });
 ok('the instruction asks for no records in the answer', /Do not mention records or their references in your answer unless the question asks which ones/.test(text) && !/then the records|Name the records|with its reference\./.test(text));
 ok('the instruction sets the voice', /the way a colleague who knows these records would explain it in a chat message/.test(text));
-ok('the instruction allows the time and day as the record states them, never a year or a worked-out weekday or date', /give the time as the record shows it \(16:48 ET\) and the day as the record or the question names it/.test(text) && /never write a year, and never work out a weekday or a date yourself/.test(text));
+ok('the instruction keeps dates out of answers: timing in relative words, never a date, weekday, clock time or year; Not in the records on this page, never tools', /say it relative to the moment or to another event/.test(text) && /never write a date, a weekday, a clock time or a year/.test(text) && /Not in the records on this page/.test(text) && /never mention tools/.test(text));
 ok('the guarding rules stay', /Answer only from the results of the tools/.test(text) && /never mention a record, a status or an outcome dated after it/.test(text) && /is not business acceptance/.test(text) && /are not available to Ashby Supplier/.test(text));
 
 console.log(`${pass} Aviator read-list checks passed, ${fail} failed`); process.exit(fail ? 1 : 0);

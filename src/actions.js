@@ -379,6 +379,13 @@ export function checkAnswer(answer, { cards = [], results = [], outside = null, 
   const code = text.match(/\b(?:NF|AP|AM|KX)-\d+(?:\.\d+)?\b|\b[A-Z]{2}\d{2}\b(?!-)|\b\d[\d,]*\s*(?:CA|EA)\b|\b[a-z]+_[a-z_]+\b|\b(?:wms|carrier|erp|tg|case|rule)\.[a-z_]+\b/);
   if (code && !codes.includes(code[0])) fail('code', `It contains "${code[0]}". Write plain words: say whose rule it is, the charge by name, cases or each, and records by their reference and what they are; no codes or field names.`);
   if (/\*\*|^#+ |^\s*[-*] /m.test(text)) fail('markdown', 'It uses markdown. Write plain sentences.');
+  // No date, weekday, clock time or year in an answer (Aviator card; rebuild plan Step 9): timing is said in relative words.
+  const MONTHS = 'January|February|March|April|May|June|July|August|September|October|November|December';
+  const DATED = new RegExp(`\\b(?:${MONTHS})\\s+\\d{1,2}(?:st|nd|rd|th)?\\b|\\b\\d{1,2}(?:st|nd|rd|th)?\\s+(?:of\\s+)?(?:${MONTHS})\\b|\\b(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\\b|\\b\\d{1,2}:\\d{2}\\b|\\b20\\d\\d-\\d\\d-\\d\\d\\b|\\b202[5-7]\\b(?![,.]\\d)`, 'gi');
+  const dated = [...text.matchAll(DATED)].map((m) => m[0]).find((d) => !String(question || '').toLowerCase().includes(d.toLowerCase()));
+  if (dated) fail('date', `It gives "${dated}". Give no date, weekday, clock time or year the question did not name: say it relative to now or to another event (this week, yesterday, the day before delivery, 30 minutes after the truck left, 20 days left).`);
+  if (/\btools?\b/i.test(text)) fail('tools', 'It mentions tools. Say what the records show; when they cannot answer, say "Not in the records on this page".');
+  if (/^\s*Not available to [A-Z][\w ]+\.?\s*$/.test(text) && results.some((r) => r && r.found === true)) fail('not_available', 'The records returned in this turn answer the question for this side: answer from them. "Not available to" is only for records the other company holds.');
   // A charge decision is Waived or Upheld. The model's own word for it is checked here (the one place the old word is named).
   if (/\brevers/i.test(text)) fail('waive', 'Northfield decides a disputed charge by waiving or upholding it. Write waive or waived.');
   for (const m of text.matchAll(/["“]([^"”]{3,})["”]/g)) if (!hay.includes(m[1].toLowerCase().replace(/\s+/g, ' ').replace(/[.]$/, ''))) fail('quote', `It quotes "${m[1]}", which is on no card, in no tool result and not in the question. Quote only what the card or the records hold.`);

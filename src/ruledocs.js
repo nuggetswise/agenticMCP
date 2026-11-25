@@ -119,3 +119,50 @@ export function ashbyMoney(db, asOf = storyClock()) {
     not_available: 'Northfield’s payables and budget decisions are Not available to Ashby',
     reconciles: { stage_total: sum(base.by_stage.filter((s) => s.stage !== 'Paid'), (s) => s.value), open_value: base.open_value, unpaid_invoices_on_open_orders: sum(rows, (r) => r.amount) } };
 }
+
+/** P27, Ashby's side: Ashby's unpaid Northfield invoices at a moment, each read against Kanmon agreement KN-1. An invoice is
+ *  clean when Northfield's receiving advice covers every order item it bills in full, no application advice rejects it and
+ *  it is not replaced. Funding one costs KN-1's fee, 1.5% per 30 days prorated by day from today to its due date. Ashby's
+ *  records only: Northfield's payables and budget stay Northfield's. */
+export function cleanInvoices(db, asOf = storyClock(), { list = false } = {}) {
+  const T = asOf.toISOString(); const today = Date.parse(`${etDay(asOf)}T12:00:00Z`);
+  const kn = db.prepare("SELECT params FROM rules WHERE id = 'KN-1'").get(); const p = kn ? J(kn.params) || {} : {}; const pct = Number(p.fee_pct_per_30_days ?? 1.5);
+  const inv = db.prepare("SELECT i.* FROM invoices i JOIN orders o ON o.po = i.po WHERE o.supplier_id = 'ASHBY' AND o.retailer_id = 'NORTHFIELD' AND i.sent_at <= ?").all(T);
+  const paid = new Set(db.prepare('SELECT DISTINCT invoice FROM remittance_items WHERE paid_at <= ?').all(T).map((r) => r.invoice));
+  const replaced = new Set(inv.filter((i) => i.replaces).map((i) => i.replaces));
+  const lineQ = db.prepare('SELECT line, qty FROM invoice_lines WHERE invoice = ?'); const recQ = db.prepare('SELECT line, sum(qty) q FROM receipts WHERE po = ? AND received_at <= ? GROUP BY line');
+  const rejQ = db.prepare("SELECT e.cause FROM errors e JOIN documents a ON a.doc_id = e.reported_by WHERE a.doc_type = '824' AND a.sent_at <= ? AND e.doc_id = ? AND (e.corrected_by IS NULL OR e.corrected_by NOT IN (SELECT doc_id FROM documents WHERE sent_at <= ?))");
+  const rows = inv.filter((i) => !paid.has(i.invoice) && !replaced.has(i.invoice)).map((i) => {
+    const due = Date.parse(i.sent_at) + (i.terms_days || 30) * DAY; const days = Math.max(0, Math.round((Date.parse(`${etDay(new Date(due))}T12:00:00Z`) - today) / DAY));
+    const rec = Object.fromEntries(recQ.all(i.po, T).map((r) => [r.line, r.q])); const why = [];
+    if (!Object.keys(rec).length) why.push('No receiving advice yet');
+    else for (const l of lineQ.all(i.invoice)) if ((rec[l.line] || 0) < l.qty) why.push(`Billed ${l.qty} cases on order item ${l.line}; Northfield received ${rec[l.line] || 0}`);
+    for (const e of rejQ.all(T, i.doc_id, T)) why.push(`Rejected by Northfield's application advice: ${e.cause}`);
+    return { invoice: i.invoice, po: i.po, amount: money(i.total), due: etDay(new Date(due)), days_to_due: days, clean: !why.length, ...(why.length ? { why_not_clean: why.join('; ') } : { fee_if_funded_today: money(i.total * pct / 100 * days / 30) }) };
+  });
+  const clean = rows.filter((r) => r.clean); const sum = (xs, k) => money(xs.reduce((t, x) => t + x[k], 0));
+  return { found: true, as_of: fmtET(asOf), agreement: 'Ashby’s invoice financing agreement with Kanmon', terms: { advance: `${(p.advance ?? 1) * 100}% of the invoice`, fee: `${pct}% per 30 days, prorated by day`, repaid_from: 'Northfield’s payment of the invoice' },
+    test: 'Clean: Northfield’s receiving advice covers every order item the invoice bills in full, no application advice rejects it, and no later invoice replaces it',
+    unpaid_invoices: rows.length, unpaid_value: sum(rows, 'amount'), clean_invoices: clean.length, clean_value: sum(clean, 'amount'), fee_to_fund_all_clean_today: money(clean.reduce((t, x) => t + x.amount * pct / 100 * x.days_to_due / 30, 0)),
+    not_clean: rows.filter((r) => !r.clean), ...(list ? { clean_list: clean } : { clean_largest: [...clean].sort((a, b) => b.amount - a.amount).slice(0, 10) }),
+    note: 'Northfield’s payables and budget decisions are Northfield’s; this reads Ashby’s own invoices and the documents Northfield sent Ashby.' };
+}
+
+/** P20: a promotion deduction Northfield took on a remittance, read the same on both sides: the deal it names (Northfield's
+ *  promotion announcement, 889), the claim, and the check of the claim against the deal, the store activity reports (852),
+ *  the ship notices (856) and the invoice (810). Ashby's side names the check as Vividly's match (Ashby's partner, synthetic
+ *  in this demo); Northfield's side reads it as the evidence Ashby's dispute carries. With no reference: every promotion
+ *  deduction on the remittance. A name such as 2701-04 reads as PD-2701-04. */
+export function promotionDeduction(db, ref, viewer = 'ashby', asOf = storyClock()) {
+  const T = asOf.toISOString(); const ITEM = (sku) => db.prepare('SELECT description FROM items WHERE sku = ?').get(sku)?.description || sku;
+  const deal = (id) => { const d = id && db.prepare('SELECT deal_id, kind, rate, rate_uom, period_start, period_end, order_start, order_end, terms FROM deals WHERE deal_id = ?').get(id); return d ? { deal: d.deal_id, kind: d.kind, rate: `$${d.rate.toFixed(2)} per ${d.rate_uom === 'EA' ? 'each' : 'case'}`, promoted_weeks: `${d.period_start} to ${d.period_end}`, order_window: `${d.order_start} to ${d.order_end}`, terms: d.terms } : 'No deal on record'; };
+  const view = (r) => ({ deduction: r.deduction_ref, remittance: r.payment, invoice: r.invoice, item: ITEM(r.sku), kind: r.kind,
+    claim: { deal: r.claimed_deal, from: r.claim_from, to: r.claim_to, quantity: r.claimed_qty, unit: r.claimed_uom === 'EA' ? 'each' : 'cases', rate: r.claimed_rate, withheld: money(r.claimed_amount) },
+    deal_announced: deal(r.claimed_deal),
+    [viewer === 'ashby' ? 'vividly_match' : 'deal_check']: { result: r.decision === 'Matched' ? 'Supported by the deal' : 'Not supported by the deal', why: r.reason, agreed_rate: r.agreed_rate, quantity_from_records: r.recomputed_qty, supported: money(r.authorised_amount), not_supported: money(r.unauthorised_amount), records: J(r.records) || [] } });
+  const rows = db.prepare("SELECT * FROM deal_settlements WHERE supplier_id = 'ASHBY' AND paid_at <= ? ORDER BY deduction_ref").all(T);
+  if (!rows.length) return { found: false, message: `No promotion deduction on a remittance at ${fmtET(asOf)}` };
+  if (ref) { const m = String(ref).match(/(?:PD-)?(\d{4}-\d{2})/); const id = m ? `PD-${m[1]}` : String(ref); const r = rows.find((x) => x.deduction_ref === id);
+    return r ? { found: true, as_of: fmtET(asOf), ...view(r) } : { found: false, message: `No promotion deduction ${id}; the remittance holds ${rows.map((x) => x.deduction_ref).join(', ')}` }; }
+  return { found: true, as_of: fmtET(asOf), remittance: rows[0].payment, deductions: rows.map(view), withheld: money(rows.reduce((t, r) => t + r.claimed_amount, 0)), not_supported: money(rows.reduce((t, r) => t + r.unauthorised_amount, 0)) };
+}

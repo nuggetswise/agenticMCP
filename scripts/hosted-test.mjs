@@ -50,15 +50,15 @@ const model = createServer((req, res) => { let raw = ''; req.on('data', (c) => (
       return say(`The card is ready: ${c.label.toLowerCase()} to ${c.to}, on ${c.record}${ls.length ? ` for ${ls.join(' and ')}` : ''}${c.message ? `, with the message "${c.message.text}"` : ''}. Nothing happens until you press Approve.`); }
     if (/Not available to/.test(r.result || '')) return say(`${r.result}. ${r.message || ''}`);
     const pc = r.period_covered || r['period covered'];
-    if (name === 'get_scorecard' && r.warehouse) return say(`${r.warehouse_failing_lines} order lines failed at ${r.warehouse}, ${r.warehouse_failing_cases} cases, from ${pc.from} to ${pc.to}. Orders: ${r.lines.map((l) => l.po).join(', ')}.`);
-    if (name === 'get_scorecard' || name === 'supplier_scorecard') return say(`${r.failing_lines} order lines failed from ${pc.from} to ${pc.to}; rate ${r.score}. ${(r.by_warehouse || []).map((w) => `${w.warehouse}: ${w.lines} lines, ${w.cases} cases (${w.by_reason.map((x) => `${x.reason} ${x.lines} lines ${x.cases} cases`).join('; ')})`).join('. ')}.`);
-    if (name === 'open_order_value') return say(`${r.due_in_period.invoices} invoices fall due from ${pc.from} to ${pc.to}, $${r.due_in_period.value.toLocaleString('en-US', { minimumFractionDigits: 2 })} on ${r.due_in_period.orders} open orders: ${r.due_in_period.list.map((d) => `${d.invoice} on ${d.po}`).join(', ')}.`);
+    if (name === 'get_scorecard' && r.warehouse) return say(`${r.warehouse_failing_lines} order lines failed at ${r.warehouse}, ${r.warehouse_failing_cases} cases, in the period asked. Orders: ${r.lines.map((l) => l.po).join(', ')}.`);
+    if (name === 'get_scorecard' || name === 'supplier_scorecard') return say(`${r.failing_lines} order lines failed in the period asked; rate ${r.score}. ${(r.by_warehouse || []).map((w) => `${w.warehouse}: ${w.lines} lines, ${w.cases} cases (${w.by_reason.map((x) => `${x.reason} ${x.lines} lines ${x.cases} cases`).join('; ')})`).join('. ')}.`);
+    if (name === 'open_order_value') return say(`${r.due_in_period.invoices} invoices fall due in the period asked, $${r.due_in_period.value.toLocaleString('en-US', { minimumFractionDigits: 2 })} on ${r.due_in_period.orders} open orders: ${r.due_in_period.list.map((d) => `${d.invoice} on ${d.po}`).join(', ')}.`);
     const refs = [...new Set(txt.match(REFS) || [])].slice(0, 3); const asOf = r.as_of || r.as_of_eastern || '';
     if (/\[invent\]/.test(q0) && !rechecked) return say(`INV-7731 is held: receiving advice REC-450118 shows 119 cases on line 2 against 120 billed.`);
     if (/\[none\]/.test(q0) && !rechecked) return say('All recent rejections have been fixed and confirmed, so nothing needs action.');
     // First the stand-in writes codes, as the model sometimes does; sent back with the reason, it writes plain words.
-    return say(rechecked ? `From ${refs.join(', ') || 'the records'}: 270 cases shipped under Northfield’s matching rule, from the Kinross load scan. As of ${asOf}.`
-      : `From ${refs.join(', ') || 'the records'}: 270 CA shipped under NF-7.8 (wms.load_scan). As of ${asOf}.`); }
+    return say(rechecked ? `From ${refs.join(', ') || 'the records'}: 270 cases shipped under Northfield’s matching rule, from the Kinross load scan.`
+      : `From ${refs.join(', ') || 'the records'}: 270 CA shipped under NF-7.8 (wms.load_scan).`); }
   const q = last.map((p) => p.text || '').join(' '); const po = (q.match(/NR-\d{5,6}/) || [])[0];
   // The person asked for an action: the stand-in names it and its record, as the model does, and the server builds the card.
   if (/complete pack/.test(q)) return callT('list_deduction_cases', {});
@@ -116,7 +116,7 @@ try {
 
   // ---- Aviator for hosted pages ----
   const a1 = await (await av({ question: 'Where does NR-451207 stand?', side: 'ashby' })).json();
-  ok('no as_of: answered at the page moment, never the story clock', a1.ok && a1.as_of === MOMENT && /2026-10-26/.test(a1.answer), JSON.stringify(a1));
+  ok('no as_of: answered at the page moment, never the story clock', a1.ok && a1.as_of === MOMENT, JSON.stringify(a1));
   ok('an answer with codes is sent back to the model, which writes it in plain words; the server never rewrites it', a1.ok && a1.answer_from === 'model' && !/\bNF-\d|\bAP-\d|\bCA\b|\bEA\b|wms\.|load_scan|_/.test(a1.answer) && /270 cases/.test(a1.answer) && /Northfield’s matching rule/.test(a1.answer), a1.answer);
   { const row = new DatabaseSync(MAIN_DB, { readOnly: true }).prepare("SELECT arguments FROM access_log WHERE tool = 'aviator' AND connection_id = 'aviator-_test-ashby' ORDER BY id DESC LIMIT 1").get(); ok('the recheck is logged', JSON.parse(row?.arguments || '{}').rechecks >= 1, row?.arguments); }
   ok('records read are listed by business name', a1.ok && a1.read.some((r) => r.name === 'Purchase order NR-451207'), JSON.stringify(a1.read));
@@ -147,25 +147,25 @@ try {
   // (the gate pins the same figures: scorecard.week_of_22_november, scorecard.groveport_lines, open_orders.due_this_week).
   const P7 = REG.p7.token, P8 = REG.p8.token;
   const w1 = await (await av({ question: 'Why did lines fail in the week of 22 November?', side: 'ashby' }, PORT, P7)).json();
-  ok('P7 at 28 December: the week of 22 November is answered for 22 to 28 November, not the quarter', w1.ok && w1.as_of === '2026-12-28T14:00:00.000Z' && w1.period.from === '2026-11-22' && w1.period.to === '2026-11-28' && /^10 order lines failed from 2026-11-22 to 2026-11-28; rate 83\.6%/.test(w1.answer) && !/108/.test(w1.answer), JSON.stringify(w1));
+  ok('P7 at 28 December: the week of 22 November is answered for 22 to 28 November, not the quarter', w1.ok && w1.as_of === '2026-12-28T14:00:00.000Z' && w1.period.from === '2026-11-22' && w1.period.to === '2026-11-28' && /^10 order lines failed in the period asked; rate 83\.6%/.test(w1.answer) && !/108/.test(w1.answer), JSON.stringify(w1));
   ok('P7: that week splits across both warehouses, in cases', /Kinross Groveport: 6 lines, 260 cases \(Short shipped, remainder cancelled 4 lines 258 cases; Received below ship notice 2 lines 2 cases\)/.test(w1.answer) && /Kinross Joliet: 4 lines, 123 cases \(Short shipped, remainder cancelled 2 lines 121 cases/.test(w1.answer), w1.answer);
   const w2 = await (await av({ question: 'Which lines failed at Kinross Groveport?', side: 'ashby' }, PORT, P7)).json(); const grv = (w2.answer || '').match(/NR-\d+/g) || [];
   const exp = new DatabaseSync(MAIN_DB, { readOnly: true }).prepare("SELECT DISTINCT s.po FROM shipments s JOIN orders o ON o.po = s.po WHERE s.ship_from = 'KIN-GRV' AND o.stream = 'replenishment'").all().map((r) => r.po);
-  ok('P7: the Groveport answer lists the 44 Groveport lines (1,581 cases) and only orders shipped from Groveport', w2.ok && /^44 order lines failed at Kinross Groveport, 1581 cases, from 2026-09-27 to 2026-12-26/.test(w2.answer) && grv.length === 44 && grv.every((po) => exp.includes(po)), JSON.stringify(w2).slice(0, 500));
+  ok('P7: the Groveport answer lists the 44 Groveport lines (1,581 cases) and only orders shipped from Groveport', w2.ok && /^44 order lines failed at Kinross Groveport, 1581 cases, in the period asked/.test(w2.answer) && grv.length === 44 && grv.every((po) => exp.includes(po)), JSON.stringify(w2).slice(0, 500));
   const w3 = await (await av({ question: 'What falls due this week?', side: 'northfield' }, PORT, P8)).json();
   ok('P8 at 8 November 23:59: this week is 8 to 14 November, from as_of', w3.ok && w3.as_of === '2026-11-09T04:59:00.000Z' && w3.period.from === '2026-11-08' && w3.period.to === '2026-11-14', JSON.stringify(w3).slice(0, 300));
-  ok('P8: 10 invoices, $1,056,413.30, on 10 open orders, not a single order', w3.ok && /^10 invoices fall due from 2026-11-08 to 2026-11-14, \$1,056,413\.30 on 10 open orders/.test(w3.answer) && (w3.answer.match(/NR-\d+/g) || []).length === 10, w3.answer);
+  ok('P8: 10 invoices, $1,056,413.30, on 10 open orders, not a single order', w3.ok && /^10 invoices fall due in the period asked, \$1,056,413\.30 on 10 open orders/.test(w3.answer) && (w3.answer.match(/NR-\d+/g) || []).length === 10, w3.answer);
   ok('P8 token serves both sides (Ashby added 24 November); a side off the page is refused', (await av({ question: 'What falls due this week?', side: 'kinross' }, PORT, P8)).status === 403);
   lazy = true; modelCalls.length = 0;
   const r1 = await (await av({ question: 'Why did lines fail in the week of 22 November?', side: 'ashby' }, PORT, P7)).json();
-  ok('an answer for another period is retried on the secondary model and comes back for the week asked', r1.ok && /^10 order lines failed from 2026-11-22 to 2026-11-28/.test(r1.answer) && modelCalls.join() === 'primary,primary,secondary,secondary', `${modelCalls.join()} ${JSON.stringify(r1).slice(0, 300)}`);
+  ok('an answer for another period is retried on the secondary model and comes back for the week asked', r1.ok && /^10 order lines failed in the period asked/.test(r1.answer) && modelCalls.join() === 'primary,primary,secondary,secondary', `${modelCalls.join()} ${JSON.stringify(r1).slice(0, 300)}`);
   const r2 = await (await av({ question: 'What falls due this week?', side: 'northfield' }, PORT, P8)).json();
-  ok('a single-order answer to a this-week question is retried on the secondary model', r2.ok && /^10 invoices fall due from 2026-11-08 to 2026-11-14/.test(r2.answer), JSON.stringify(r2).slice(0, 300));
+  ok('a single-order answer to a this-week question is retried on the secondary model', r2.ok && /^10 invoices fall due in the period asked/.test(r2.answer), JSON.stringify(r2).slice(0, 300));
   { const row = new DatabaseSync(MAIN_DB, { readOnly: true }).prepare("SELECT arguments FROM access_log WHERE connection_id = 'aviator-p7-ashby' AND tool = 'aviator' ORDER BY id DESC LIMIT 1").get(); const a = JSON.parse(row.arguments);
     ok('the retry is logged with its period and model route', a.retried_for_period_on === 'secondary' && a.period === '2026-11-22 to 2026-11-28' && /secondary · stand-in-second/.test(a.model_route), row.arguments); }
   lazy = false;
   for (const [qq, f, t] of [['What fell due last week?', '2026-11-01', '2026-11-07'], ['What falls due next week?', '2026-11-15', '2026-11-21'], ['What falls due 9 to 15 November?', '2026-11-09', '2026-11-15']]) { const j = await (await av({ question: qq, side: 'northfield' }, PORT, P8)).json();
-    ok(`"${qq}" resolves to ${f} to ${t}`, j.ok && j.period.from === f && j.period.to === t && j.answer.includes(`from ${f} to ${t}`), JSON.stringify(j).slice(0, 240)); }
+    ok(`"${qq}" resolves to ${f} to ${t}`, j.ok && j.period.from === f && j.period.to === t && j.answer.includes('in the period asked'), JSON.stringify(j).slice(0, 240)); }
 
   // ---- daily cap on model calls ----
   await av({ question: 'Where does NR-451207 stand?', side: 'ashby' }, CAP_PORT);
@@ -180,7 +180,7 @@ try {
   const ask = async (q) => { const n = await p.$$eval('#log .a', (x) => x.length); await p.fill('#q', q); await p.click('#send'); await p.waitForFunction((k) => document.querySelectorAll('#log .a').length > k, n, { timeout: 30000 }); return p.$eval('#log .a:last-child', (e) => e.innerText); };
   const t1 = await ask('Where does NR-450118 stand?');
   ok('/p/_test Ashby: a typed question returns an answer citing records by business name', /Read: [^\n]*Purchase order NR-450118/.test(t1) && !/\bNF-\d|\bCA\b|[a-z]+\.[a-z_]+\b/.test(t1.replace(/\d\.\d/g, '')), t1);
-  ok('/p/_test Ashby: answered at the page moment with no as_of sent', /2026-10-26/.test(t1), t1);
+  ok('/p/_test Ashby: answered with no as_of sent, and the answer carries no date (the moment itself is checked on the route above)', /270 cases/.test(t1) && !/20\d\d-\d\d-\d\d/.test(t1), t1);
   await p.selectOption('#side', 'northfield'); const t2 = await ask('Where does NR-450118 stand?');
   ok('/p/_test Northfield: a typed question returns an answer citing records by business name', /Read: [^\n]*NR-450118/.test(t2), t2);
   ok('the Northfield question ran on Northfield’s connection', ldb.prepare("SELECT count(*) n FROM access_log WHERE connection_id = 'aviator-_test-northfield' AND tool = 'supplier_document_trail'").get().n >= 1);

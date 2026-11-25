@@ -1174,6 +1174,175 @@
     }
    }
   },
+  "/v1/promotion-deductions": {
+   "get": {
+    "operationId": "promotion_deduction",
+    "summary": "Promotion deductions and their deals",
+    "description": "A promotion deduction Northfield took on its remittance (for example 2701-04 or PD-2701-04): the deal it names on Northfield’s promotion announcement (889), the claim (period, quantity, rate, amount withheld) and Vividly’s match of the claim to the deal, the store activity reports, the ship notices and the invoice: supported or not, why, and the supported and unsupported amounts. Vividly is Ashby’s partner; its match is synthetic in this demo. Without a deduction: every promotion deduction on the remittance.",
+    "tags": [
+     "Deduction triage"
+    ],
+    "x-mcp-tool": "promotion_deduction",
+    "x-required-scopes": [
+     "deductions"
+    ],
+    "x-optional-scopes": [],
+    "x-read-only": true,
+    "parameters": [
+     {
+      "name": "deduction",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Deduction, for example 2701-04 or PD-2701-04. Leave out for all of them"
+      },
+      "description": "Deduction, for example 2701-04 or PD-2701-04. Leave out for all of them"
+     },
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+      },
+      "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    }
+   }
+  },
+  "/v1/clean-invoices": {
+   "get": {
+    "operationId": "clean_invoices",
+    "summary": "Clean invoices for early funding",
+    "description": "Ashby’s unpaid Northfield invoices read against Ashby’s invoice financing agreement with Kanmon: clean when Northfield’s receiving advice covers every order item the invoice bills in full and no application advice rejects it. For each invoice that is not clean, why; for the clean ones, their value and the fee to fund them today (1.5% per 30 days, prorated by day to the due date). Ashby’s own records and the documents Northfield sent; Northfield’s payables and budget are Northfield’s.",
+    "tags": [
+     "Cash and funding"
+    ],
+    "x-mcp-tool": "clean_invoices",
+    "x-required-scopes": [
+     "orders",
+     "documents"
+    ],
+    "x-optional-scopes": [],
+    "x-read-only": true,
+    "parameters": [
+     {
+      "name": "list",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "description": "True to list every clean invoice"
+      },
+      "description": "True to list every clean invoice"
+     },
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+      },
+      "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    }
+   }
+  },
+  "/v1/store-shelves": {
+   "get": {
+    "operationId": "store_shelves",
+    "summary": "Store shelves and replenishment",
+    "description": "Every Northfield store’s latest week from the store activity reports Northfield sends Ashby (852): units sold, on hand, received, sell-through (Measured or Estimated) and weeks of supply, with what Ashby’s replenishment rules recommend for each store (a new order for an empty shelf, a transfer out of a store with too much stock, or nothing), the stores that need a new order, the stores that can spare stock, and Ashby’s available pairs. With a store: its weeks on record and its recommendation. Northfield decides every order and transfer.",
+    "tags": [
+     "Sell-through review"
+    ],
+    "x-mcp-tool": "store_shelves",
+    "x-required-scopes": [
+     "documents"
+    ],
+    "x-optional-scopes": [],
+    "x-read-only": true,
+    "parameters": [
+     {
+      "name": "store",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Store number, for example 114. Leave out for every store"
+      },
+      "description": "Store number, for example 114. Leave out for every store"
+     },
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+      },
+      "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    }
+   }
+  },
   "/v1/calendar": {
    "get": {
     "operationId": "get_story_calendar",

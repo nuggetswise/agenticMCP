@@ -181,3 +181,20 @@ export function replayAgentRule(db, { job, change, records, asOf }) {
   const differs = (x) => x.now.next_step !== x.with_change.next_step || who(x.now.authority) !== who(x.with_change.authority);
   return { found: true, job, change, as_of: fmtET(asOf), records: rows.length, changed: rows.filter(differs), unchanged: rows.filter((x) => !differs(x)).length, rows: rows.map((x) => ({ ...x, changes: differs(x) })), changes_nothing: true };
 }
+
+/** Ashby's store read (P9): every Northfield store's latest week from the store activity reports Northfield sends Ashby (852),
+ *  with sell-through and weeks of supply, and what Ashby's replenishment rules recommend for each store: a new order for an
+ *  empty shelf, a transfer from a store with too much, or nothing. With a store: that store's weeks and its recommendation.
+ *  Northfield decides every order and transfer and picks the receiving store. */
+export function storeShelvesAshby(db, store, asOf = storyClock()) {
+  const base = storeSellThroughNF(db, store, asOf); if (base.found === false) return base;
+  const { ashby_available_stock, ashby_recommendation, ...b } = base;
+  const rec = (s) => { const d = shelfDecision(db, s, asOf); if (!d || d.found === false) return null;
+    return { state: d.decision_row, recommendation: { recommend_new_order: 'New order', recommend_transfer: 'Transfer stock out', wait_for_goods_in_transit: 'Wait for goods in transit', nothing_to_do: 'Nothing to do' }[d.next_step] || d.next_step, ...(d.pairs ? { pairs: d.pairs } : {}), ...(d.next_step === 'recommend_new_order' ? { decided_by: 'Jordan Ellis, Northfield' } : {}) }; };
+  const avail = shelfDecision(db, store ?? (b.stores?.[0]?.store), asOf)?.evidence?.ashby_available ?? null;
+  const decides = 'Northfield decides every order and transfer and picks the receiving store';
+  if (store != null) return { ...b, ashby_rules: rec(String(store).replace(/^store\s*/i, '')), ashby_available_pairs: avail, decides };
+  const stores = b.stores.map((x) => ({ ...x, ashby_rules: rec(x.store) }));
+  const pick = (k) => stores.filter((x) => x.ashby_rules && x.ashby_rules.recommendation === k).map((x) => ({ store: x.store, on_hand: x.on_hand, weeks_of_supply: x.weeks_of_supply, ...(x.ashby_rules.pairs ? { pairs: x.ashby_rules.pairs } : {}) }));
+  return { ...b, stores, needs_new_order: pick('New order'), can_spare_stock: pick('Transfer stock out'), ashby_available_pairs: avail, decides };
+}

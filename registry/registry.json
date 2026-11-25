@@ -407,7 +407,8 @@
    ],
    "tools": [
     "recommend_next_step",
-    "get_order"
+    "get_order",
+    "store_shelves"
    ],
    "anchors": [
     "order:NR-451207",
@@ -798,6 +799,68 @@
    "capability_status": "planned",
    "owner": "Unassigned",
    "ends_at": "Both companies' changes are recorded with who made them, drafted rules cite their document and section, and the next rule run and Aviator answer use them"
+  },
+  {
+   "id": "P20",
+   "name": "P20 Promotion deductions with Vividly",
+   "status": "Built",
+   "calendar": "P20",
+   "seen_by": "Priya Raman, then Jordan Ellis",
+   "agency": {
+    "verdict": "not applicable",
+    "agent": null,
+    "job": "Read each promotion deduction against its deal and dispute only what the deal does not support",
+    "reason": "Aviator reads; Priya and Jordan press every dispute and decision on the page",
+    "would_reverse": "A deduction disputed or decided from Aviator without the person pressing"
+   },
+   "customer_agent": {
+    "supplier": "Which promotion deductions the deals do not support",
+    "retailer": "Which disputed promotion deductions to waive"
+   },
+   "erp_placement": "None",
+   "decisions": [],
+   "tools": [
+    "promotion_deduction"
+   ],
+   "anchors": [
+    "document:PMT-990168"
+   ],
+   "acceptance": [],
+   "capability_status": "planned",
+   "owner": "Unassigned",
+   "tools_northfield": [
+    "promotion_deduction"
+   ],
+   "ends_at": "Northfield's repayment of the waived amounts, matched on Ashby's side"
+  },
+  {
+   "id": "P27",
+   "name": "P27 Early cash on a clean invoice",
+   "status": "Built",
+   "calendar": "P27",
+   "seen_by": "Priya Raman",
+   "agency": {
+    "verdict": "not applicable",
+    "agent": null,
+    "job": "Read which unpaid Northfield invoices are clean and what funding them through Kanmon costs",
+    "reason": "Aviator reads; Priya presses Request funding on the page",
+    "would_reverse": "Funding requested from Aviator without Priya pressing"
+   },
+   "customer_agent": {
+    "supplier": "Which invoices are clean and what early funding costs",
+    "retailer": "None"
+   },
+   "erp_placement": "None",
+   "decisions": [],
+   "tools": [
+    "clean_invoices"
+   ],
+   "anchors": [],
+   "acceptance": [],
+   "capability_status": "planned",
+   "owner": "Unassigned",
+   "tools_northfield": [],
+   "ends_at": "Northfield's payment of each funded invoice repays Kanmon"
   }
  ],
  "other_inventory": [

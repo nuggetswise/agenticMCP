@@ -815,8 +815,14 @@ const n0 = n => E.int(n);
 const big = v => v >= 1e6 ? "$" + (v / 1e6).toFixed(2) + "M" : money(v);
 const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-const dmy = d => { const x = new Date(d + "T12:00:00Z"); return `${DAYS[x.getUTCDay()]} ${x.getUTCDate()} ${MON[x.getUTCMonth()]}`; };
-const et = s => { if (!s) return ""; const m = String(s).match(/^(\d{4})-(\d\d)-(\d\d)[ T](\d\d:\d\d)/); return m ? `${+m[3]} ${MON[+m[2] - 1]} ${m[4]}` : s; };
+/* No dates on screen: this week reads as weekday and time, earlier as days ago, later as weeks ahead. */
+const TODAY = Date.UTC(2026, 11, 9), WEEK0 = Date.UTC(2026, 11, 6);
+const dayOf = d => Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10));
+const ago = n => n === 0 ? "Today" : n === 1 ? "Yesterday" : n + " days ago";
+const dmy = d => { const t = dayOf(d), wd = DAYS[new Date(t).getUTCDay()], n = Math.round((t - TODAY) / 864e5);
+  if (n < 0) return t >= WEEK0 ? wd : ago(-n); if (t < WEEK0 + 7 * 864e5) return wd; if (t < WEEK0 + 14 * 864e5) return "Next " + wd; const w = Math.round(n / 7); return "In " + w + (w === 1 ? " week" : " weeks"); };
+const et = s => { if (!s) return ""; const m = String(s).match(/^(\d{4}-\d\d-\d\d)[ T](\d\d:\d\d)/); if (!m) return s; const t = dayOf(m[1]);
+  return t >= WEEK0 ? DAYS[new Date(t).getUTCDay()] + " " + m[2] : ago(Math.round((TODAY - t) / 864e5)); };
 const isoET = iso => { const x = new Date(Date.parse(iso) - 5 * 3600000).toISOString(); return x.slice(0, 10) + " " + x.slice(11, 16); };
 const ITEM = {"ASH-HNY-340":"wildflower honey","ASH-MUG-12":"stoneware mugs","ASH-NAP-4":"linen napkins","ASH-TRL-09":"trail runners"};
 const OWN = {"erp.shipment_planned":"Shipment planned","erp.fulfilment_posted":"Fulfilment posted","wms.departure_scan":"Departure scan","wms.load_scan":"Load scan","erp.setting":"ERP setting","wms.short_pick":"Short pick","erp.inventory_read":"Inventory read","wms.pack_scan":"Pack scan","wms.load_tally":"Load tally","erp.substitution":"Item substitution"};
@@ -826,8 +832,8 @@ const tbl = (head, rows) => `<table class="ow"><thead><tr>${head.map(h => `<th>$
 const orderBtn = po => AO[po] ? `<button class="lnk" type="button" data-sel="apo:${esc(po)}">PO ${esc(po.slice(3))}</button>` : `PO ${esc(po.slice(3))}`;
 
 /* ---------- figures ---------- */
-const INC = A.incoming, BK = [["this_week","Due this week","10 to 12 Dec"],["next_week","Due next week","13 to 19 Dec"],["later","Due later","20 Dec onward"]];
-if (INC.overdue.n) BK.unshift(["overdue","Overdue","before today"]);
+const INC = A.incoming, BK = [["this_week","Due this week","Thu to Sat"],["next_week","Due next week","Sun to Sat"],["later","Due later","After next week"]];
+if (INC.overdue.n) BK.unshift(["overdue","Overdue","Past due"]);
 const PS = A.ps, PD = A.pd.short_without_case, HELD = A.held;
 const heldV = HELD.rni.value + HELD.ih.value;
 const STG = A.stages;
@@ -874,7 +880,7 @@ function homeRec(){
 }
 function bucketRec(k){
   const b = BK.find(x => x[0] === k), x = INC[k];
-  let body = tbl(["Invoice","Order","Amount","Due"], x.list.map(i => `<tr><td>${esc(i.inv)}</td><td>${orderBtn(i.po)}</td><td>${money(i.amt)}</td><td>${esc(dmy(i.due))}</td></tr>`));
+  let body = tbl(["Order","Amount","Due"], x.list.map(i => `<tr><td>${orderBtn(i.po)}</td><td>${money(i.amt)}</td><td>${esc(dmy(i.due))}</td></tr>`));
   if (x.list.length < x.n) body += `<p class="meta">First ${x.list.length} of ${n0(x.n)} invoices by due date; the total covers all ${n0(x.n)}.</p>`;
   body += E.details("a:" + k, ruleList(["due","release","own"]));
   return {title:b[1], chip:null, meta:`${n0(x.n)} invoices · ${money(x.v)} · ${b[2]}`, banner:[`${money(x.v)} from Northfield Retailer`, "Northfield accounts payable releases each payment in its own system on the due date."], body, action:null};
@@ -888,11 +894,11 @@ function psRec(){
     return `<tr><td>${orderBtn(x.po)}</td><td>${money(x.invoiced)}</td><td>${money(x.paid)}</td><td>${money(x.gap)}</td><td>${esc(st[0])}${ev ? `<br><span class="via">${esc(EVID[ev] || ev)}</span>` : ""}</td><td>${esc(st[1])}</td></tr>`; }))
     + `<p class="reason"><b>Where Ashby acts.</b> Priya Raman disputes or accepts each charge in its deduction case. This view sends nothing.</p>`
     + E.details("a:ps", ruleList(["short","dispute","release"]));
-  return {title:"Paid short", chip:[`${money(owedV)} owed back`, "amber"], meta:`${PS.invoices} invoices · ${money(PS.gap)} deducted from Northfield's payment on 1 Dec`,
-    banner:[`${money(owedV)} comes back and ${money(toDecideV)} waits for a decision`, `Northfield waived the charge on PO ${owedBack.map(x => x.po.slice(3)).join(", ")} and has not repaid it yet. ${toDecide.length} charges opened on 1 Dec wait for Priya to dispute or accept. Ashby accepted ${money(acceptedV)} for damage on prepaid freight.`], body, action:null};
+  return {title:"Paid short", chip:[`${money(owedV)} owed back`, "amber"], meta:`${PS.invoices} invoices · ${money(PS.gap)} deducted from Northfield's payment ${et("2026-12-01 08:00").toLowerCase()}`,
+    banner:[`${money(owedV)} comes back and ${money(toDecideV)} waits for a decision`, `Northfield waived the charge on PO ${owedBack.map(x => x.po.slice(3)).join(", ")} and has not repaid it yet. ${toDecide.length} charges opened ${et("2026-12-01 08:30").toLowerCase()} wait for Priya to dispute or accept. Ashby accepted ${money(acceptedV)} for damage on prepaid freight.`], body, action:null};
 }
 function pdRec(){
-  let body = tbl(["Order","Receiving advice","Short cartons","Possible charge"], PD.list.map(x => `<tr><td>${orderBtn(x.po)}</td><td>${esc(x.receipt)}</td><td>${n0(x.short_cases)}</td><td>${money(x.amount)}</td></tr>`));
+  let body = tbl(["Order","Short cartons at receipt","Possible charge"], PD.list.map(x => `<tr><td>${orderBtn(x.po)}</td><td>${n0(x.short_cases)}</td><td>${money(x.amount)}</td></tr>`));
   if (PD.list.length < PD.orders) body += `<p class="meta">First ${PD.list.length} of ${PD.orders} receipts; the total covers all ${PD.orders}.</p>`;
   body += `<p class="reason"><b>Where Ashby acts.</b> Ashby checks its own load scans for each order before Northfield opens a case. This view sends nothing.</p>`;
   body += E.details("a:pd", ruleList(["possible","short","own"]));
@@ -904,28 +910,28 @@ function orderRec(po){
   const back = S.from && S.from !== "apo:" + po ? `<button class="lnk" type="button" data-sel="${esc(S.from)}">Back to ${esc(S.from === "a:home" ? "Money in motion" : S.from === "a:ps" ? "Paid short" : S.from === "a:pd" ? "Possible deductions" : (BK.find(b => "a:" + b[0] === S.from) || [0, "the list"])[1])}</button>` : "";
   let body = "";
   if (ps) { const st = psState(ps);
-    body += `<div class="p8box"><div class="th"><span class="tt">${money(ps.gap)} paid short on ${esc(ps.invoice)}</span></div>`
+    body += `<div class="p8box"><div class="th"><span class="tt">${money(ps.gap)} paid short on its invoice</span></div>`
       + tbl(["When","What","Who"], [[ps.paid_on.slice(0, 16), `Remittance paid ${money(ps.paid)} of ${money(ps.invoiced)}`, "Northfield accounts payable"]].concat((ps.trail || []).map(t => [isoET(t[0]), t[1] === "opened" ? "Deduction case opened · shortage charge" : t[1] === "dispute" ? "Dispute sent with the bill of lading, proof of delivery and load scan" : t[1] === "accepted" ? "Charge accepted" : "Decision · " + (t[2] || ""), t[3] || "Northfield"])).sort((a, b) => a[0] < b[0] ? -1 : 1).map(r => `<tr><td>${esc(et(r[0]))}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`))
       + `<p class="reason"><b>Now.</b> ${esc(st[0])}${st[1] ? " · " + esc(st[1]) : ""}.</p></div>`; }
   if (pd) body += `<div class="p8box"><div class="th"><span class="tt">Possible deduction · ${money(pd.amount)}</span></div><p class="vals">${esc(pd.receipt)} shows ${n0(pd.short_cases)} short ${pd.short_cases === 1 ? "carton" : "cartons"}; no deduction case yet.</p></div>`;
   const rcv = l => o.rc.filter(r => r[1] === l).reduce((s, r) => s + r[2], 0), sh = l => o.rc.filter(r => r[1] === l).reduce((s, r) => s + r[3], 0);
   body += E.facts("Purchase order to payment", o.docs.map(d => { const m = d[0].match(/^(.*) \((\d{3})\)$/) || [null, d[0], ""];
-    return {v:`<b>${esc(m[1])}</b> · ${esc(et(d[2]))}${d[3] !== "Delivered" ? ` · <span class="st-amber">${esc(d[3])}</span>` : ""}`, tags:[["EDI " + m[2], dk(po, d[1])]]}; }));
+    return {v:`<b>${esc(m[1])}</b> · ${esc(et(d[2]))}${d[3] !== "Delivered" ? ` · <span class="st-amber">${esc(d[3].replace(/INV-\S+/, "the corrected invoice"))}</span>` : ""}`, tags:[["EDI " + m[2], dk(po, d[1])]]}; }));
   if (o.lines.length) body += `<span class="lab">Order items</span>` + tbl(["Order item","Item","Ordered","Accepted","Received","Short"], o.lines.map(l => `<tr><td>${l[0]}</td><td>${esc(ITEM[l[1]] || l[1])}</td><td>${n0(l[2])}</td><td>${l[3] == null ? "Not acknowledged" : n0(l[3])}</td><td>${o.rc.length ? n0(rcv(l[0])) : "Not yet"}</td><td>${sh(l[0]) ? `<span class="st-amber">${n0(sh(l[0]))}</span>` : ""}</td></tr>`));
   if (o.inv.length || o.pay.length) body += `<span class="lab">Invoices and payments</span>` + tbl(["Record","When","Amount","Status"],
-    o.inv.map(i => `<tr><td>Invoice ${esc(i[0])}</td><td>${esc(et(i[1]))}</td><td>${money(i[2])}</td><td>${esc(i[3])}</td></tr>`)
-    .concat(o.pay.map(p => `<tr><td>Remittance ${esc(p[0])}</td><td>${esc(et(p[1]))}</td><td>${money(p[3])} of ${money(p[4])}</td><td>${p[4] - p[3] > 0.004 ? `<span class="st-amber">${money(p[4] - p[3])} short-paid</span>` : "Paid in full"}</td></tr>`)));
-  if (o.own.length) body += E.facts("Ashby's own records", o.own.map(r => ({v:`<b>${esc(OWN[r[1]] || r[1])}</b> · ${esc(et(r[0]))}${r[3] ? ` · ${esc(r[3])}` : ""}${r[4] != null ? ` · ${n0(r[4])} cartons` : ""}`, tags:[[SYS(r[2]), null]]})));
+    o.inv.map(i => `<tr><td>${i[4] ? "Corrected invoice" : "Invoice"}</td><td>${esc(et(i[1]))}</td><td>${money(i[2])}</td><td>${esc(i[3].replace(/INV-\S+/, "the corrected invoice"))}</td></tr>`)
+    .concat(o.pay.map(p => `<tr><td>Remittance</td><td>${esc(et(p[1]))}</td><td>${money(p[3])} of ${money(p[4])}</td><td>${p[4] - p[3] > 0.004 ? `<span class="st-amber">${money(p[4] - p[3])} short-paid</span>` : "Paid in full"}</td></tr>`)));
+  if (o.own.length) body += E.facts("Ashby's own records", o.own.map(r => ({v:`<b>${esc(OWN[r[1]] || r[1])}</b> · ${esc(et(r[0]))}${r[4] != null ? ` · ${n0(r[4])} cartons` : ""}`, tags:[[SYS(r[2]), null]]})));
   body += E.details("ao:" + po, ruleList(["stage","close","release","own"].concat(ps ? ["short","dispute"] : pd ? ["possible","short"] : [])) + `<p class="k p8gap">Who did what</p>` + E.who3([["Read by","Rule · Trading Grid"],["Sent by Trading Grid","Nothing"]]));
   const paid = o.pay.length, chip = ps ? ["Paid short","amber"] : pd ? ["Possible deduction","amber"] : paid ? ["Paid","brand"] : o.inv.length ? ["Invoiced",""] : ["Open",""];
-  return {title:"PO " + po.slice(3), chip, meta:`${esc(o.to)} · ${money(o.v)} · requested ${esc(dmy(o.req))}${back ? " · " + back : ""}`, body, action:null};
+  return {title:"PO " + po.slice(3), chip, meta:`${esc(o.to)} · ${money(o.v)} · delivery ${esc(dmy(o.req).toLowerCase())}${back ? " · " + back : ""}`, body, action:null};
 }
 
 /* ---------- history ---------- */
 const H = (iso, text, roles) => E.hist(Math.round((Date.parse(iso) - Date.parse("2026-12-06T05:00:00Z")) / 60000), text, roles, "", "ash");
 H("2026-12-09T22:28:00.000Z", `Money in motion read · ${n0(A.open)} open Northfield orders · ${money(A.unpaid.value)} unpaid`, "Rule · Trading Grid");
-H("2026-12-01T13:00:00.000Z", `1 Dec · Remittance from Northfield · ${PS.invoices} invoices paid ${money(PS.gap)} short`, "Northfield accounts payable");
-PS.list.forEach(x => (x.trail || []).filter(t => t[1] !== "opened").forEach(t => H(t[0], `${et(isoET(t[0])).split(" ").slice(0, 2).join(" ")} · PO ${x.po.slice(3)} · ${t[1] === "decision" ? "charge " + String(t[2]).toLowerCase() + " by Northfield" : t[1] === "dispute" ? "charge disputed" : "charge accepted"}`, t[3] || "Northfield")));
+H("2026-12-01T13:00:00.000Z", `${et("2026-12-01 08:00")} · Remittance from Northfield · ${PS.invoices} invoices paid ${money(PS.gap)} short`, "Northfield accounts payable");
+PS.list.forEach(x => (x.trail || []).filter(t => t[1] !== "opened").forEach(t => H(t[0], `${et(isoET(t[0]))} · PO ${x.po.slice(3)} · ${t[1] === "decision" ? "charge " + String(t[2]).toLowerCase() + " by Northfield" : t[1] === "dispute" ? "charge disputed" : "charge accepted"}`, t[3] || "Northfield")));
 
 /* ---------- page ---------- */
 const AP = {

@@ -71,15 +71,35 @@ button,input{font:inherit;color:inherit}
 .menu button b{font-weight:600;color:var(--text-heading)}
 .menu button span{font-size:var(--ui-fs-small);color:var(--text-muted)}
 /* page head */
-.head{flex:none;display:flex;gap:var(--space-6);align-items:flex-start;justify-content:space-between;padding:var(--space-3) var(--ui-shell-gutter)}
+.head{flex:none;display:flex;flex-direction:column;gap:var(--space-1);padding:6px var(--ui-shell-gutter)}
+.hrow{display:flex;gap:var(--space-4);align-items:center;justify-content:space-between}
+.per{display:inline-flex;flex:none;border:1px solid var(--border-default);border-radius:var(--radius-md);background:var(--surface-card);padding:2px}
+.per button{border:0;background:none;font:inherit;font-size:var(--ui-fs-small);font-weight:500;color:var(--text-muted);padding:2px var(--space-3);border-radius:var(--radius-sm);cursor:pointer}
+.per button[aria-pressed="true"]{background:var(--action-soft);color:var(--action-text)}
+.per:empty{display:none}
 .head h1{margin:0;font-size:var(--ui-fs-title);font-weight:700;line-height:1.25;color:var(--text-heading)}
-.ev{margin:2px 0 0;color:var(--text-body)}
-.goal{margin:0;color:var(--text-muted);font-size:var(--ui-fs-small)}
-.figs{display:flex;gap:var(--space-2);flex:none}
-.fig{min-width:118px;border:1px solid var(--border-default);background:var(--surface-card);border-radius:var(--radius-md);padding:6px var(--space-3);display:flex;flex-direction:column}
-.fig span{font-size:var(--ui-fs-small);color:var(--text-muted);white-space:nowrap}
-.fig b{font-size:var(--ui-fs-card-title);font-weight:700;color:var(--text-heading)}
+.ev{margin:0;color:var(--text-body)}
+.goal{color:var(--text-muted)}
+.figs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--space-3)}
+.fig{border:1px solid var(--border-default);background:var(--surface-card);border-radius:var(--radius-lg);padding:6px var(--space-4);display:flex;flex-direction:column;align-items:flex-start;text-align:left;font:inherit;color:inherit;cursor:pointer;transition:background var(--ui-dur-fast) var(--ui-ease),box-shadow var(--ui-dur-fast) var(--ui-ease)}
+.fig:hover{background:var(--action-soft)}
+.fig:active{transform:scale(var(--ui-press-scale))}
+.fig[aria-pressed="true"]{background:var(--action-soft);box-shadow:inset 0 0 0 2px var(--color-action)}
+.fig span{font-size:var(--ui-fs-small);font-weight:500;color:var(--text-muted);white-space:nowrap}
+.fig b{font-size:calc(var(--ui-fs-title) * 1.2);line-height:1.1;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums}
+.fig em{font-style:normal;font-size:var(--ui-fs-small);color:var(--text-muted)}
 .fig.risk b{color:var(--ot-risk)}
+.glb{width:100%;border:0;background:none;cursor:pointer;font-family:inherit;text-align:left}
+.glb:hover{background:var(--surface-subtle)}
+.glb i{font-style:normal;color:var(--action-text);letter-spacing:0;text-transform:none;font-weight:500;margin-left:auto;padding-left:var(--space-2)}
+.more{margin-top:var(--space-2)}
+.sbar{display:grid;grid-template-columns:120px minmax(0,1fr) 150px;gap:var(--space-3);align-items:center;width:100%;border:0;border-bottom:1px solid var(--border-default);background:none;font:inherit;color:inherit;text-align:left;padding:var(--space-2) var(--space-1);cursor:pointer}
+.sbar:hover{background:var(--action-soft)}
+.sbar .tr{height:10px;border-radius:var(--radius-pill);background:var(--surface-subtle);overflow:hidden}
+.sbar .tr i{display:block;height:100%;background:var(--color-action);border-radius:var(--radius-pill)}
+.sbar .nm{font-weight:600;color:var(--text-heading)}
+.sbar .vv{text-align:right;font-variant-numeric:tabular-nums}
+.sbar .vv em{display:block;font-style:normal;font-size:var(--ui-fs-small);color:var(--text-muted)}
 /* list and detail */
 .split{flex:1;min-height:0;display:grid;grid-template-columns:var(--ui-list-pane) minmax(0,1fr);gap:var(--ui-shell-gutter);padding:0 var(--ui-shell-gutter) var(--ui-shell-gutter)}
 .pane{background:var(--surface-card);border:1px solid var(--border-default);border-radius:var(--radius-lg);min-height:0;display:flex;flex-direction:column;overflow:hidden}
@@ -202,7 +222,7 @@ s.was{color:var(--text-muted)}
 @media (max-width:959px){
   .app{height:auto}
   .head{flex-direction:column}
-  .figs{flex-wrap:wrap}
+  .figs{grid-template-columns:repeat(2,minmax(0,1fr))}
   .split{grid-template-columns:1fr}
   .pane{max-height:none}
   .list,.rbody{overflow:visible}
@@ -300,8 +320,9 @@ E.init = function(cfg){
   ${multi ? `<div class="menu" id="menu" role="menu" aria-label="Switch account"><div class="ml">Accounts</div>${cfg.sides.map(s => `<button type="button" role="menuitemradio" data-side="${s.id}" aria-checked="false"><b>${esc(s.person)}</b><span>${esc(s.company)}</span></button>`).join("")}</div>` : ""}</div>
 </header>
 <section class="head" aria-label="Problem">
-  <div><h1 id="title"></h1><p class="ev" id="ev"></p><p class="goal" id="goal"></p></div>
-  <div class="figs" id="figs"></div>
+  <div class="hrow"><h1 id="title"></h1><div class="per" id="per" role="group" aria-label="Period"></div></div>
+  <p class="ev"><span id="ev"></span><span class="goal" id="goal"></span></p>
+  <div class="figs" id="figs" role="group" aria-label="Key figures"></div>
 </section>
 <main class="split">
   <section class="pane" aria-label="List"><div class="tool"><input id="q" type="search" placeholder="Search" aria-label="Search the list"><span class="sort" id="sort"></span></div><div class="bulk" id="bulk" aria-live="polite"></div><div class="list" id="list"></div></section>
@@ -343,8 +364,10 @@ E.renderHead = () => {
   const h = E.page.head();
   $("#title").textContent = h.title;
   if (!S.eventSet) $("#ev").textContent = (S.evBy && S.evBy[S.side]) || h.event || "";
-  $("#goal").textContent = h.goal || "";
-  $("#figs").innerHTML = (h.figs || []).map(f => `<div class="fig${f[2] ? " " + f[2] : ""}"><span>${esc(f[0])}</span><b>${esc(f[1])}</b></div>`).join("");
+  $("#goal").textContent = h.goal ? " · " + h.goal : "";
+  const cur = S.sel[S.side];
+  $("#figs").innerHTML = (h.figs || []).map(f => `<button class="fig${f[2] ? " " + f[2] : ""}" type="button" data-sel="${esc(f[3])}" aria-pressed="${cur === f[3]}"><span>${esc(f[0])}</span><b>${esc(f[1])}</b>${f[4] ? `<em>${esc(f[4])}</em>` : ""}</button>`).join("");
+  $("#per").innerHTML = h.period ? h.period.options.map(o => `<button type="button" data-period="${esc(o[0])}" aria-pressed="${h.period.value === o[0]}">${esc(o[1])}</button>`).join("") : "";
   const sd = E.side();
   $("#ws").textContent = sd.label;
   $("#acctName").textContent = `${sd.person} · ${sd.company}`;
@@ -358,8 +381,12 @@ E.renderList = () => {
   let first = !S.started;
   let k = 0;
   $("#list").innerHTML = groups.map(g => {
-    const rows = g.rows.filter(r => !q || (r.title + " " + r.text).toLowerCase().includes(q));
+    let rows = g.rows.filter(r => !q || (r.title + " " + r.text).toLowerCase().includes(q));
     if (!rows.length) return "";
+    if (g.fold && !q) { const on = !!S.open["grp:" + g.label];
+      const head = `<button class="gl glb" type="button" data-grp="${esc(g.label)}" aria-expanded="${on}">${esc(g.label)} · ${g.count != null ? esc(g.count) : rows.length}<i>${on ? "Hide" : "Show"}</i></button>`;
+      if (!on) return head;
+      return head + rows.map(r => `<button class="row" type="button" data-sel="${esc(r.id)}" aria-current="${S.sel[S.side] === r.id}"><div class="r1"><span class="po">${esc(r.title)}</span>${r.chip ? E.chip(r.chip[0], r.chip[1]) : ""}</div><div class="r2">${esc(r.line)}</div>${r.sub ? `<div class="r3">${esc(r.sub)}</div>` : ""}</button>`).join(""); }
     return `${g.label ? `<div class="gl">${esc(g.label)}<span>${g.count != null ? esc(g.count) : rows.length}</span></div>` : ""}` + rows.map(r => (r.pick ? `<div class="pickrow"><input type="checkbox" class="pick" data-pick="${esc(r.id)}" aria-label="Select ${esc(r.title)}" ${S.picked && S.picked.has(r.id) ? "checked" : ""}>` : "") + `<button class="row${first ? " enter" : ""}" style="${first && !E.RM() ? `animation-delay:${(k++) * 30}ms` : ""}" type="button" data-sel="${esc(r.id)}" aria-current="${S.sel[S.side] === r.id}"><div class="r1"><span class="po">${esc(r.title)}</span>${r.chip ? E.chip(r.chip[0], r.chip[1]) : ""}</div><div class="r2">${esc(r.line)}</div>${r.sub || r.id === nextId ? `<div class="r3">${r.id === nextId && r.id !== S.sel[S.side] ? `<span class="nx">Next to work · </span>` : ""}${esc(r.sub || "")}</div>` : ""}</button>` + (r.pick ? `</div>` : "")).join("");
   }).join("") || `<p class="meta" style="padding:var(--space-3)">No match</p>`;
 };
@@ -376,7 +403,10 @@ E.renderRec = (flashKey) => {
   if (fk) { const el = $("#rec " + fk); if (el) el.focus({preventScroll:true}); }
 };
 E.render = (flashKey) => { E.renderHead(); E.renderList(); E.renderBulk(); E.renderRec(flashKey); if ($("#avp").classList.contains("on")) E.renderAv(); };
-E.select = (id, focus) => { S.sel[S.side] = id; E.renderList(); E.renderRec(); $("#rbody").scrollTop = 0; if (focus) $("#rech").focus({preventScroll:true}); };
+E.select = (id, focus) => { S.sel[S.side] = id; E.renderHead(); E.renderList(); E.renderRec(); $("#rbody").scrollTop = 0; if (focus) $("#rech").focus({preventScroll:true}); };
+/* A long table shows its first five rows; the rest open in place. */
+E.cap = (key, head, rows, n) => { n = n || 5; const all = !!S.open["all:" + key], show = all || rows.length <= n ? rows : rows.slice(0, n);
+  return `<table class="ow"><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${show.join("")}</tbody></table>` + (rows.length > n ? `<div class="more"><button class="lnk" type="button" data-det="all:${esc(key)}" aria-expanded="${all}">${all ? "Show first " + n : "Show all " + rows.length}</button></div>` : ""); };
 E.switchSide = id => {
   if (S.busy || id === S.side) { E.menu(false); return; }
   S.side = id; S.eventSet = false; E.menu(false);
@@ -414,6 +444,8 @@ E.onClick = function(e){
   if (t.dataset.sel) { E.select(t.dataset.sel, true); return; }
   if (t.dataset.doc) { E.openDoc(t.dataset.doc); return; }
   if (t.dataset.det) { S.open[t.dataset.det] = !S.open[t.dataset.det]; E.renderRec(); return; }
+  if (t.dataset.grp) { S.open["grp:" + t.dataset.grp] = !S.open["grp:" + t.dataset.grp]; E.renderList(); const b = document.querySelector(`[data-grp="${t.dataset.grp}"]`); if (b) b.focus(); return; }
+  if (t.dataset.period) { if (E.page.setPeriod) { E.page.setPeriod(t.dataset.period); E.render(); const b = document.querySelector(`[data-period="${t.dataset.period}"]`); if (b) b.focus(); E.say("Period: " + t.textContent); } return; }
   if (t.dataset.act) {
     const id = t.dataset.act;
     if (t.getAttribute("aria-disabled") === "true" || S.pending[id] || S.busy) return;
@@ -566,7 +598,7 @@ E.start = () => { E.render(); S.started = true; };
 <script id="avc-moment">
 window.TG_AVIATOR.asOf = function () { return new Date(Date.parse("2026-12-06T05:00:00Z") + E.S.clock * 60000).toISOString(); };
 window.TG_AVIATOR.side = function () { return E.side ? (E.cfg.sides.find(function (s) { return s.id === E.S.side; }) || {}).aviator : null; };
-window.TG_AVIATOR.context = function () { var id = E.S.sel[E.S.side] || ""; return /^po:/.test(id) ? "Purchase order " + id.slice(3) : /^sup:/.test(id) ? "Supplier " + id.slice(4) : /^apo:/.test(id) ? "Purchase order " + id.slice(4) : id === "a:home" ? "Money in motion" : id === "a:ps" ? "Paid short" : id === "a:pd" ? "Possible deductions" : id === "a:held" ? "Held" : /^a:/.test(id) ? "Invoices " + id.slice(2).replace("_", " ") : id === "transit" ? "Orders not yet received" : id ? "Stage " + id.slice(3) : ""; };
+window.TG_AVIATOR.context = function () { var id = E.S.sel[E.S.side] || ""; return /^po:/.test(id) ? "Purchase order " + id.slice(3) : /^sup:/.test(id) ? "Supplier " + id.slice(4) : /^apo:/.test(id) ? "Purchase order " + id.slice(4) : id === "a:home" ? "Money in motion" : id === "a:ps" ? "Paid short" : id === "a:pd" ? "Possible deductions" : id === "a:held" ? "Held" : /^a:/.test(id) ? "Invoices " + id.slice(2).replace("_", " ") : id === "transit" ? "Orders not yet received" : id === "due" ? "Invoices due this week" : id === "bar" ? "Orders billed above received" : id === "open" ? "Open orders by stage" : id ? "Stage " + id.slice(3) : ""; };
 
 </script>
 <script>
@@ -637,7 +669,8 @@ const R = {
   stage:{text:"An open order sits at the furthest document Trading Grid carries for it: purchase order, acknowledgment, ship notice, receiving advice, invoice.", src:"Trading Grid"},
   due:{text:"An invoice falls due on its invoice date plus its payment terms; the week runs Sunday to Saturday.", src:"Trading Grid"},
   unf:{text:"Unfilled at acknowledgment is the ordered value less the acknowledged value.", src:"Trading Grid"},
-  bar:{text:"Billed above received counts orders, not invoices: an order with any order item invoiced above the quantity received.", src:"Trading Grid"},
+  bar:{text:"Billed above received counts orders with any order item invoiced above the quantity received, valued at the order's average cost per unit.", src:"Trading Grid"},
+  period:{text:"The period counts invoices and remittances sent in it; the quarter started 27 September, the week runs Sunday to Saturday.", src:"Trading Grid"},
   transit:{text:"In transit counts every open order with no receiving advice, buyer and replenishment.", src:"Trading Grid"},
   ontime:{text:"Prepaid freight arrives inside the delivery window; collect freight is ready at the assigned pickup.", src:"Northfield guide"},
   asn:{text:"A ship notice is sent within 1 hour of departure.", src:"Northfield guide"},
@@ -655,6 +688,17 @@ const UNF = D.unfilled, DUE = D.due;
 const unfOf = po => (UNF.list.find(u => u.po === po) || {}).unfilled || 0;
 const dueOf = po => DUE.list.filter(d => d.po === po).reduce((s, d) => s + d.amount, 0);
 const SUPS = D.bySupplier.slice();
+/* Period: this week or quarter to date, by the date of the invoice or remittance. */
+const PSTART = {week:"2026-12-06", qtd:"2026-09-27"}, PLABEL = {week:"this week", qtd:"quarter to date"};
+S.per = "qtd";
+const invDay = po => ORDERS[po].docs.filter(d => d[0] === "810").map(d => d[2].slice(0, 10)).sort()[0] || "";
+const remDay = po => ORDERS[po].rem.map(r => r[1].slice(0, 10)).sort().pop() || "";
+const unitV = o => o.v / o.lines.reduce((a, l) => a + l[2], 0);
+const aboveV = po => { const o = ORDERS[po], u = unitV(o); return o.lines.reduce((a, l) => a + Math.max(0, l[6] - l[5]) * u, 0); };
+const barIds = () => buyerIds.filter(po => ORDERS[po].bar && invDay(po) >= PSTART[S.per]).sort((a, b) => aboveV(b) - aboveV(a));
+const barV = () => barIds().reduce((a, po) => a + aboveV(po), 0);
+const paidIds = () => buyerIds.filter(po => ORDERS[po].st === "Paid" && remDay(po) >= PSTART[S.per]).sort((a, b) => ORDERS[b].v - ORDERS[a].v);
+const paidV = () => paidIds().reduce((a, po) => a + ORDERS[po].rem.reduce((x, r) => x + r[2], 0), 0);
 const supAll = [...new Set(buyerIds.map(po => ORDERS[po].s))];
 supAll.forEach(s => { if (!SUPS.find(x => x.supplier === s)) SUPS.push({supplier:s, open_orders:0, open_value:0, due_in_period:0, unfilled_at_acknowledgment:0}); });
 
@@ -674,30 +718,53 @@ const ordRows = ids => ids.map(po => { const o = ORDERS[po], u = unfOf(po), d = 
 const ORDHEAD = ["Order","Supplier","Stage","Value","Due this week","Unfilled"];
 
 function stageRec(st){
-  const s = STAGE[st], ids = atStage(st);
+  const s = STAGE[st], paid = st === "Paid", ids = paid ? paidIds() : atStage(st);
   let body = "";
   if (st === "Acknowledged") {
     body += `<span class="lab">Unfilled at acknowledgment · ${money(UNF.value)} on ${UNF.orders} orders · ordered less acknowledged</span>`
-      + tbl(["Order","Supplier","Stage","Unfilled"], UNF.list.slice().sort((a, b) => b.unfilled - a.unfilled).map(u => `<tr><td>${orderBtn(u.po)}</td><td>${esc(u.supplier)}</td><td>${esc(ORDERS[u.po].st)}</td><td>${money(u.unfilled)}</td></tr>`));
-    body += `<span class="lab">Acknowledged, not yet shipped · ${ids.length} orders</span>` + tbl(ORDHEAD, ordRows(ids));
-  } else if (st === "Invoiced") {
-    body += `<span class="lab">Due this week · ${money(DUE.value)} on ${DUE.invoices} invoices · invoice date plus terms</span>`
-      + tbl(["Order","Supplier","Amount","Due"], DUE.list.map(d => `<tr><td>${orderBtn(d.po)}</td><td>${esc(d.supplier)}</td><td>${money(d.amount)}</td><td>${esc(DAYNAME(d.due))}${d.due < "2026-12-09" ? ", unpaid" : ""}</td></tr>`));
-    const bar = buyerIds.filter(po => ORDERS[po].bar);
-    body += `<span class="lab">Billed above received · ${bar.length} orders</span>` + tbl(ORDHEAD, ordRows(bar.sort((a, b) => ORDERS[b].v - ORDERS[a].v)));
-    body += `<span class="lab">Invoiced · ${ids.length} orders</span>` + tbl(ORDHEAD, ordRows(ids));
+      + E.cap("unf", ["Order","Supplier","Stage","Unfilled"], UNF.list.slice().sort((a, b) => b.unfilled - a.unfilled).map(u => `<tr><td>${orderBtn(u.po)}</td><td>${esc(u.supplier)}</td><td>${esc(ORDERS[u.po].st)}</td><td>${money(u.unfilled)}</td></tr>`));
+    body += `<span class="lab">Acknowledged, not yet shipped · ${ids.length} orders</span>` + E.cap("st:" + st, ORDHEAD, ordRows(ids));
+  } else if (paid && !ids.length) {
+    body += `<p class="vals">No remittance ${esc(PLABEL[S.per])}.</p>`;
   } else {
-    body += tbl(ORDHEAD, ordRows(ids));
+    body += E.cap("st:" + st, ORDHEAD, ordRows(ids));
   }
-  body += E.details("st:" + st, ruleList(st === "Paid" ? ["buyer","close"] : st === "Acknowledged" ? ["buyer","stage","unf"] : st === "Invoiced" ? ["buyer","stage","due","bar"] : ["buyer","stage"]));
-  const banner = st === "Acknowledged" ? [`${money(UNF.value)} can return to budget`, `Northfield's buyer returns it to budget in Northfield's ordering system, order by order.`] : st === "Invoiced" ? [`${money(DUE.value)} falls due this week`, `Northfield accounts payable schedules each payment in its own system.`] : null;
-  return {title:st, chip:st === "Acknowledged" ? ["Can return to budget","amber"] : null, meta:`${n0(s.orders)} orders · ${money(s.value)}${st === "Paid" ? " · paid by remittance" : " · buyer purchase orders"}`, banner, body, action:null};
+  body += E.details("st:" + st, ruleList(paid ? ["buyer","close","period"] : st === "Acknowledged" ? ["buyer","stage","unf"] : st === "Invoiced" ? ["buyer","stage","due"] : ["buyer","stage"]));
+  return {title:st, chip:paid ? [PLABEL[S.per].replace(/^./, c => c.toUpperCase()), ""] : null, meta:paid ? `${n0(ids.length)} orders · ${money(paidV())} paid by remittance` : `${n0(s.orders)} orders · ${money(s.value)} · buyer purchase orders`, banner:null, body, action:null};
+}
+
+function openRec(){
+  const max = Math.max.apply(null, STAGES.map(st => STAGE[st].value));
+  let body = `<span class="lab">Open value by stage · buyer purchase orders</span>` + STAGES.map(st => `<button class="sbar" type="button" data-sel="st:${st}"><span class="nm">${st}</span><span class="tr" aria-hidden="true"><i style="width:${Math.max(1, Math.round(STAGE[st].value / max * 100))}%"></i></span><span class="vv">${money(STAGE[st].value)}<em>${n0(STAGE[st].orders)} orders</em></span></button>`).join("");
+  body += `<span class="lab">Closed ${esc(PLABEL[S.per])}</span><button class="sbar" type="button" data-sel="st:Paid"><span class="nm">Paid</span><span></span><span class="vv">${money(paidV())}<em>${n0(paidIds().length)} orders</em></span></button>`;
+  body += E.details("open", ruleList(["buyer","stage","close","period"]));
+  return {title:"Open orders", chip:null, meta:`${n0(D.totals.open)} open · ${money(D.totals.openValue)} · ${D.totals.suppliers} suppliers`, banner:null, body, action:null};
+}
+
+function dueRec(){
+  const days = {}; DUE.list.forEach(d => { const k = DAYNAME(d.due); days[k] = days[k] || {v:0, n:0, d:d.due}; days[k].v += d.amount; days[k].n++; });
+  let body = `<div class="cash">${Object.keys(days).sort((a, b) => days[a].d < days[b].d ? -1 : 1).map(k => `<div class="cc"><span>${esc(k)}${days[k].d < "2026-12-09" ? " · unpaid" : ""}</span><b>${money(days[k].v)}</b><em>${n0(days[k].n)} ${days[k].n === 1 ? "invoice" : "invoices"}</em></div>`).join("")}</div>`;
+  body += `<span class="lab">Invoices due this week · largest first</span>` + E.cap("due", ["Order","Supplier","Amount","Due"], DUE.list.slice().sort((a, b) => b.amount - a.amount).map(d => `<tr><td>${orderBtn(d.po)}</td><td>${esc(d.supplier)}</td><td>${money(d.amount)}</td><td>${esc(DAYNAME(d.due))}${d.due < "2026-12-09" ? ", unpaid" : ""}</td></tr>`));
+  body += E.details("due", ruleList(["buyer","due"]));
+  return {title:"Due this week", chip:null, meta:`${n0(DUE.invoices)} invoices · ${money(DUE.value)}`, banner:[`${money(DUE.value)} falls due this week`, "Northfield accounts payable schedules each payment in its own system."], body, action:null};
+}
+
+function barRec(){
+  const ids = barIds(), v = barV(), none = ids.filter(po => ORDERS[po].lines.every(l => l[5] === 0)), part = ids.filter(po => none.indexOf(po) < 0);
+  const sum = a => a.reduce((x, po) => x + aboveV(po), 0);
+  let body = `<div class="cash">${[["No receipt on file", none], ["Received short", part]].filter(x => x[1].length).map(x => `<div class="cc"><span>${x[0]}</span><b>${money(sum(x[1]))}</b><em>${n0(x[1].length)} ${x[1].length === 1 ? "order" : "orders"}</em></div>`).join("")}</div>`;
+  const rows = ids.map(po => { const o = ORDERS[po], b = o.lines.reduce((a, l) => a + l[6], 0), r = o.lines.reduce((a, l) => a + l[5], 0);
+    return `<tr><td>${orderBtn(po)}</td><td>${esc(o.s)}</td><td>${n0(b)}</td><td>${r ? n0(r) : `<span class="st-red">None</span>`}</td><td>${money(aboveV(po))}</td></tr>`; });
+  body += ids.length ? `<span class="lab">Orders · largest first</span>` + E.cap("bar", ["Order","Supplier","Units invoiced","Units received","Above received"], rows) : `<p class="vals">No invoice ${esc(PLABEL[S.per])} bills above what was received.</p>`;
+  body += `<p class="reason"><b>Owner.</b> Each supplier corrects its invoice in its own system; Northfield accounts payable holds payment until it matches the receipt.</p>`;
+  body += E.details("bar", ruleList(["buyer","bar","period"]));
+  return {title:"Billed above received", chip:[`${n0(ids.length)} ${ids.length === 1 ? "order" : "orders"}`, "red"], meta:`${money(v)} · invoices ${esc(PLABEL[S.per])}`, banner:null, body, action:null};
 }
 
 function transitRec(){
   let body = `<div class="cash"><div class="cc"><span>Not yet received</span><b>${n0(D.transit.orders)} orders</b><em>${money(D.transit.value)}</em></div><div class="cc"><span>Buyer orders</span><b>${n0(D.transit.buyer)}</b></div><div class="cc"><span>Replenishment orders</span><b>${n0(D.transit.replenishment)}</b></div><div class="cc on"><span>At risk</span><b>${RISKIDS.length} orders</b><em>${money(RISKV)}</em></div></div>`;
   RGROUPS.forEach(g => { const ids = RISKIDS.filter(id => RISK[id].k === g.k).sort((a, b) => RISK[b].v - RISK[a].v);
-    body += `<span class="lab">${esc(g.label)} · ${ids.length}</span>` + tbl(["Order","Value","Owner","Where Northfield acts"], ids.map(id => { const o = RISK[id];
+    body += `<span class="lab">${esc(g.label)} · ${ids.length}</span>` + E.cap("tr:" + g.k, ["Order","Value","Owner","Where Northfield acts"], ids.map(id => { const o = RISK[id];
       return `<tr><td>${orderBtn(id)}</td><td>${money(o.v)}</td><td>Ashby Supplier</td><td>${esc(actsAt(o))}</td></tr>`; })); });
   body += E.details("transit", ruleList(["transit","risk","ontime","asn"]));
   return {title:"In transit", chip:[`${RISKIDS.length} at risk`,"red"], meta:`${n0(D.transit.orders)} orders not yet received · ${money(D.transit.value)} · buyer and replenishment`, body, action:null};
@@ -708,8 +775,8 @@ function supRec(name){
   const open = ids.filter(po => ORDERS[po].st !== "Paid").sort((a, b) => ORDERS[b].v - ORDERS[a].v), paid = ids.filter(po => ORDERS[po].st === "Paid").sort((a, b) => ORDERS[b].v - ORDERS[a].v);
   const cnt = st => ids.filter(po => ORDERS[po].st === st).length;
   let body = `<div class="cash">${STAGES.concat(["Paid"]).map(st => `<div class="cc"><span>${st}</span><b>${cnt(st)}</b></div>`).join("")}</div>`;
-  if (open.length) body += `<span class="lab">Open · ${open.length} orders</span>` + tbl(ORDHEAD, ordRows(open));
-  if (paid.length) body += `<span class="lab">Paid · ${paid.length} orders</span>` + tbl(ORDHEAD, ordRows(paid));
+  if (open.length) body += `<span class="lab">Open · ${open.length} orders</span>` + E.cap("so:" + name, ORDHEAD, ordRows(open));
+  if (paid.length) body += `<span class="lab">Paid · ${paid.length} orders</span>` + E.cap("sp:" + name, ORDHEAD, ordRows(paid));
   body += E.details("sup:" + name, ruleList(["buyer","close","stage"]));
   return {title:name, chip:null, meta:`${x.open_orders} open · ${money(x.open_value)} · due this week ${money(x.due_in_period)} · unfilled ${money(x.unfilled_at_acknowledgment)}`, body, action:null};
 }
@@ -769,7 +836,8 @@ function riskCard(id){
 }
 function orderRec(po){
   const o = ORDERS[po], r = RISK[po];
-  const back = S.from && S.from !== "po:" + po ? `<button class="lnk" type="button" data-sel="${esc(S.from)}">Back to ${esc(S.from.replace(/^st:|^sup:/, "").replace(/^transit$/, "In transit"))}</button>` : "";
+  const BACK = {transit:"In transit", due:"Due this week", bar:"Billed above received", open:"Open orders"};
+  const back = S.from && S.from !== "po:" + po ? `<button class="lnk" type="button" data-sel="${esc(S.from)}">Back to ${esc(BACK[S.from] || S.from.replace(/^st:|^sup:/, ""))}</button>` : "";
   let body = "";
   if (r) body += riskCard(po);
   body += holds(po) + stuck(po) + `<span class="lab">Purchase order to payment</span>` + strip(po) + lineView(po) + allDocs(po);
@@ -779,24 +847,26 @@ function orderRec(po){
 }
 
 /* ---------- page ---------- */
-S.sel = {nf:"st:Acknowledged"};
+S.sel = {nf:"due"};
 const origSelect = E.select;
 E.select = (id, focus) => { const cur = S.sel[S.side]; if (/^a?po:/.test(id) && cur && !/^a?po:/.test(cur)) S.from = cur; else if (!/^a?po:/.test(id)) S.from = null; origSelect(id, focus); };
 const NFP = window.P8NF = {
-  head:() => ({title:`${big(DUE.value)} falls due this week and ${money(UNF.value)} sits on orders suppliers will not fill`,
+  head:() => ({title:`${big(DUE.value)} falls due this week and ${big(barV())} is billed above what Northfield received`,
     event:`Trading Grid read the documents on ${n0(D.totals.orders)} purchase orders from ${D.totals.suppliers} suppliers; ${RISKIDS.length} inbound orders are at risk.`,
-    goal:"Leaders see what falls due and what returns to budget.",
-    figs:[["Open", big(D.totals.openValue)], ["Due this week", money(DUE.value)], ["Can return to budget", money(UNF.value)], ["In transit at risk", money(RISKV), "risk"]]}),
+    goal:"See what falls due and what is billed but not received.",
+    period:{value:S.per, options:[["week","This week"],["qtd","Quarter to date"]]},
+    figs:[["Open orders", big(D.totals.openValue), "", "open", `${n0(D.totals.open)} orders`], ["Due this week", money(DUE.value), "", "due", `${n0(DUE.invoices)} invoices`], ["Billed above received", money(barV()), "risk", "bar", `${n0(barIds().length)} ${barIds().length === 1 ? "order" : "orders"} · ${PLABEL[S.per]}`], ["In transit at risk", money(RISKV), "risk", "transit", `${RISKIDS.length} orders`]]}),
+  setPeriod:p => { S.per = p; },
   sortLabel:() => "Open value",
   groups:() => [
-    {label:"Stages · buyer purchase orders", count:"", rows:STAGES.concat(["Paid"]).map(st => ({id:"st:" + st, title:st, text:st, line:`${n0(STAGE[st].orders)} orders · ${money(STAGE[st].value)}`, sub:st === "Acknowledged" ? `${money(UNF.value)} unfilled can return to budget` : st === "Invoiced" ? `${money(DUE.value)} due this week` : st === "Paid" ? "Paid by remittance" : ""}))},
+    {label:"Stages · buyer purchase orders", count:"", rows:STAGES.concat(["Paid"]).map(st => ({id:"st:" + st, title:st, text:st, line:st === "Paid" ? `${n0(paidIds().length)} orders · ${money(paidV())}` : `${n0(STAGE[st].orders)} orders · ${money(STAGE[st].value)}`, sub:st === "Acknowledged" ? `${money(UNF.value)} unfilled at acknowledgment` : st === "Invoiced" ? `${money(DUE.value)} due this week` : st === "Paid" ? "Paid by remittance · " + PLABEL[S.per] : ""}))},
     {label:"Not yet received · every order", count:"", rows:[{id:"transit", title:"In transit", text:"in transit at risk", chip:[`${RISKIDS.length} at risk`,"red"], line:`${n0(D.transit.orders)} orders · ${money(D.transit.value)}`, sub:`${money(RISKV)} at risk of missing its delivery window`}]},
-    {label:"Suppliers by open value", count:SUPS.length, rows:SUPS.map(s => ({id:"sup:" + s.supplier, title:s.supplier, text:s.supplier, line:s.open_orders ? `${s.open_orders} open · ${money(s.open_value)}` : "No open orders", sub:[s.due_in_period ? `Due this week ${money(s.due_in_period)}` : "", s.unfilled_at_acknowledgment ? `Unfilled ${money(s.unfilled_at_acknowledgment)}` : ""].filter(Boolean).join(" · ")}))}],
-  record:id => /^st:/.test(id) ? stageRec(id.slice(3)) : id === "transit" ? transitRec() : /^sup:/.test(id) ? supRec(id.slice(4)) : orderRec(id.slice(3)),
-  rules:id => { const F = {buyer:`${n0(D.totals.orders)} buyer purchase orders, ${n0(D.totals.open)} open`, close:`${n0(STAGE.Paid.orders)} orders paid by remittance`, stage:STAGES.map(s => s + " " + STAGE[s].orders).join(", "), due:`${DUE.invoices} invoices, ${money(DUE.value)}`, unf:`${UNF.orders} orders, ${money(UNF.value)}`, bar:`${D.billedAbove} orders`, transit:`${n0(D.transit.orders)} orders, ${money(D.transit.value)}`, risk:`${RISKIDS.length} orders, ${money(RISKV)}`};
+    {label:"Suppliers by open value", count:SUPS.length, fold:true, rows:SUPS.map(s => ({id:"sup:" + s.supplier, title:s.supplier, text:s.supplier, line:s.open_orders ? `${s.open_orders} open · ${money(s.open_value)}` : "No open orders", sub:[s.due_in_period ? `Due this week ${money(s.due_in_period)}` : "", s.unfilled_at_acknowledgment ? `Unfilled ${money(s.unfilled_at_acknowledgment)}` : ""].filter(Boolean).join(" · ")}))}],
+  record:id => id === "open" ? openRec() : id === "due" ? dueRec() : id === "bar" ? barRec() : /^st:/.test(id) ? stageRec(id.slice(3)) : id === "transit" ? transitRec() : /^sup:/.test(id) ? supRec(id.slice(4)) : orderRec(id.slice(3)),
+  rules:id => { const F = {buyer:`${n0(D.totals.orders)} buyer purchase orders, ${n0(D.totals.open)} open`, close:`${n0(STAGE.Paid.orders)} orders paid by remittance`, stage:STAGES.map(s => s + " " + STAGE[s].orders).join(", "), due:`${DUE.invoices} invoices, ${money(DUE.value)}`, unf:`${UNF.orders} orders, ${money(UNF.value)}`, bar:`${barIds().length} orders, ${money(barV())} ${PLABEL[S.per]}`, period:PLABEL[S.per], transit:`${n0(D.transit.orders)} orders, ${money(D.transit.value)}`, risk:`${RISKIDS.length} orders, ${money(RISKV)}`};
     if (/^po:/.test(id) && RISK[id.slice(3)]) F.risk = cause(RISK[id.slice(3)]);
-    return (/^po:/.test(id) && RISK[id.slice(3)] ? ["risk","ontime","asn","own"] : id === "transit" ? ["transit","risk","ontime","asn"] : ["buyer","close","stage","due","unf","bar"]).map(k => ({text:R[k].text, src:R[k].src, found:F[k] || ""})); },
-  questions:() => ["What falls due this week?", "Which unfilled order items can return to budget?"],
+    return (/^po:/.test(id) && RISK[id.slice(3)] ? ["risk","ontime","asn","own"] : id === "transit" ? ["transit","risk","ontime","asn"] : id === "bar" ? ["buyer","bar","period"] : ["buyer","close","stage","due","unf","bar","period"]).map(k => ({text:R[k].text, src:R[k].src, found:F[k] || ""})); },
+  questions:() => ["What falls due this week?", "Which invoices bill more than Northfield received?"],
   act:() => null
 };
 NFP.D = D; NFP.riskN = RISKIDS.length;
@@ -885,7 +955,7 @@ function homeRec(){
 }
 function bucketRec(k){
   const b = BK.find(x => x[0] === k), x = INC[k];
-  let body = tbl(["Order","Amount","Due"], x.list.map(i => `<tr><td>${orderBtn(i.po)}</td><td>${money(i.amt)}</td><td>${esc(dmy(i.due))}</td></tr>`));
+  let body = E.cap("a:" + k, ["Order","Amount","Due"], x.list.map(i => `<tr><td>${orderBtn(i.po)}</td><td>${money(i.amt)}</td><td>${esc(dmy(i.due))}</td></tr>`));
   if (x.list.length < x.n) body += `<p class="meta">First ${x.list.length} of ${n0(x.n)} invoices by due date; the total covers all ${n0(x.n)}.</p>`;
   body += E.details("a:" + k, ruleList(["due","release","own"]));
   return {title:b[1], chip:null, meta:`${n0(x.n)} invoices · ${money(x.v)} · ${b[2]}`, banner:[`${money(x.v)} from Northfield Retailer`, "Northfield accounts payable releases each payment in its own system on the due date."], body, action:null};
@@ -895,7 +965,7 @@ function heldRec(){
   return {title:"Held", chip:null, meta:`${HELD.ih.invoices} invoices held · ${HELD.rni.orders} received orders not yet invoiced · ${money(heldV)}`, banner:null, body, action:null};
 }
 function psRec(){
-  const body = tbl(["Order","Invoiced","Paid","Short","Case","Next"], PS.list.map(x => { const st = psState(x), ev = (x.trail || []).map(t => t[4]).filter(Boolean)[0];
+  const body = E.cap("a:ps", ["Order","Invoiced","Paid","Short","Case","Next"], PS.list.map(x => { const st = psState(x), ev = (x.trail || []).map(t => t[4]).filter(Boolean)[0];
     return `<tr><td>${orderBtn(x.po)}</td><td>${money(x.invoiced)}</td><td>${money(x.paid)}</td><td>${money(x.gap)}</td><td>${esc(st[0])}${ev ? `<br><span class="via">${esc(EVID[ev] || ev)}</span>` : ""}</td><td>${esc(st[1])}</td></tr>`; }))
     + `<p class="reason"><b>Where Ashby acts.</b> Priya Raman disputes or accepts each charge in its deduction case. This view sends nothing.</p>`
     + E.details("a:ps", ruleList(["short","dispute","release"]));
@@ -903,7 +973,7 @@ function psRec(){
     banner:[`${money(owedV)} comes back and ${money(toDecideV)} waits for a decision`, `Northfield waived the charge on PO ${owedBack.map(x => x.po.slice(3)).join(", ")} and has not repaid it yet. ${toDecide.length} charges opened ${et("2026-12-01 08:30").toLowerCase()} wait for Priya to dispute or accept. Ashby accepted ${money(acceptedV)} for damage on prepaid freight.`], body, action:null};
 }
 function pdRec(){
-  let body = tbl(["Order","Short cartons at receipt","Possible charge"], PD.list.map(x => `<tr><td>${orderBtn(x.po)}</td><td>${n0(x.short_cases)}</td><td>${money(x.amount)}</td></tr>`));
+  let body = E.cap("a:pd", ["Order","Short cartons at receipt","Possible charge"], PD.list.map(x => `<tr><td>${orderBtn(x.po)}</td><td>${n0(x.short_cases)}</td><td>${money(x.amount)}</td></tr>`));
   if (PD.list.length < PD.orders) body += `<p class="meta">First ${PD.list.length} of ${PD.orders} receipts; the total covers all ${PD.orders}.</p>`;
   body += `<p class="reason"><b>Who acts.</b> Kinross Logistics checks its load scan for each order, in its warehouse system; Priya Raman disputes once Northfield opens a case. This view sends nothing.</p>`;
   body += E.details("a:pd", ruleList(["possible","short","own"]));
@@ -943,7 +1013,7 @@ const AP = {
   head:() => ({title:`${money(toDecideV)} in charges waits for your decision and ${money(PD.value)} may come off later payments`,
     event:`Northfield's last remittance paid ${PS.invoices} invoices ${money(PS.gap)} short, and ${PD.orders} receipts came in short with no case yet.`,
     goal:"See what comes in, when, and what may come off.",
-    figs:[["Due this week", money(INC.this_week.v)], ["Unpaid", big(A.unpaid.value)], ["Waiting for your decision", money(toDecideV), "risk"], ["Possible deductions", money(PD.value), "risk"]]}),
+    figs:[["Due this week", money(INC.this_week.v), "", "a:this_week", `${n0(INC.this_week.n)} invoices`], ["Unpaid", big(A.unpaid.value), "", "a:home", `${n0(A.unpaid.invoices)} invoices`], ["Waiting for your decision", money(toDecideV), "risk", "a:ps", `${toDecide.length} charges`], ["Possible deductions", money(PD.value), "risk", "a:pd", `${PD.orders} short receipts`]]}),
   sortLabel:() => "Due date",
   groups:() => [
     {label:"Money in motion", count:"", rows:[{id:"a:home", title:"Overview", text:"overview money in motion", line:`${money(A.unpaid.value)} unpaid · ${n0(A.unpaid.invoices)} invoices`, sub:`${n0(A.open)} open Northfield orders`}]},
@@ -961,7 +1031,7 @@ const AP = {
 
 const PAGES = {nf:NF, ash:AP};
 E.page = new Proxy({}, {get:(t, k) => (PAGES[S.side] || NF)[k]});
-S.sel.ash = "a:home";
+S.sel.ash = "a:ps";
 document.head.insertAdjacentHTML("beforeend", `<style id="p8-ash-style">.cc.ccb{border:0;text-align:left;cursor:pointer;font:inherit;transition:background var(--ui-dur-fast) var(--ui-ease)}.cc.ccb:hover{background:var(--action-soft)}.cc.ccb:active{transform:scale(var(--ui-press-scale))}.fr.frb{width:100%;background:none;border:0;border-bottom:1px solid var(--border-default);font:inherit;text-align:left;cursor:pointer;color:inherit}.fr.frb:hover{background:var(--action-soft)}.fr.frb .tag{color:var(--action-text)}</style>`);
 E.start();
 E.event(`Trading Grid read the documents on ${n0(NF.D.totals.orders)} purchase orders from ${NF.D.totals.suppliers} suppliers; ${NF.riskN} inbound orders are at risk.`, true);

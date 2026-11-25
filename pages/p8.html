@@ -396,7 +396,7 @@ E.docHTML = d => {
 E.openDoc = id => { const d = E.W.docs[id]; if (!d) return; E.openDrawer(d.name + (d.ref ? " " + d.ref : ""), E.docHTML(d)); };
 E.openHistory = () => {
   const items = S.hist.filter(h => h.t <= S.clock && h.sides.split(",").includes(S.side)).slice().sort((a, b) => b.t - a.t);
-  E.openDrawer("History", `<ul class="hi">${items.map(h => `<li><span class="tm">${esc(E.when(h.t))}</span><span>${h.doc ? `<button class="tag" style="font-size:var(--ui-fs-body);color:var(--text-heading)" type="button" data-doc="${esc(h.doc)}">${esc(h.text)}</button>` : esc(h.text)}<br><span class="by">${esc(h.roles)}</span></span></li>`).join("")}</ul>`);
+  E.openDrawer("History", `<ul class="hi">${items.map(h => `<li><span class="tm">${esc(h.when || E.when(h.t))}</span><span>${h.doc ? `<button class="tag" style="font-size:var(--ui-fs-body);color:var(--text-heading)" type="button" data-doc="${esc(h.doc)}">${esc(h.text)}</button>` : esc(h.text)}<br><span class="by">${esc(h.roles)}</span></span></li>`).join("")}</ul>`);
 };
 E.openRules = () => {
   const id = S.sel[S.side]; const rs = E.page.rules(id);
@@ -871,12 +871,17 @@ const stat = (label, v, sub) => `<div class="cc"><span>${esc(label)}</span><b>${
 
 /* ---------- records ---------- */
 function homeRec(){
-  let body = `<span class="lab">Coming in · unpaid invoices by due date</span><div class="cash">${BK.map(b => tile("a:" + b[0], b[1], money(INC[b[0]].v), `${n0(INC[b[0]].n)} invoices · ${b[2]}`, b[0] === "this_week")).join("")}</div>`;
+  const need = [
+    {v:`<b>${toDecide.length} charges · ${money(toDecideV)}</b> · dispute or accept in each deduction case`, tags:[["Paid short", null]], sel:"a:ps"},
+    {v:`<b>${money(owedV)} owed back</b> · Northfield waived the charge ${et(isoET(owedBack[0].trail.slice(-1)[0][0])).toLowerCase()}; not yet repaid`, tags:[["Paid short", null]], sel:"a:ps"},
+    {v:`<b>${PD.orders} short receipts · ${money(PD.value)}</b> · no deduction case yet; Kinross checks its load scans`, tags:[["Possible deductions", null]], sel:"a:pd"}];
+  let body = `<span class="lab">Needs Priya Raman</span>` + need.map(r => `<button class="fr frb" type="button" data-sel="${r.sel}"><span class="v">${r.v}</span><span class="tags"><span class="tag">${esc(r.tags[0][0])}</span></span></button>`).join("");
+  body += `<span class="lab">Coming in · unpaid invoices by due date</span><div class="cash">${BK.map(b => tile("a:" + b[0], b[1], money(INC[b[0]].v), `${n0(INC[b[0]].n)} invoices · ${b[2]}`, b[0] === "this_week")).join("")}</div>`;
   body += `<span class="lab">Held or at risk</span><div class="cash">${tile("a:held", "Held", money(heldV), heldV ? "" : "Nothing held")}${tile("a:ps", "Paid short", money(PS.gap), `${PS.invoices} invoices · ${money(owedV)} owed back`)}${tile("a:pd", "Possible deductions", money(PD.value), `${PD.orders} short receipts · no case yet`)}</div>`;
-  body += `<span class="lab">Northfield orders by stage · ${n0(A.open)} open · ${money(A.openValue)}</span><div class="cash">${STG.map(s => stat(s.stage, n0(s.orders), money(s.value))).join("")}</div>`;
+  body += `<span class="lab">Northfield orders by stage · ${n0(A.open)} open · ${money(A.openValue)}</span><div class="cash">${STG.filter(s => s.orders).map(s => stat(s.stage === "Paid" ? "Paid · closed" : s.stage, n0(s.orders), money(s.value))).join("")}</div>${STG.filter(s => !s.orders).length ? `<p class="meta">No order is ${STG.filter(s => !s.orders).map(s => s.stage.toLowerCase()).join(" or ")} without an invoice today.</p>` : ""}`;
   body += E.details("a:home", ruleList(["due","release","stage","close","possible","own"]));
   return {title:"Money in motion", chip:null, meta:`${money(A.unpaid.value)} unpaid on ${n0(A.unpaid.invoices)} invoices to Northfield Retailer`,
-    banner:[`${money(INC.this_week.v)} comes in this week`, `Northfield accounts payable releases each payment on its due date, invoice date plus terms. ${money(PD.value)} may come back off later payments as shortage charges.`], body, action:null};
+    banner:null, body, action:null};
 }
 function bucketRec(k){
   const b = BK.find(x => x[0] === k), x = INC[k];
@@ -900,10 +905,10 @@ function psRec(){
 function pdRec(){
   let body = tbl(["Order","Short cartons at receipt","Possible charge"], PD.list.map(x => `<tr><td>${orderBtn(x.po)}</td><td>${n0(x.short_cases)}</td><td>${money(x.amount)}</td></tr>`));
   if (PD.list.length < PD.orders) body += `<p class="meta">First ${PD.list.length} of ${PD.orders} receipts; the total covers all ${PD.orders}.</p>`;
-  body += `<p class="reason"><b>Where Ashby acts.</b> Ashby checks its own load scans for each order before Northfield opens a case. This view sends nothing.</p>`;
+  body += `<p class="reason"><b>Who acts.</b> Kinross Logistics checks its load scan for each order, in its warehouse system; Priya Raman disputes once Northfield opens a case. This view sends nothing.</p>`;
   body += E.details("a:pd", ruleList(["possible","short","own"]));
   return {title:"Possible deductions", chip:[`${PD.orders} short receipts`, "amber"], meta:`${money(PD.value)} at Northfield's shortage charge · no case open yet`,
-    banner:[`${money(PD.value)} may come off later payments`, "Northfield's receiving advice shows short cartons on these orders and no deduction case is open yet."], body, action:null};
+    banner:[`${money(PD.value)} may come off later payments`, "Northfield's receiving advice shows short cartons on these orders and no deduction case is open yet. Kinross checks its load scans first."], body, action:null};
 }
 function orderRec(po){
   const o = AO[po], ps = PS.list.find(x => x.po === po), pd = PD.list.find(x => x.po === po);
@@ -928,17 +933,17 @@ function orderRec(po){
 }
 
 /* ---------- history ---------- */
-const H = (iso, text, roles) => E.hist(Math.round((Date.parse(iso) - Date.parse("2026-12-06T05:00:00Z")) / 60000), text, roles, "", "ash");
+const H = (iso, text, roles) => { E.hist(Math.round((Date.parse(iso) - Date.parse("2026-12-06T05:00:00Z")) / 60000), text, roles, "", "ash"); S.hist[S.hist.length - 1].when = et(isoET(iso)); };
 H("2026-12-09T22:28:00.000Z", `Money in motion read · ${n0(A.open)} open Northfield orders · ${money(A.unpaid.value)} unpaid`, "Rule · Trading Grid");
-H("2026-12-01T13:00:00.000Z", `${et("2026-12-01 08:00")} · Remittance from Northfield · ${PS.invoices} invoices paid ${money(PS.gap)} short`, "Northfield accounts payable");
-PS.list.forEach(x => (x.trail || []).filter(t => t[1] !== "opened").forEach(t => H(t[0], `${et(isoET(t[0]))} · PO ${x.po.slice(3)} · ${t[1] === "decision" ? "charge " + String(t[2]).toLowerCase() + " by Northfield" : t[1] === "dispute" ? "charge disputed" : "charge accepted"}`, t[3] || "Northfield")));
+H("2026-12-01T13:00:00.000Z", `Remittance from Northfield · ${PS.invoices} invoices paid ${money(PS.gap)} short`, "Northfield accounts payable");
+PS.list.forEach(x => (x.trail || []).filter(t => t[1] !== "opened").forEach(t => H(t[0], `PO ${x.po.slice(3)} · ${t[1] === "decision" ? "charge " + String(t[2]).toLowerCase() + " by Northfield" : t[1] === "dispute" ? "charge disputed" : "charge accepted"}`, t[3] || "Northfield")));
 
 /* ---------- page ---------- */
 const AP = {
-  head:() => ({title:`${money(INC.this_week.v)} comes in this week and ${money(PD.value)} may come back as deductions`,
-    event:`Trading Grid read ${n0(A.unpaid.invoices)} unpaid invoices to Northfield and the receiving advice on every open order.`,
-    goal:"Ashby sees what comes in, when, and what may come off.",
-    figs:[["Unpaid", big(A.unpaid.value)], ["Due this week", money(INC.this_week.v)], ["Paid short", money(PS.gap)], ["Possible deductions", money(PD.value), "risk"]]}),
+  head:() => ({title:`${money(toDecideV)} in charges waits for your decision and ${money(PD.value)} may come off later payments`,
+    event:`Northfield's last remittance paid ${PS.invoices} invoices ${money(PS.gap)} short, and ${PD.orders} receipts came in short with no case yet.`,
+    goal:"See what comes in, when, and what may come off.",
+    figs:[["Due this week", money(INC.this_week.v)], ["Unpaid", big(A.unpaid.value)], ["Waiting for your decision", money(toDecideV), "risk"], ["Possible deductions", money(PD.value), "risk"]]}),
   sortLabel:() => "Due date",
   groups:() => [
     {label:"Money in motion", count:"", rows:[{id:"a:home", title:"Overview", text:"overview money in motion", line:`${money(A.unpaid.value)} unpaid · ${n0(A.unpaid.invoices)} invoices`, sub:`${n0(A.open)} open Northfield orders`}]},
@@ -957,7 +962,7 @@ const AP = {
 const PAGES = {nf:NF, ash:AP};
 E.page = new Proxy({}, {get:(t, k) => (PAGES[S.side] || NF)[k]});
 S.sel.ash = "a:home";
-document.head.insertAdjacentHTML("beforeend", `<style id="p8-ash-style">.cc.ccb{border:0;text-align:left;cursor:pointer;font:inherit;transition:background var(--ui-dur-fast) var(--ui-ease)}.cc.ccb:hover{background:var(--action-soft)}.cc.ccb:active{transform:scale(var(--ui-press-scale))}</style>`);
+document.head.insertAdjacentHTML("beforeend", `<style id="p8-ash-style">.cc.ccb{border:0;text-align:left;cursor:pointer;font:inherit;transition:background var(--ui-dur-fast) var(--ui-ease)}.cc.ccb:hover{background:var(--action-soft)}.cc.ccb:active{transform:scale(var(--ui-press-scale))}.fr.frb{width:100%;background:none;border:0;border-bottom:1px solid var(--border-default);font:inherit;text-align:left;cursor:pointer;color:inherit}.fr.frb:hover{background:var(--action-soft)}.fr.frb .tag{color:var(--action-text)}</style>`);
 E.start();
 E.event(`Trading Grid read the documents on ${n0(NF.D.totals.orders)} purchase orders from ${NF.D.totals.suppliers} suppliers; ${NF.riskN} inbound orders are at risk.`, true);
 })();

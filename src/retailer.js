@@ -261,7 +261,7 @@ export const REPLAY_CHECKS = {
   carton_over_cm: { what: 'No carton over N cm on any side', set: '856', current: null },
   unit_over_kg: { what: 'No carton holds a unit over N kg', set: '856', current: null },
   carton_contents_units: { what: 'Carton contents match the ship notice, charged per unit that differs', set: '856', current: 'NF-4.5 ($150 plus $1 per carton)', currentValue: 0, currentCharge: 'NF-4.5' },
-  ship_notice_trip_id: { what: 'Ship notice carries the trip ID in its header', set: '856', current: null }, // Northfield guide 2026.3, NF-4.18 (P28)
+  ship_notice_trip_id: { what: 'Ship notice carries the trip ID in its header', set: '856', current: null }, // Northfield guide 2026.3, NF-4.18
   ship_notice_accuracy_pct: { what: 'Ship notice accurate and complete, charged as N percent of the order’s cost', set: '856', current: null },
 };
 function failsOf(db, check, value, TO = '9999') {

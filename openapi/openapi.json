@@ -204,54 +204,6 @@
     }
    }
   },
-  "/v1/rules/guide-change": {
-   "get": {
-    "operationId": "guide_change_impact",
-    "summary": "What a Northfield guide change does to next week’s shipments",
-    "description": "Compares Northfield’s newest guide version with the one before, names the requirement it adds with its section, start and charge, replays Ashby’s ship notices of the last 30 days against it, lists the shipments due in the first week of the rule with the charge each would carry, and names the fix, its owner and whether it is made. Once the rule is in force it shows the first ship notice under it, its technical acknowledgment (997) and Northfield’s receiving advice. Ashby’s records only; changes nothing.",
-    "tags": [
-     "Requirement change"
-    ],
-    "x-mcp-tool": "guide_change_impact",
-    "x-required-scopes": [
-     "rules",
-     "documents",
-     "orders"
-    ],
-    "x-optional-scopes": [],
-    "x-read-only": true,
-    "parameters": [
-     {
-      "name": "as_of",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "type": "string",
-       "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
-      },
-      "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     },
-     "403": {
-      "description": "A required scope is not granted on this connection"
-     },
-     "404": {
-      "description": "Record not found, or not Ashby’s"
-     }
-    }
-   }
-  },
   "/v1/money": {
    "get": {
     "operationId": "money_in_motion",

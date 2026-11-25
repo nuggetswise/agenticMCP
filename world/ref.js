@@ -141,7 +141,7 @@ export const rules = [
   // P26 (20 November 2026): lot and best-before date on every food carton. The requirement follows grocery retailers'
   // published ship notice guides; the charge is invented.
   R('NF-4.17', 'ship notice', '856', 'Every food carton on a ship notice carries a lot and a best-before date; a ship notice with cartons that carry neither is charged', { code: 'LT01', charge: '$150 per ship notice plus $5 per carton without a lot', check: 'lot_and_date_on_food_cartons' }),
-  // P28 (24 November 2026): guide 2026.3 adds the trip ID on every ship notice from Monday 30 November. Invented for
+  // P21 (24 November 2026): guide 2026.3 adds the trip ID on every ship notice from Monday 30 November. Invented for
   // Northfield, modelled on a published retailer trip ID notice (world/stages/guide-change.js).
   { ...R('NF-4.18', 'ship notice', '856', 'Every ship notice carries the trip ID in its header from 30 November 2026; a ship notice without it is charged', { code: 'TI01', charge: '$150 per ship notice' }), rule_set: 'northfield-2026.3', source: 'Northfield supplier guide 2026.3, rule NF-4.18' },
   R('GS1-1', 'item', '832,856', 'Every item number has the length and check digit GS1 sets: 12 digits for a UPC, 14 for a case GTIN, the last digit a check digit', { owner: 'Industry standard', check: 'gtin_length_and_check_digit', basis: 'public', pub: [pub('gs1', 'A GTIN-12 is a U.P.C. Company Prefix, an item reference and a check digit, 12 digits in all'), pub('gs1prefix', 'A 12-digit GTIN carries an implied leading zero, so it is 12 digits, not 13')] }),

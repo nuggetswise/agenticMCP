@@ -114,7 +114,7 @@ export function rulesBySource(db, dataDb, cid) {
   if (cid === AS) for (const e of db.prepare("SELECT at, kind, data FROM events WHERE kind IN ('rule.changed', 'rule.added') ORDER BY at, id").all()) { const d = J(e.data);
     if (e.kind === 'rule.changed') { const x = groups['Ashby manual rules'].find((r) => r.id === d.rule); if (x) { x.params = { ...(x.params || {}), ...d.to }; x.last_change = { at: fmtET(e.at), by: d.changed_by, drafted_by: d.drafted_by, change: { rule: d.rule, from: d.from, to: d.to } }; } }
     else groups['Ashby manual rules'].push({ id: d.rule, source: 'Ashby manual rules', owner: 'Ashby', rule: d.statement, params: null, basis: 'Ashby', created_by: d.added_by, created: e.at.slice(0, 10), editable_here: false, last_change: { at: fmtET(e.at), by: d.added_by, drafted_by: d.drafted_by }, from_document: d.source || null }); }
-  // Each rule's document and section, where one stands behind it (rule documents, P21 and P28).
+  // Each rule's document and section, where one stands behind it (rule documents, P21).
   const secOf = new Map(); try { for (const s of db.prepare("SELECT s.rule_id, s.section, d.title, d.version, d.doc_id FROM rule_sections s JOIN rule_documents d ON d.doc_id = s.doc_id WHERE d.in_force_to IS NULL OR d.owner <> 'Northfield' ORDER BY d.published_at").all()) secOf.set(s.rule_id, { document: `${s.title} ${s.version}`, section: s.section }); } catch { /* tables absent in an older build */ }
   for (const g of Object.values(groups)) for (const r of g) if (secOf.has(r.id)) r.document = secOf.get(r.id);
   // Northfield rules published from a draft (P15) join the guide; those going into force later carry the date (D72).

@@ -1,5 +1,5 @@
-// P28 Guide change hits next week's shipments, and P21's "Create rules from a document" (24 November 2026, owner decisions;
-// spec: "TG for Retail · Prototype build prompts", sections P21 and P28).
+// Northfield's guide 2026.3 and the rule documents behind P21's "Create rules from a document" (24 November 2026, owner
+// decisions; spec: "TG for Retail · Prototype build prompts", section P21).
 //
 // Rule documents. Every rule now cites the document and section it comes from: Northfield's supplier guide in three
 // versions (2026.1, 2026.2 in force for the quarter, 2026.3 published 20 November, in force from Monday 30 November),
@@ -71,7 +71,7 @@ export function ruleDocuments(rules) {
 
 function generate(L) {
   // Northfield publishes guide 2026.3. Ashby's EDI operations add the trip ID to Ashby's ship notice map (the record of the
-  // fix Priya Raman confirms on P28); the Supplier ERP's ship notices carry it from then.
+  // fix Priya Raman confirms); the Supplier ERP's ship notices carry it from then.
   L.event({ at: GUIDE_PUBLISHED, kind: 'guide.published', po: null, system: 'Northfield supplier guide', party: 'NORTHFIELD', channel: 'Trading Grid',
     data: { document: NEW_GUIDE, version: '2026.3', replaces: OLD_GUIDE, in_force_from: TRIP_START, new_rules: [TRIP_RULE], published_by: 'Jordan Ellis' } });
   L.event({ at: ASHBY_MAP_FIX, kind: 'erp.correction', po: null, system: 'Supplier ERP', party: 'ASHBY', channel: 'API',
@@ -84,7 +84,7 @@ export default {
   origins: [],
   prev: () => [],
   schema: `
--- Rule documents (P21, P28): Northfield's supplier guide versions and the agreements behind Ashby's agreement rules.
+-- Rule documents (P21): Northfield's supplier guide versions and the agreements behind Ashby's agreement rules.
 CREATE TABLE rule_documents (doc_id TEXT PRIMARY KEY, owner TEXT NOT NULL, title TEXT NOT NULL, version TEXT NOT NULL, published_at TEXT NOT NULL, in_force_from TEXT NOT NULL, in_force_to TEXT,
   published_by TEXT NOT NULL, replaces TEXT, basis TEXT NOT NULL);
 -- Each rule's section in its document, with the requirement as written and the segment note (where in the X12 it is met).

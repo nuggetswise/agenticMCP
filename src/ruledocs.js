@@ -1,4 +1,4 @@
-// Rule documents (P21 "Create rules from a document"), the guide change (P28) and Ashby's money in motion (P8, Ashby side).
+// Rule documents (P21 "Create rules from a document") and Ashby's money in motion (P8, Ashby side).
 // Every figure is read from the records; nothing here writes. A rule drafted from a document goes into force only through
 // a person's own save (Ashby) or Northfield's replay and publish (P15).
 import { fmtET, etDay } from '../world/lib.js';
@@ -71,45 +71,6 @@ export function extractRules(db, side, { document, as_of } = {}) {
   return { found: true, document: { id: d.doc_id, title: d.title, version: d.version, published: d.published_at <= T ? fmtET(d.published_at) : 'Not yet published',  in_force_from: fmtET(d.in_force_from), replaces: d.replaces },
     sections_read: all.length, ...(prev ? { compared_with: d.replaces, unchanged_sections: all.length - picked.length } : {}), drafts,
     note: side === 'northfield' ? 'Drafts only: a draft goes into Draft rules, and a rule is published only after its replay (Rule Replay).' : 'Drafts only: Priya Raman saves a draft as an Ashby manual rule; a rule from Northfield’s guide stays Northfield’s and read-only.' };
-}
-
-/** P28: what Northfield's newest guide version changes for Ashby, at a moment. Ashby's records only. */
-export function guideChangeImpact(db, asOf = storyClock()) {
-  const T = asOf.toISOString();
-  const docs = db.prepare("SELECT * FROM rule_documents WHERE owner = 'Northfield' AND published_at <= ? ORDER BY published_at").all(T);
-  const nw = docs.at(-1), old = nw && docs.find((x) => x.doc_id === nw.replaces);
-  if (!nw || !old) return { found: false, message: 'No revised Northfield guide is published by then' };
-  const sec = db.prepare('SELECT * FROM rule_sections WHERE doc_id = ? AND new_in_version = 1').all(nw.doc_id);
-  const r = db.prepare('SELECT * FROM rules WHERE id = ?').get(TRIP_RULE); const s = sec.find((x) => x.rule_id === TRIP_RULE);
-  if (!r || !s) return { found: false, message: 'The revised guide adds no ship notice requirement' };
-  const start = s.in_force_from || nw.in_force_from; const perNotice = chargeNumber(r.charge) || 150;
-  const from30 = new Date(asOf.getTime() - 30 * DAY).toISOString();
-  const past = db.prepare("SELECT d.reference, d.po, d.sent_at, d.body FROM documents d JOIN orders o ON o.po = d.po WHERE o.supplier_id = 'ASHBY' AND d.doc_type = '856' AND d.test = 0 AND d.status <> 'Superseded' AND d.sent_at > ? AND d.sent_at <= ? ORDER BY d.sent_at").all(from30, T);
-  const withTrip = past.filter((x) => J(x.body).trip_id);
-  const fix = db.prepare("SELECT * FROM events WHERE kind = 'erp.correction' AND json_extract(data, '$.rule') = ? AND at <= ? ORDER BY at DESC LIMIT 1").get(TRIP_RULE, T);
-  // Next week's shipments: Ashby's open Northfield orders with no ship notice by the moment, due for delivery in the first week of the rule.
-  const end = new Date(Date.parse(start) + 7 * DAY).toISOString();
-  const shipped = new Set(db.prepare("SELECT DISTINCT po FROM documents WHERE doc_type = '856' AND sent_at <= ?").all(T).map((x) => x.po));
-  const upcoming = db.prepare("SELECT po, ship_to, requested_delivery, order_value FROM orders WHERE supplier_id = 'ASHBY' AND received_at <= ? AND requested_delivery >= ? AND requested_delivery < ? ORDER BY requested_delivery, po").all(T, etDay(new Date(start)), etDay(new Date(end)))
-    .filter((o) => !shipped.has(o.po));
-  const charged = fix ? 0 : upcoming.length;
-  const first = Date.parse(T) >= Date.parse(start) ? db.prepare("SELECT d.* FROM documents d JOIN orders o ON o.po = d.po WHERE o.supplier_id = 'ASHBY' AND d.doc_type = '856' AND d.test = 0 AND d.sent_at >= ? AND d.sent_at <= ? ORDER BY d.sent_at LIMIT 1").get(start, T) : null;
-  const firstNext = db.prepare("SELECT d.reference, d.po, d.sent_at FROM documents d JOIN orders o ON o.po = d.po WHERE o.supplier_id = 'ASHBY' AND d.doc_type = '856' AND d.test = 0 AND d.sent_at >= ? ORDER BY d.sent_at LIMIT 1").get(start);
-  let confirmed = null;
-  if (first) { const b = J(first.body); const ack = db.prepare("SELECT reference, sent_at, status FROM documents WHERE doc_type = '997' AND answers_doc_id = ? AND sent_at <= ?").get(first.doc_id, T);
-    const rcv = db.prepare("SELECT reference, sent_at, body FROM documents WHERE doc_type = '861' AND sent_at <= ?").all(T).find((x) => J(x.body).asn_ref === first.reference);
-    confirmed = { ship_notice: first.reference, po: first.po, sent: fmtET(first.sent_at), trip_id: b.trip_id || null, passes: !!b.trip_id, technical_acknowledgment: ack ? { reference: ack.reference, at: fmtET(ack.sent_at), reads: 'Technically acknowledged' } : null,
-      receiving_advice: rcv ? { reference: rcv.reference, at: fmtET(rcv.sent_at), matches: true } : null }; }
-  return { found: true, as_of: fmtET(asOf),
-    guide: { old: { document: old.doc_id, version: old.version }, new: { document: nw.doc_id, version: nw.version, published: fmtET(nw.published_at), published_by: nw.published_by } },
-    changed_requirement: { section: s.section, requires: s.requirement, starts: fmtET(start), charge: r.charge, segment_note: s.segment_note, rule: TRIP_RULE },
-    replay: { period: `${fmtET(from30)} to ${fmtET(asOf)}`, ship_notices_read: past.length, pass_new_rule: withTrip.length, would_fail: past.length - withTrip.length, basis: 'Each ship notice checked for the trip ID in its header; a ship notice counts as affected only if it lacks it and ships on or after the start' },
-    next_week: { from: etDay(new Date(start)), to: etDay(new Date(Date.parse(end) - 1)), shipments: upcoming.map((o) => ({ po: o.po, ship_to: o.ship_to, requested_delivery: o.requested_delivery, order_value: o.order_value, charge: fix ? 0 : perNotice })),
-      would_be_charged: charged, money_at_stake: money(charged * perNotice), charge_per_ship_notice: perNotice },
-    owner_fix: { owner: 'EDI operations', fix_in: 'Ashby’s ship notice map', state: fix ? 'Fixed' : 'Open', ...(fix ? { fixed_at: fmtET(fix.at), change: J(fix.data).change } : {}) },
-    first_shipment_under_rule: confirmed || (firstNext ? { next: 'First shipment under the new rule', ship_notice: firstNext.reference, po: firstNext.po, at: fmtET(firstNext.sent_at), as_of: firstNext.sent_at } : null),
-    already_shipped_wrong: db.prepare("SELECT count(*) n FROM documents d JOIN orders o ON o.po = d.po WHERE o.supplier_id = 'ASHBY' AND d.doc_type = '856' AND d.sent_at >= ? AND d.sent_at <= ? AND json_extract(d.body, '$.trip_id') IS NULL").get(start, T).n,
-    other_retailers: { retailers: 0, says: 'Ashby trades with Northfield only on Trading Grid in this world' } };
 }
 
 /** P8, Ashby's side: Ashby's working capital with Northfield at a moment. Ashby's records only. */

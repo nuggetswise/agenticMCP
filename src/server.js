@@ -562,7 +562,7 @@ const pageMoment = (page) => { const m = db.prepare('SELECT as_of FROM calendar 
 // story calendar. The area sets Aviator's read tools and its as-of moment, the latest moment of that area's rows; it
 // scopes questions and changes no data. Read-only: no action card on this page; an answer names the prototype to act in.
 export const AREAS = {
-  'Partner requirements': { ashby: ['lookup_retailer_rules', 'rule_documents', 'extract_rules_from_document', 'guide_change_impact'], northfield: ['lookup_rules', 'rule_documents', 'extract_rules_from_document', 'list_draft_rules', 'replay_draft_rule'] },
+  'Partner requirements': { ashby: ['lookup_retailer_rules', 'rule_documents', 'extract_rules_from_document'], northfield: ['lookup_rules', 'rule_documents', 'extract_rules_from_document', 'list_draft_rules', 'replay_draft_rule'] },
   Fulfillment: { ashby: ['orders_needing_attention', 'get_order', 'get_document', 'check_deliveries', 'explain_rejection'], northfield: ['supplier_document_trail', 'get_document', 'lot_reach'] },
   'Sell-through and replenishment': { ashby: ['get_order', 'get_document', 'recommend_next_step'], northfield: ['store_sell_through', 'supplier_document_trail'] },
   'Invoice and payment': { ashby: ['money_in_motion', 'get_order', 'get_document'], northfield: ['open_order_value', 'three_way_match', 'get_document'] },

@@ -166,3 +166,37 @@ export function promotionDeduction(db, ref, viewer = 'ashby', asOf = storyClock(
     return r ? { found: true, as_of: fmtET(asOf), ...view(r) } : { found: false, message: `No promotion deduction ${id}; the remittance holds ${rows.map((x) => x.deduction_ref).join(', ')}` }; }
   return { found: true, as_of: fmtET(asOf), remittance: rows[0].payment, deductions: rows.map(view), withheld: money(rows.reduce((t, r) => t + r.claimed_amount, 0)), not_supported: money(rows.reduce((t, r) => t + r.unauthorised_amount, 0)) };
 }
+
+// ---------- Catalogue data mismatch (P25) ----------
+// The UPC an Ashby ship notice carries for each item at a moment: the ship notice map's value when the map holds one,
+// else the Supplier ERP item mapping for the Northfield item, else the item master. Each is checked as Northfield's rules
+// read it: 12 digits with the GS1 check digit, and held in the catalogue records Ashby has published to Northfield.
+const upcCheckDigit = (u) => { const d = String(u).slice(0, 11).split('').map(Number); const s = d.reduce((t, x, i) => t + x * (i % 2 === 0 ? 3 : 1), 0); return (10 - (s % 10)) % 10; };
+export function catalogueCheck(db, asOf = storyClock()) {
+  const T = asOf.toISOString();
+  const held = db.prepare("SELECT sku, product, item_number, colour, size FROM catalogue_records WHERE supplier_id = 'ASHBY' AND published_at <= ? ORDER BY sku").all(T);
+  const heldUpc = new Set(held.map((h) => h.item_number));
+  const at = (sku, rec) => db.prepare('SELECT value, note FROM supplier_item_records WHERE supplier_id = ? AND sku = ? AND record = ? AND valid_from <= ? AND (valid_to IS NULL OR valid_to > ?) ORDER BY valid_from DESC LIMIT 1').get('ASHBY', sku, rec, T, T);
+  const items = db.prepare("SELECT sku, description FROM items WHERE supplier_id = 'ASHBY' ORDER BY sku").all();
+  const sent = {}; for (const it of items) { const v = at(it.sku, 'Ashby ship notice map') || at(it.sku, 'Supplier ERP item mapping') || at(it.sku, 'Supplier ERP item master'); if (v) sent[it.sku] = v.value; }
+  const problem = (u) => { if (!/^\d+$/.test(u) || u.length !== 12) return `${u.length} digits where a UPC has 12`; if (upcCheckDigit(u) !== Number(u[11])) return `Wrong check digit: it should be ${upcCheckDigit(u)}`; if (!heldUpc.has(u)) return 'Not held by Northfield: never published in Ashby’s catalogue records'; return null; };
+  const name = Object.fromEntries(items.map((i) => [i.sku, i.description]));
+  const wrong = Object.entries(sent).map(([sku, upc]) => ({ sku, item: name[sku], upc, problem: problem(upc) })).filter((x) => x.problem);
+  const wrongSku = new Set(wrong.map((w) => w.sku));
+  // Open orders: Northfield orders received, with no ship notice sent yet, that carry an item whose UPC would be wrong.
+  const open = db.prepare("SELECT o.po, o.ship_to, o.order_value FROM orders o WHERE o.supplier_id = 'ASHBY' AND o.received_at <= ? AND NOT EXISTS (SELECT 1 FROM shipments s WHERE s.po = o.po) ORDER BY o.po").all(T)
+    .map((o) => ({ ...o, lines: db.prepare('SELECT line, sku, qty_ordered FROM order_lines WHERE po = ? ORDER BY line').all(o.po) }))
+    .filter((o) => o.lines.some((l) => wrongSku.has(l.sku)));
+  // A ship notice built and not yet sent is held in Trading Grid for its checks; its order is the one on screen, not an open order.
+  const heldNotices = db.prepare("SELECT s.shipment_id, s.po FROM shipments s JOIN orders o ON o.po = s.po WHERE o.supplier_id = 'ASHBY' AND o.received_at <= ? AND s.sent_at > ?").all(T, T)
+    .filter((h) => db.prepare('SELECT sku FROM shipment_lines WHERE shipment_id = ?').all(h.shipment_id).some((l) => wrongSku.has(l.sku)));
+  const unpublished = db.prepare("SELECT sku, value, note FROM supplier_item_records WHERE supplier_id = 'ASHBY' AND record = 'Supplier ERP item master' AND valid_from <= ? AND (valid_to IS NULL OR valid_to > ?)").all(T, T).filter((r) => !heldUpc.has(r.value) && !held.some((h) => h.sku === r.sku));
+  return { found: true, as_of: fmtET(asOf),
+    northfield_holds: held.map((h) => ({ product: name[h.sku] || h.product, upc: h.item_number, colour: h.colour, size: h.size })),
+    in_supplier_erp_not_published: unpublished.map((u) => ({ upc: u.value, note: u.note })),
+    wrong_on_ship_notices: wrong.map((w) => ({ item: w.item, upc_sent: w.upc, problem: w.problem })),
+    ship_notices_held_for_these_item_numbers: heldNotices.map((h) => ({ ship_notice: h.shipment_id, order: h.po })),
+    open_orders_with_the_same_item_numbers: open.map((o) => ({ order: o.po, ship_to: o.ship_to.replace(/^DC(\d)/, 'DC $1'), value: money(o.order_value), would_carry: o.lines.filter((l) => wrongSku.has(l.sku)).map((l) => ({ item: name[l.sku], upc: sent[l.sku] })) })),
+    open_value: money(open.reduce((t, o) => t + o.order_value, 0)),
+    rules: { item_number: 'GS1 standard: 12 digits for a UPC, the last a check digit', held: 'Northfield guide: every order item on a ship notice carries a UPC Northfield holds in the supplier’s catalogue records' } };
+}

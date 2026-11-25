@@ -782,7 +782,8 @@
     "rule_documents",
     "extract_rules_from_document",
     "add_supplier_rule",
-    "lookup_retailer_rules"
+    "lookup_retailer_rules",
+    "flag_preview"
    ],
    "tools_northfield": [
     "lookup_rules",
@@ -861,6 +862,37 @@
    "owner": "Unassigned",
    "tools_northfield": [],
    "ends_at": "Northfield's payment of each funded invoice repays Kanmon"
+  },
+  {
+   "id": "P25",
+   "name": "P25 Catalogue data mismatch",
+   "status": "Built",
+   "calendar": "P25",
+   "seen_by": "Priya Raman",
+   "agency": {
+    "verdict": "not applicable",
+    "agent": null,
+    "job": "Check each item number on a held ship notice against GS1 and the catalogue records Northfield holds, and find the open orders that would repeat the error",
+    "reason": "Rules check the item numbers; the owners fix them in their own systems and Priya confirms each fix and releases the ship notice",
+    "would_reverse": "A mapping change or release made from Aviator without Priya pressing"
+   },
+   "customer_agent": {
+    "supplier": "Which UPCs Northfield holds and which open orders carry the same wrong item numbers",
+    "retailer": "None"
+   },
+   "erp_placement": "None",
+   "decisions": [],
+   "tools": [
+    "catalogue_check"
+   ],
+   "anchors": [
+    "order:NR-47300"
+   ],
+   "acceptance": [],
+   "capability_status": "planned",
+   "owner": "Unassigned",
+   "tools_northfield": [],
+   "ends_at": "Northfield's receiving advice matches the corrected ship notice"
   }
  ],
  "other_inventory": [

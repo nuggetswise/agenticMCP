@@ -446,7 +446,7 @@ for (const t of [...SCOUT_TOOLS, ...WATCH_TOOLS, ...MATCH_TOOLS, ...RUNTIME_TOOL
 const SESSION_TOOLS = (cid) => cid === AS ? [...SCOUT_TOOLS, ...WATCH_TOOLS, ...RUNTIME_TOOLS[AS]] : [...MATCH_TOOLS, ...RUNTIME_TOOLS[NF]];
 async function runSessionTool(cid, t, args) { let out; try { out = await t.run(args); if (cid === NF) out = linkify(out, SIDE[NF]); } catch (e) { out = { result: 'Invalid request', error: e.message }; } log(cid, t.name, [], args, out.result || out.status || 'Answered', []); return out; }
 function makeServer(cid) {
-  const server = new McpServer({ name: cid === AS ? 'trading-grid-ashby' : 'trading-grid-northfield', title: cid === AS ? 'Trading Grid · Ashby Supplier' : 'Trading Grid · Northfield Retailer', version: '0.4.11' }, { instructions: INSTRUCTIONS[cid]() });
+  const server = new McpServer({ name: cid === AS ? 'trading-grid-ashby' : 'trading-grid-northfield', title: cid === AS ? 'Trading Grid · Ashby Supplier' : 'Trading Grid · Northfield Retailer', version: '0.4.12' }, { instructions: INSTRUCTIONS[cid]() });
   // Every tool on the connection answers through `present` (src/credit.js): no result, title or description names an agent.
   const register = server.registerTool.bind(server);
   server.registerTool = (name, meta, handler) => register(name, { ...meta, title: present(meta.title), description: present(meta.description) }, async (args) => {
@@ -489,7 +489,7 @@ app.set('trust proxy', 1);
 app.use((req, res, next) => { const json = res.json.bind(res); res.json = (body) => json(present(body)); next(); });
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false }));
-app.get('/healthz', (req, res) => res.json({ status: 'ok', version: '0.4.11', writes: WRITES, connections: [AS, NF], aviator: !!process.env.GEMINI_API_KEY, model_routes: Aviator.modelRoutes().map((r) => `${r.route} · ${r.model}`) }));
+app.get('/healthz', (req, res) => res.json({ status: 'ok', version: '0.4.12', writes: WRITES, connections: [AS, NF], aviator: !!process.env.GEMINI_API_KEY, model_routes: Aviator.modelRoutes().map((r) => `${r.route} · ${r.model}`) }));
 const cidOf = (req, res) => { const c = BY_TOKEN[req.params.token]; if (!c) { res.status(404).send('Not found'); return null; } return c; };
 
 app.post('/mcp/:token', async (req, res) => {
@@ -606,13 +606,14 @@ export function recordsRead(text, results, focus = [], sources = []) {
   const main = []; const add = (x) => { if (x && returned(x) && !main.includes(x)) main.push(x); };
   for (const x of String(text).match(Cards.REF_RE) || []) add(x);
   for (const x of all) if (String(text).includes(x)) add(x);
-  for (const x of focus) add(x);
+  for (const x of focus) add(/^\d{4}-\d{2}$/.test(x) ? `PD-${x}` : x);
   const named = (refs) => refs.map((ref) => {
     if (db.prepare('SELECT 1 FROM orders WHERE po = ?').get(ref)) return { record: ref, name: `Purchase order ${ref}` };
     const d = db.prepare('SELECT name FROM documents WHERE reference = ? ORDER BY sent_at LIMIT 1').get(ref); if (d) return { record: ref, name: `${d.name} ${ref}` };
     if (/^PMT-/.test(ref)) return { record: ref, name: `Remittance ${ref}` };
     if (/^DC-/.test(ref)) return { record: ref, name: `Deduction case ${ref}` };
-    if (/^(DM|PD)-/.test(ref)) return { record: ref, name: `Deduction ${ref}` };
+    if (/^PD-/.test(ref)) return { record: ref, name: `Promotion deduction ${ref}` };
+    if (/^DM-/.test(ref)) return { record: ref, name: `Deduction ${ref}` };
     if (/^CI-/.test(ref)) return { record: ref, name: `Compliance invoice ${ref}` };
     if (/^(SHP|SO)-/.test(ref)) return { record: ref, name: `Supplier ERP shipment ${ref}` };
     if (/^NFD-/.test(ref)) return { record: ref, name: `Draft rule ${ref}` };
@@ -667,7 +668,10 @@ const PREREAD = {
   northfield: [[/\b(?:PD-)?\d{4}-\d{2}\b/, 'promotion_deduction', (r) => ({ deduction: r })], [/\bINV-[A-Z0-9-]+\b/, 'three_way_match', (r) => ({ reference: r })], [/\b(?:DC|DM)-\d+\b/, 'review_deduction_case', (r) => ({ case: r })], [/\bNR-\d+\b/, 'supplier_document_trail', (r) => ({ po: r })], [/\bASN-[A-Z0-9-]+\b/, 'get_document', (r) => ({ reference: r })]],
 };
 const MANY = /\b(quarter|weeks?|months?|all|across|each|every|suppliers|stores|orders|invoices|how many|how much|most|rank|often|trend|total)\b/i;
+// A reference written the way a person says it ("PO 46215", "case 41102", "deduction 2701-04") is read as the record's id.
+export const normalRefs = (text) => String(text || '').replace(/\bP\.?O\.?\s*#?\s*(\d{5,6})\b/gi, 'NR-$1').replace(/\b(?:deduction\s+)?case\s*#?\s*(\d{5})\b/gi, 'DC-$1').replace(/\b(?<!-)(\d{4}-\d{2})\b(?!-)/g, (m, d, i, all) => (/PD-$/.test(all.slice(0, i)) ? m : `PD-${d}`));
 export function prereadFor(side, question, context, names) {
+  question = normalRefs(question);
   const pick = (text) => { for (const [re, tool, args] of PREREAD[side] || []) { const m = String(text || '').match(re); if (m && names.has(tool)) return { tool, arguments: args(m[0]) }; } return null; };
   return pick(question) || (MANY.test(question) ? null : pick(context));
 }
@@ -764,7 +768,8 @@ async function pageAviator(page, req, res) {
   // An answer for a different period than the question asked is asked again on the secondary model (the primary when
   // there is none). If that also reads another period, the page gets an error code rather than a wrong answer.
   if (r.out.ok && !r.covers) { const second = all.filter((x) => x.route === 'secondary'); retried = second.length ? 'secondary' : 'primary';
-    const r2 = await run(second.length ? second : all, ` The first answer read a different period. Call the tool again with from ${asked.from} and to ${asked.to}.`);
+    // Secondary first; the primary stays behind it, so a secondary key whose daily quota is spent falls back rather than capping.
+    const r2 = await run(second.length ? [...second, ...all.filter((x) => x.route !== 'secondary')] : all, ` The first answer read a different period. Call the tool again with from ${asked.from} and to ${asked.to}.`);
     if (r2.out.ok && (r2.covers || (!r2.readPeriod && !r.readPeriod))) r = r2; else r = { ...r2, out: r2.out.capped ? r2.out : { ok: false, wrong_period: true, tools_called: [...(r.out.tools_called || []), ...(r2.out.tools_called || [])] } }; }
   const { out, results } = r;
   if (!out.ok) { runCards.forEach((c) => session.cards.delete(c.id)); runCards = []; }
@@ -774,7 +779,7 @@ async function pageAviator(page, req, res) {
   if (!out.ok) return res.status(out.capped ? 429 : 503).json({ ok: false, error: out.capped ? 'daily_cap' : /no model key/.test(out.message || '') ? 'aviator_unavailable' : 'no_answer', ...(out.cause ? { cause: out.cause } : {}), ...(out.reasons ? { checks: out.reasons } : {}), session: session.id });
   const titleOf = (n) => (tools.find((x) => x.name === n) || {}).title || null;
   const sources = [...(out.tools_called || []).map((x) => titleOf(x.tool)), ...(r.pre ? [titleOf(r.pre.tool)] : [])].filter((x) => x && !/SQL|query/i.test(x));
-  const rr = recordsRead(out.answer, results, [...(question.match(Cards.REF_RE) || []), ...(r.pre ? Object.values(r.pre.arguments) : [])], sources);
+  const rr = recordsRead(out.answer, results, [...(normalRefs(question).match(Cards.REF_RE) || []), ...(r.pre ? Object.values(r.pre.arguments) : [])], sources);
   res.json({ ok: true, answer: out.answer, answer_from: 'model', read: rr.read, also_read: rr.also, side, as_of: asOf, as_of_eastern: fmtET(at), ...(asked ? { period: { from: asked.from, to: asked.to } } : {}), ...(outside ? { outside_trading_grid: { owner: outside.owner, where: outside.where } } : {}), session: session.id, cards: runCards.map(publicCard) });
 }
 

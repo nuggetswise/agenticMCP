@@ -1343,6 +1343,112 @@
     }
    }
   },
+  "/v1/catalogue-check": {
+   "get": {
+    "operationId": "catalogue_check",
+    "summary": "Catalogue records and item numbers",
+    "description": "Ashby’s item numbers read against what Northfield holds: the catalogue records Ashby has published to Northfield (product, UPC, colour, size), any UPC in the Supplier ERP never published, the UPC each Ashby ship notice would carry now (from the ship notice map, the item mapping or the item master) with what is wrong with it under GS1 and Northfield’s guide, and the open orders not yet shipped that carry the same wrong item numbers, with their value. Use it for which UPCs Northfield holds and which open orders would repeat the error.",
+    "tags": [
+     "Ship notice check"
+    ],
+    "x-mcp-tool": "catalogue_check",
+    "x-required-scopes": [
+     "orders",
+     "documents"
+    ],
+    "x-optional-scopes": [],
+    "x-read-only": true,
+    "parameters": [
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+      },
+      "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    }
+   }
+  },
+  "/v1/flag-preview": {
+   "get": {
+    "operationId": "flag_preview",
+    "summary": "Missing-document flag, previewed",
+    "description": "Read-only: which of Ashby’s open documents a missing-document flag would catch if it fired with a given number of hours left before the deadline, against the value in force (Ashby’s own rule, 2 hours left today). For each document caught: the order, the document, its owner and the time left. Use it for what a 4, 8 or 12-hour flag would catch. Saves nothing; a change is saved only from Ashby’s rule settings.",
+    "tags": [
+     "Rule settings"
+    ],
+    "x-mcp-tool": "flag_preview",
+    "x-required-scopes": [
+     "orders",
+     "documents"
+    ],
+    "x-optional-scopes": [
+     "rules"
+    ],
+    "x-read-only": true,
+    "parameters": [
+     {
+      "name": "hours_left",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "number",
+       "description": "Hours left before the deadline at which the flag would fire, for example 12"
+      },
+      "description": "Hours left before the deadline at which the flag would fire, for example 12"
+     },
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+      },
+      "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    }
+   }
+  },
   "/v1/calendar": {
    "get": {
     "operationId": "get_story_calendar",

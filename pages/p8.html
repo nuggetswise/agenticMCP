@@ -71,33 +71,35 @@ button,input{font:inherit;color:inherit}
 .menu button b{font-weight:600;color:var(--text-heading)}
 .menu button span{font-size:var(--ui-fs-small);color:var(--text-muted)}
 /* page head */
-.head{flex:none;display:flex;flex-direction:column;gap:var(--space-1);padding:6px var(--ui-shell-gutter)}
+/* Figure size for headline tiles: proposed for the design system's Product UI scale. */
+:root{--ui-fs-stat:calc(var(--ui-fs-title) * 1.2);--ui-fw-bold:700;--lh-tight:1.1}
+.head{flex:none;display:flex;flex-direction:column;gap:var(--space-1);padding:var(--space-1) var(--ui-shell-gutter)}
 .hrow{display:flex;gap:var(--space-4);align-items:center;justify-content:space-between}
-.per{display:inline-flex;flex:none;border:1px solid var(--border-default);border-radius:var(--radius-md);background:var(--surface-card);padding:2px}
-.per button{border:0;background:none;font:inherit;font-size:var(--ui-fs-small);font-weight:500;color:var(--text-muted);padding:2px var(--space-3);border-radius:var(--radius-sm);cursor:pointer}
-.per button[aria-pressed="true"]{background:var(--action-soft);color:var(--action-text)}
+.per{display:inline-flex;flex:none;border:1px solid var(--border-default);border-radius:var(--radius-pill);background:var(--surface-page);padding:0}
+.per button{border:0;background:none;font:inherit;font-size:var(--ui-fs-small);font-weight:var(--ui-fw-medium);color:var(--text-muted);line-height:var(--space-6);padding:0 var(--space-3);border-radius:var(--radius-pill);cursor:pointer}
+.per button[aria-pressed="true"]{background:var(--surface-card);box-shadow:var(--shadow-xs);color:var(--ot-blue-900)}
 .per:empty{display:none}
 .head h1{margin:0;font-size:var(--ui-fs-title);font-weight:700;line-height:1.25;color:var(--text-heading)}
 .ev{margin:0;color:var(--text-body)}
 .goal{color:var(--text-muted)}
 .figs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--space-3)}
-.fig{border:1px solid var(--border-default);background:var(--surface-card);border-radius:var(--radius-lg);padding:6px var(--space-4);display:flex;flex-direction:column;align-items:flex-start;text-align:left;font:inherit;color:inherit;cursor:pointer;transition:background var(--ui-dur-fast) var(--ui-ease),box-shadow var(--ui-dur-fast) var(--ui-ease)}
+.fig{border:1px solid var(--border-default);background:var(--surface-card);border-radius:var(--radius-lg);padding:var(--space-1) var(--space-4);display:flex;flex-direction:column;align-items:flex-start;text-align:left;font:inherit;color:inherit;cursor:pointer;transition:background var(--ui-dur-fast) var(--ui-ease),box-shadow var(--ui-dur-fast) var(--ui-ease)}
 .fig:hover{background:var(--action-soft)}
-.fig:active{transform:scale(var(--ui-press-scale))}
 .fig[aria-pressed="true"]{background:var(--action-soft);box-shadow:inset 0 0 0 2px var(--color-action)}
-.fig span{font-size:var(--ui-fs-small);font-weight:500;color:var(--text-muted);white-space:nowrap}
-.fig b{font-size:calc(var(--ui-fs-title) * 1.2);line-height:1.1;font-weight:700;color:var(--text-heading);font-variant-numeric:tabular-nums}
+.fig span{font-size:var(--ui-fs-small);font-weight:var(--ui-fw-medium);color:var(--text-muted);white-space:nowrap}
+.fig b{font-size:var(--ui-fs-stat);line-height:var(--lh-tight);font-weight:var(--ui-fw-bold);color:var(--text-heading);font-variant-numeric:tabular-nums}
 .fig em{font-style:normal;font-size:var(--ui-fs-small);color:var(--text-muted)}
 .fig.risk b{color:var(--ot-risk)}
+.fig.warn b{color:var(--ot-warn)}
 .glb{width:100%;border:0;background:none;cursor:pointer;font-family:inherit;text-align:left}
 .glb:hover{background:var(--surface-subtle)}
-.glb i{font-style:normal;color:var(--action-text);letter-spacing:0;text-transform:none;font-weight:500;margin-left:auto;padding-left:var(--space-2)}
+.glb i{font-style:normal;color:var(--action-text);letter-spacing:0;text-transform:none;font-weight:var(--ui-fw-medium);margin-left:auto;padding-left:var(--space-2)}
 .more{margin-top:var(--space-2)}
-.sbar{display:grid;grid-template-columns:120px minmax(0,1fr) 150px;gap:var(--space-3);align-items:center;width:100%;border:0;border-bottom:1px solid var(--border-default);background:none;font:inherit;color:inherit;text-align:left;padding:var(--space-2) var(--space-1);cursor:pointer}
+.sbar{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,4fr) minmax(0,1fr);gap:var(--space-3);align-items:center;width:100%;border:0;border-bottom:1px solid var(--border-default);background:none;font:inherit;color:inherit;text-align:left;padding:var(--space-2) var(--space-1);cursor:pointer}
 .sbar:hover{background:var(--action-soft)}
-.sbar .tr{height:10px;border-radius:var(--radius-pill);background:var(--surface-subtle);overflow:hidden}
+.sbar .tr{height:6px;border-radius:var(--radius-pill);background:var(--border-default);overflow:hidden}
 .sbar .tr i{display:block;height:100%;background:var(--color-action);border-radius:var(--radius-pill)}
-.sbar .nm{font-weight:600;color:var(--text-heading)}
+.sbar .nm{font-weight:var(--ui-fw-semibold);color:var(--text-heading)}
 .sbar .vv{text-align:right;font-variant-numeric:tabular-nums}
 .sbar .vv em{display:block;font-style:normal;font-size:var(--ui-fs-small);color:var(--text-muted)}
 /* list and detail */
@@ -762,12 +764,12 @@ function barRec(){
 }
 
 function transitRec(){
-  let body = `<div class="cash"><div class="cc"><span>Not yet received</span><b>${n0(D.transit.orders)} orders</b><em>${money(D.transit.value)}</em></div><div class="cc"><span>Buyer orders</span><b>${n0(D.transit.buyer)}</b></div><div class="cc"><span>Replenishment orders</span><b>${n0(D.transit.replenishment)}</b></div><div class="cc on"><span>At risk</span><b>${RISKIDS.length} orders</b><em>${money(RISKV)}</em></div></div>`;
+  let body = `<div class="cash"><div class="cc"><span>Not yet received</span><b>${n0(D.transit.orders)} orders</b><em>${money(D.transit.value)}</em></div><div class="cc"><span>Buyer orders</span><b>${n0(D.transit.buyer)}</b></div><div class="cc"><span>Replenishment orders</span><b>${n0(D.transit.replenishment)}</b></div><div class="cc"><span>At risk</span><b>${RISKIDS.length} orders</b><em>${money(RISKV)}</em></div></div>`;
   RGROUPS.forEach(g => { const ids = RISKIDS.filter(id => RISK[id].k === g.k).sort((a, b) => RISK[b].v - RISK[a].v);
     body += `<span class="lab">${esc(g.label)} · ${ids.length}</span>` + E.cap("tr:" + g.k, ["Order","Value","Owner","Where Northfield acts"], ids.map(id => { const o = RISK[id];
       return `<tr><td>${orderBtn(id)}</td><td>${money(o.v)}</td><td>Ashby Supplier</td><td>${esc(actsAt(o))}</td></tr>`; })); });
   body += E.details("transit", ruleList(["transit","risk","ontime","asn"]));
-  return {title:"In transit", chip:[`${RISKIDS.length} at risk`,"red"], meta:`${n0(D.transit.orders)} orders not yet received · ${money(D.transit.value)} · buyer and replenishment`, body, action:null};
+  return {title:"In transit", chip:[`${RISKIDS.length} at risk`,"amber"], meta:`${n0(D.transit.orders)} orders not yet received · ${money(D.transit.value)} · buyer and replenishment`, body, action:null};
 }
 
 function supRec(name){
@@ -842,7 +844,7 @@ function orderRec(po){
   if (r) body += riskCard(po);
   body += holds(po) + stuck(po) + `<span class="lab">Purchase order to payment</span>` + strip(po) + lineView(po) + allDocs(po);
   body += E.details("o:" + po, ruleList(o.rp ? ["transit","close"] : ["buyer","close","stage"]) + `<p class="k p8gap">Who did what</p>` + E.who3([["Read by","Rule · Trading Grid"],["Sent by Trading Grid","Nothing"]]));
-  const chip = r ? ["At risk","red"] : o.st === "Paid" ? ["Paid","brand"] : o.bar ? ["Billed above received","amber"] : [o.st, ""];
+  const chip = r ? ["At risk","amber"] : o.st === "Paid" ? ["Paid","brand"] : o.bar ? ["Billed above received","amber"] : [o.st, ""];
   return {title:"PO " + po.slice(3), chip, meta:`${esc(o.s)} · ${esc(DC(o.to))} · ${money(o.v)} · ${o.rp ? "replenishment order" : "buyer purchase order"}${back ? " · " + back : ""}`, body, action:null};
 }
 
@@ -855,12 +857,12 @@ const NFP = window.P8NF = {
     event:`Trading Grid read the documents on ${n0(D.totals.orders)} purchase orders from ${D.totals.suppliers} suppliers; ${RISKIDS.length} inbound orders are at risk.`,
     goal:"See what falls due and what is billed but not received.",
     period:{value:S.per, options:[["week","This week"],["qtd","Quarter to date"]]},
-    figs:[["Open orders", big(D.totals.openValue), "", "open", `${n0(D.totals.open)} orders`], ["Due this week", money(DUE.value), "", "due", `${n0(DUE.invoices)} invoices`], ["Billed above received", money(barV()), "risk", "bar", `${n0(barIds().length)} ${barIds().length === 1 ? "order" : "orders"} · ${PLABEL[S.per]}`], ["In transit at risk", money(RISKV), "risk", "transit", `${RISKIDS.length} orders`]]}),
+    figs:[["Open orders", big(D.totals.openValue), "", "open", `${n0(D.totals.open)} orders`], ["Due this week", money(DUE.value), "", "due", `${n0(DUE.invoices)} invoices`], ["Billed above received", money(barV()), "risk", "bar", `${n0(barIds().length)} ${barIds().length === 1 ? "order" : "orders"} · ${PLABEL[S.per]}`], ["In transit at risk", money(RISKV), "warn", "transit", `${RISKIDS.length} orders`]]}),
   setPeriod:p => { S.per = p; },
   sortLabel:() => "Open value",
   groups:() => [
     {label:"Stages · buyer purchase orders", count:"", rows:STAGES.concat(["Paid"]).map(st => ({id:"st:" + st, title:st, text:st, line:st === "Paid" ? `${n0(paidIds().length)} orders · ${money(paidV())}` : `${n0(STAGE[st].orders)} orders · ${money(STAGE[st].value)}`, sub:st === "Acknowledged" ? `${money(UNF.value)} unfilled at acknowledgment` : st === "Invoiced" ? `${money(DUE.value)} due this week` : st === "Paid" ? "Paid by remittance · " + PLABEL[S.per] : ""}))},
-    {label:"Not yet received · every order", count:"", rows:[{id:"transit", title:"In transit", text:"in transit at risk", chip:[`${RISKIDS.length} at risk`,"red"], line:`${n0(D.transit.orders)} orders · ${money(D.transit.value)}`, sub:`${money(RISKV)} at risk of missing its delivery window`}]},
+    {label:"Not yet received · every order", count:"", rows:[{id:"transit", title:"In transit", text:"in transit at risk", chip:[`${RISKIDS.length} at risk`,"amber"], line:`${n0(D.transit.orders)} orders · ${money(D.transit.value)}`, sub:`${money(RISKV)} at risk of missing its delivery window`}]},
     {label:"Suppliers by open value", count:SUPS.length, fold:true, rows:SUPS.map(s => ({id:"sup:" + s.supplier, title:s.supplier, text:s.supplier, line:s.open_orders ? `${s.open_orders} open · ${money(s.open_value)}` : "No open orders", sub:[s.due_in_period ? `Due this week ${money(s.due_in_period)}` : "", s.unfilled_at_acknowledgment ? `Unfilled ${money(s.unfilled_at_acknowledgment)}` : ""].filter(Boolean).join(" · ")}))}],
   record:id => id === "open" ? openRec() : id === "due" ? dueRec() : id === "bar" ? barRec() : /^st:/.test(id) ? stageRec(id.slice(3)) : id === "transit" ? transitRec() : /^sup:/.test(id) ? supRec(id.slice(4)) : orderRec(id.slice(3)),
   rules:id => { const F = {buyer:`${n0(D.totals.orders)} buyer purchase orders, ${n0(D.totals.open)} open`, close:`${n0(STAGE.Paid.orders)} orders paid by remittance`, stage:STAGES.map(s => s + " " + STAGE[s].orders).join(", "), due:`${DUE.invoices} invoices, ${money(DUE.value)}`, unf:`${UNF.orders} orders, ${money(UNF.value)}`, bar:`${barIds().length} orders, ${money(barV())} ${PLABEL[S.per]}`, period:PLABEL[S.per], transit:`${n0(D.transit.orders)} orders, ${money(D.transit.value)}`, risk:`${RISKIDS.length} orders, ${money(RISKV)}`};

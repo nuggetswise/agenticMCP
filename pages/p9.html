@@ -680,7 +680,7 @@ const readList = docs => `<p class="k">Records read</p>` + docs.map(d => `<p>${t
 function recCard(id){
   const k = F.k, r = rules(id, k), x = m(id, k);
   if (!r.rec) return "";
-  if (nf()) return `<p class="na"><b>Ashby's recommendation</b> · Not available to Northfield</p>`;
+  if (nf()) return "";
   const prev = x.prev.join(", ");
   if (r.rec.kind === "order") {
     const l = lost(id, k);
@@ -707,7 +707,7 @@ function renderDet(){
   } else if (k === 5 && x.tout) banner = `<div class="card banner enter"><div class="bt">${x.tout} pairs transferred out</div><p>${x.oh} on hand and ${wks(x.wos)} weeks of supply after the transfer.</p></div>`;
   else if (k === 5 && x.tin) banner = `<div class="card banner enter"><div class="bt">${x.tin} pairs received by transfer</div><p>${x.oh} on hand after ${x.sold} sold.</p></div>`;
   const flag = r.empty || r.slow;
-  const stock = nf() ? wr(`<b>Supplier stock</b> · Not available to Northfield`) : wr(`<b>Supplier stock</b> · ${AVAIL} pairs available`, tag("Supplier ERP · API", "ERP"));
+  const stock = nf() ? "" : wr(`<b>Supplier stock</b> · ${AVAIL} pairs available`, tag("Supplier ERP · API", "ERP"));
   const shelf = r.empty ? `<b>Shelf</b> · <span class="st-red">0 on hand</span> · ${x.sold} sold against a ${Math.round(x.avg)}-pair average`
     : r.slow ? `<b>Stock</b> · ${x.oh} on hand · <span class="st-amber">${wks(x.wos)} weeks of supply</span> · ${x.sold} sold`
     : `<b>Shelf</b> · ${x.oh} on hand · ${x.sold} sold · ${Math.round(x.avg)}-pair average`;
@@ -735,7 +735,7 @@ function openDrawer(title, html){ from = document.activeElement; $("#dtitle").te
 function closeDrawer(){ if (!$("#drawer").classList.contains("on")) return; $("#drawer").classList.remove("on"); $("#scrim").classList.remove("on"); if (from && document.body.contains(from)) from.focus(); }
 function openDoc(id){
   const d = DOCS[id]; if (!d) return;
-  if (d.side === "ashby" && nf()) { openDrawer(d.name, `<p>Not available to Northfield</p>`); return; }
+  if (d.side === "ashby" && nf()) return;
   let h = `<dl class="kv"><dt>Document</dt><dd>${esc(d.name)}${d.ref ? " " + esc(d.ref) : ""}</dd><dt>Interface</dt><dd>${esc(d.iface)}</dd><dt>From</dt><dd>${esc(d.from)}</dd><dt>To</dt><dd>${esc(d.to)}</dd><dt>Received</dt><dd>${esc(dayName(d.at) + " " + hm(d.at))} ET</dd>${(d.kv || []).map(r => `<dt>${esc(r[0])}</dt><dd>${esc(r[1])}</dd>`).join("")}</dl>`;
   if (d.report != null) {
     const k = d.report, tot = IDS.reduce((a, s) => [a[0] + DATA[s][k][0], a[1] + DATA[s][k][1]], [0, 0]);
@@ -763,7 +763,7 @@ function openRules(){
                ["A transfer leaves 8 weeks of supply at the sending store.", r.rec && r.rec.kind === "transfer" ? "Keeps " + (x.oh - r.rec.pairs) + " pairs" : "Not used"],
                ["Northfield decides every order and transfer and picks the receiving store.", ""]];
   const blk = (rows, src) => rows.map(q => `<div class="rl"><div class="s">${esc(src)}</div><div>${esc(q[0])}</div>${q[1] ? `<div class="f">Here: ${esc(q[1])}</div>` : ""}</div>`).join("");
-  openDrawer("Rules for store " + id, blk(calc, "Trading Grid") + (nf() ? `<div class="rl"><div class="s">Ashby's replenishment rules</div><div>Not available to Northfield</div></div>` : blk(ash, "Ashby's replenishment rules")));
+  openDrawer("Rules for store " + id, blk(calc, "Trading Grid") + (nf() ? "" : blk(ash, "Ashby's replenishment rules")));
 }
 
 /* ---------- Aviator ---------- */

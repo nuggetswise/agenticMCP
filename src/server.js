@@ -132,7 +132,7 @@ function write(cid, name, args) {
   }
   // Business documents, application advice and chargebacks: the card is built from the side's rules and records, as on a page.
   const cardAction = cid === AS && name === 'send_document' ? ({ 855: 'send_acknowledgment', 865: 'answer_order_change', 856: 'send_ship_notice', 810: 'send_invoice', 997: 'answer_application_advice' })[args.document]
-    : cid === NF && ['send_application_advice', 'decide_chargeback'].includes(name) ? name : null;
+    : cid === NF && ['send_application_advice', 'decide_chargeback', 'draft_rule'].includes(name) ? name : cid === AS && name === 'add_supplier_rule' ? 'add_rule' : null;
   if (cardAction) {
     const r = Cards.buildCard(db, cid === AS ? 'ashby' : 'northfield', cardAction, args, D.asOfDate(args.as_of));
     if (!r.ok) { log(cid, name, [], args, 'Invalid request', [], refusedW(cid, null, 'Invalid request')); return { result: 'Invalid request', message: r.message }; }
@@ -260,7 +260,7 @@ const NF_SQL_TOOL = { name: 'run_readonly_sql', title: 'Read-only SQL over North
 const LOG_TOOL = { name: 'get_access_log', title: 'Access log', description: 'Every call made on this connection, and writes the other company made into shared records: time, user, tool, scopes used, arguments, result and records returned. Newest first.', input: { limit: z.number().int().min(1).max(200).optional() } };
 export const ALL_TOOLS = [...TOOLS, ...BOUNDARY, ...ASHBY_WRITES, ...ASHBY_REFUSALS, SQL_TOOL, LOG_TOOL];
 export const ALL_NF_TOOLS = [...NF_TOOLS, ...NF_WRITES, ...NF_REFUSALS, NF_SQL_TOOL, LOG_TOOL];
-const WRITE_NAMES = new Set(['submit_dispute', 'release_ship_notice', 'send_document', 'decide_charge', 'publish_rule', 'send_application_advice', 'decide_chargeback']);
+const WRITE_NAMES = new Set(['submit_dispute', 'release_ship_notice', 'send_document', 'decide_charge', 'publish_rule', 'send_application_advice', 'decide_chargeback', 'add_supplier_rule', 'draft_rule']);
 // Governance tools (T2.3). Pause and a trial change no Trading Grid record but do record on the change list, so none is marked read-only.
 const agentNames = (cid) => Object.keys(G.AGENTS).filter((a) => G.AGENTS[a].connection === cid).map((a) => `${RULE_SETS[a].runtime} (${ruleSet(a)})`).join(', ');
 const GOV = (cid) => [
@@ -558,6 +558,18 @@ const PAGES = existsSync(PAGES_JSON) ? JSON.parse(readFileSync(PAGES_JSON, 'utf8
 const BY_PAGE_TOKEN = Object.fromEntries(Object.entries(PAGES).map(([id, p]) => [p.token, { id, ...p }]));
 const SIDE_CID = { ashby: AS, northfield: NF };
 const pageMoment = (page) => { const m = db.prepare('SELECT as_of FROM calendar WHERE id = ?').get(page.calendar); return m ? m.as_of : null; };
+// The overview page's Aviator (a design to explore, 24 November 2026): before typing, the viewer chooses an area of the
+// story calendar. The area sets Aviator's read tools and its as-of moment, the latest moment of that area's rows; it
+// scopes questions and changes no data. Read-only: no action card on this page; an answer names the prototype to act in.
+export const AREAS = {
+  'Partner requirements': { ashby: ['lookup_retailer_rules', 'rule_documents', 'extract_rules_from_document', 'guide_change_impact'], northfield: ['lookup_rules', 'rule_documents', 'extract_rules_from_document', 'list_draft_rules', 'replay_draft_rule'] },
+  Fulfillment: { ashby: ['orders_needing_attention', 'get_order', 'get_document', 'check_deliveries', 'explain_rejection'], northfield: ['supplier_document_trail', 'get_document', 'lot_reach'] },
+  'Sell-through and replenishment': { ashby: ['get_order', 'get_document', 'recommend_next_step'], northfield: ['store_sell_through', 'supplier_document_trail'] },
+  'Invoice and payment': { ashby: ['money_in_motion', 'get_order', 'get_document'], northfield: ['open_order_value', 'three_way_match', 'get_document'] },
+  'Deductions and recovery': { ashby: ['list_deductions', 'get_deduction_case', 'get_document'], northfield: ['list_deduction_cases', 'review_deduction_case', 'get_document'] },
+  Performance: { ashby: ['get_scorecard', 'fill_rate', 'ship_notice_timeliness', 'finding_outcomes'], northfield: ['supplier_scorecard', 'fill_rate', 'ship_notice_timeliness', 'finding_outcomes'] },
+};
+const areaMoment = (area) => db.prepare('SELECT max(as_of) m FROM calendar WHERE stage = ?').get(area).m;
 // The page may run at any origin a viewer opens it from; the hosted copy's own requests go only to this server.
 const PAGE_CSP = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
 const PAGE_HEADERS = { 'Content-Security-Policy': PAGE_CSP, 'X-Content-Type-Options': 'nosniff', 'X-Robots-Tag': 'noindex, nofollow', 'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-cache' };
@@ -673,8 +685,11 @@ async function pageAviator(page, req, res) {
   const question = String(b.question || '').trim(); if (!question) return refuse(400, 'empty_question');
   if (question.length > MAX_QUESTION) return refuse(400, 'question_too_long', { max: MAX_QUESTION });
   const turns = Array.isArray(b.history) ? b.history : []; if (turns.length > MAX_TURNS) return refuse(400, 'too_many_turns', { max: MAX_TURNS });
+  // An area page (the overview) scopes Aviator to one area of the story calendar, at that area's latest moment.
+  const area = page.areas ? (Object.keys(AREAS).includes(String(b.area || '')) ? String(b.area) : null) : null;
+  if (page.areas && !area) return refuse(400, 'choose_area', { areas: Object.keys(AREAS) });
   // The page's moment, never the story clock. An as_of from the page must fall inside the page's own story window.
-  const moment = pageMoment(page); const through = page.through ? new Date(page.through).toISOString() : null; // null: window end not set yet, left open
+  const moment = area ? areaMoment(area) : pageMoment(page); const through = page.through ? new Date(page.through).toISOString() : null; // null: window end not set yet, left open
   let asOf = moment; if (b.as_of != null && b.as_of !== '') { const x = asOfIso(b.as_of); if (!x || x < moment || (through && x > through)) return refuse(403, 'outside_page_window', { from: moment, through }); asOf = x; }
   const at = new Date(asOf);
   // The viewer's session: one per viewer and page, shared by both sides of a switcher page, ended after 30 minutes idle.
@@ -682,7 +697,11 @@ async function pageAviator(page, req, res) {
   const context = typeof b.context === 'string' ? b.context.slice(0, 300) : b.context ? JSON.stringify(b.context).slice(0, 300) : '';
   const history = turns.filter((h) => h && typeof h.text === 'string').map((h) => ({ role: h.role === 'model' || h.role === 'aviator' ? 'model' : 'user', text: h.text.slice(0, 2000) }));
   // A tool that names its pages (fill_rate and ship_notice_timeliness: P7 and P22) is offered to Aviator on those pages only.
-  const readTools = (cid === AS ? TOOLS : NF_TOOLS).filter((t) => !t.pages || t.pages.includes(page.id)); const SD = SIDE[cid]; const asked = askedPeriod(question, at);
+  // A read-only page (pages.json aviator: read_only, P8) gets every read tool of its side, SQL and the rule reads included,
+  // and no proposal or decision tool. P21 adds the rule reads (rules by source, change list) to the side's read tools.
+  const readOnly = page.aviator === 'read_only'; const govReads = (GOV_TOOLS[cid] || []).filter((t) => !t.write);
+  const readTools = area ? (cid === AS ? TOOLS : NF_TOOLS).filter((t) => AREAS[area][side].includes(t.name)) : readOnly ? [...(cid === AS ? TOOLS : NF_TOOLS), ...govReads, cid === AS ? SQL_TOOL : NF_SQL_TOOL]
+    : [...(cid === AS ? TOOLS : NF_TOOLS).filter((t) => !t.pages || t.pages.includes(page.id)), ...(page.id === 'p21' ? govReads : [])]; const SD = SIDE[cid]; const asked = askedPeriod(question, at);
   // Facts the server sets for this turn. Outside Trading Grid: the guard is that no card can be raised (propose_action is
   // not offered); the model writes the reply from the owner and the place. Ashby asked for an 824: Ashby answers Northfield's
   // 824 with a 997 and the corrected invoice. A message a carried record holds: the person's words go into that record.
@@ -692,8 +711,11 @@ async function pageAviator(page, req, res) {
   const actions = Object.keys(Cards.CARD_ACTIONS[sideName]);
   const PROPOSE = { name: 'propose_action', description: `Raise an action card for ${SD.person} when asked to do something Trading Grid does. The server builds the card from ${SD.company}’s rules and the records and returns it as data; nothing happens until ${SD.person} presses Approve. Explain the card from its fields. Actions: ${actions.map((k) => `${k} (${Cards.CARD_ACTIONS[sideName][k].does}; takes ${Cards.CARD_ACTIONS[sideName][k].takes})`).join('; ')}.`,
     input: { action: z.enum(actions), lines: z.array(z.number()).optional().describe('Lines the person named, when they named any'), note: z.string().optional().describe('The person’s own words to the other company, when the record carries them: an application advice’s message, or a dispute’s note'), case: z.string().optional(), charge: z.string().optional(), decision: z.string().optional().describe('Waived or Upheld; Apply or Waive'), reason: z.string().optional(), po: z.string().optional(), document: z.string().optional(), draft: z.string().optional(), advice: z.string().optional(),
-      messages: z.array(z.object({ code: z.string(), message: z.string() })).optional().describe('With send_application_advice: a plain message per error code, at most 60 characters') } };
-  const tools = outside ? [...readTools] : [...readTools, PROPOSE];
+      messages: z.array(z.object({ code: z.string(), message: z.string() })).optional().describe('With send_application_advice: a plain message per error code, at most 60 characters'),
+      rule: z.string().optional().describe('With change_rule: the Ashby manual rule to change'), params: z.record(z.number()).optional().describe('With change_rule: the new parameter values, as the rule holds them'),
+      statement: z.string().optional().describe('With add_rule or draft_rule: what the rule requires, in the person’s words or as the document states it'), section: z.string().optional().describe('With add_rule or draft_rule: the section of the rule document named in document'),
+      check: z.string().optional().describe('With draft_rule: a replay check'), value: z.number().optional(), charge_amount: z.number().optional().describe('With draft_rule: charge per failure in dollars, only when stated') } };
+  const tools = outside || readOnly ? [...readTools] : [...readTools, PROPOSE];
   const perms = Object.fromEntries(G.aviatorPermissions(db, cid).actions.map((x) => [x.action, x.permission])); let runCards = []; let lastRefusal = null;
   const proposeAction = (args) => {
     // The model decides whether the person asked for an action. The server still checks the permission, builds the card
@@ -750,6 +772,26 @@ async function pageAviator(page, req, res) {
   const rr = recordsRead(out.answer, results, [...(question.match(Cards.REF_RE) || []), ...(r.pre ? Object.values(r.pre.arguments) : [])]);
   res.json({ ok: true, answer: out.answer, answer_from: 'model', read: rr.read, also_read: rr.also, side, as_of: asOf, as_of_eastern: fmtET(at), ...(asked ? { period: { from: asked.from, to: asked.to } } : {}), ...(outside ? { outside_trading_grid: { owner: outside.owner, where: outside.where } } : {}), session: session.id, cards: runCards.map(publicCard) });
 }
+
+// ---------- Rules from a viewer's own document (P21) ----------
+// A hosted P21 page posts the text of a file the viewer chose. The model reads it (AI reading); the server shapes each
+// requirement into a draft in When, Check, Then, Charge and Owner form. A viewer's own file has no records in the demo
+// world, so every draft reads "Not replayed: no matching records". Nothing is saved; the text is not kept or logged.
+const WHEN_SET = { 850: 'A purchase order arrives', 855: 'An order acknowledgment is sent', 856: 'A ship notice is sent', 810: 'An invoice is sent', 861: 'A receiving advice arrives' };
+app.options('/aviator/:token/extract', (req, res) => { cors(res).status(204).end(); });
+app.post('/aviator/:token/extract', async (req, res) => {
+  cors(res); const page = BY_PAGE_TOKEN[req.params.token]; if (!page || page.id !== 'p21') return res.status(404).json({ ok: false, error: 'not_found' });
+  const m = AV_MINUTE.hit(ipOf(req)); if (!m.ok) return res.status(429).set('Retry-After', String(m.retry_after)).json({ ok: false, error: 'rate_limited', retry_after: m.retry_after });
+  const b = req.body || {}; const side = String(b.side || '').toLowerCase(); if (!page.sides.includes(side)) return res.status(403).json({ ok: false, error: 'side_not_on_page' });
+  const text = String(b.text || ''); if (text.trim().length < 40) return res.status(400).json({ ok: false, error: 'empty_document' }); if (text.length > 30000) return res.status(400).json({ ok: false, error: 'document_too_long', max: 30000 });
+  const out = await Aviator.extractFromText({ text, side });
+  withVia({ id: `aviator-${page.id}-${side}`, user: `Rules from a document on /p/${page.id}` }, () => log(SIDE_CID[side], 'extract_rules_from_document', [], { chars: text.length, model_route: out.model ? `${out.route} · ${out.model}` : null }, out.ok ? `Read ${out.rules.length} requirement(s)` : `No answer: ${out.error}`, []));
+  if (!out.ok) return res.status(out.error === 'daily_cap' ? 429 : 503).json({ ok: false, error: out.error });
+  const owner = side === 'northfield' ? 'Northfield, Jordan Ellis' : 'Ashby, Priya Raman';
+  res.json({ ok: true, document: String(b.name || 'Your document').slice(0, 120), read_by: 'AI reading', drafts: out.rules.map((r) => ({ source: { document: String(b.name || 'Your document').slice(0, 120), section: r.section }, requires: r.requires,
+    when: WHEN_SET[String(r.document_set || '').trim()] || 'When the trade the section covers takes place', check: r.requires, then: r.charge ? `Charge ${r.charge}` : 'Flag it to its owner before the document leaves', charge: r.charge || 'To set', owner,
+    replay: { replayed: false, says: 'Not replayed: no matching records' }, state: 'Draft, not saved', ai_read: true })) });
+});
 
 // ---------- Action cards on hosted pages ----------
 const PERSON_OF = { ashby: 'Priya Raman', northfield: 'Jordan Ellis' };

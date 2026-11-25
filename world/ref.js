@@ -141,6 +141,9 @@ export const rules = [
   // P26 (20 November 2026): lot and best-before date on every food carton. The requirement follows grocery retailers'
   // published ship notice guides; the charge is invented.
   R('NF-4.17', 'ship notice', '856', 'Every food carton on a ship notice carries a lot and a best-before date; a ship notice with cartons that carry neither is charged', { code: 'LT01', charge: '$150 per ship notice plus $5 per carton without a lot', check: 'lot_and_date_on_food_cartons' }),
+  // P28 (24 November 2026): guide 2026.3 adds the trip ID on every ship notice from Monday 30 November. Invented for
+  // Northfield, modelled on a published retailer trip ID notice (world/stages/guide-change.js).
+  { ...R('NF-4.18', 'ship notice', '856', 'Every ship notice carries the trip ID in its header from 30 November 2026; a ship notice without it is charged', { code: 'TI01', charge: '$150 per ship notice' }), rule_set: 'northfield-2026.3', source: 'Northfield supplier guide 2026.3, rule NF-4.18' },
   R('GS1-1', 'item', '832,856', 'Every item number has the length and check digit GS1 sets: 12 digits for a UPC, 14 for a case GTIN, the last digit a check digit', { owner: 'Industry standard', check: 'gtin_length_and_check_digit', basis: 'public', pub: [pub('gs1', 'A GTIN-12 is a U.P.C. Company Prefix, an item reference and a check digit, 12 digits in all'), pub('gs1prefix', 'A 12-digit GTIN carries an implied leading zero, so it is 12 digits, not 13')] }),
   R('GS1-2', 'item', '832,856', 'Every item number carries the GS1 company prefix of the company that assigned it', { owner: 'Industry standard', check: 'gtin_company_prefix', basis: 'public', pub: [pub('gs1', 'A GTIN-12 begins with the U.P.C. Company Prefix of the company that issued it')] }),
   R('NF-4.12', 'location', '856', 'The ship-to GLN is an active Northfield location', { check: 'ship_to_active' }),
@@ -226,6 +229,7 @@ export const HISTORY_START = '2026-03-01';
 export const ruleSets = [
   { id: 'northfield-2026.1', owner: 'Northfield', published_at: '2026-02-16', valid_from: HISTORY_START, valid_to: '2026-08-01', note: 'Northfield supplier guide 2026.1. Superseded by 2026.2.' },
   { id: 'northfield-2026.2', owner: 'Northfield', published_at: '2026-07-15', valid_from: '2026-08-01', valid_to: null, note: 'Northfield supplier guide 2026.2, in force for the quarter.' },
+  { id: 'northfield-2026.3', owner: 'Northfield', published_at: '2026-11-20', valid_from: '2026-11-30T05:00:00.000Z', valid_to: null, note: 'Northfield supplier guide 2026.3: adds the trip ID on every ship notice (NF-4.18) from 30 November 2026.' },
   { id: 'ashby-policy', owner: 'Ashby', published_at: '2026-02-20', valid_from: HISTORY_START, valid_to: null, note: 'Ashby’s own policies.' },
   { id: 'ashby-agreement', owner: 'Ashby agreement', published_at: '2026-02-20', valid_from: HISTORY_START, valid_to: null, note: 'Agreements Ashby has signed.' },
   { id: 'kinross', owner: 'Ashby agreement', published_at: '2026-02-20', valid_from: HISTORY_START, valid_to: null, note: 'Ashby’s warehouse agreement with Kinross.' },

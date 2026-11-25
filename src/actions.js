@@ -12,6 +12,7 @@ import { fmtET } from '../world/lib.js';
 import * as D from './domain.js';
 import * as NR from './retailer.js';
 import { appendEvent, appendDocument, appendRow, overlayRow, currentSession } from './session.js';
+import { updateSupplierRule } from './governance.js';
 
 const J = (s) => { try { return s ? JSON.parse(s) : {}; } catch { return {}; } };
 const money = (n) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -32,12 +33,16 @@ export const CARD_ACTIONS = {
     answer_order_change: { write: 'send_document', permission: 'answer_order_change', rule: 'NF-1.6', doc: '865', takes: 'po', does: 'Answer an order change with a change acknowledgment (865)' },
     send_ship_notice: { write: 'send_document', permission: 'send_ship_notice', rule: 'NF-4.2', doc: '856', takes: 'po', does: 'Send the ship notice (856) built from the load scan' },
     send_invoice: { write: 'send_document', permission: 'send_invoice', rule: 'NF-7.8', doc: '810', takes: 'po', does: 'Send the invoice (810) for the shipped quantity' },
+    // P21 (24 November 2026): Aviator drafts a change to an Ashby manual rule, or a new one; pressing the card saves it.
+    change_rule: { write: 'update_supplier_rule', permission: 'change_rule', rule: null, takes: 'rule (an Ashby manual rule) and params', does: 'Change one of Ashby’s manual rules' },
+    add_rule: { write: 'add_supplier_rule', permission: 'add_rule', rule: null, takes: 'statement, optional document and section it comes from', does: 'Add an Ashby manual rule' },
     answer_application_advice: { write: 'send_document', permission: 'answer_application_advice', rule: 'NF-7.2', doc: '997', takes: 'advice (AA-…)', does: 'Answer Northfield’s application advice (824) with a 997 and the corrected document' },
   },
   northfield: {
     send_application_advice: { write: 'send_application_advice', permission: 'send_application_advice', rule: 'NF-7.8', takes: 'document (an 810 or 856 Northfield received), optional messages per error code', does: 'Reject a document with an application advice (824)' },
     decide_charge: { write: 'decide_charge', permission: 'decide_charge', rule: 'NF-7.7', takes: 'case, charge, decision (Waived or Upheld), reason', does: 'Waive or uphold a disputed deduction' },
     decide_chargeback: { write: 'decide_chargeback', permission: 'decide_chargeback', rule: 'NF-3.6', takes: 'po, decision (Apply or Waive)', does: 'Apply or waive a readiness chargeback' },
+    draft_rule: { write: 'draft_rule', permission: 'draft_rule', rule: 'NF-11.1', takes: 'statement, optional check, value and charge, optional document and section', does: 'Draft a Northfield rule into Draft rules' },
     publish_rule: { write: 'publish_rule', permission: 'publish_rule', rule: 'NF-11.1', takes: 'draft (NFD-…)', does: 'Publish a draft rule to suppliers after its replay' },
   },
 };
@@ -303,9 +308,45 @@ function buildPublish(db, side, a, T) {
   return { ok: true, card: { record: id, po: null, to: 'Every Northfield supplier', args: { draft: id, replay: { failing_with_draft: fails, added_exposure: exposure } },
     detail: { draft: id, statement: d.statement, replay: { failing: fails, added_exposure: exposure } } } };
 }
+// ---------- Rule drafts (P21) ----------
+const sectionOf = (db, doc, section) => (doc && section ? db.prepare('SELECT s.*, d.title, d.version, d.owner FROM rule_sections s JOIN rule_documents d ON d.doc_id = s.doc_id WHERE upper(s.doc_id) = ? AND s.section = ?').get(String(doc).toUpperCase(), String(section)) : null);
+function buildChangeRule(db, side, a, T) {
+  if (side !== 'ashby') return { ok: false, message: 'Northfield drafts a rule change into Draft rules and publishes it after a replay.' };
+  const r = updateSupplierRule(db, 'ashby-assistant', { rule: a.rule, params: a.params, as_of: T });
+  if (r.result !== 'Effect shown; nothing saved') return { ok: false, message: r.message || r.result };
+  const now = db.prepare('SELECT statement FROM rules WHERE id = ?').get(r.rule);
+  // Ashby's missing-document flag (P21's example): the open work the new value flags now that the value in force does not.
+  if (r.rule === 'AP-3.4' && typeof r.to.hours_left === 'number') {
+    const att = D.attention(db, new Date(T), { warehouse: true }); const left = (w) => (Date.parse(`${String(w.due).replace(' ET', '').replace(' ', 'T')}:00-05:00`) - Date.parse(T)) / 3600000;
+    const caught = (att.watching_not_flagged || []).filter((w) => left(w) <= r.to.hours_left);
+    r.effect = { touches: `${caught.length} open ${caught.length === 1 ? 'document' : 'documents'} flagged sooner`, changed: caught.map((w) => ({ po: w.po, document: w.document, owner: 'Kinross Logistics', time_left: w.time_left })), records: (att.watching_not_flagged || []).length };
+  }
+  return { ok: true, card: { record: now?.statement || 'Ashby manual rule', po: null, to: 'Ashby’s manual rules', args: { rule: r.rule, from: r.from, to: r.to },
+    detail: { rule: now?.statement, from: r.from, to: r.to, open_work: r.effect.touches, records_changed: r.effect.changed?.length ?? 0, records_read: r.effect.records ?? 0, lines: (r.effect.changed || []).slice(0, 12).map((c) => ({ po: c.po || c.record || null, document: c.document || null, time_left: c.time_left || null })) } } };
+}
+function buildAddRule(db, side, a, T) {
+  if (side !== 'ashby') return { ok: false, message: 'Northfield adds a rule through Draft rules.' };
+  const sec = sectionOf(db, a.document, a.section);
+  if (sec && sec.owner === 'Northfield') return { ok: false, message: `Section ${sec.section} of ${sec.title} ${sec.version} is Northfield’s rule and stays read-only for Ashby.` };
+  const statement = String(a.statement || sec?.requirement || '').trim(); if (statement.length < 8) return { ok: false, message: 'Say what the new rule requires.' };
+  return { ok: true, card: { record: 'New Ashby manual rule', po: null, to: 'Ashby’s manual rules', args: { statement, source: sec ? { document: sec.doc_id, section: sec.section } : null },
+    detail: { statement, source: sec ? `${sec.title} ${sec.version}, section ${sec.section}` : 'Priya Raman’s own words', charge: sec?.charge || 'To set' } } };
+}
+function buildDraftRule(db, side, a, T) {
+  if (side !== 'northfield') return { ok: false, message: 'Ashby saves its own rules; Northfield’s guide is Northfield’s.' };
+  const sec = sectionOf(db, a.document, a.section);
+  if (sec && sec.owner !== 'Northfield') return { ok: false, message: 'Not available to Northfield: Ashby’s agreements are Ashby’s own records.' };
+  const statement = String(a.statement || sec?.requirement || '').trim(); if (statement.length < 8) return { ok: false, message: 'Say what the draft rule requires.' };
+  const check = a.check && NR.REPLAY_CHECKS[a.check] ? a.check : null; const value = a.value != null ? Number(a.value) : 0; const charge = a.charge_amount != null ? Number(a.charge_amount) : a.charge != null && Number.isFinite(Number(a.charge)) ? Number(a.charge) : null;
+  const rp = check ? NR.replayRule(db, { check, value, charge: charge ?? undefined, as_of: T }) : null;
+  const replay = rp && rp.found !== false && rp.documents_replayed ? { documents_replayed: rp.documents_replayed, failing: rp.failing_with_draft, exposure: rp.exposure_with_draft ?? rp.added_exposure ?? 'To set' } : { says: 'Not replayed: no matching records' };
+  return { ok: true, card: { record: 'New draft rule', po: null, to: 'Northfield’s Draft rules', args: { statement, check, value, charge, source: sec ? { document: sec.doc_id, section: sec.section } : null, replay },
+    detail: { statement, charge: charge == null ? 'To set' : `$${charge.toFixed(2)}`, replay, source: sec ? `${sec.title} ${sec.version}, section ${sec.section}` : 'Jordan Ellis’s own words', publishes: 'Only after its replay, through Rule Replay' } } };
+}
 const BUILD = { open_dispute: buildDispute, release_held_ship_notice: buildRelease, send_acknowledgment: (db, s, a, T) => buildDocument(db, s, a, T, '855'), answer_order_change: (db, s, a, T) => buildDocument(db, s, a, T, '865'),
   send_ship_notice: (db, s, a, T) => buildDocument(db, s, a, T, '856'), send_invoice: (db, s, a, T) => buildDocument(db, s, a, T, '810'), answer_application_advice: buildAnswerAdvice,
-  send_application_advice: buildAdvice, decide_charge: buildDecision, decide_chargeback: buildChargeback, publish_rule: buildPublish };
+  send_application_advice: buildAdvice, decide_charge: buildDecision, decide_chargeback: buildChargeback, publish_rule: buildPublish,
+  change_rule: buildChangeRule, add_rule: buildAddRule, draft_rule: buildDraftRule };
 
 /** Builds the card for one action on one side at one moment, or says plainly why there is none. */
 export function buildCard(db, side, action, args = {}, T) {
@@ -386,6 +427,11 @@ export function applyCard(db, card, by) {
     case 'decide_chargeback': return a.decision === 'Apply'
       ? { case: a.case, event: ev('case.opened', a.po, { case: a.case, charge: 'RT01', amount: a.amount, deduction: null, opened_by: by, basis: `Lakeline reports the collect load not ready at the assigned pickup ${fmtET(a.assigned_pickup)}`, dispute_deadline: new Date(Date.parse(T) + 60 * 86400000).toISOString().slice(0, 10) }, 'Northfield deduction case') }
       : { event: ev('compliance.chargeback_waived', a.po, { charge: 'RT01', amount: a.amount, waived_by: by }, 'Northfield compliance record') };
+    case 'change_rule': return { event: ev('rule.changed', null, { rule: a.rule, from: a.from, to: a.to, changed_by: by, drafted_by: 'Aviator', source: 'Ashby manual rules' }, 'Ashby manual rules') };
+    case 'add_rule': { const n = db.prepare("SELECT count(*) n FROM events WHERE kind = 'rule.added'").get().n + 1; const id = `AR-${n}`;
+      return { rule: id, event: ev('rule.added', null, { rule: id, statement: a.statement, source: a.source, added_by: by, drafted_by: 'Aviator', owner: 'Ashby' }, 'Ashby manual rules') }; }
+    case 'draft_rule': { const n = db.prepare("SELECT count(*) n FROM events WHERE kind = 'rule.drafted'").get().n + 1; const id = `NFD-A${n}`;
+      return { draft: id, event: ev('rule.drafted', null, { draft: id, statement: a.statement, check_kind: a.check, value: a.value, charge: a.charge, source: a.source, replay: a.replay, author: by, drafted_by: 'Aviator', state: 'Draft' }, 'Northfield supplier guide') }; }
     case 'publish_rule': return { event: ev('rule.published', null, { draft: a.draft, published_by: by, replay: a.replay, rule: 'NF-11.1' }, 'Northfield supplier guide') };
   }
   throw new Error(`No write for ${card.action}`);
@@ -402,6 +448,8 @@ export function rereadOf(card, result) {
     case 'decide_charge': return ['review_deduction_case', { case: a.case, as_of: T }];
     case 'decide_chargeback': return a.decision === 'Apply' ? ['review_deduction_case', { case: a.case, as_of: T }] : ['supplier_document_trail', { po: a.po, as_of: T }];
     case 'publish_rule': return ['list_draft_rules', {}];
+    case 'change_rule': case 'add_rule': return ['list_rules_by_source', {}];
+    case 'draft_rule': return ['list_draft_rules', {}];
   }
   return null;
 }

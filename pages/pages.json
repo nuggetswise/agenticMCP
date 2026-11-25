@@ -64,9 +64,11 @@
   "p8": {
    "calendar": "P8",
    "sides": [
-    "northfield"
+    "northfield",
+    "ashby"
    ],
-   "token": "p8-LZXGPnCFYuh0"
+   "token": "p8-LZXGPnCFYuh0",
+   "aviator": "read_only"
   },
   "p6": {
    "calendar": "P6",
@@ -125,6 +127,23 @@
    ],
    "token": "test-C3PPJLhbsFo1",
    "through": "2027-01-09T23:59:00-05:00"
+  },
+  "p28": {
+   "calendar": "P28",
+   "sides": [
+    "ashby"
+   ],
+   "token": "p28-NkmRooc4L_Em"
+  },
+  "overview": {
+   "off_calendar": "The overview page: Aviator scoped by area of the story calendar, a design to explore",
+   "sides": [
+    "ashby",
+    "northfield"
+   ],
+   "aviator": "read_only",
+   "areas": true,
+   "token": "overview-q5GA_wpE-rm7"
   }
  }
 }

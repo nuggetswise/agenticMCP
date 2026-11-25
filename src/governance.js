@@ -85,7 +85,9 @@ export function trialAgentRule(db, dataDb, cid, { job, rule, params, records, as
 /** The change list of a connection, newest first, with each agent's state now. */
 export function changeList(db, cid, { limit = 50, kind } = {}) {
   const rows = db.prepare(`SELECT * FROM agent_changes WHERE connection_id = ?${kind ? ' AND kind = ?' : ''} ORDER BY id DESC LIMIT ?`).all(...[cid, kind, limit].filter((x) => x !== undefined));
-  return { connection: cid, agents: agentsOf(db, cid), aviator_permissions: aviatorPermissions(db, cid), entries: rows.map(row) };
+  const drafted = db.prepare(`SELECT id, at, kind, data FROM events WHERE kind IN (${cid === AS ? "'rule.changed', 'rule.added'" : "'rule.drafted'"}) ORDER BY at DESC, id DESC LIMIT ?`).all(limit)
+    .map((e) => { const d = J(e.data); return { id: `CL-R${e.id}`, at: fmtET(e.at), agent: 'Aviator', kind: e.kind.replace('.', '_'), rule: d.rule || d.draft, change: e.kind === 'rule.changed' ? { rule: d.rule, from: d.from, to: d.to } : { statement: d.statement, source: d.source || null }, result: { state: e.kind === 'rule.drafted' ? 'Draft' : 'Saved' }, run_by: d.changed_by || d.added_by || d.author, note: 'Drafted by Aviator; saved when the person pressed the card' }; });
+  return { connection: cid, agents: agentsOf(db, cid), aviator_permissions: aviatorPermissions(db, cid), entries: [...drafted, ...rows.map(row)] };
 }
 
 // ---------- P21 Admin and rules: rules by source, a supplier's own rule changed with its effect shown first, approval modes ----------
@@ -107,6 +109,14 @@ export function rulesBySource(db, dataDb, cid) {
       created_by: src === 'Ashby manual rules' ? 'Priya Raman' : src === 'Northfield guide' ? 'Jordan Ellis' : r.owner, created: r.valid_from || null,
       editable_here: cid === AS && src === 'Ashby manual rules' && !!live.params, last_change: lastRuleChange(db, r.id) });
   }
+  // Rule changes and new rules saved from an Aviator card (P21), in the viewer's session or on record: they stand on the
+  // change list as the person's, drafted by Aviator.
+  if (cid === AS) for (const e of db.prepare("SELECT at, kind, data FROM events WHERE kind IN ('rule.changed', 'rule.added') ORDER BY at, id").all()) { const d = J(e.data);
+    if (e.kind === 'rule.changed') { const x = groups['Ashby manual rules'].find((r) => r.id === d.rule); if (x) { x.params = { ...(x.params || {}), ...d.to }; x.last_change = { at: fmtET(e.at), by: d.changed_by, drafted_by: d.drafted_by, change: { rule: d.rule, from: d.from, to: d.to } }; } }
+    else groups['Ashby manual rules'].push({ id: d.rule, source: 'Ashby manual rules', owner: 'Ashby', rule: d.statement, params: null, basis: 'Ashby', created_by: d.added_by, created: e.at.slice(0, 10), editable_here: false, last_change: { at: fmtET(e.at), by: d.added_by, drafted_by: d.drafted_by }, from_document: d.source || null }); }
+  // Each rule's document and section, where one stands behind it (rule documents, P21 and P28).
+  const secOf = new Map(); try { for (const s of db.prepare("SELECT s.rule_id, s.section, d.title, d.version, d.doc_id FROM rule_sections s JOIN rule_documents d ON d.doc_id = s.doc_id WHERE d.in_force_to IS NULL OR d.owner <> 'Northfield' ORDER BY d.published_at").all()) secOf.set(s.rule_id, { document: `${s.title} ${s.version}`, section: s.section }); } catch { /* tables absent in an older build */ }
+  for (const g of Object.values(groups)) for (const r of g) if (secOf.has(r.id)) r.document = secOf.get(r.id);
   // Northfield rules published from a draft (P15) join the guide; those going into force later carry the date (D72).
   for (const d of db.prepare("SELECT * FROM draft_rules WHERE state IN ('Scheduled', 'Published') ORDER BY id").all())
     groups['Northfield guide'].push({ id: d.id, source: 'Northfield guide', owner: 'Northfield', rule: d.statement, params: null, basis: d.basis, created_by: d.author, created: d.created_at.slice(0, 10),
@@ -163,12 +173,15 @@ export const AVIATOR_ACTIONS = {
     answer_order_change: { label: 'Answer an order change with a change acknowledgment (865)', editable: true, starts: 'propose_action_card', approver: 'Priya Raman', rule: 'NF-1.6' },
     send_ship_notice: { label: 'Send the ship notice (856) built from the load scan', editable: true, starts: 'propose_action_card', approver: 'Priya Raman', rule: 'NF-4.2' },
     send_invoice: { label: 'Send the invoice (810) for the shipped quantity', editable: true, starts: 'propose_action_card', approver: 'Priya Raman', rule: 'NF-7.8' },
+    change_rule: { label: 'Change one of Ashby’s manual rules', editable: true, starts: 'propose_action_card', approver: 'Priya Raman', rule: null },
+    add_rule: { label: 'Add an Ashby manual rule', editable: true, starts: 'propose_action_card', approver: 'Priya Raman', rule: null },
     answer_application_advice: { label: 'Answer an application advice with the 997 and the corrected document', editable: true, starts: 'propose_action_card', approver: 'Priya Raman', rule: 'NF-7.2' },
   },
   [NF]: {
     send_application_advice: { label: 'Reject a document with an application advice (EDI 824)', editable: true, starts: 'propose_action_card', approver: 'Jordan Ellis', rule: 'NF-7.8' },
     decide_charge: { label: 'Waive or uphold a disputed deduction', editable: false, starts: 'propose_action_card', approver: 'Jordan Ellis', rule: 'NF-7.7', locked: 'Locked to the card: Jordan Ellis decides every charge by pressing Approve' },
     decide_chargeback: { label: 'Apply or waive a readiness chargeback', editable: true, starts: 'propose_action_card', approver: 'Jordan Ellis', rule: 'NF-3.6' },
+    draft_rule: { label: 'Draft a rule into Draft rules', editable: true, starts: 'propose_action_card', approver: 'Jordan Ellis', rule: 'NF-11.1' },
     publish_rule: { label: 'Publish a rule after its replay', editable: true, starts: 'propose_action_card', approver: 'Jordan Ellis', rule: 'NF-11.1' },
   },
 };

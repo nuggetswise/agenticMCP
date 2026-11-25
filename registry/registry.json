@@ -343,12 +343,14 @@
     "would_reverse": "A decision delegated from the view, such as chasing a supplier"
    },
    "customer_agent": {
-    "supplier": "Not applicable: a retailer view",
+    "supplier": "Where Ashby's money with Northfield is waiting and who releases it, in Priya's own assistant",
     "retailer": "Open-order value by stage in Northfield’s own assistant, once a retailer connection exists"
    },
    "erp_placement": "None",
    "decisions": [],
-   "tools": [],
+   "tools": [
+    "money_in_motion"
+   ],
    "anchors": [
     "order:NR-450118",
     "order:NR-447913",
@@ -660,7 +662,10 @@
     "list_draft_rules",
     "replay_draft_rule",
     "publish_rule",
-    "lookup_rules"
+    "lookup_rules",
+    "rule_documents",
+    "extract_rules_from_document",
+    "draft_rule"
    ],
    "anchors": [
     "draft_rule:NFD-1"
@@ -752,6 +757,83 @@
    "capability_status": "planned",
    "owner": "Unassigned",
    "ends_at": "Ashby: Northfield's receiving advice matches the corrected ship notice and no lot charge is raised. Northfield: the recalled lot's DCs and cases are listed, each traced to its receiving advice"
+  },
+  {
+   "id": "P21",
+   "name": "P21 Admin and rules",
+   "status": "Built",
+   "calendar": "P21",
+   "seen_by": "Priya Raman, then Jordan Ellis",
+   "agency": {
+    "verdict": "rule-based",
+    "agent": null,
+    "job": "Set each company's own rules and Aviator's permissions, see a change's effect on open work before it is saved, and draft rules from a document",
+    "reason": "Every change is a parameter or a statement a person saves; drafts from a document are AI reading, and each is replayed against the quarter's records before it can be saved or published",
+    "would_reverse": "A rule whose effect cannot be replayed from exchanged records"
+   },
+   "customer_agent": {
+    "supplier": "Which of Priya's rules came from which agreement, and what a changed limit would catch, in her own assistant",
+    "retailer": "What the revised guide adds and what a draft would add in charges, in Jordan's own assistant"
+   },
+   "erp_placement": "None",
+   "decisions": [],
+   "tools": [
+    "rule_documents",
+    "extract_rules_from_document",
+    "add_supplier_rule",
+    "lookup_retailer_rules"
+   ],
+   "tools_northfield": [
+    "lookup_rules",
+    "rule_documents",
+    "extract_rules_from_document",
+    "draft_rule",
+    "list_draft_rules",
+    "replay_draft_rule"
+   ],
+   "anchors": [
+    "guide.published:guide.published"
+   ],
+   "acceptance": [],
+   "capability_status": "planned",
+   "owner": "Unassigned",
+   "ends_at": "Both companies' changes are recorded with who made them, drafted rules cite their document and section, and the next rule run and Aviator answer use them"
+  },
+  {
+   "id": "P28",
+   "name": "P28 Guide change hits next week's shipments",
+   "status": "Not built",
+   "calendar": "P28",
+   "seen_by": "Priya Raman",
+   "agency": {
+    "verdict": "rule-based",
+    "agent": null,
+    "job": "Name the one requirement Northfield's revised guide adds, replay Ashby's ship notices against it, and show which of next week's shipments would be charged",
+    "reason": "A ship notice carries the trip ID or it does not; the charge is Northfield's published one",
+    "would_reverse": "A guide change whose requirement no exchanged record can show"
+   },
+   "customer_agent": {
+    "supplier": "What Northfield's guide change would cost over the quarter, in Priya's own assistant"
+   },
+   "erp_placement": "None",
+   "decisions": [],
+   "tools": [
+    "guide_change_impact",
+    "rule_documents",
+    "lookup_retailer_rules",
+    "get_document",
+    "get_order",
+    "release_ship_notice"
+   ],
+   "tools_northfield": [],
+   "anchors": [
+    "guide.published:guide.published",
+    "erp.correction:erp.correction"
+   ],
+   "acceptance": [],
+   "capability_status": "planned",
+   "owner": "Unassigned",
+   "ends_at": "The first ship notice under the new rule carries the trip ID, Northfield's receiving advice matches it, and next week's shipments carry no charge"
   }
  ],
  "other_inventory": [

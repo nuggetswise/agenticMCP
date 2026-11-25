@@ -393,6 +393,16 @@
    "links": []
   },
   {
+   "id": "NF-4.18",
+   "owner": "Northfield",
+   "statement": "Every ship notice carries the trip ID in its header from 30 November 2026; a ship notice without it is charged",
+   "implements": [],
+   "charge": "TI01 $150 per ship notice",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
    "id": "GS1-1",
    "owner": "Industry standard",
    "statement": "Every item number has the length and check digit GS1 sets: 12 digits for a UPC, 14 for a case GTIN, the last digit a check digit",

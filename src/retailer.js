@@ -261,12 +261,14 @@ export const REPLAY_CHECKS = {
   carton_over_cm: { what: 'No carton over N cm on any side', set: '856', current: null },
   unit_over_kg: { what: 'No carton holds a unit over N kg', set: '856', current: null },
   carton_contents_units: { what: 'Carton contents match the ship notice, charged per unit that differs', set: '856', current: 'NF-4.5 ($150 plus $1 per carton)', currentValue: 0, currentCharge: 'NF-4.5' },
+  ship_notice_trip_id: { what: 'Ship notice carries the trip ID in its header', set: '856', current: null }, // Northfield guide 2026.3, NF-4.18 (P28)
   ship_notice_accuracy_pct: { what: 'Ship notice accurate and complete, charged as N percent of the order’s cost', set: '856', current: null },
 };
 function failsOf(db, check, value, TO = '9999') {
   const docs = (set) => db.prepare(`SELECT d.*, o.supplier_id sup FROM documents d JOIN orders o ON o.po = d.po WHERE d.doc_type = ? AND d.status <> 'Superseded' AND d.sent_at >= ? AND d.sent_at <= ?`).all(set, QUARTER_FROM, TO);
   const first = (po, set) => db.prepare('SELECT sent_at, body FROM documents WHERE po = ? AND doc_type = ? ORDER BY sent_at').get(po, set);
   const out = [];
+  if (check === 'ship_notice_trip_id') for (const d of docs('856')) { if (!J(d.body).trip_id) out.push(d); }
   if (check === 'ship_notice_minutes') for (const d of docs('856')) { const b = J(d.body); if (b.shipped_at && (Date.parse(d.sent_at) - Date.parse(b.shipped_at)) / 60000 > value) out.push(d); }
   if (check === 'acknowledgment_hours') for (const d of docs('855')) { const p = first(d.po, '850'); if (p && (Date.parse(d.sent_at) - Date.parse(p.sent_at)) / H > value) out.push(d); }
   if (check === 'invoice_days') for (const d of docs('810')) { const s = first(d.po, '856'); const b = s ? J(s.body) : null; if (b && b.shipped_at && (Date.parse(d.sent_at) - Date.parse(b.shipped_at)) / (24 * H) > value) out.push(d); }
@@ -292,7 +294,7 @@ export function replayRule(db, { draft, check, value, charge, as_of }) {
   // as_of (18 November 2026): replay only the documents exchanged by that time, for a page that opens before the quarter ends.
   const TO = as_of ? (asOfDate(as_of) || new Date('9999-01-01')).toISOString() : '9999'; const upTo = as_of ? { documents_up_to: fmtET(TO) } : {};
   let d = null;
-  if (draft) { d = db.prepare('SELECT * FROM draft_rules WHERE id = ?').get(draft.trim().toUpperCase()); if (!d) return { found: false, message: `No draft rule ${draft}` }; check = d.check_kind; value = value ?? d.value; charge = d.charge; } // a value with a draft replays the draft's revised value at its own charge (Revise draft)
+  if (draft) { d = db.prepare('SELECT * FROM draft_rules WHERE id = ?').get(draft.trim().toUpperCase()) || draftRules(db).drafts.find((x) => x.id === draft.trim().toUpperCase()); if (!d) return { found: false, message: `No draft rule ${draft}` }; if (!d.check_kind) return { found: true, draft: { id: d.id, statement: d.statement, state: d.state }, replayable: false, says: 'Not replayed: no matching records', note: 'No check in the quarter’s records matches this draft. Nothing is published.' }; check = d.check_kind; value = value ?? d.value; charge = d.charge; } // a value with a draft replays the draft's revised value at its own charge (Revise draft)
   const C = REPLAY_CHECKS[check]; if (!C) return { found: false, message: `Replay checks: ${Object.keys(REPLAY_CHECKS).join(', ')}` };
   const v = Number(value); if (!Number.isFinite(v) || v < 0) return { found: false, message: 'value must be a number' };
   if (C.needs) return { found: true, ...upTo, draft: d ? { id: d.id, statement: d.statement, state: d.state } : null, check: C.what.replace('N', String(v)), replayable: false, needs: C.needs, note: 'Not replayed: the quarter’s records cannot show this check yet. Nothing is published.' };
@@ -326,7 +328,10 @@ export function replayRule(db, { draft, check, value, charge, as_of }) {
         newly_failing: (B[s] || []).filter((x) => !(A[s] || []).includes(x)).slice(0, 5), documents_now: [...new Set(A[s] || [])], documents_with_draft: [...new Set(B[s] || [])] }; }).sort((a, b) => b.with_draft - a.with_draft || b.added_exposure - a.added_exposure),
     note: 'Replayed against the quarter’s exchanged X12 only. Nothing is published; publishing needs this replay on record and Jordan Ellis’s approval.' };
 }
-export function draftRules(db) { return { drafts: db.prepare('SELECT * FROM draft_rules ORDER BY id').all().map((r) => ({ ...r })) }; }
+export function draftRules(db) {
+  // Drafts saved from an Aviator card (P21) stand beside the recorded drafts, in the viewer's session or on record.
+  const carded = db.prepare("SELECT at, data FROM events WHERE kind = 'rule.drafted' ORDER BY at, id").all().map((e) => { const d = J(e.data); return { id: d.draft, created_at: e.at, author: d.author, statement: d.statement, check_kind: d.check_kind || null, value: d.value ?? 0, charge: d.charge ?? null, state: 'Draft', charge_basis: 'per document', basis: d.source ? `From ${d.source.document}, section ${d.source.section}` : 'Northfield', in_force_from: null, drafted_by: d.drafted_by, replay: d.replay || null }; });
+  return { drafts: [...db.prepare('SELECT * FROM draft_rules ORDER BY id').all().map((r) => ({ ...r })), ...carded] }; }
 export { timeLeft };
 
 export const JOBS = { three_way_match: (db, r, t) => threeWayMatch(db, r, t) };

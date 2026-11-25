@@ -71,6 +71,7 @@ const BODY = {
       ...(d.scac ? [seg('TD5', 'B', '2', d.scac)] : []),
       ...(d.bol ? [seg('REF', 'BM', d.bol)] : []),
       ...(d.seal ? [seg('REF', 'SN', d.seal)] : []),
+      ...(d.trip_id ? [seg('REF', 'TI', d.trip_id)] : []), // trip ID, Northfield guide 2026.3 (NF-4.18)
       seg('DTM', '011', d8(d.shipped_at), t4(d.shipped_at)),
       seg('DTM', '017', d8(d.delivery_date)),
       seg('N1', 'ST', clean(d.ship_to_name), 'UL', d.ship_to_gln),
@@ -229,7 +230,7 @@ const READ = {
       if (e[0] === 'LIN') { const l = { line: +e[1], ...items(e, 2), qty: 0 }; if (!lines.has(l.line)) lines.set(l.line, l); lines._cur = l.line; }
       if (e[0] === 'SN1') { const l = lines.get(lines._cur); l.qty += +e[2]; l.uom = e[3]; if (e[8]) status = e[8]; carton = sscc ? { sscc, line: l.line, sku: l.sku, qty: +e[2] } : null; if (carton) cartons.push(carton); }
     }
-    return { ref: b[2], resend: b[1] === '05', structure: b[5], po: first(S, 'PRF')[1], po_ref: first(S, 'PRF')[1], carton_count: +first(S, 'TD1')[2], scac: first(S, 'TD5')?.[3] || null, bol: first(S, 'REF', 'BM')?.[2] || null, seal: first(S, 'REF', 'SN')?.[2] || null,
+    return { ref: b[2], resend: b[1] === '05', structure: b[5], po: first(S, 'PRF')[1], po_ref: first(S, 'PRF')[1], carton_count: +first(S, 'TD1')[2], scac: first(S, 'TD5')?.[3] || null, bol: first(S, 'REF', 'BM')?.[2] || null, seal: first(S, 'REF', 'SN')?.[2] || null, trip_id: first(S, 'REF', 'TI')?.[2] || null,
       shipped_at: iso8(dep[2], dep[3] + '00'), delivery_date: day8(first(S, 'DTM', '017')[2]), parties: n1(S), lines: [...lines.values()], cartons, complete: status !== 'BP', hl_count: +first(S, 'CTT')[1] };
   },
   810: (S) => { const b = first(S, 'BIG'); return { ref: b[2], po: b[4], po_ref: b[4], replaces: first(S, 'REF', 'OI')?.[2] || null, parties: n1(S), terms_days: +first(S, 'ITD')[7],

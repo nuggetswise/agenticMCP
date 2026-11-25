@@ -100,6 +100,206 @@
     }
    }
   },
+  "/v1/rules/documents": {
+   "get": {
+    "operationId": "rule_documents",
+    "summary": "Rule documents",
+    "description": "The documents Ashby’s rules come from: Northfield’s supplier guide by version (published, in force from and to) and Ashby’s own agreements (Kinross, Kanmon, the marketplace), each with its number of sections. Changes nothing.",
+    "tags": [
+     "Requirement lookup"
+    ],
+    "x-mcp-tool": "rule_documents",
+    "x-required-scopes": [
+     "rules"
+    ],
+    "x-optional-scopes": [],
+    "x-read-only": true,
+    "parameters": [
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+      },
+      "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    }
+   }
+  },
+  "/v1/rules/documents/{document}/drafts": {
+   "get": {
+    "operationId": "extract_rules_from_document",
+    "summary": "Draft rules from a document",
+    "description": "Reads one rule document and returns its requirements as draft rules, each in When, Check, Then, Charge and Owner form, citing the document and section, each replayed against Ashby’s own records this quarter where the records can show it (\"Not replayed: no matching records\" otherwise). A charge the document does not state reads \"To set\". A guide version yields only what it adds or changes against the version before it. Saves nothing: Priya Raman saves a draft as an Ashby manual rule; Northfield’s rules stay read-only.",
+    "tags": [
+     "Rule authoring"
+    ],
+    "x-mcp-tool": "extract_rules_from_document",
+    "x-required-scopes": [
+     "rules"
+    ],
+    "x-optional-scopes": [
+     "documents"
+    ],
+    "x-read-only": true,
+    "parameters": [
+     {
+      "name": "document",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "description": "Rule document id, for example GUIDE-NF-2026.3 (Northfield’s revised guide) or AGR-ASHBY-KINROSS (Ashby’s Kinross agreement); rule_documents lists them"
+      },
+      "description": "Rule document id, for example GUIDE-NF-2026.3 (Northfield’s revised guide) or AGR-ASHBY-KINROSS (Ashby’s Kinross agreement); rule_documents lists them"
+     },
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+      },
+      "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    }
+   }
+  },
+  "/v1/rules/guide-change": {
+   "get": {
+    "operationId": "guide_change_impact",
+    "summary": "What a Northfield guide change does to next week’s shipments",
+    "description": "Compares Northfield’s newest guide version with the one before, names the requirement it adds with its section, start and charge, replays Ashby’s ship notices of the last 30 days against it, lists the shipments due in the first week of the rule with the charge each would carry, and names the fix, its owner and whether it is made. Once the rule is in force it shows the first ship notice under it, its technical acknowledgment (997) and Northfield’s receiving advice. Ashby’s records only; changes nothing.",
+    "tags": [
+     "Requirement change"
+    ],
+    "x-mcp-tool": "guide_change_impact",
+    "x-required-scopes": [
+     "rules",
+     "documents",
+     "orders"
+    ],
+    "x-optional-scopes": [],
+    "x-read-only": true,
+    "parameters": [
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+      },
+      "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    }
+   }
+  },
+  "/v1/money": {
+   "get": {
+    "operationId": "money_in_motion",
+    "summary": "Ashby’s money in motion with Northfield",
+    "description": "Ashby’s working capital with Northfield at a moment: open orders and value by stage (ordered to invoiced), unpaid invoices by due date from the payment terms each carries (overdue, this week, next week, later), money held (received not invoiced; invoiced and held by an application advice, each with its cause, owner and where it is fixed), possible deductions (cases opened but not yet taken, short receipts with no case, costed by Northfield’s shortage charge) and invoices paid short, each gap traced to its deduction. Northfield’s payables and budget decisions are not available to Ashby. Changes nothing.",
+    "tags": [
+     "Working capital review"
+    ],
+    "x-mcp-tool": "money_in_motion",
+    "x-required-scopes": [
+     "orders",
+     "documents",
+     "deductions"
+    ],
+    "x-optional-scopes": [],
+    "x-read-only": true,
+    "parameters": [
+     {
+      "name": "as_of",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+      },
+      "description": "Point in time to answer as of, ISO 8601 (2026-11-18T09:00:00-05:00) or a date. Default: the story clock, Tuesday 17 November 2026 11:00 Eastern."
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Result. Fields outside the connection’s scopes are returned as \"Not shared\".",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "A required scope is not granted on this connection"
+     },
+     "404": {
+      "description": "Record not found, or not Ashby’s"
+     }
+    }
+   }
+  },
   "/v1/documents/{reference}/rejection": {
    "get": {
     "operationId": "explain_rejection",

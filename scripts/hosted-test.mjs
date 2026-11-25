@@ -155,7 +155,7 @@ try {
   const w3 = await (await av({ question: 'What falls due this week?', side: 'northfield' }, PORT, P8)).json();
   ok('P8 at 8 November 23:59: this week is 8 to 14 November, from as_of', w3.ok && w3.as_of === '2026-11-09T04:59:00.000Z' && w3.period.from === '2026-11-08' && w3.period.to === '2026-11-14', JSON.stringify(w3).slice(0, 300));
   ok('P8: 10 invoices, $1,056,413.30, on 10 open orders, not a single order', w3.ok && /^10 invoices fall due from 2026-11-08 to 2026-11-14, \$1,056,413\.30 on 10 open orders/.test(w3.answer) && (w3.answer.match(/NR-\d+/g) || []).length === 10, w3.answer);
-  ok('P8 token is Northfield only', (await av({ question: 'What falls due this week?', side: 'ashby' }, PORT, P8)).status === 403);
+  ok('P8 token serves both sides (Ashby added 24 November); a side off the page is refused', (await av({ question: 'What falls due this week?', side: 'kinross' }, PORT, P8)).status === 403);
   lazy = true; modelCalls.length = 0;
   const r1 = await (await av({ question: 'Why did lines fail in the week of 22 November?', side: 'ashby' }, PORT, P7)).json();
   ok('an answer for another period is retried on the secondary model and comes back for the week asked', r1.ok && /^10 order lines failed from 2026-11-22 to 2026-11-28/.test(r1.answer) && modelCalls.join() === 'primary,primary,secondary,secondary', `${modelCalls.join()} ${JSON.stringify(r1).slice(0, 300)}`);

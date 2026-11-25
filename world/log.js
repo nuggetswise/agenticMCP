@@ -3,6 +3,7 @@
 import { writeInterchange } from './x12.js';
 import { PARTY, ITEM, locations } from './ref.js';
 import { lotOf } from './lots.js';
+import { carriesTrip, tripIdOf } from './stages/guide-change.js';
 
 export const iso = (d) => { const x = new Date(d); x.setMilliseconds(0); return x.toISOString(); };
 const LOC = Object.fromEntries(locations.map((l) => [l.id, l]));
@@ -116,7 +117,7 @@ export const D = {
     const lines = (o.lines || O.lines.map((l) => ({ line: l.line, sku: l.sku, qty: o.qty?.[l.line] ?? l.qty }))).filter((l) => l.qty > 0).map((l) => { const x = lineOf({ ...O.lines.find((y) => y.line === l.line), ...l }); return { ...x, ...(lotOf(x.sku, o.shippedAt) || {}) }; });
     (L.shippedAt ??= new Map()).set(o.ref, iso(o.shippedAt));
     return L.doc({ type: '856', from: O.supplier, to: 'NORTHFIELD', at, ref: o.ref, resend: !!o.resend, po_ref: o.poRef || O.po, carton_count: o.cartonCount ?? (o.cartons ? o.cartons.length : lines.reduce((a, l) => a + l.qty, 0)), scac: o.scac ?? 'LKLF', bol: o.bol || null, seal: o.seal || null,
-      shipped_at: iso(o.shippedAt), delivery_date: o.deliveryDate, ship_to_name: st.name, ship_to_gln: o.shipToGln || st.gln, ship_from_name: site.name, ship_from_gln: site.gln, lines, cartons: o.cartons || null, status: o.status || 'CC', fault: o.fault || null });
+      shipped_at: iso(o.shippedAt), trip_id: o.tripId !== undefined ? o.tripId : carriesTrip(O.supplier, iso(o.shippedAt)) ? tripIdOf(o.ref, iso(o.shippedAt)) : null, delivery_date: o.deliveryDate, ship_to_name: st.name, ship_to_gln: o.shipToGln || st.gln, ship_from_name: site.name, ship_from_gln: site.gln, lines, cartons: o.cartons || null, status: o.status || 'CC', fault: o.fault || null });
   },
   invoice(L, O, at, o) {
     const sup = PARTY[O.supplier];

@@ -148,3 +148,22 @@ export async function ask({ question, history = [], tools, callTool, side, clock
   }
   return { ok: false, status: 502, cause: 'too_many_steps', message: 'Aviator stopped after too many steps without an answer.', tools_called: called };
 }
+
+// ---------- Rules from a viewer's own document (P21 "Create rules from a document") ----------
+// The model reads the text the viewer uploaded and returns each requirement it states, with its section, as data; the
+// server shapes the drafts. Reading a document is AI reading: every draft is tagged so on the page. Nothing is saved.
+const EXTRACT_SCHEMA = { type: 'object', properties: { rules: { type: 'array', items: { type: 'object', properties: {
+  section: { type: 'string' }, requires: { type: 'string' }, document_set: { type: 'string', description: 'The business document it applies to, as an X12 set number (856, 810, 855, 850) or none' }, charge: { type: 'string', description: 'The charge exactly as the text states it, or empty' } }, required: ['section', 'requires'] } } }, required: ['rules'] };
+export async function extractFromText({ text, side, fetchImpl = fetch }) {
+  const routes = modelRoutes(); if (!routes.length) return { ok: false, error: 'aviator_unavailable' };
+  const body = { contents: [{ role: 'user', parts: [{ text: `Read this ${side === 'northfield' ? 'retailer supplier guide' : 'trading agreement'} and list every requirement it states, one per item, with its section number as written, the requirement in the document's own words, the business document it applies to, and the charge only where the text states one. Add nothing the text does not say.\n\n${String(text).slice(0, 30000)}` }] }],
+    generationConfig: { responseMimeType: 'application/json', responseSchema: EXTRACT_SCHEMA } };
+  for (const rt of routes) {
+    if (!takeModelCall()) return { ok: false, error: 'daily_cap' };
+    let r; try { r = await fetchImpl(`${modelApi()}/${rt.model}:generateContent`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': rt.key }, body: JSON.stringify(body), signal: AbortSignal.timeout(60000) }); } catch { continue; }
+    if (r.status === 429 || r.status === 503) continue; if (!r.ok) return { ok: false, error: 'no_answer' };
+    const j = await r.json(); const t = j?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '';
+    try { const out = JSON.parse(t); return { ok: true, rules: Array.isArray(out.rules) ? out.rules.slice(0, 60) : [], model: rt.model, route: rt.route }; } catch { return { ok: false, error: 'no_answer' }; }
+  }
+  return { ok: false, error: 'aviator_unavailable' };
+}

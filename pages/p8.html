@@ -1015,7 +1015,7 @@ const AP = {
   head:() => ({title:`${money(toDecideV)} in charges waits for your decision and ${money(PD.value)} may come off later payments`,
     event:`Northfield's last remittance paid ${PS.invoices} invoices ${money(PS.gap)} short, and ${PD.orders} receipts came in short with no case yet.`,
     goal:"See what comes in, when, and what may come off.",
-    figs:[["Due this week", money(INC.this_week.v), "", "a:this_week", `${n0(INC.this_week.n)} invoices`], ["Unpaid", big(A.unpaid.value), "", "a:home", `${n0(A.unpaid.invoices)} invoices`], ["Waiting for your decision", money(toDecideV), "risk", "a:ps", `${toDecide.length} charges`], ["Possible deductions", money(PD.value), "risk", "a:pd", `${PD.orders} short receipts`]]}),
+    figs:[["Due this week", money(INC.this_week.v), "", "a:this_week", `${n0(INC.this_week.n)} invoices`], ["Unpaid", big(A.unpaid.value), "", "a:home", `${n0(A.unpaid.invoices)} invoices`], ["Waiting for your decision", money(toDecideV), "warn", "a:ps", `${toDecide.length} charges`], ["Possible deductions", money(PD.value), "warn", "a:pd", `${PD.orders} short receipts`]]}),
   sortLabel:() => "Due date",
   groups:() => [
     {label:"Money in motion", count:"", rows:[{id:"a:home", title:"Overview", text:"overview money in motion", line:`${money(A.unpaid.value)} unpaid · ${n0(A.unpaid.invoices)} invoices`, sub:`${n0(A.open)} open Northfield orders`}]},

@@ -27,7 +27,7 @@
   --link-hover:var(--ot-blue-900); --surface-page:var(--ot-surface-50); --surface-card:var(--ot-white);
   --surface-subtle:var(--ot-surface-100); --surface-dark:var(--ot-navy-900); --border-default:var(--ot-line-200);
   --border-strong:#D3D7DD; --action-soft:#E8F0FF; --accent-soft:#FAF1D2;
-  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px; --space-6:24px; --space-8:32px;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px; --space-6:24px; --space-8:32px; --space-20:80px; --ui-shell-gutter:24px;
   --container-max:1200px; --radius-sm:6px; --radius-md:10px; --radius-lg:12px; --radius-xl:16px; --radius-pill:999px;
   --shadow-xs:0 1px 2px rgba(15,27,45,.05); --shadow-sm:0 1px 3px rgba(15,27,45,.08);
   --shadow-md:0 4px 12px rgba(15,27,45,.08); --shadow-lg:0 12px 32px rgba(15,27,45,.12);
@@ -48,7 +48,7 @@ button{font:inherit;color:inherit}
 .t.capped tbody tr:nth-child(n+6),.rls.capped .rl:nth-child(n+6){display:none}
 .more{margin-top:var(--space-2)}
 .mono{font-family:var(--mono-ui);font-size:var(--ui-fs-small);white-space:nowrap}
-.wrap{padding:0 max(var(--space-4),env(safe-area-inset-right)) 80px max(var(--space-4),env(safe-area-inset-left));max-width:var(--container-max);margin:0 auto}
+.wrap{padding:0 max(var(--ui-shell-gutter),env(safe-area-inset-right)) var(--space-20) max(var(--ui-shell-gutter),env(safe-area-inset-left));max-width:var(--container-max);margin:0 auto}
 .top{display:flex;align-items:center;gap:var(--space-4);height:52px;border-bottom:1px solid var(--border-default);background:var(--surface-card);padding:0 max(var(--space-4),env(safe-area-inset-right)) 0 max(var(--space-4),env(safe-area-inset-left))}
 .mark{white-space:nowrap;display:flex;align-items:center;gap:var(--space-2);font-weight:var(--fw-bold);color:var(--text-heading);font-size:var(--ui-fs-body-lg)}
 .mark i{width:22px;height:22px;border-radius:var(--radius-sm);background:var(--grad-brand);display:inline-block}
@@ -73,7 +73,7 @@ button{font:inherit;color:inherit}
 .hfig.risk b{color:var(--ot-risk)}
 .hfig.warn b{color:var(--ot-warn)}
 
-.pagehead h1{margin:0;font-size:var(--ui-fs-title);font-weight:var(--fw-bold);line-height:1.2;color:var(--text-heading)}
+.pagehead h1{margin:0;font-size:var(--ui-fs-title);font-weight:var(--fw-bold);line-height:var(--lh-heading);color:var(--text-heading)}
 .ev{margin:var(--space-1) 0 0;color:var(--text-body)}
 .goal{color:var(--text-muted)}
 .map{background:var(--surface-card);border:1px solid var(--border-default);border-radius:var(--radius-lg);padding:var(--space-2) var(--space-3);margin-bottom:var(--space-3)}
@@ -131,7 +131,7 @@ button{font:inherit;color:inherit}
 .figs{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-2);margin:var(--space-2) 0 var(--space-3)}
 .fig{background:var(--surface-subtle);border-radius:var(--radius-md);padding:var(--space-2) var(--space-3)}
 .fig .k{font-size:var(--ui-fs-label);font-weight:var(--ui-fw-semibold);letter-spacing:var(--ls-eyebrow);text-transform:uppercase;color:var(--text-muted)}
-.fig .n{font-size:var(--fs-h4);font-weight:var(--fw-bold);color:var(--text-heading);line-height:1.3}
+.fig .n{font-size:var(--fs-h4);font-weight:var(--fw-bold);color:var(--text-heading);line-height:var(--lh-heading)}
 .fig .was{font-size:var(--ui-fs-small);color:var(--text-muted)}
 .fig .was s{color:var(--text-muted)}
 .bar{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-3)}
@@ -155,7 +155,7 @@ button{font:inherit;color:inherit}
 .opt:hover{border-color:var(--color-action)}
 .trial{margin-top:var(--space-2);color:var(--text-heading)}
 table.t{width:100%;border-collapse:collapse;font-size:var(--ui-fs-small)}
-table.t th{text-align:left;font-size:var(--ui-fs-label);text-transform:uppercase;letter-spacing:var(--ls-eyebrow);color:var(--text-muted);font-weight:var(--ui-fw-semibold);background:var(--surface-subtle);padding:var(--space-2)}
+table.t th{text-align:left;font-size:var(--ui-fs-small);color:var(--text-muted);font-weight:var(--ui-fw-semibold);background:var(--surface-subtle);padding:var(--space-2)}
 table.t th.n,table.t td.n{text-align:right}
 table.t td{border-top:1px solid var(--border-default);padding:var(--space-2);color:var(--text-heading);vertical-align:top}
 .banner{margin:0 0 var(--space-3);padding:var(--space-3) var(--space-4);border-left:3px solid var(--color-primary)}

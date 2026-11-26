@@ -268,6 +268,13 @@ body{overflow:hidden}
 .ph .h{display:flex;justify-content:space-between;align-items:baseline;gap:var(--space-2)}
 .ph .h span{font-size:var(--ui-fs-small);color:var(--text-muted)}
 .tools{display:flex;gap:var(--space-2);margin-top:var(--space-2)}
+.bands{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-2);margin-top:var(--space-2)}
+.band{border:0;background:var(--surface-subtle);border-radius:var(--radius-md);padding:var(--space-1) var(--space-2);display:flex;flex-direction:column;align-items:flex-start;text-align:left;font:inherit;font-size:var(--ui-fs-small);color:var(--text-muted);cursor:pointer;transition:background var(--ui-dur-fast) var(--ui-ease),box-shadow var(--ui-dur-fast) var(--ui-ease)}
+.band b{font-size:var(--ui-fs-body-lg);font-weight:var(--ui-fw-bold);color:var(--text-heading);font-variant-numeric:tabular-nums}
+.band em{font-style:normal}
+.band.warn b{color:var(--ot-warn)}
+.band:hover{background:var(--action-soft)}
+.band[aria-pressed="true"]{background:var(--action-soft);box-shadow:inset 0 0 0 2px var(--color-action)}
 .tools input,.tools select{height:32px;border:1px solid var(--border-strong);border-radius:var(--radius-md);background:var(--surface-card);font:inherit;font-size:var(--ui-fs-small);color:var(--text-heading);padding:0 var(--space-2)}
 .tools input{flex:1;min-width:0}
 .readbar{height:2px;background:var(--border-default);border-radius:var(--radius-pill);overflow:hidden;margin-top:var(--space-2)}
@@ -528,7 +535,7 @@ const dayName = t => DAY[((Math.floor(t / 1440) % 7) + 7) % 7];
 const REPORT_AT = k => T(-1 + (k - 4) * 7, 6, 10);   /* report k arrives the day before the opening moment's week starts */
 const CLOCK = {4:T(0,8,7), 5:T(6,6,10)};
 
-const F = {tile:"lost", ws:"ashby", k:4, sel:"114", q:"", filter:"all", sort:"risk", open:{}, fresh:false};
+const F = {band:null, tile:"lost", ws:"ashby", k:4, sel:"114", q:"", filter:"all", sort:"risk", open:{}, fresh:false};
 const nf = () => F.ws === "nf";
 window.E = {S:{get sel(){ return F.sel; }}};
 
@@ -606,6 +613,7 @@ document.body.insertAdjacentHTML("afterbegin", `
   <div class="split">
     <section class="pane" aria-label="Stores">
       <div class="ph"><div class="h"><span class="lab">Stores</span><span id="cnt"></span></div>
+        <div class="bands" id="bands" role="group" aria-label="Stores by stock state"></div>
         <div class="tools"><input id="q" type="search" placeholder="Search store" aria-label="Search store"><select id="flt" aria-label="Filter"><option value="all">All stores</option><option value="act">Needs action</option></select><select id="srt" aria-label="Sort"><option value="risk">Weeks of supply</option><option value="sold">Units sold</option><option value="store">Store</option></select></div>
         <div class="readbar" id="readbar"><i></i></div></div>
       <div class="list" id="list"></div>
@@ -649,9 +657,11 @@ function chip(id, k){
   if (k === 5) { const x = m(id, 5); if (id === "114" && x.rec) return ["Restocked","brand"]; if (x.tout) return ["Transfer sent","brand"]; if (x.tin) return ["Transfer received","brand"]; }
   return null;
 }
+const bandOf = (id, k) => { const r = rules(id, k); return r.empty ? "empty" : r.slow ? "slow" : "ok"; };
 function rows(){
   const k = F.k;
   let ids = IDS.slice();
+  if (F.band) ids = ids.filter(id => bandOf(id, k) === F.band);
   if (F.q) ids = ids.filter(id => id.includes(F.q.trim()));
   if (F.filter === "act") ids = ids.filter(id => { const r = rules(id, k); return r.empty || r.slow; });
   if (F.tile) ids = ids.filter(id => inTile(F.tile, id, k));
@@ -664,7 +674,15 @@ function rows(){
   });
   return ids;
 }
+function renderBands(){
+  const k = F.k, by = {empty:[], ok:[], slow:[]};
+  IDS.forEach(id => by[bandOf(id, k)].push(id));
+  const w = by.ok.map(id => m(id, k).wos).filter(v => v != null), range = w.length ? `${wks(Math.min(...w))} to ${wks(Math.max(...w))} weeks` : "";
+  const B = [["empty","Empty shelf",""],["ok","Stocked and selling",range],["slow","Over 12 weeks",""]];
+  $("#bands").innerHTML = B.map(b => `<button class="band${b[0] !== "ok" && by[b[0]].length ? " warn" : ""}" type="button" data-band="${b[0]}" aria-pressed="${F.band === b[0]}"><span>${esc(b[1])}</span><b>${by[b[0]].length}</b>${b[2] ? `<em>${esc(b[2])}</em>` : ""}</button>`).join("");
+}
 function renderList(){
+  renderBands();
   const k = F.k, ids = rows();
   $("#cnt").textContent = ids.length === 40 ? "40 stores" : ids.length + " of 40 stores";
   $("#list").innerHTML = ids.length ? ids.map(id => { const x = m(id, k), c = chip(id, k);
@@ -722,6 +740,8 @@ function renderDet(){
     : r.slow ? `<b>Stock</b> · ${x.oh} on hand · <span class="st-amber">${wks(x.wos)} weeks of supply</span> · ${x.sold} sold`
     : `<b>Shelf</b> · ${x.oh} on hand · ${x.sold} sold · ${Math.round(x.avg)}-pair average`;
   const facts = [wr(shelf, tag("EDI 852", "852-" + k))];
+  if (!flag) facts.unshift(nf() ? wr(`<b>Stocked and selling</b> · ${wks(x.wos)} weeks of supply`, "")
+    : wr(`<b>Stocked and selling</b> · ${wks(x.wos)} weeks of supply · Ashby acts at an empty shelf or 12 weeks`, tag("Ashby's replenishment rules")));
   if (flag && !nf() && r.empty) facts.push(stock);
   if (flag && nf() && r.empty) facts.push(stock);
   if (r.empty) facts.push(wr(`<b>In transit</b> · 0 pairs`, tag("EDI 856")));
@@ -788,12 +808,12 @@ function toggleAv(on){ const p = $("#avp"), b = $("#avb"); on = on == null ? !p.
 
 /* ---------- account menu ---------- */
 function menu(on){ const mn = $("#menu"), b = $("#acctb"); mn.classList.toggle("on", on); b.setAttribute("aria-expanded", on); if (on) (mn.querySelector('[aria-checked="true"]') || mn.querySelector("button")).focus(); }
-function switchWs(ws){ if (ws === F.ws) { menu(false); $("#acctb").focus(); return; } F.ws = ws; F.fresh = false; closeDrawer(); menu(false); render(); $("#acctb").focus(); say((nf() ? "Northfield Retailer" : "Ashby Supplier") + " workspace open."); }
+function switchWs(ws){ if (ws === F.ws) { menu(false); $("#acctb").focus(); return; } F.ws = ws; F.band = null; F.fresh = false; closeDrawer(); menu(false); render(); $("#acctb").focus(); say((nf() ? "Northfield Retailer" : "Ashby Supplier") + " workspace open."); }
 
 /* ---------- next report: the only control that moves the story clock ---------- */
 function nextReport(){
   if (F.k === 5) return;
-  F.k = 5; F.tile = null; F.fresh = true;
+  F.k = 5; F.tile = null; F.band = null; F.fresh = true;
   const bar = $("#readbar"); bar.classList.remove("gone"); bar.innerHTML = "<i></i>";
   render(); F.fresh = false;
   setTimeout(() => bar.classList.add("gone"), RM() ? 0 : 950);
@@ -824,12 +844,16 @@ document.addEventListener("keydown", e => {
   if ($("#menu").classList.contains("on") && (e.key === "ArrowDown" || e.key === "ArrowUp")) { e.preventDefault(); const bs = [...document.querySelectorAll("#menu button")], i = bs.indexOf(document.activeElement); bs[(i + (e.key === "ArrowDown" ? 1 : bs.length - 1)) % bs.length].focus(); }
 });
 $("#q").addEventListener("input", e => { F.q = e.target.value; renderList(); });
-$("#flt").addEventListener("change", e => { F.filter = e.target.value; renderList(); });
+$("#flt").addEventListener("change", e => { F.filter = e.target.value; F.band = null; renderList(); });
 /* headline tiles filter the store list and open the first store */
 $("#strip").addEventListener("click", e => { const b = e.target.closest("[data-tile]"); if (!b) return;
-  F.tile = F.tile === b.dataset.tile ? null : b.dataset.tile; const first = rows()[0];
+  F.tile = F.tile === b.dataset.tile ? null : b.dataset.tile; F.band = null; const first = rows()[0];
   if (F.tile && first) F.sel = first; render(); const nb = document.querySelector(`[data-tile="${b.dataset.tile}"]`); if (nb) nb.focus(); });
 $("#srt").addEventListener("change", e => { F.sort = e.target.value; renderList(); });
+/* stock-state bands filter the store list and open the first store */
+$("#bands").addEventListener("click", e => { const b = e.target.closest("[data-band]"); if (!b) return;
+  F.band = F.band === b.dataset.band ? null : b.dataset.band; F.tile = null; const first = rows()[0];
+  if (F.band && first) F.sel = first; render(); const nb = document.querySelector(`[data-band="${b.dataset.band}"]`); if (nb) nb.focus(); });
 
 render();
 setTimeout(() => $("#readbar").classList.add("gone"), RM() ? 0 : 950);

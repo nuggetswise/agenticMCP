@@ -109,7 +109,7 @@ const R = (id, topic, doc_type, statement, o = {}) => ({ id, owner: o.owner || '
 // Mirrored from the EDI Review Pack (registry/catalogue-pack.json), which is the source of truth for rule wording,
 // owner, basis and sources. Thresholds the rule runs read sit in params. AP-4.1 holds none: every dispute needs Priya Raman's approval (17 November 2026).
 const PACK = JSON.parse(readFileSync(new URL('../registry/catalogue-pack.json', import.meta.url), 'utf8'));
-const ASHBY_PARAMS = { 'AP-6.1': { min_weekly_avg: 1 }, 'AP-6.2': { min_weeks_supply: 12, pct_of_median: 50 }, 'AP-6.3': { keep_weeks: 8 }, 'AP-6.4': { carton: 40, avg_weeks: 4 }, 'AM-1': { business_days: 2 }, 'AP-7.2': { hours: 24 }, 'AP-3.4': { hours_left: 2 } };
+const ASHBY_PARAMS = { 'AP-6.1': { min_weekly_avg: 1 }, 'AP-6.2': { min_weeks_supply: 12, pct_of_median: 50, sell_through_target_low: 40, sell_through_target_high: 80, sell_through_weeks: 4 }, 'AP-6.3': { keep_weeks: 8 }, 'AP-6.4': { carton: 40, avg_weeks: 4 }, 'AM-1': { business_days: 2 }, 'AP-7.2': { hours: 24 }, 'AP-3.4': { hours_left: 2 } };
 const ASHBY_RULES = PACK.rules.filter((r) => /^A[PM]-/.test(r.id)).map((r) => ({ id: r.id, owner: r.owner, implements: r.implements.length ? r.implements.join(',') : null, params: ASHBY_PARAMS[r.id] || null, rule_set: r.owner === 'Ashby' ? 'ashby-policy' : 'ashby-agreement', topic: 'policy', doc_type: null, statement: r.statement, window_hours: null, limit_value: null, charge_code: null, charge: null, check: null, source: r.source, basis: r.basis.split(',')[0].toLowerCase(), public_sources: r.links.map((l) => ({ title: l.title, url: l.url, kind: 'Published practice' })) }));
 
 /** Who owns a rule, and which one wins (EDI Review Pack). */

@@ -104,6 +104,7 @@ button,input{font:inherit;color:inherit}
 .sbar .vv em{display:block;font-style:normal;font-size:var(--ui-fs-small);color:var(--text-muted)}
 .dc.capped tbody tr:nth-child(n+6){display:none}
 .drawer.wide{width:min(980px,94vw)}
+.hi .tag{white-space:normal;text-align:left}
 /* list and detail */
 .split{flex:1;min-height:0;display:grid;grid-template-columns:var(--ui-list-pane) minmax(0,1fr);gap:var(--ui-shell-gutter);padding:0 var(--ui-shell-gutter) var(--ui-shell-gutter)}
 .pane{background:var(--surface-card);border:1px solid var(--border-default);border-radius:var(--radius-lg);min-height:0;display:flex;flex-direction:column;overflow:hidden}
@@ -137,10 +138,10 @@ mark.rd{background:var(--accent-soft);color:var(--text-heading);padding:0 var(--
 .rh{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap}
 .rh h2{margin:0;font-size:var(--ui-fs-title);font-weight:var(--ui-fw-bold);color:var(--text-heading)}
 .meta{color:var(--text-muted);font-size:var(--ui-fs-small);margin-top:var(--space-1)}
-.rbody{flex:1;overflow:auto;padding:var(--space-3) var(--space-4) calc(var(--space-8) * 2)}
+.rbody{flex:1;overflow:auto;padding:var(--space-3) var(--space-4) var(--space-16)}
 .abar{flex:none;border-top:1px solid var(--border-default);padding:var(--space-3) var(--space-4);background:var(--surface-card)}
 .abar:empty{display:none}
-.abar{padding-right:calc(var(--space-8) * 6)}
+.abar{padding-right:calc(var(--space-20) * 2)}
 .says{margin:0 0 var(--space-2);color:var(--text-heading)}
 .bar{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap}
 .nod{color:var(--text-muted);font-size:var(--ui-fs-small);margin:var(--space-1) 0 0}
@@ -368,7 +369,7 @@ E.renderHead = () => {
   if (!S.eventSet) $("#ev").textContent = (S.evBy && S.evBy[S.side]) || h.event || "";
   $("#goal").textContent = h.goal ? " · " + h.goal : "";
   const cur = S.sel[S.side];
-  $("#figs").innerHTML = (h.figs || []).map(f => `<button class="fig${f[2] ? " " + f[2] : ""}" type="button" data-sel="${esc(f[3])}" aria-pressed="${cur === f[3]}"><span>${esc(f[0])}</span><b>${esc(f[1])}</b>${f[4] ? `<em>${esc(f[4])}</em>` : ""}</button>`).join("");
+  $("#figs").innerHTML = (h.figs || []).map(f => `<button class="fig${f[2] ? " " + f[2] : ""}" type="button" data-sel="${esc(f[3])}" aria-pressed="${f[5] != null ? !!f[5] : cur === f[3]}"><span>${esc(f[0])}</span><b>${esc(f[1])}</b>${f[4] ? `<em>${esc(f[4])}</em>` : ""}</button>`).join("");
   $("#per").innerHTML = h.period ? h.period.options.map(o => `<button type="button" data-period="${esc(o[0])}" aria-pressed="${h.period.value === o[0]}">${esc(o[1])}</button>`).join("") : "";
   const sd = E.side();
   $("#ws").textContent = sd.label;
@@ -383,7 +384,7 @@ E.renderList = () => {
   let first = !S.started;
   let k = 0;
   $("#list").innerHTML = groups.map(g => {
-    let rows = g.rows.filter(r => !q || (r.title + " " + r.text).toLowerCase().includes(q));
+    let rows = g.rows.filter(r => (!q || (r.title + " " + r.text).toLowerCase().includes(q)) && (!S.tile || typeof S.tile !== "object" || !S.tile[S.side] || !E.page.inTile || E.page.inTile(S.tile[S.side], r.id)));
     if (!rows.length) return "";
     if (g.fold && !q) { const on = !!S.open["grp:" + g.label];
       const head = `<button class="gl glb" type="button" data-grp="${esc(g.label)}" aria-expanded="${on}">${esc(g.label)} · ${g.count != null ? esc(g.count) : rows.length}<i>${on ? "Hide" : "Show"}</i></button>`;
@@ -420,7 +421,7 @@ E.switchSide = id => {
 E.openDrawer = (title, html, wide) => { S.drawerFrom = document.activeElement; $("#drawer").classList.toggle("wide", !!wide); $("#dtitle").textContent = title; $("#dbody").innerHTML = html; $("#drawer").classList.add("on"); $("#scrim").classList.add("on"); $("#dclose").focus(); };
 E.closeDrawer = () => { if (!$("#drawer").classList.contains("on")) return; $("#drawer").classList.remove("on"); $("#scrim").classList.remove("on"); if (S.drawerFrom && document.body.contains(S.drawerFrom)) S.drawerFrom.focus(); };
 E.docHTML = d => {
-  let h = `<dl class="kv"><dt>Document</dt><dd>${esc(d.name)}${d.ref ? " " + esc(d.ref) : ""}</dd><dt>Interface</dt><dd>${esc(d.iface)}</dd><dt>From</dt><dd>${esc(d.from)}</dd><dt>To</dt><dd>${esc(d.to)}</dd>${d.at != null ? `<dt>Received</dt><dd>${esc(E.when(d.at))} ET</dd>` : ""}${(d.kv || []).map(k => `<dt>${esc(k[0])}</dt><dd>${k[2] ? `<mark class="rd">${esc(k[1])}</mark> <span class="ai">AI reading · ${esc(k[2])}</span>` : esc(k[1])}</dd>`).join("")}</dl>`;
+  let h = `<dl class="kv"><dt>Document</dt><dd>${esc(d.name)}${d.ref ? ` <span class="mono">${esc(d.ref)}</span>` : ""}</dd><dt>Interface</dt><dd>${esc(d.iface)}</dd><dt>From</dt><dd>${esc(d.from)}</dd><dt>To</dt><dd>${esc(d.to)}</dd>${d.at != null ? `<dt>Received</dt><dd>${esc(E.when(d.at))} ET</dd>` : ""}${(d.kv || []).map(k => `<dt>${esc(k[0])}</dt><dd>${k[2] ? `<mark class="rd">${esc(k[1])}</mark> <span class="ai">AI reading · ${esc(k[2])}</span>` : E.refy(k[1])}</dd>`).join("")}</dl>`;
   if (d.items) h += `<table class="ow"><thead><tr>${d.items[0].map(c => `<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>${d.items.slice(1).map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
   if (d.note) h += `<p class="meta">${esc(d.note)}</p>`;
   return h;
@@ -460,6 +461,20 @@ E.keepFocus = () => { const a = document.activeElement; if (a && a !== document.
 /* A drawer table shows its first five rows; the rest open in place. */
 E.dcap = (head, rows, n) => { n = n || 5; return `<div class="tw dc${rows.length > n ? " capped" : ""}"><table class="ow"><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` + (rows.length > n ? `<div class="more"><button class="lnk" type="button" data-xall="${rows.length}" aria-expanded="false">Show all ${rows.length}</button></div>` : ""); };
 document.addEventListener("click", e => { const b = e.target.closest("[data-xall]"); if (!b) return; const w = b.parentElement.previousElementSibling; const on = w.classList.toggle("capped"); b.setAttribute("aria-expanded", String(!on)); b.textContent = on ? "Show all " + b.dataset.xall : "Show first 5"; });
+/* Work-queue tiles filter the list to the records they count and open the first one. */
+S.tile = S.tile || {};
+E.tileOn = k => S.tile[S.side] === k;
+const select1 = E.select;
+E.select = (id, focus) => {
+  if (!/^tile:/.test(id)) return select1(id, focus);
+  const k = id.slice(5); S.tile[S.side] = S.tile[S.side] === k ? null : k;
+  E.renderList(); const first = document.querySelector("#list .row");
+  if (S.tile[S.side] && first) select1(first.dataset.sel, false); else E.render();
+  const b = document.querySelector(`[data-sel="${id}"]`); if (b) b.focus();
+  E.say(S.tile[S.side] ? `${b ? b.querySelector("span").textContent : "Filter"}: ${document.querySelectorAll("#list .row").length} shown` : "All records shown");
+};
+/* references in document viewers are set in JetBrains Mono */
+E.refy = v => /^(?:[A-Z]{2,5}-[A-Z0-9]+(?:-[A-Z0-9]+)*|\d{10,}|[A-Z]{3}-[A-Z]{3,4}-\d+)$/.test(String(v)) ? `<span class="mono">${esc(v)}</span>` : esc(v);
 E.start = () => { E.render(); S.started = true; };
 })();
 

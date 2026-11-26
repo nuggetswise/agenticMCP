@@ -71,17 +71,17 @@ export function testDecision(db, document, asOf = storyClock()) {
   return out('trade_test', 'Test Agent', a.document, asOf, { evidence, decision_row: row, next_step: next, ...detail, rule: rule(db, 'NF-4.9'), rule_baseline: 'Shows "Pack 12 submitted, 6 expected" and one fixed suggestion: change the pack configuration', confirmed_by: 'A passed retest, then the receiving advice on the first live shipment' });
 }
 
-/** Sell-through for one store's report week (rebuild plan Step 3, decided 23 November 2026): units sold ÷ units received
- *  in the week, from Northfield's store activity report (852 QS and QR). Transfers between stores are recorded apart and
- *  are not receipts. Measured when every figure is the report's own; Estimated for the first week on record, whose
- *  receipts rest on the set opening balance. No rate when nothing was received that week. Shared by both sides. */
+/** Sell-through for one store's report week (decided 26 November 2026, replacing the 23 November units-sold-over-received
+ *  rule): units sold over the last 4 report weeks ÷ (stock at the start of those weeks + units received, net of transfers),
+ *  which equals units sold ÷ (units sold + on hand), from Northfield's store activity report (852 QS and QA). In the week:
+ *  the same over one week. Always 0% to 100%; no rate only when a store had neither sales nor stock. Shared by both sides. */
 export function sellThrough(db, wk) {
-  if (!wk || wk.received == null) return { sell_through: null, sell_through_basis: 'Not available', sell_through_reason: 'The report carries no units received' };
-  const first = db.prepare('SELECT min(period_end) p FROM store_activity WHERE sku = ? AND store = ?').get(wk.sku, wk.store).p;
-  const flows = { received: wk.received, transfer_in: wk.transfer_in, transfer_out: wk.transfer_out }; const unitsSold = wk.sold; // a measure, not a threshold
-  if (!wk.received) return { ...flows, sell_through: null, sell_through_basis: 'Not available', sell_through_reason: 'Nothing received that week', formula: 'Units sold ÷ units received in the week' };
-  return { ...flows, sell_through: Math.round((unitsSold / wk.received) * 1000) / 10, sell_through_unit: 'percent', sell_through_basis: wk.period_end === first ? 'Estimated' : 'Measured',
-    ...(wk.period_end === first ? { sell_through_reason: 'First week on record: units received rest on the set opening balance' } : {}), formula: 'Units sold ÷ units received in the week' };
+  if (!wk) return { sell_through: null, sell_through_reason: 'No store activity report' };
+  const flows = { received: wk.received, transfer_in: wk.transfer_in, transfer_out: wk.transfer_out };
+  const last = db.prepare('SELECT sold FROM store_activity WHERE store = ? AND sku = ? AND period_end <= ? ORDER BY period_end DESC LIMIT 4').all(wk.store, wk.sku, wk.period_end);
+  const sold4 = last.reduce((a, r) => a + r.sold, 0), pc = (n, d) => (d ? Math.round((n / d) * 1000) / 10 : null);
+  return { ...flows, sell_through: pc(sold4, sold4 + wk.on_hand), sell_through_unit: 'percent', sell_through_weeks: last.length, sell_through_in_week: pc(wk.sold, wk.sold + wk.on_hand),
+    formula: 'Units sold in the last 4 weeks ÷ (stock at the start of those weeks + units received, net of transfers) = units sold ÷ (units sold + on hand)' };
 }
 
 /** Northfield's store read (P9): one store's or every store's figures from Northfield's own store activity reports, with
@@ -193,8 +193,13 @@ export function storeShelvesAshby(db, store, asOf = storyClock()) {
     return { state: d.decision_row, recommendation: { recommend_new_order: 'New order', recommend_transfer: 'Transfer stock out', wait_for_goods_in_transit: 'Wait for goods in transit', nothing_to_do: 'Nothing to do' }[d.next_step] || d.next_step, ...(d.pairs ? { pairs: d.pairs } : {}), ...(d.next_step === 'recommend_new_order' ? { decided_by: 'Jordan Ellis, Northfield' } : {}) }; };
   const avail = shelfDecision(db, store ?? (b.stores?.[0]?.store), asOf)?.evidence?.ashby_available ?? null;
   const decides = 'Northfield decides every order and transfer and picks the receiving store';
-  if (store != null) return { ...b, ashby_rules: rec(String(store).replace(/^store\s*/i, '')), ashby_available_pairs: avail, decides };
-  const stores = b.stores.map((x) => ({ ...x, ashby_rules: rec(x.store) }));
+  const lo = param(db, 'AP-6.2', 'sell_through_target_low'), hi = param(db, 'AP-6.2', 'sell_through_target_high');
+  const target = { sell_through_target: `${lo}% to ${hi}% over ${param(db, 'AP-6.2', 'sell_through_weeks')} weeks (Ashby's target; above ${hi}% risks a stockout, below ${lo}% is slow)` };
+  const band = (v) => (v == null ? null : v > hi ? 'Above target' : v < lo ? 'Below target' : 'On target');
+  if (store != null) return { ...b, sell_through_band: band(b.sell_through), ...target, ashby_rules: rec(String(store).replace(/^store\s*/i, '')), ashby_available_pairs: avail, decides };
+  const stores = b.stores.map((x) => ({ ...x, sell_through_band: band(x.sell_through), ashby_rules: rec(x.store) }));
   const pick = (k) => stores.filter((x) => x.ashby_rules && x.ashby_rules.recommendation === k).map((x) => ({ store: x.store, on_hand: x.on_hand, weeks_of_supply: x.weeks_of_supply, ...(x.ashby_rules.pairs ? { pairs: x.ashby_rules.pairs } : {}) }));
-  return { ...b, stores, needs_new_order: pick('New order'), can_spare_stock: pick('Transfer stock out'), ashby_available_pairs: avail, decides };
+  const sold4 = stores.reduce((a, x) => a + (x.sell_through_weeks ? db.prepare('SELECT sum(sold) s FROM (SELECT sold FROM store_activity WHERE store = ? AND sku = ? AND period_end <= ? ORDER BY period_end DESC LIMIT 4)').get(x.store, x.sku, b.week_ending).s : 0), 0), oh = stores.reduce((a, x) => a + x.on_hand, 0);
+  const all = { sell_through_all_stores: Math.round((sold4 / (sold4 + oh)) * 1000) / 10, stores_by_band: { 'Above target': stores.filter((x) => x.sell_through_band === 'Above target').length, 'On target': stores.filter((x) => x.sell_through_band === 'On target').length, 'Below target': stores.filter((x) => x.sell_through_band === 'Below target').length } };
+  return { ...b, ...target, ...all, stores, needs_new_order: pick('New order'), can_spare_stock: pick('Transfer stock out'), ashby_available_pairs: avail, decides };
 }

@@ -27,7 +27,7 @@
   --link-hover:var(--ot-blue-900); --surface-page:var(--ot-surface-50); --surface-card:var(--ot-white);
   --surface-subtle:var(--ot-surface-100); --surface-dark:var(--ot-navy-900); --border-default:var(--ot-line-200);
   --border-strong:#D3D7DD; --action-soft:#E8F0FF; --accent-soft:#FAF1D2;
-  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px; --space-6:24px; --space-8:32px;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px; --space-6:24px; --space-8:32px; --ui-list-pane:400px;
   --container-max:1200px; --radius-sm:6px; --radius-md:10px; --radius-lg:12px; --radius-xl:16px; --radius-pill:999px;
   --shadow-xs:0 1px 2px rgba(15,27,45,.05); --shadow-sm:0 1px 3px rgba(15,27,45,.08);
   --shadow-md:0 4px 12px rgba(15,27,45,.08); --shadow-lg:0 12px 32px rgba(15,27,45,.12);
@@ -255,7 +255,7 @@ table.t td,table.t th,.fig,.clock,.tm,.kv dd,.mono,.r3{font-variant-numeric:tabu
 .acct .co{color:var(--text-muted);font-weight:var(--ui-fw-medium)}
 .strip{display:flex;flex-wrap:wrap;gap:var(--space-2) var(--space-5);margin-top:var(--space-2);font-size:var(--ui-fs-small);color:var(--text-muted)}
 .strip b{color:var(--text-heading);font-weight:var(--ui-fw-semibold)}
-.wrap{max-width:none}.grid{grid-template-columns:5fr 8fr}
+.wrap{max-width:none}.grid{grid-template-columns:var(--ui-list-pane) minmax(0,1fr)}
 .src .scrollist{max-height:calc(100vh - 330px)}
 .bld{margin:var(--space-3) 0 var(--space-2);display:flex;flex-direction:column;gap:var(--space-2)}.br{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap}.bk{width:64px;font-size:var(--ui-fs-label);font-weight:var(--ui-fw-semibold);letter-spacing:var(--ls-eyebrow);text-transform:uppercase;color:var(--color-primary)}.br select,.br input{height:32px;border:1px solid var(--border-strong);border-radius:var(--radius-md);background:var(--surface-card);color:var(--text-heading);font:inherit;padding:0 var(--space-2)}.br input{width:90px}.br select:disabled,.br input:disabled{background:var(--surface-subtle);color:var(--text-body)}.op{color:var(--text-muted);font-size:var(--ui-fs-small)}
 .muted{color:var(--text-muted);font-size:var(--ui-fs-small);margin-top:var(--space-1)}

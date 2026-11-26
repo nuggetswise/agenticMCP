@@ -30,10 +30,13 @@ const PRIYA = 'Priya Raman', JORDAN = 'Jordan Ellis', BOTH = 'Priya Raman, then 
 // 24 November 2026 (rebuild plan Step 4, Bucket 4): P27 opens at 09:00 ET on Wednesday 25 November, after P14, with Ashby's
 // unpaid Northfield invoices already read as clean or not (Kanmon agreement KN-1).
 // P24 merges into P8 (decided 23 November): P8 opens at 17:30 ET on 9 December, the moment P24 used, and P24's row retires.
+// 26 November 2026 (round plan): P24 is its own page again, at P8's moment, Northfield only. P4 opens at 08:00 ET on
+// 2 November, three weeks after P2, once Drop-ship is live. P15 is named "Rule changes and their cost".
 export const CALENDAR = () => [
   { id: 'P2', stage: STAGE.req, week: 3, moment: 'Drop-ship and warehouse readiness', seen_by: PRIYA, prototype: 'P2 Programme Readiness', as_of: '2026-10-12T13:00:00.000Z', anchor: 'Drop-ship programme' },
+  { id: 'P4', stage: STAGE.req, week: 6, moment: 'Marketplace supplier approved and activated for Wholesale, and its first Wholesale order', seen_by: 'Jordan Ellis, then Priya Raman', prototype: 'P4 Marketplace to Wholesale', as_of: '2026-11-02T13:00:00.000Z', anchor: 'Wholesale programme' },
   { id: 'P21', stage: STAGE.req, week: 8, moment: 'Each company sets its own rules and sees the effect of a change before it applies', seen_by: BOTH, prototype: 'P21 Admin and rules', as_of: '2026-11-17T16:00:00.000Z', anchor: "Both companies' rules" },
-  { id: 'P15', stage: STAGE.req, week: 14, moment: 'A draft rule replayed against the quarter before publishing', seen_by: JORDAN, prototype: 'P15 Rule Replay', as_of: '2026-12-28T16:00:00.000Z', anchor: 'NFD-1' },
+  { id: 'P15', stage: STAGE.req, week: 14, moment: 'A draft rule replayed against the quarter before publishing', seen_by: JORDAN, prototype: 'P15 Rule changes and their cost', as_of: '2026-12-28T16:00:00.000Z', anchor: 'NFD-1' },
   { id: 'P23', stage: STAGE.ful, week: 6, moment: 'Northfield changes an order twice before it ships; order change 3 arrives', seen_by: PRIYA, prototype: 'P23 Order change before shipment', as_of: '2026-11-02T20:30:00.000Z', anchor: 'NR-450118' },
   { id: 'P13', stage: STAGE.ful, week: 8, moment: 'Silent order watch', seen_by: PRIYA, prototype: 'P13 Silent order watch', as_of: '2026-11-18T14:00:00.000Z', anchor: 'NR-46210 to NR-46231' },
   { id: 'P5', stage: STAGE.ful, week: 11, moment: 'Five fulfilment risks before departure', seen_by: PRIYA, prototype: 'P5 Shipment Watch', as_of: '2026-12-08T22:21:00.000Z', anchor: 'NR-460207 to NR-460288' },
@@ -44,6 +47,7 @@ export const CALENDAR = () => [
   { id: 'P14', stage: STAGE.inv, week: 7, moment: 'An invoice that does not match its order and receipt', seen_by: JORDAN, prototype: 'P14 Invoice Variance', as_of: '2026-11-10T14:00:00.000Z', anchor: 'INV-7731' },
   { id: 'P27', stage: STAGE.inv, week: 9, moment: 'Early cash on a clean invoice: Ashby funds clean Northfield invoices through Kanmon', seen_by: PRIYA, prototype: 'P27 Early cash on a clean invoice', as_of: '2026-11-25T14:00:00.000Z', anchor: '314 clean invoices' },
   { id: 'P8', stage: STAGE.inv, week: 11, moment: 'Open-order value from purchase order to payment, with the orders in transit at risk of missing their window', seen_by: JORDAN, prototype: 'P8 Money in Motion', as_of: '2026-12-09T22:30:00.000Z', anchor: 'NR-450118 and 358 other orders' },
+  { id: 'P24', stage: STAGE.ful, week: 11, moment: 'Inbound orders at risk of missing their window, each with its cause and owner', seen_by: JORDAN, prototype: 'P24 Inbound order risk', as_of: '2026-12-09T22:30:00.000Z', anchor: 'Orders in transit at risk' },
   { id: 'P6', stage: STAGE.ded, week: 10, moment: 'Deductions and an invoice exception', seen_by: BOTH, prototype: 'P6 Charge Resolution', as_of: '2026-12-01T14:00:00.000Z', anchor: 'DC-40877 on NR-450118' },
   { id: 'P20', stage: STAGE.ded, week: 15, moment: 'A remittance takes five promotion deductions', seen_by: BOTH, prototype: 'P20 Promotion deductions', as_of: '2027-01-06T14:00:00.000Z', anchor: 'PMT-990168' },
   { id: 'P7', stage: STAGE.perf, week: 14, moment: 'On-time, in-full 91.8%, calculated by Trading Grid', seen_by: BOTH, prototype: 'P7 Performance Improvement', as_of: '2026-12-28T14:00:00.000Z', anchor: '104 failing order items' },

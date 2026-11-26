@@ -33,7 +33,8 @@
   "p15": {
    "calendar": "P15",
    "sides": [
-    "northfield"
+    "northfield",
+    "ashby"
    ],
    "token": "p15-Qob8xZlf5xo_"
   },
@@ -144,6 +145,30 @@
     "ashby"
    ],
    "token": "p27-kodZbnmQdYj4"
+  },
+  "p2": {
+   "calendar": "P2",
+   "sides": [
+    "ashby",
+    "northfield"
+   ],
+   "token": "p2-uN5Ro7nMAw8Z"
+  },
+  "p4": {
+   "calendar": "P4",
+   "sides": [
+    "northfield",
+    "ashby"
+   ],
+   "token": "p4-1Ix_iy2dbUE6"
+  },
+  "p24": {
+   "calendar": "P24",
+   "sides": [
+    "northfield"
+   ],
+   "token": "p24-UxsKXEzu0S_N",
+   "aviator": "read_only"
   }
  }
 }

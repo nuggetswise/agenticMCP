@@ -29,7 +29,7 @@
   --shadow-xs:0 1px 2px rgba(15,27,45,.05); --shadow-sm:0 1px 3px rgba(15,27,45,.08);
   --shadow-md:0 4px 12px rgba(15,27,45,.08); --shadow-lg:0 12px 32px rgba(15,27,45,.12);
   --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px; --space-6:24px; --space-8:32px;
-  --space-10:40px; --space-12:48px; --space-16:64px; --space-20:80px; --container-max:1200px; --gutter:24px;
+  --space-10:40px; --space-12:48px; --space-16:64px; --space-20:80px;--ui-shell-gutter:24px; --container-max:1200px; --gutter:24px;
   --radius-sm:6px; --radius-md:10px; --radius-lg:12px; --radius-xl:16px; --radius-pill:999px;
   --font-sans:Inter,"Helvetica Neue",Arial,sans-serif;
   --mono-ui:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
@@ -47,7 +47,7 @@ body{background:var(--surface-page);color:var(--text-body);font-family:var(--fon
 button{font:inherit;color:inherit}
 .mono{font-family:var(--mono-ui);font-size:var(--ui-fs-small);white-space:nowrap}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.wrap{padding:0 max(var(--space-4),env(safe-area-inset-right)) 96px max(var(--space-4),env(safe-area-inset-left));max-width:var(--container-max);margin:0 auto}
+.wrap{padding:0 max(var(--space-4),env(safe-area-inset-right)) calc(var(--space-12) * 2) max(var(--space-4),env(safe-area-inset-left));max-width:var(--container-max);margin:0 auto}
 /* header */
 .top{display:flex;flex-wrap:wrap;row-gap:var(--space-2);align-items:center;gap:var(--space-4);min-height:52px;border-bottom:1px solid var(--border-default);background:var(--surface-card);padding:0 max(var(--space-4),env(safe-area-inset-right)) 0 max(var(--space-4),env(safe-area-inset-left))}
 .mark{white-space:nowrap;display:flex;align-items:center;gap:var(--space-2);font-weight:var(--ui-fw-bold);color:var(--text-heading);font-size:var(--ui-fs-body-lg)}
@@ -248,7 +248,7 @@ body{overflow:hidden}
 .app{display:flex;flex-direction:column;height:calc(100vh - 53px)}
 /* Figure size for headline tiles: proposed for the design system's Product UI scale. */
 :root{--ui-fs-stat:calc(var(--ui-fs-title) * 1.2);--ui-fw-bold:700;--lh-tight:1.1;--fw-regular:400;--lh-body:1.5;--lh-heading:1.2}
-.head{display:flex;flex-direction:column;gap:var(--space-1);padding:var(--space-1) var(--space-5) var(--space-1)}
+.head{display:flex;flex-direction:column;gap:var(--space-1);padding:var(--space-1) var(--ui-shell-gutter) var(--space-1)}
 .head .tx{min-width:0}
 .head h1{margin:0;font-size:var(--ui-fs-title);font-weight:var(--ui-fw-bold);line-height:var(--lh-heading);color:var(--text-heading)}
 .head .ev{margin:var(--space-1) 0 0;color:var(--text-body)}
@@ -301,7 +301,7 @@ body{overflow:hidden}
 .wk{width:100%;border-collapse:collapse;font-size:var(--ui-fs-small)}
 .wk th{text-align:right;font-weight:var(--ui-fw-semibold);color:var(--text-muted);padding:var(--space-1) var(--space-2);background:var(--surface-subtle);white-space:nowrap}
 .wk th:first-child,.wk td:first-child{text-align:left}
-.wk td{text-align:right;border-top:1px solid var(--border-default);padding:5px var(--space-2);color:var(--text-heading);white-space:nowrap}
+.wk td{text-align:right;border-top:1px solid var(--border-default);padding:var(--space-1) var(--space-2);color:var(--text-heading);white-space:nowrap}
 .wk td.cur{font-weight:var(--ui-fw-bold)}
 .wk td:first-child{color:var(--text-muted)}
 .reccard{margin-top:var(--space-3);border:1px solid var(--ot-warn-bar);border-radius:var(--radius-lg);padding:var(--space-3)}
@@ -313,7 +313,7 @@ body{overflow:hidden}
 .na b{color:var(--text-heading);font-weight:var(--ui-fw-semibold)}
 .recs{margin:0;padding:0;list-style:none}
 .recs li{display:flex;justify-content:space-between;gap:var(--space-3);padding:var(--space-2) 0;border-bottom:1px solid var(--border-default);color:var(--text-heading)}
-.ab2{border-top:1px solid var(--border-default);padding:var(--space-3) 190px var(--space-3) var(--space-4);display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap}
+.ab2{border-top:1px solid var(--border-default);padding:var(--space-3) calc(var(--space-20) * 2) var(--space-3) var(--space-4);display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap}
 .ab2 .says{margin:0;color:var(--text-body);font-size:var(--ui-fs-small);flex:1 1 260px}
 .ab2 .btn{flex:none}
 .avb{position:fixed;right:20px;bottom:20px;z-index:15}
@@ -682,8 +682,8 @@ function weekTable(id){
   const row = (name, f) => `<tr><td>${name}</td>${cols.map(i => `<td class="${i === k ? "cur" : ""}">${f(i)}</td>`).join("")}</tr>`;
   const d = DATA[id];
   return `<div class="tw"><table class="wk"><thead><tr><th>Week</th>${cols.map(i => `<th>${lab(i)}</th>`).join("")}</tr></thead><tbody>
-  ${row("Sold", i => d[i][0])}${row("On hand", i => d[i][1])}${row("Received", i => d[i][2])}${row("Transfers in", i => d[i][3])}${row("Transfers out", i => d[i][4])}
-  ${row("Sell-through", i => d[i][2] ? Math.round(d[i][0] / d[i][2] * 100) + "%" + (i === 0 ? " Estimated" : "") : "Not available")}</tbody></table></div>`;
+  ${row("Sold", i => d[i][0])}${row("On hand", i => d[i][1])}${row("Received", i => d[i][2])}${row("Transfers in", i => d[i][3])}${row("Transfers out", i => d[i][4])}${F.open["wk" + id] ? row("Sell-through", i => d[i][2] ? Math.round(d[i][0] / d[i][2] * 100) + "%" + (i === 0 ? " Estimated" : "") : "Not available") : ""}</tbody></table></div>
+  <div class="det"><button class="lnk" type="button" data-det="wk${id}" aria-expanded="${!!F.open["wk" + id]}">${F.open["wk" + id] ? "Hide details" : "Details"}</button></div>`;
 }
 function detBtn(key, html){ const on = !!F.open[key]; return `<div class="det"><button class="lnk" type="button" data-det="${key}" aria-expanded="${on}">${on ? "Hide details" : "Details"}</button>${on ? `<div class="dbody">${html}</div>` : ""}</div>`; }
 const readList = docs => `<p class="k">Records read</p>` + docs.map(d => `<p>${tag(DOCS[d].name, d)} <span class="k">· ${esc(DOCS[d].iface)}</span></p>`).join("");

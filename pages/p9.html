@@ -276,6 +276,8 @@ body{overflow:hidden}
 .srow .r2 b.st-amber{color:var(--ot-warn)}
 .bands[hidden]{display:none}
 .pane.det{margin-top:0}
+.fig em.sub{color:var(--text-heading);font-weight:var(--ui-fw-medium)}
+.fig em.sub.st-amber{color:var(--ot-warn)}
 .band:hover{background:var(--action-soft)}
 .band[aria-pressed="true"]{background:var(--action-soft);box-shadow:inset 0 0 0 2px var(--color-action)}
 .tools input,.tools select{height:32px;border:1px solid var(--border-strong);border-radius:var(--radius-md);background:var(--surface-card);font:inherit;font-size:var(--ui-fs-small);color:var(--text-heading);padding:0 var(--space-2)}
@@ -650,9 +652,10 @@ function head(){
   const st = n => `${n} ${n === 1 ? "store" : "stores"}`;
   const lostV = IDS.reduce((a, id) => a + lost(id, k), 0) * PRICE, overV = IDS.filter(id => rules(id, k).slow).reduce((a, id) => a + over(id, k), 0) * PRICE;
   const stN = netST(k);
-  const figs = [["Sell-through", pct(stN), !nf() && stBand(stN) !== "ok" ? "warn" : "", "str", nf() ? "40 stores · last 4 weeks" : "40 stores · last 4 weeks · target 40% to 80%"], ["Sales lost", money(lostV), lostV ? "warn" : "", "lost", `${st(empty)} · Estimated`], ["Overstock", money(overV), overV ? "warn" : "", "over", `${st(slow)} · above 12 weeks of supply`]];
+  const so = m(F.sel, k).st, soOut = !nf() && stBand(so) !== "ok";
+  const figs = [["Sell-through", pct(stN), !nf() && stBand(stN) !== "ok" ? "warn" : "", "str", nf() ? "40 stores · last 4 weeks" : "40 stores · last 4 weeks · target 40% to 80%", `Store ${F.sel} · ${pct(so)}${soOut ? (stBand(so) === "out" ? " above target" : " below target") : ""}`, soOut], ["Sales lost", money(lostV), lostV ? "warn" : "", "lost", `${st(empty)} · Estimated`], ["Overstock", money(overV), overV ? "warn" : "", "over", `${st(slow)} · above 12 weeks of supply`]];
   if (!nf() && before) figs.push(["Available to ship", money(AVAIL * PRICE), "", "ship", `${AVAIL} pairs`]);
-  $("#strip").innerHTML = figs.map(f => `<button class="fig${f[2] ? " " + f[2] : ""}" type="button" data-tile="${f[3]}" aria-pressed="${F.tile === f[3]}"><span>${esc(f[0])}</span><b>${esc(f[1])}</b><em>${esc(f[4])}</em></button>`).join("");
+  $("#strip").innerHTML = figs.map(f => `<button class="fig${f[2] ? " " + f[2] : ""}" type="button" data-tile="${f[3]}" aria-pressed="${F.tile === f[3]}"><span>${esc(f[0])}</span><b>${esc(f[1])}</b><em>${esc(f[4])}</em>${f[5] ? `<em class="sub${f[6] ? " st-amber" : ""}">${esc(f[5])}</em>` : ""}</button>`).join("");
   $("#clock").textContent = dayName(CLOCK[k]) + " " + hm(CLOCK[k]) + " ET";
   $("#wslabel").textContent = nf() ? "Northfield Retailer · Buying" : "Ashby Supplier · Retail planning";
   $("#acctn").textContent = PEOPLE[F.ws][0]; $("#acctc").textContent = "· " + PEOPLE[F.ws][1];
@@ -840,7 +843,7 @@ document.body.addEventListener("click", e => {
   if (t.id === "acctb") { menu(!$("#menu").classList.contains("on")); return; }
   if (t.dataset.ws) { switchWs(t.dataset.ws); return; }
   if (!t.closest(".acct")) menu(false);
-  if (t.dataset.sel) { F.sel = t.dataset.sel; renderList(); renderDet(); $("#rech").focus({preventScroll:true}); return; }
+  if (t.dataset.sel) { F.sel = t.dataset.sel; head(); renderList(); renderDet(); $("#rech").focus({preventScroll:true}); return; }
   if (t.dataset.doc) { openDoc(t.dataset.doc); return; }
   if (t.dataset.det) { F.open[t.dataset.det] = !F.open[t.dataset.det]; renderDet(); const b = document.querySelector(`[data-det='${t.dataset.det}']`); if (b) b.focus(); return; }
   if (t.id === "bNext") { if (t.getAttribute("aria-disabled") !== "true") nextReport(); return; }

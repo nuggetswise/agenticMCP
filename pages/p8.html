@@ -436,7 +436,7 @@ E.openRules = () => {
 };
 
 /* ---------- Aviator ---------- */
-E.renderAv = () => { window.TG_AVIATOR.mount($("#avbody"), {questions:() => E.page.questions(), side:() => E.side().aviator}); };
+E.renderAv = () => { window.TG_AVIATOR.mount($("#avbody"), {questions:() => E.page.questions(), side:() => E.side().aviator, period:() => E.page && E.page.period ? E.page.period() : null}); };
 E.toggleAv = on => { const p = $("#avp"), b = $("#avb"); on = on == null ? !p.classList.contains("on") : on; if (on) E.renderAv(); p.classList.toggle("on", on); b.setAttribute("aria-expanded", on); if (on) $("#avclose").focus(); else b.focus(); };
 
 /* ---------- clicks ---------- */
@@ -565,6 +565,7 @@ E.start = () => { E.render(); S.started = true; };
     var mine = { role: "user", text: q }; hist[s].push(mine); busy = true; draw();
     var body = { question: q, side: s, context: context(), history: earlier };
     var a = asOf(); if (a) body.as_of = a;
+    var pe = cur && cur.opts.period != null ? val(cur.opts.period) : null; if (pe) body.period = pe;
     if (session) body.session = session;
     post("/aviator/" + encodeURIComponent(C.token), body)
       .then(function (x) {
@@ -664,7 +665,7 @@ const RGROUPS = [
   {k:"tue", label:"Due Wednesday · missed Tuesday's pickup"},
   {k:"wed", label:"Due Thursday · not ready at Wednesday's pickup"},
   {k:"noasn", label:"Due Thursday · no ship notice"}];
-const cause = o => o.k === "noasn" ? "Due tomorrow, prepaid · no ship notice" : o.k === "tue" ? "Not ready Tuesday · ship notice sent on the delivery day" : `Lakeline logged not ready ${(() => { const sd = o.s214.map(x => x.codes.find(c => c[0] === "SD")).find(Boolean); return sd ? E.when(sd[1]).replace("Wed", "Wednesday") : "Wednesday"; })()} · no ship notice`;
+const cause = o => o.k === "noasn" ? "Due tomorrow, prepaid · no ship notice" : o.k === "tue" ? "Not ready Tuesday · ship notice sent on the delivery day" : `Northfield's carrier logged not ready ${(() => { const sd = o.s214.map(x => x.codes.find(c => c[0] === "SD")).find(Boolean); return sd ? E.when(sd[1]).replace("Wed", "Wednesday") : "Wednesday"; })()} · no ship notice`;
 const actsAt = o => o.k === "noasn" ? `Hold the ${o.dc} receiving appointment for Thursday in Northfield's receiving system` : `Move the ${o.dc} receiving appointment to ${o.k === "tue" ? "Thursday" : "Friday"} in Northfield's receiving system; the buyer checks in-stock for ${ITEM[o.sku]}`;
 
 /* ---------- rules ---------- */
@@ -675,7 +676,7 @@ const R = {
   due:{text:"An invoice falls due on its invoice date plus its payment terms; the week runs Sunday to Saturday.", src:"Trading Grid"},
   unf:{text:"Unfilled at acknowledgment is the ordered value less the acknowledged value.", src:"Trading Grid"},
   bar:{text:"Billed above received counts open orders, not yet paid by remittance, with any order item invoiced above the quantity received, valued at the order's average cost per unit.", src:"Trading Grid"},
-  period:{text:"Invoices and remittances count in the period they are dated. This quarter runs to now; Previous quarter is Northfield's quarter before it; All trading covers every quarter on Trading Grid.", src:"Trading Grid"},
+  period:{text:"Invoices and remittances count in the period they are dated. This quarter runs to now; Closed period is Northfield's closed quarter before it; All trading covers every quarter on Trading Grid.", src:"Trading Grid"},
   transit:{text:"In transit counts every open order with no receiving advice, buyer and replenishment.", src:"Trading Grid"},
   ontime:{text:"Prepaid freight arrives inside the delivery window; collect freight is ready at the assigned pickup.", src:"Northfield guide"},
   asn:{text:"A ship notice is sent within 1 hour of departure.", src:"Northfield guide"},
@@ -695,9 +696,9 @@ const unfOf = po => (UNF.list.find(u => u.po === po) || {}).unfilled || 0;
 const dueOf = po => DUE.list.filter(d => d.po === po).reduce((s, d) => s + d.amount, 0);
 const SUPS = D.bySupplier.slice();
 /* Period: this quarter, the closed quarter or all trading, by the date of the invoice or remittance. */
-const PERIODS = [["quarter","This quarter"],["closed","Previous quarter"],["all","All trading"]];
+const PERIODS = [["quarter","This quarter"],["closed","Closed period"],["all","All trading"]];
 const PSTART = {quarter:"2026-09-27", closed:"2026-03-29", all:"2026-03-29"}, PEND = {quarter:"2026-12-26", closed:"2026-06-27", all:"2026-12-26"};
-const PLABEL = {quarter:"this quarter", closed:"previous quarter", all:"all trading"}, PIN = {quarter:"this quarter", closed:"in the previous quarter", all:"across all trading"};
+const PLABEL = {quarter:"this quarter", closed:"closed period", all:"all trading"}, PIN = {quarter:"this quarter", closed:"in the closed period", all:"across all trading"};
 const inPer = day => day >= PSTART[S.per] && day <= PEND[S.per];
 S.per = "quarter";
 const invDay = po => ORDERS[po].docs.filter(d => d[0] === "810").map(d => d[2].slice(0, 10)).sort()[0] || "";
@@ -715,7 +716,7 @@ supAll.forEach(s => { if (!SUPS.find(x => x.supplier === s)) SUPS.push({supplier
 NFH(NOW - 2, `Open-order read · ${n0(D.totals.orders)} purchase orders from ${D.totals.suppliers} suppliers · ${n0(D.totals.open)} open`, "Rule · Trading Grid", "");
 NFH(NOW - 1, `Inbound risk check · ${n0(D.transit.orders)} orders not yet received · ${RISKIDS.length} at risk`, "Rule · Trading Grid", "");
 RISKIDS.forEach(id => { const o = RISK[id];
-  o.s214.forEach(s => NFH(s.sent, `Carrier status on PO ${o.n} · ${s.codes.map(c => ({X3:"arrived at pickup",SD:"not ready",AF:"picked up"}[c[0]] || c[0])).join(", ")}`, "Lakeline Freight", docKey(id, s.ref)));
+  o.s214.forEach(s => NFH(s.sent, `Carrier status on PO ${o.n} · ${s.codes.map(c => ({X3:"arrived at pickup",SD:"not ready",AF:"picked up"}[c[0]] || c[0])).join(", ")}`, "Northfield's carrier", docKey(id, s.ref)));
   if (o.asnIn) NFH(o.asn.sent, `Ship notice on PO ${o.n} · sent on the delivery date`, "Ashby Supplier", docKey(id, o.asn.ref)); });
 DUE.list.forEach(d => { const t = T(0,0,0) + (Date.parse(d.due + "T05:00:00Z") - BASE) / 60000; if (t <= NOW) NFH(t, `Invoice on PO ${d.po.slice(3)} fell due · ${money(d.amount)} · ${d.supplier}`, "Trading Grid", ""); });
 
@@ -831,7 +832,7 @@ function stuck(po){
 function riskCard(id){
   const o = RISK[id];
   const facts = [];
-  if (o.rt) facts.push({v:`<b>Routing instructions</b> · collect, Lakeline Freight · pickup ${E.when(o.rt.from)} to ${E.hm(o.rt.to)}`, tags:[["EDI 754", docKey(id, o.rt.ref)]]});
+  if (o.rt) facts.push({v:`<b>Routing instructions</b> · collect, Northfield's carrier · pickup ${E.when(o.rt.from)} to ${E.hm(o.rt.to)}`, tags:[["EDI 754", docKey(id, o.rt.ref)]]});
   o.s214.forEach(s => { const nr = s.codes.find(c => c[0] === "SD"), pu = s.codes.find(c => c[0] === "AF");
     facts.push({v:`<b>Carrier status</b> · ${nr ? `<span class="st-red">Not ready</span> ${E.when(nr[1])}, inside the pickup window` : pu ? `Picked up ${E.when(pu[1])}` : "Arrived at pickup"}`, tags:[["EDI 214", docKey(id, s.ref)]]}); });
   if (o.asnIn) facts.push({v:`<b>Ship notice</b> · <span class="st-red">Sent on the delivery day</span> · ${o.asn.cartons} cartons`, tags:[["EDI 856", docKey(id, o.asn.ref)]]});
@@ -839,7 +840,7 @@ function riskCard(id){
   const arrive = o.k === "tue" ? "Expected Thursday, one day late" : o.k === "wed" ? "Expected Friday, one day late" : "Arrival unknown · no ship notice";
   return E.facts("Why it is at risk", facts)
     + `<div class="p8box"><div class="th"><span class="tt">${arrive}</span></div>`
-    + tbl(["Cause","Owner","Where Northfield acts"], [`<tr><td>${esc(cause(o))}</td><td>Ashby Supplier, shipping from Kinross Logistics</td><td>${esc(actsAt(o))}</td></tr>`])
+    + tbl(["Cause","Owner","Where Northfield acts"], [`<tr><td>${esc(cause(o))}</td><td>Ashby Supplier, shipping from Ashby's 3PL warehouse</td><td>${esc(actsAt(o))}</td></tr>`])
     + E.details("r:" + id, ruleList(o.k === "noasn" ? ["ontime","asn","risk"] : ["ontime","risk","asn","own"]) + `<p class="k p8gap">Who did what</p>` + E.who3([["Found by","Rule · Trading Grid"],["Acts","Northfield receiving and buying, in Northfield's own systems"],["Sent by Trading Grid","Nothing"]]))
     + `</div>`;
 }
@@ -861,7 +862,7 @@ const origSelect = E.select;
 E.select = (id, focus) => { const cur = S.sel[S.side]; if (/^a?po:/.test(id) && cur && !/^a?po:/.test(cur)) S.from = cur; else if (!/^a?po:/.test(id)) S.from = null; origSelect(id, focus); };
 const NFP = window.P8NF = {
   head:() => ({title:`${big(DUE.value)} falls due this week and ${big(barV())} is billed above what Northfield received ${PIN[S.per]}`,
-    event:`Trading Grid read the documents on ${n0(D.totals.orders)} purchase orders from ${D.totals.suppliers} suppliers; ${RISKIDS.length} inbound orders are at risk.`,
+    event:`${n0(D.totals.orders)} buyer purchase orders from ${D.totals.suppliers} suppliers · ${RISKIDS.length} inbound orders at risk`,
     goal:"See what falls due and what is billed but not received.",
     period:{value:S.per, options:PERIODS},
     figs:[["Open orders", big(D.totals.openValue), "", "open", `${n0(D.totals.open)} orders`], ["Due this week", money(DUE.value), "", "due", `${n0(DUE.invoices)} invoices`], ["Billed above received", money(barV()), barV() ? "risk" : "", "bar", `${n0(barIds().length)} ${barIds().length === 1 ? "order" : "orders"} · ${PLABEL[S.per]}`], ["In transit at risk", money(RISKV), "warn", "transit", `${RISKIDS.length} orders`]]}),
@@ -876,6 +877,7 @@ const NFP = window.P8NF = {
     if (/^po:/.test(id) && RISK[id.slice(3)]) F.risk = cause(RISK[id.slice(3)]);
     return (/^po:/.test(id) && RISK[id.slice(3)] ? ["risk","ontime","asn","own"] : id === "transit" ? ["transit","risk","ontime","asn"] : id === "bar" ? ["buyer","bar","period"] : ["buyer","close","stage","due","unf","bar","period"]).map(k => ({text:R[k].text, src:R[k].src, found:F[k] || ""})); },
   questions:() => ["What falls due this week?", "Which invoices bill more than Northfield received?"],
+  period:() => ({quarter:"This quarter", closed:"Closed period", all:"All trading"})[S.per],
   act:() => null
 };
 NFP.D = D; NFP.riskN = RISKIDS.length;
@@ -905,8 +907,8 @@ const et = s => { if (!s) return ""; const m = String(s).match(/^(\d{4}-\d\d-\d\
 const isoET = iso => { const x = new Date(Date.parse(iso) - 5 * 3600000).toISOString(); return x.slice(0, 10) + " " + x.slice(11, 16); };
 const ITEM = {"ASH-HNY-340":"wildflower honey","ASH-MUG-12":"stoneware mugs","ASH-NAP-4":"linen napkins","ASH-TRL-09":"trail runners"};
 const OWN = {"erp.shipment_planned":"Shipment planned","erp.fulfilment_posted":"Fulfilment posted","wms.departure_scan":"Departure scan","wms.load_scan":"Load scan","erp.setting":"ERP setting","wms.short_pick":"Short pick","erp.inventory_read":"Inventory read","wms.pack_scan":"Pack scan","wms.load_tally":"Load tally","erp.substitution":"Item substitution"};
-const SYS = s => s === "Supplier ERP" ? "Ashby's ERP" : s === "Kinross warehouse system" ? "Kinross warehouse" : s;
-const EVID = {held_by_warehouse:"Kinross holds the scans; not yet shared", tally_only:"Kinross load tally only", none:"No evidence on file"};
+const SYS = s => s === "Supplier ERP" ? "Ashby's ERP" : s === "Kinross warehouse system" ? "Ashby's 3PL warehouse" : s;
+const EVID = {held_by_warehouse:"Ashby's 3PL warehouse holds the scans; not yet shared", tally_only:"Load tally at Ashby's 3PL warehouse only", none:"No evidence on file"};
 const tbl = (head, rows) => `<table class="ow"><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table>`;
 const orderBtn = po => AO[po] ? `<button class="lnk" type="button" data-sel="apo:${esc(po)}">PO ${esc(po.slice(3))}</button>` : `PO ${esc(po.slice(3))}`;
 
@@ -953,7 +955,7 @@ function homeRec(){
   const need = [
     {v:`<b>${toDecide.length} charges · ${money(toDecideV)}</b> · dispute or accept in each deduction case`, tags:[["Paid short", null]], sel:"a:ps"},
     {v:`<b>${money(owedV)} owed back</b> · Northfield waived the charge ${et(isoET(owedBack[0].trail.slice(-1)[0][0])).toLowerCase()}; not yet repaid`, tags:[["Paid short", null]], sel:"a:ps"},
-    {v:`<b>${PD.orders} short receipts · ${money(PD.value)}</b> · no deduction case yet; Kinross checks its load scans`, tags:[["Possible deductions", null]], sel:"a:pd"}];
+    {v:`<b>${PD.orders} short receipts · ${money(PD.value)}</b> · no deduction case yet; Ashby's 3PL warehouse checks its load scans`, tags:[["Possible deductions", null]], sel:"a:pd"}];
   let body = `<span class="lab">Needs Priya Raman</span>` + need.map(r => `<button class="fr frb" type="button" data-sel="${r.sel}"><span class="v">${r.v}</span><span class="tags"><span class="tag">${esc(r.tags[0][0])}</span></span></button>`).join("");
   body += `<span class="lab">Coming in · unpaid invoices by due date</span><div class="cash">${BK.map(b => tile("a:" + b[0], b[1], money(INC[b[0]].v), `${n0(INC[b[0]].n)} invoices · ${b[2]}`, b[0] === "this_week")).join("")}</div>`;
   body += `<span class="lab">Held or at risk</span><div class="cash">${tile("a:held", "Held", money(heldV), heldV ? "" : "Nothing held")}${tile("a:ps", "Paid short", money(PS.gap), `${PS.invoices} invoices · ${money(owedV)} owed back`)}${tile("a:pd", "Possible deductions", money(PD.value), `${PD.orders} short receipts · no case yet`)}</div>`;
@@ -984,10 +986,10 @@ function psRec(){
 function pdRec(){
   let body = E.cap("a:pd", ["Order","Short cartons at receipt","Possible charge"], PD.list.map(x => `<tr><td>${orderBtn(x.po)}</td><td>${n0(x.short_cases)}</td><td>${money(x.amount)}</td></tr>`));
   if (PD.list.length < PD.orders) body += `<p class="meta">First ${PD.list.length} of ${PD.orders} receipts; the total covers all ${PD.orders}.</p>`;
-  body += `<p class="reason"><b>Who acts.</b> Kinross Logistics checks its load scan for each order, in its warehouse system; Priya Raman disputes once Northfield opens a case. This view sends nothing.</p>`;
+  body += `<p class="reason"><b>Who acts.</b> Ashby's 3PL warehouse checks its load scan for each order, in its warehouse system; Priya Raman disputes once Northfield opens a case. This view sends nothing.</p>`;
   body += E.details("a:pd", ruleList(["possible","short","own"]));
   return {title:"Possible deductions", chip:[`${PD.orders} short receipts`, "amber"], meta:`${money(PD.value)} at Northfield's shortage charge · no case open yet`,
-    banner:[`${money(PD.value)} may come off later payments`, "Northfield's receiving advice shows short cartons on these orders and no deduction case is open yet. Kinross checks its load scans first."], body, action:null};
+    banner:[`${money(PD.value)} may come off later payments`, "Northfield's receiving advice shows short cartons on these orders and no deduction case is open yet. Ashby's 3PL warehouse checks its load scans first."], body, action:null};
 }
 function orderRec(po){
   const o = AO[po], ps = PS.list.find(x => x.po === po), pd = PD.list.find(x => x.po === po);
@@ -1034,7 +1036,7 @@ const AP = {
   record:id => id === "a:home" ? homeRec() : id === "a:held" ? heldRec() : id === "a:ps" ? psRec() : id === "a:pd" ? pdRec() : /^apo:/.test(id) ? orderRec(id.slice(4)) : bucketRec(id.slice(2)),
   rules:id => { const F = {due:`${n0(A.unpaid.invoices)} unpaid invoices, ${money(A.unpaid.value)}`, possible:`${PD.orders} receipts, ${money(PD.value)}`, short:`${PS.invoices} invoices paid short, ${money(PS.gap)}`, held:money(heldV), stage:STG.map(s => s.stage + " " + s.orders).join(", ")};
     return (id === "a:ps" ? ["short","dispute","release"] : id === "a:pd" ? ["possible","short","own"] : /^apo:/.test(id) ? ["stage","close","release","own"] : ["due","release","stage","possible","own"]).map(k => ({text:R[k].text, src:R[k].src, found:F[k] || ""})); },
-  questions:() => ["Where is my money waiting, and who releases it?", "Why was PO 450118 paid less than invoiced?"],
+  questions:() => ["Where is my money waiting, and who releases it?", "Why was an invoice paid less than it billed?"],
   act:() => null
 };
 
@@ -1043,7 +1045,7 @@ E.page = new Proxy({}, {get:(t, k) => (PAGES[S.side] || NF)[k]});
 S.sel.ash = "a:ps";
 document.head.insertAdjacentHTML("beforeend", `<style id="p8-ash-style">.cc.ccb{border:0;text-align:left;cursor:pointer;font:inherit;transition:background var(--ui-dur-fast) var(--ui-ease)}.cc.ccb:hover{background:var(--action-soft)}.cc.ccb:active{transform:scale(var(--ui-press-scale))}.fr.frb{width:100%;background:none;border:0;border-bottom:1px solid var(--border-default);font:inherit;text-align:left;cursor:pointer;color:inherit}.fr.frb:hover{background:var(--action-soft)}.fr.frb .tag{color:var(--action-text)}</style>`);
 E.start();
-E.event(`Trading Grid read the documents on ${n0(NF.D.totals.orders)} purchase orders from ${NF.D.totals.suppliers} suppliers; ${NF.riskN} inbound orders are at risk.`, true);
+E.event(`${n0(NF.D.totals.orders)} buyer purchase orders from ${NF.D.totals.suppliers} suppliers · ${NF.riskN} inbound orders at risk`, true);
 })();
 </script>
 <script>(function(){var u='https://tg-retail-demo-mcp.onrender.com/#uc-money-in-motion';function add(){if(document.getElementById('tgAll'))return;var m=document.querySelector('.mark');var a=document.createElement('a');a.id='tgAll';a.href=u;a.textContent='All use cases';a.style.cssText='margin-left:16px;font-weight:600;font-size:var(--ui-fs-small);color:var(--action-text);text-decoration:none;white-space:nowrap';if(m&&m.parentNode)m.parentNode.insertBefore(a,m.nextSibling);}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',add);else add();})();</script>

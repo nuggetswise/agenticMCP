@@ -71,7 +71,9 @@ button,input{font:inherit;color:inherit}
 .menu button b{font-weight:600;color:var(--text-heading)}
 .menu button span{font-size:var(--ui-fs-small);color:var(--text-muted)}
 /* page head */
-.head{flex:none;display:flex;gap:var(--space-6);align-items:flex-start;justify-content:space-between;padding:var(--space-3) var(--ui-shell-gutter)}
+.head{flex:none;display:flex;flex-direction:column;gap:var(--space-2);align-items:stretch;padding:var(--space-3) var(--ui-shell-gutter)}
+.head .ev,.head .goal{display:inline}
+.head .goal::before{content:" · "}
 .head h1{margin:0;font-size:var(--ui-fs-title);font-weight:700;line-height:1.25;color:var(--text-heading)}
 .ev{margin:2px 0 0;color:var(--text-body)}
 .goal{margin:0;color:var(--text-muted);font-size:var(--ui-fs-small)}
@@ -80,6 +82,13 @@ button,input{font:inherit;color:inherit}
 .fig span{font-size:var(--ui-fs-small);color:var(--text-muted);white-space:nowrap}
 .fig b{font-size:var(--ui-fs-card-title);font-weight:700;color:var(--text-heading)}
 .fig.risk b{color:var(--ot-risk)}
+:root{--ui-fs-stat:calc(var(--ui-fs-title) * 1.2);--lh-tight:1.1;--ui-fw-bold:700}
+button.fig{font:inherit;color:inherit;text-align:left;align-items:flex-start;cursor:pointer;transition:background var(--ui-dur-fast) var(--ui-ease),box-shadow var(--ui-dur-fast) var(--ui-ease)}
+button.fig:hover{background:var(--action-soft)}
+.fig[aria-pressed="true"]{background:var(--action-soft);box-shadow:inset 0 0 0 2px var(--color-action)}
+.fig b{font-size:var(--ui-fs-stat);line-height:var(--lh-tight);font-variant-numeric:tabular-nums}
+.fig em{font-style:normal;font-size:var(--ui-fs-small);color:var(--text-muted)}
+.fig.warn b{color:var(--ot-warn)}
 /* list and detail */
 .split{flex:1;min-height:0;display:grid;grid-template-columns:var(--ui-list-pane) minmax(0,1fr);gap:var(--ui-shell-gutter);padding:0 var(--ui-shell-gutter) var(--ui-shell-gutter)}
 .pane{background:var(--surface-card);border:1px solid var(--border-default);border-radius:var(--radius-lg);min-height:0;display:flex;flex-direction:column;overflow:hidden}
@@ -336,7 +345,7 @@ E.renderHead = () => {
   $("#title").textContent = h.title;
   if (!S.eventSet) $("#ev").textContent = (S.evBy && S.evBy[S.side]) || h.event || "";
   $("#goal").textContent = h.goal || "";
-  $("#figs").innerHTML = (h.figs || []).map(f => `<div class="fig${f[2] ? " " + f[2] : ""}"><span>${esc(f[0])}</span><b>${esc(f[1])}</b></div>`).join("");
+  $("#figs").innerHTML = (h.figs || []).map(f => f[3] ? `<button type="button" class="fig${f[2] ? " " + f[2] : ""}" data-tile="${esc(f[3])}" aria-pressed="${(S.tile || "all") === f[3]}"><span>${esc(f[0])}</span><b>${esc(f[1])}</b><em>${esc(f[4] || "")}</em></button>` : `<div class="fig${f[2] ? " " + f[2] : ""}"><span>${esc(f[0])}</span><b>${esc(f[1])}</b></div>`).join("");
   const sd = E.side();
   $("#ws").textContent = sd.label;
   $("#acctName").textContent = `${sd.person} · ${sd.company}`;
@@ -402,6 +411,7 @@ E.toggleAv = on => { const p = $("#avp"), b = $("#avb"); on = on == null ? !p.cl
 E.onClick = function(e){
   const t = e.target.closest("button"); if (!t || t.closest("#avc")) return;
   if (t.dataset.side) { E.switchSide(t.dataset.side); return; }
+  if (t.dataset.tile) { S.tile = t.dataset.tile; E.renderHead(); E.renderList(); const g = E.page.groups(); const first = g.length && g[0].rows.length ? g[0].rows[0].id : null; if (first) E.select(first); const nb = document.querySelector(`[data-tile="${t.dataset.tile}"]`); if (nb) nb.focus(); return; }
   if (t.dataset.sel) { E.select(t.dataset.sel, true); return; }
   if (t.dataset.doc) { E.openDoc(t.dataset.doc); return; }
   if (t.dataset.det) { S.open[t.dataset.det] = !S.open[t.dataset.det]; E.renderRec(); return; }
@@ -598,10 +608,10 @@ const R = {
 
 S.sel = {nf:"NR-46616"};
 ALL.forEach(id => { const o = O[id];
-  o.s214.forEach((s, i) => E.hist(s.sent, `Carrier status on ${id} · ${s.codes.map(c => ({X3:"arrived at pickup",SD:"not ready",AF:"picked up"}[c[0]] || c[0])).join(", ")}`, "Northfield's carrier", "214-" + id + "-" + i));
+  o.s214.forEach((s, i) => E.hist(s.sent, `Carrier status on PO ${o.n} · ${s.codes.map(c => ({X3:"arrived at pickup",SD:"not ready",AF:"picked up"}[c[0]] || c[0])).join(", ")}`, "Northfield's carrier", "214-" + id + "-" + i));
   if (o.asnIn) E.hist(o.asn.sent, `Ship notice ${o.asn.ref} · sent on the delivery date`, "Ashby Supplier", "856-" + id);
 });
-E.hist(NOW - 1, "Inbound risk check · 127 orders due Wednesday and Thursday · 13 at risk", "Rule · Trading Grid", "");
+E.hist(NOW - 1, `Inbound risk check · ${ALL.length} orders at risk · ${money(TOTAL)}`, "Rule · Trading Grid", "");
 
 function cause(o){
   if (o.k === "noasn") return "Due tomorrow, prepaid · no ship notice";
@@ -614,7 +624,7 @@ function rec(id){
   if (o.rt) facts.push({v:`<b>Routing instructions</b> · collect, Northfield's carrier · pickup ${E.when(o.rt.from)} to ${E.hm(o.rt.to)}`, tags:[["EDI 754","754-" + id]]});
   o.s214.forEach((s, i) => { const nr = s.codes.find(c => c[0] === "SD"), pu = s.codes.find(c => c[0] === "AF");
     facts.push({v:`<b>Carrier status</b> · ${nr ? `<span class="st-red">Not ready</span> ${E.when(nr[1])}, inside the pickup window` : pu ? `Picked up ${E.when(pu[1])}` : "Arrived at pickup"}`, tags:[["EDI 214","214-" + id + "-" + i]]}); });
-  if (o.asnIn) facts.push({v:`<b>Ship notice</b> · <span class="st-red">Sent on the delivery day</span> · ${o.asn.cartons} cartons`, tags:[["EDI 856","856-" + id]]});
+  if (o.asnIn) facts.push({v:`<b>Ship notice</b> · <span class="st-amber">Sent on the delivery day</span> · ${o.asn.cartons} cartons`, tags:[["EDI 856","856-" + id]]});
   else facts.push({v:`<b>Ship notice</b> · <span class="st-amber">Missing</span>`, tags:[]});
   const arrive = o.k === "tue" ? "Thursday, one day late" : "Friday, one day late";
   const act = o.k === "noasn" ? `Hold the ${o.dc} receiving appointment for Thursday in Northfield's receiving system; confirm the slot once the ship notice arrives.` : `Move the ${o.dc} receiving appointment to ${o.k === "tue" ? "Thursday" : "Friday"} in Northfield's receiving system; the buyer checks in-stock for ${esc(ITEM[o.sku])}.`;
@@ -623,22 +633,25 @@ function rec(id){
     + `<table class="ow"><thead><tr><th>Cause</th><th>Owner</th><th>Where Northfield acts</th></tr></thead><tbody><tr><td>${esc(cause(o))}</td><td>Ashby Supplier</td><td>${esc(act)}</td></tr></tbody></table>`
     + E.details("r:" + id, ruleList(o.k === "noasn" ? ["ontime","asn","risk"] : ["ontime","risk","asn","own"]) + `<p class="k" style="margin-top:6px">Who did what</p>` + E.who3([["Found by","Rule · Trading Grid"],["Acts","Northfield receiving and buying, in Northfield's own systems"],["Sent by Trading Grid","Nothing"]]))
     + `</div>`;
-  return {title:"PO " + o.n, chip:["At risk","red"], meta:`Ashby Supplier · ${o.dc} · due ${o.dueDay} · ${o.k === "noasn" ? "prepaid" : "collect"} freight`, body, action:null};
+  return {title:"PO " + o.n, chip:["At risk","amber"], meta:`Ashby Supplier · ${o.dc} · due ${o.dueDay} · ${o.k === "noasn" ? "prepaid" : "collect"} freight`, body, action:null};
 }
 const ruleList = keys => keys.map(k => `<p>${esc(R[k].text)} <span class="k">· ${esc(R[k].src)}</span></p>`).join("");
 
+const inTile = k => !S.tile || S.tile === "all" || (S.tile === "tue" ? k === "tue" : k !== "tue");
+const TV = t => ALL.filter(id => t === "tue" ? O[id].k === "tue" : O[id].k !== "tue").reduce((a, id) => a + O[id].v, 0);
+const TN = t => ALL.filter(id => t === "tue" ? O[id].k === "tue" : O[id].k !== "tue").length;
 E.page = {
-  head:() => ({title:`13 inbound orders worth ${money(TOTAL)} are at risk of missing their delivery window`, event:"The rules read the documents and carrier status on 127 orders due Wednesday and Thursday.", goal:"Northfield acts on late orders while there is time.",
-    figs:[["At risk", money(TOTAL), "risk"], ["Orders read", String(READ)], ["Due Wednesday", String(ALL.filter(id => O[id].k === "tue").length)], ["Due Thursday", String(ALL.filter(id => O[id].k !== "tue").length)]]}),
+  head:() => ({title:`${ALL.length} Ashby orders worth ${money(TOTAL)} are at risk of missing Northfield's delivery window`, event:"Northfield's carrier logged collect freight not ready at Wednesday's pickup.", goal:"Move each DC receiving appointment before the order is due.",
+    figs:[["At risk", money(TOTAL), "warn", "all", `${ALL.length} orders`], ["Due Wednesday", money(TV("tue")), "warn", "tue", `${TN("tue")} orders`], ["Due Thursday", money(TV("thu")), "warn", "thu", `${TN("thu")} orders`]]}),
   sortLabel:() => "Delivery day",
-  groups:() => GROUPS.map(g => ({label:g.label, rows:ALL.filter(id => O[id].k === g.k).sort((a, b) => O[b].v - O[a].v).map(id => ({id, title:"PO " + O[id].n, text:id + " " + O[id].dc, line:`${O[id].dc} · ${money(O[id].v)} · ${O[id].q} cases ${ITEM[O[id].sku]}`, sub:cause(O[id])}))})),
+  groups:() => GROUPS.filter(g => inTile(g.k)).map(g => ({label:g.label, rows:ALL.filter(id => O[id].k === g.k).sort((a, b) => O[b].v - O[a].v).map(id => ({id, title:"PO " + O[id].n, text:id + " " + O[id].dc, line:`${O[id].dc} · ${money(O[id].v)} · ${O[id].q} cases ${ITEM[O[id].sku]}`, sub:cause(O[id])}))})),
   record:rec,
   rules:id => ["ontime","asn","risk","own"].map(k => ({text:R[k].text, src:R[k].src, found:k === "risk" ? cause(O[id]) : ""})),
   questions:() => ["Which orders will miss tomorrow's receiving appointments?", "Why are the collect orders late?"],
   act:() => null
 };
 E.start();
-E.event("The rules read the documents and carrier status on 127 orders due Wednesday and Thursday.", true);
+E.event("Northfield's carrier logged collect freight not ready at Wednesday's pickup.", true);
 })();
 
 </script>

@@ -540,7 +540,7 @@ const dayName = t => DAY[((Math.floor(t / 1440) % 7) + 7) % 7];
 const REPORT_AT = k => T(-1 + (k - 4) * 7, 6, 10);   /* report k arrives the day before the opening moment's week starts */
 const CLOCK = {4:T(0,8,7), 5:T(6,6,10)};
 
-const F = {band:null, tile:"lost", ws:"ashby", k:4, sel:"114", q:"", filter:"all", sort:"risk", open:{}, fresh:false};
+const F = {band:null, tile:null, ws:"ashby", k:4, sel:"114", q:"", filter:"act", sort:"risk", open:{}, fresh:false};
 const nf = () => F.ws === "nf";
 window.E = {S:{get sel(){ return F.sel; }}};
 
@@ -579,7 +579,7 @@ const wks = v => v == null ? "No sales" : v.toFixed(1);
 
 /* ---------- records ---------- */
 const DOCS = {
-  "ERP": {name:"Available stock", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(0,8,5), side:"ashby", kv:[["Item","ASH-TRL-09 trail runner"],["Available","980 pairs"]]},
+  "ERP": {name:"Inventory advice", iface:"EDI 846", from:"Supplier ERP", to:"Trading Grid", at:T(0,8,5), side:"ashby", kv:[["Item","ASH-TRL-09 trail runner"],["Available","980 pairs"]]},
   "850": {name:"Purchase order", ref:"NR-451207", iface:"EDI 850", from:"Northfield Retailer", to:"Ashby Supplier", at:T(0,10,20), kv:[["Ship to","Northfield Store 114"],["Item","ASH-TRL-09 trail runner"],["Quantity","40 pairs at $38.00"],["Total","$1,520.00"]]},
   "855": {name:"Order acknowledgment", ref:"ACK-451207", iface:"EDI 855", from:"Ashby Supplier", to:"Northfield Retailer", at:T(0,10,50), kv:[["Answers","Purchase order NR-451207"],["Order item 1","40 pairs accepted"]]},
   "856": {name:"Ship notice", ref:"ASN-451207-1", iface:"EDI 856", from:"Ashby Supplier", to:"Northfield Retailer", at:T(0,16,5), kv:[["Purchase order","NR-451207"],["Ship to","Northfield Store 114"],["Carrier","Lakeline Freight"],["Quantity","40 pairs · 1 carton"]]},
@@ -590,7 +590,7 @@ for (let k = 0; k <= 5; k++) DOCS["852-" + k] = {name:"Store activity report", i
 
 const HIST = [];
 for (let k = 0; k <= 5; k++) HIST.push({t:REPORT_AT(k), text:"Store activity report · 40 stores", by:"Northfield · EDI 852", doc:"852-" + k});
-HIST.push({t:T(0,8,5), text:"Available stock read · 980 pairs", by:"Supplier ERP · API", doc:"ERP", side:"ashby"});
+HIST.push({t:T(0,8,5), text:"Inventory advice · 980 pairs available", by:"Supplier ERP · Inventory advice · EDI 846", doc:"ERP", side:"ashby"});
 HIST.push({t:T(0,8,7), text:"Replenishment check · 2 stores need stock action", by:"Ashby's replenishment rules · Trading Grid", side:"ashby"});
 HIST.push({t:T(0,8,7), text:"Sell-through calculated · 40 stores", by:"Trading Grid", side:"nf"});
 [[T(0,10,20),"Purchase order · 40 pairs to store 114","Northfield · EDI 850","850"],
@@ -640,21 +640,24 @@ document.body.insertAdjacentHTML("afterbegin", `
 const say = t => { const l = $("#live"); l.textContent = ""; setTimeout(() => { l.textContent = t; }, 30); };
 
 /* ---------- header ---------- */
+let FIGS = [];
+const tileName = t => (FIGS.find(f => f[3] === t) || [""])[0];
+const tileValue = t => (FIGS.find(f => f[3] === t) || ["",""])[1];
 function flagged(k){ return IDS.filter(id => { const r = rules(id, k); return r.empty || r.slow; }); }
 function head(){
   const k = F.k, fl = flagged(k), empty = IDS.filter(id => rules(id, k).empty).length, slow = IDS.filter(id => rules(id, k).slow).length;
   const before = k === 4;
   $("#title").textContent = before
     ? (nf() ? `${fl.length} of 40 stores have an empty shelf or too much stock this week.` : `${fl.length} of 40 Northfield stores need stock action this week.`)
-    : "Store 114 is restocked and selling again.";
+    : (() => { const s = m("114", k); return `Store 114 sold ${s.sold} of its ${s.rec} restocked pairs; ${wks(s.wos)} weeks of supply left.`; })();
   $("#evline").textContent = before ? "Read when Northfield's store activity report arrived." : "Read when Northfield's next store activity report arrived.";
   $("#goal").textContent = " · Restock stores that sell out; move stock from stores that don't.";
   const st = n => `${n} ${n === 1 ? "store" : "stores"}`;
   const lostV = IDS.reduce((a, id) => a + lost(id, k), 0) * PRICE, overV = IDS.filter(id => rules(id, k).slow).reduce((a, id) => a + over(id, k), 0) * PRICE;
   const stN = netST(k);
-  const so = m(F.sel, k).st, soOut = !nf() && stBand(so) !== "ok";
-  const figs = [["Sell-through", pct(stN), !nf() && stBand(stN) !== "ok" ? "warn" : "", "str", nf() ? "40 stores · last 4 weeks" : "40 stores · last 4 weeks · target 40% to 80%", `Store ${F.sel} · ${pct(so)}${soOut ? (stBand(so) === "out" ? " above target" : " below target") : ""}`, soOut], ["Sales lost", money(lostV), lostV ? "warn" : "", "lost", `${st(empty)} · Estimated`], ["Overstock", money(overV), overV ? "warn" : "", "over", `${st(slow)} · above 12 weeks of supply`]];
-  if (!nf() && before) figs.push(["Available to ship", money(AVAIL * PRICE), "", "ship", `${AVAIL} pairs`]);
+  const so = m(F.sel, k).st, soEmpty = rules(F.sel, k).empty, soOut = !nf() && !soEmpty && stBand(so) !== "ok", none = F.tile && !rows().length;
+  const figs = [["Sell-through", pct(stN), !nf() && stBand(stN) !== "ok" ? "warn" : "", "str", nf() ? "40 stores · last 4 weeks" : "40 stores · last 4 weeks · target 40% to 80%", none ? "" : soEmpty ? `Store ${F.sel} · Empty shelf` : `Store ${F.sel} · ${pct(so)}${soOut ? (stBand(so) === "out" ? " above target" : " below target") : ""}`, soOut || soEmpty], ["Sales lost", money(lostV), lostV ? "warn" : "", "lost", `${st(empty)} · Estimated`], ["Overstock", money(overV), overV ? "warn" : "", "over", `${st(slow)} · above 12 weeks of supply`]];
+  FIGS = figs;
   $("#strip").innerHTML = figs.map(f => `<button class="fig${f[2] ? " " + f[2] : ""}" type="button" data-tile="${f[3]}" aria-pressed="${F.tile === f[3]}"><span>${esc(f[0])}</span><b>${esc(f[1])}</b><em>${esc(f[4])}</em>${f[5] ? `<em class="sub${f[6] ? " st-amber" : ""}">${esc(f[5])}</em>` : ""}</button>`).join("");
   $("#clock").textContent = dayName(CLOCK[k]) + " " + hm(CLOCK[k]) + " ET";
   $("#wslabel").textContent = nf() ? "Northfield Retailer · Buying" : "Ashby Supplier · Retail planning";
@@ -670,7 +673,7 @@ function chip(id, k){
   if (k === 5) { const x = m(id, 5); if (id === "114" && x.rec) return ["Restocked","brand"]; if (x.tout) return ["Transfer sent","brand"]; if (x.tin) return ["Transfer received","brand"]; }
   return null;
 }
-const bandOf = (id, k) => stBand(m(id, k).st);
+const bandOf = (id, k) => rules(id, k).empty ? "empty" : stBand(m(id, k).st);
 function rows(){
   const k = F.k;
   let ids = IDS.slice();
@@ -688,20 +691,21 @@ function rows(){
   return ids;
 }
 function renderBands(){
-  const k = F.k, by = {out:[], ok:[], slow:[]};
+  const k = F.k, by = {empty:[], out:[], ok:[], slow:[]};
   $("#bands").hidden = nf();
   if (nf()) return;
   IDS.forEach(id => by[bandOf(id, k)].push(id));
-  const B = [["out","Above target","above 80%"],["ok","On target","40% to 80%"],["slow","Below target","below 40%"]];
+  const B = [["empty","Empty shelf","0 on hand"],["out","Above target","above 80%"],["ok","On target","40% to 80%"],["slow","Below target","below 40%"]];
   $("#bands").innerHTML = B.map(b => `<button class="band${b[0] !== "ok" && by[b[0]].length ? " warn" : ""}" type="button" data-band="${b[0]}" aria-pressed="${F.band === b[0]}"><span>${esc(b[1])}</span><b>${by[b[0]].length}</b>${b[2] ? `<em>${esc(b[2])}</em>` : ""}</button>`).join("");
 }
 function renderList(){
   renderBands();
+  $("#flt").value = F.filter;
   const k = F.k, ids = rows();
   $("#cnt").textContent = ids.length === 40 ? "40 stores" : ids.length + " of 40 stores";
   $("#list").innerHTML = ids.length ? ids.map(id => { const x = m(id, k), c = chip(id, k);
-    return `<button class="srow" type="button" data-sel="${id}" aria-current="${F.sel === id}"><div class="r1"><span class="nm">Store ${id}</span>${c ? `<span class="chip ${c[1]}">${esc(c[0])}</span>` : ""}</div><div class="r2">Sell-through <b${!nf() && stBand(x.st) !== "ok" ? ' class="st-amber"' : ""}>${pct(x.st)}</b>${!nf() && stBand(x.st) !== "ok" ? (stBand(x.st) === "out" ? " above target" : " below target") : ""} · <b>${wks(x.wos)}</b> weeks of supply · ${x.sold} sold</div></button>`; }).join("")
-    : `<div class="empty">No store matches.</div>`;
+    return `<button class="srow" type="button" data-sel="${id}" aria-current="${F.sel === id}"><div class="r1"><span class="nm">Store ${id}</span>${c ? `<span class="chip ${c[1]}">${esc(c[0])}</span>` : ""}</div><div class="r2">${rules(id, k).empty ? `<b class="st-amber">0 on hand</b> · ${x.sold} sold against a ${Math.round(x.avg)}-pair average` : `Sell-through <b${!nf() && stBand(x.st) !== "ok" ? ' class="st-amber"' : ""}>${pct(x.st)}</b>${!nf() && stBand(x.st) !== "ok" ? (stBand(x.st) === "out" ? " above target" : " below target") : ""} · <b>${wks(x.wos)}</b> weeks of supply · ${x.sold} sold`}</div></button>`; }).join("")
+    : `<div class="empty">${F.tile ? esc(`No store matches · ${tileName(F.tile)} ${tileValue(F.tile)}`) : F.band ? esc(`No store matches · ${({empty:"Empty shelf",out:"Above target",ok:"On target",slow:"Below target"})[F.band]} 0`) : "No store matches."}</div>`;
 }
 
 /* ---------- detail ---------- */
@@ -714,7 +718,7 @@ function weekTable(id){
   const row = (name, f) => `<tr><td>${name}</td>${cols.map(i => `<td class="${i === k ? "cur" : ""}">${f(i)}</td>`).join("")}</tr>`;
   const d = DATA[id];
   return `<div class="tw"><table class="wk"><thead><tr><th>Week</th>${cols.map(i => `<th>${lab(i)}</th>`).join("")}</tr></thead><tbody>
-  ${row("Sell-through in the week", i => pct(m(id, i).stw))}${row("Sold", i => d[i][0])}${row("On hand", i => d[i][1])}${row("Received", i => d[i][2])}${F.open["wk" + id] ? row("Transfers in", i => d[i][3]) + row("Transfers out", i => d[i][4]) : ""}</tbody></table></div>
+  ${row("Sell-through in the week", i => d[i][1] === 0 ? "Empty shelf" : pct(m(id, i).stw))}${row("Sold", i => d[i][0])}${row("On hand", i => d[i][1])}${row("Received", i => d[i][2])}${F.open["wk" + id] ? row("Transfers in", i => d[i][3]) + row("Transfers out", i => d[i][4]) : ""}</tbody></table></div>
   <div class="det"><button class="lnk" type="button" data-det="wk${id}" aria-expanded="${!!F.open["wk" + id]}">${F.open["wk" + id] ? "Hide details" : "Details"}</button></div>`;
 }
 function detBtn(key, html){ const on = !!F.open[key]; return `<div class="det"><button class="lnk" type="button" data-det="${key}" aria-expanded="${on}">${on ? "Hide details" : "Details"}</button>${on ? `<div class="dbody">${html}</div>` : ""}</div>`; }
@@ -749,7 +753,7 @@ function renderDet(){
   } else if (k === 5 && x.tout) banner = `<div class="card banner enter"><div class="bt">${x.tout} pairs transferred out</div><p>${x.oh} on hand and ${wks(x.wos)} weeks of supply after the transfer.</p></div>`;
   else if (k === 5 && x.tin) banner = `<div class="card banner enter"><div class="bt">${x.tin} pairs received by transfer</div><p>${x.oh} on hand after ${x.sold} sold.</p></div>`;
   const flag = r.empty || r.slow;
-  const stock = nf() ? "" : wr(`<b>Supplier stock</b> · ${AVAIL} pairs available`, tag("Supplier ERP · API", "ERP"));
+  const stock = nf() ? "" : wr(`<b>Supplier stock</b> · ${AVAIL} pairs available`, tag("Inventory advice · EDI 846", "ERP"));
   const shelf = r.empty ? `<b>Shelf</b> · <span class="st-amber">0 on hand</span> · ${x.sold} sold against a ${Math.round(x.avg)}-pair average`
     : r.slow ? `<b>Stock</b> · ${x.oh} on hand · <span class="st-amber">${wks(x.wos)} weeks of supply</span> · ${x.sold} sold`
     : `<b>Shelf</b> · ${x.oh} on hand · ${x.sold} sold · ${Math.round(x.avg)}-pair average`;
@@ -762,7 +766,7 @@ function renderDet(){
   const says = k === 4 ? "Reads Northfield's next weekly store activity report and recalculates all 40 stores." : "Latest store activity report read.";
   $("#det").innerHTML = `<div class="dh"><div class="rh"><h2 id="rech" tabindex="-1">Store ${id}</h2>${c ? `<span class="chip ${c[1]}">${esc(c[0])}</span>` : ""}</div><div class="meta">Northfield Store ${id} · ASH-TRL-09 trail runner · $38.00 a pair</div></div>
   <div class="db2">${banner}
-    <div class="ms"><div><div class="k">Sell-through</div><div class="v${!nf() && stBand(x.st) !== "ok" ? " amber" : ""}">${pct(x.st)}<span class="e">last 4 weeks${!nf() && stBand(x.st) !== "ok" ? (stBand(x.st) === "out" ? " · above target" : " · below target") : ""}</span></div></div><div><div class="k">Weeks of supply</div><div class="v ${wosCls}">${wks(x.wos)}</div></div><div><div class="k">Sold</div><div class="v">${x.sold}</div></div><div><div class="k">On hand</div><div class="v">${x.oh}</div></div><div><div class="k">4-week average</div><div class="v">${Math.round(x.avg)}</div></div></div>
+    <div class="ms"><div><div class="k">Sell-through</div>${r.empty ? `<div class="v amber">Empty shelf<span class="e">0 on hand</span></div>` : `<div class="v${!nf() && stBand(x.st) !== "ok" ? " amber" : ""}">${pct(x.st)}<span class="e">last 4 weeks${!nf() && stBand(x.st) !== "ok" ? (stBand(x.st) === "out" ? " · above target" : " · below target") : ""}</span></div>`}</div><div><div class="k">Weeks of supply</div><div class="v ${wosCls}">${wks(x.wos)}</div></div><div><div class="k">Sold</div><div class="v">${x.sold}</div></div><div><div class="k">On hand</div><div class="v">${x.oh}</div></div><div><div class="k">4-week average</div><div class="v">${Math.round(x.avg)}</div></div></div>
     <div class="wrong" style="margin-top:0"><span class="lab">${flag ? "What is wrong" : "Records"}</span>${facts.join("")}</div>
     ${recCard(id)}
     ${recs}
@@ -797,14 +801,14 @@ function openHistory(){
 }
 function openRules(){
   const id = F.sel, k = F.k, x = m(id, k), r = rules(id, k);
-  const calc = [["Sell-through: units sold in the last 4 weeks ÷ (stock at the start of those weeks + units received, net of transfers). In the week, the same over one week.", pct(x.st)],
+  const calc = [["Sell-through: units sold in the last 4 weeks ÷ (stock at the start of those weeks + units received, net of transfers). In the week, the same over one week.", r.empty ? "Empty shelf · 0 on hand" : pct(x.st)],
                 ["Weeks of supply: on hand ÷ average sold in the 4 weeks before.", wks(x.wos) + " weeks"],
                 ["Sales lost on an empty shelf: 4-week average minus units sold, Estimated.", x.oh === 0 ? lost(id, k) + " pairs" : "Shelf not empty"]];
   const ash = [["Empty shelf: zero on hand and a weekly average of at least 1 pair.", r.empty ? "Met: 0 on hand" : "Not met"],
                ["An empty shelf with nothing in transit and stock available gets a new order recommendation.", r.rec && r.rec.kind === "order" ? r.rec.pairs + " pairs" : "Not met"],
                ["An empty shelf with goods in transit gets Wait.", "Not met"],
                ["Order in whole cartons of 40 pairs, sized from the 4-week average.", r.rec && r.rec.kind === "order" ? r.rec.cartons + " carton" : "Not used"],
-               ["Sell-through target: 40% to 80% over 4 weeks; above 80% risks a stockout, below 40% is slow.", pct(x.st) + ", " + stPhrase(x.st)],
+               ["Sell-through target: 40% to 80% over 4 weeks; above 80% risks a stockout, below 40% is slow.", r.empty ? "Empty shelf · not banded by sell-through" : pct(x.st) + ", " + stPhrase(x.st)],
                ["Slow sell-through: 12 or more weeks of supply and sales below 50% of the median store.", r.slow ? "Met: " + wks(x.wos) + " weeks" : "Not met"],
                ["A transfer leaves 8 weeks of supply at the sending store.", r.rec && r.rec.kind === "transfer" ? "Keeps " + (x.oh - r.rec.pairs) + " pairs" : "Not used"],
                ["Northfield decides every order and transfer and picks the receiving store.", ""]];
@@ -813,7 +817,7 @@ function openRules(){
 }
 
 /* ---------- Aviator ---------- */
-const AVQ = {ashby:["Why does store 114 need 40 pairs?","Which stores can spare stock?"], northfield:["Which stores sold out this week?","Where is stock sitting unsold?"]};
+const AVQ = {ashby:["Why does the empty store need a new order?","Which stores can spare stock?"], northfield:["Which stores sold out this week?","Where is stock sitting unsold?"]};
 const C = window.TG_AVIATOR;
 C.side = () => nf() ? "northfield" : "ashby";
 C.asOf = () => F.k === 4 ? "2026-10-26T08:07:00-04:00" : "2026-11-01T06:10:00-05:00";
@@ -823,12 +827,12 @@ function toggleAv(on){ const p = $("#avp"), b = $("#avb"); on = on == null ? !p.
 
 /* ---------- account menu ---------- */
 function menu(on){ const mn = $("#menu"), b = $("#acctb"); mn.classList.toggle("on", on); b.setAttribute("aria-expanded", on); if (on) (mn.querySelector('[aria-checked="true"]') || mn.querySelector("button")).focus(); }
-function switchWs(ws){ if (ws === F.ws) { menu(false); $("#acctb").focus(); return; } F.ws = ws; F.band = null; F.fresh = false; closeDrawer(); menu(false); render(); $("#acctb").focus(); say((nf() ? "Northfield Retailer" : "Ashby Supplier") + " workspace open."); }
+function switchWs(ws){ if (ws === F.ws) { menu(false); $("#acctb").focus(); return; } F.ws = ws; F.band = null; F.filter = ws === "nf" ? "all" : F.filter; F.fresh = false; closeDrawer(); menu(false); render(); $("#acctb").focus(); say((nf() ? "Northfield Retailer" : "Ashby Supplier") + " workspace open."); }
 
 /* ---------- next report: the only control that moves the story clock ---------- */
 function nextReport(){
   if (F.k === 5) return;
-  F.k = 5; F.tile = null; F.band = null; F.fresh = true;
+  F.k = 5; F.tile = null; F.band = null; F.filter = "all"; F.fresh = true;
   const bar = $("#readbar"); bar.classList.remove("gone"); bar.innerHTML = "<i></i>";
   render(); F.fresh = false;
   setTimeout(() => bar.classList.add("gone"), RM() ? 0 : 950);
@@ -867,7 +871,7 @@ $("#strip").addEventListener("click", e => { const b = e.target.closest("[data-t
 $("#srt").addEventListener("change", e => { F.sort = e.target.value; renderList(); });
 /* stock-state bands filter the store list and open the first store */
 $("#bands").addEventListener("click", e => { const b = e.target.closest("[data-band]"); if (!b) return;
-  F.band = F.band === b.dataset.band ? null : b.dataset.band; F.tile = null; const first = rows()[0];
+  F.band = F.band === b.dataset.band ? null : b.dataset.band; F.tile = null; if (F.band) F.filter = "all"; const first = rows()[0];
   if (F.band && first) F.sel = first; render(); const nb = document.querySelector(`[data-band="${b.dataset.band}"]`); if (nb) nb.focus(); });
 
 render();

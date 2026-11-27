@@ -598,7 +598,7 @@ const R = {
 
 S.sel = {nf:"NR-46616"};
 ALL.forEach(id => { const o = O[id];
-  o.s214.forEach((s, i) => E.hist(s.sent, `Carrier status on ${id} · ${s.codes.map(c => ({X3:"arrived at pickup",SD:"not ready",AF:"picked up"}[c[0]] || c[0])).join(", ")}`, "Lakeline Freight", "214-" + id + "-" + i));
+  o.s214.forEach((s, i) => E.hist(s.sent, `Carrier status on ${id} · ${s.codes.map(c => ({X3:"arrived at pickup",SD:"not ready",AF:"picked up"}[c[0]] || c[0])).join(", ")}`, "Northfield's carrier", "214-" + id + "-" + i));
   if (o.asnIn) E.hist(o.asn.sent, `Ship notice ${o.asn.ref} · sent on the delivery date`, "Ashby Supplier", "856-" + id);
 });
 E.hist(NOW - 1, "Inbound risk check · 127 orders due Wednesday and Thursday · 13 at risk", "Rule · Trading Grid", "");
@@ -606,22 +606,21 @@ E.hist(NOW - 1, "Inbound risk check · 127 orders due Wednesday and Thursday · 
 function cause(o){
   if (o.k === "noasn") return "Due tomorrow, prepaid · no ship notice";
   if (o.k === "tue") return "Not ready Tuesday · ship notice sent on the delivery day";
-  return "Lakeline logged not ready Wednesday 15:30 · no ship notice";
+  return "Northfield's carrier logged not ready Wednesday 15:30 · no ship notice";
 }
 function rec(id){
   const o = O[id];
   const facts = [{v:`<b>Purchase order</b> · ${o.q} cases ${esc(ITEM[o.sku])} · ${money(o.v)} · due ${o.dueDay} at ${o.dc}`, tags:[["EDI 850","850-" + id]]}];
-  if (o.rt) facts.push({v:`<b>Routing instructions</b> · collect, Lakeline Freight · pickup ${E.when(o.rt.from)} to ${E.hm(o.rt.to)}`, tags:[["EDI 754","754-" + id]]});
+  if (o.rt) facts.push({v:`<b>Routing instructions</b> · collect, Northfield's carrier · pickup ${E.when(o.rt.from)} to ${E.hm(o.rt.to)}`, tags:[["EDI 754","754-" + id]]});
   o.s214.forEach((s, i) => { const nr = s.codes.find(c => c[0] === "SD"), pu = s.codes.find(c => c[0] === "AF");
     facts.push({v:`<b>Carrier status</b> · ${nr ? `<span class="st-red">Not ready</span> ${E.when(nr[1])}, inside the pickup window` : pu ? `Picked up ${E.when(pu[1])}` : "Arrived at pickup"}`, tags:[["EDI 214","214-" + id + "-" + i]]}); });
   if (o.asnIn) facts.push({v:`<b>Ship notice</b> · <span class="st-red">Sent on the delivery day</span> · ${o.asn.cartons} cartons`, tags:[["EDI 856","856-" + id]]});
   else facts.push({v:`<b>Ship notice</b> · <span class="st-amber">Missing</span>`, tags:[]});
-  facts.push({v:`<b>Kinross and Supplier ERP records</b> · Not available to Northfield`, tags:[]});
   const arrive = o.k === "tue" ? "Thursday, one day late" : "Friday, one day late";
   const act = o.k === "noasn" ? `Hold the ${o.dc} receiving appointment for Thursday in Northfield's receiving system; confirm the slot once the ship notice arrives.` : `Move the ${o.dc} receiving appointment to ${o.k === "tue" ? "Thursday" : "Friday"} in Northfield's receiving system; the buyer checks in-stock for ${esc(ITEM[o.sku])}.`;
   const body = E.facts("Why it is at risk", facts)
     + `<div class="card amber"><div class="th"><span class="tt">Expected ${arrive}</span></div>`
-    + `<table class="ow"><thead><tr><th>Cause</th><th>Owner</th><th>Where Northfield acts</th></tr></thead><tbody><tr><td>${esc(cause(o))}</td><td>Ashby Supplier, shipping from Kinross Logistics</td><td>${esc(act)}</td></tr></tbody></table>`
+    + `<table class="ow"><thead><tr><th>Cause</th><th>Owner</th><th>Where Northfield acts</th></tr></thead><tbody><tr><td>${esc(cause(o))}</td><td>Ashby Supplier</td><td>${esc(act)}</td></tr></tbody></table>`
     + E.details("r:" + id, ruleList(o.k === "noasn" ? ["ontime","asn","risk"] : ["ontime","risk","asn","own"]) + `<p class="k" style="margin-top:6px">Who did what</p>` + E.who3([["Found by","Rule · Trading Grid"],["Acts","Northfield receiving and buying, in Northfield's own systems"],["Sent by Trading Grid","Nothing"]]))
     + `</div>`;
   return {title:"PO " + o.n, chip:["At risk","red"], meta:`Ashby Supplier · ${o.dc} · due ${o.dueDay} · ${o.k === "noasn" ? "prepaid" : "collect"} freight`, body, action:null};
@@ -635,7 +634,7 @@ E.page = {
   groups:() => GROUPS.map(g => ({label:g.label, rows:ALL.filter(id => O[id].k === g.k).sort((a, b) => O[b].v - O[a].v).map(id => ({id, title:"PO " + O[id].n, text:id + " " + O[id].dc, line:`${O[id].dc} · ${money(O[id].v)} · ${O[id].q} cases ${ITEM[O[id].sku]}`, sub:cause(O[id])}))})),
   record:rec,
   rules:id => ["ontime","asn","risk","own"].map(k => ({text:R[k].text, src:R[k].src, found:k === "risk" ? cause(O[id]) : ""})),
-  questions:() => ["Which orders miss tomorrow's DC 2 receiving?", "Why is PO 46616 late?"],
+  questions:() => ["Which orders will miss tomorrow's receiving appointments?", "Why are the collect orders late?"],
   act:() => null
 };
 E.start();

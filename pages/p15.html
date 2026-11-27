@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Draft rule replay · Trading Grid</title>
+<title>Rule changes and their cost</title>
 <style>
 /* Product UI weights and line heights from the design system (bundle.css). */
 :root{--font-sans:Inter,"Helvetica Neue",Arial,sans-serif;--ls-eyebrow:0.08em}
@@ -523,7 +523,7 @@ document.addEventListener("click",e=>{const t=e.target.closest("button");if(!t||
 $("#scrim").addEventListener("click",closeDrawer);
 window.P15D=()=>DR.side==="nf"?{asWritten:dD().rule(dX().s==="published"?dX().pub:dX().val)}:null;
 AV.side="northfield";AV.scope={northfield:"Reads records Northfield can see.",ashby:"Reads records Ashby can see."};
-AV.qs={"northfield":[{"q":"Which suppliers does the 30-minute draft hit hardest?"},{"q":"What changes at 40 minutes?"}],"ashby":[{"q":"Which of our ship notices miss 30 minutes, and from which warehouse?"},{"q":"How much later than 30 minutes do our ship notices go out?"}]};
+AV.qs={"northfield":[{"q":"Which suppliers would the tighter ship notice rule charge most?"},{"q":"How does the charge change with a longer window?"}],"ashby":[{"q":"How late do our ship notices go out against the new rule?"},{"q":"Which of our ship notices miss it, and from which warehouse?"}]};
 render();
 </script>
 

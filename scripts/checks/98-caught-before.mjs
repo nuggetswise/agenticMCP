@@ -13,9 +13,9 @@ export default function ({ db, ash, nf, ok, eq }) {
   eq('caught.no_ship_notice_that_left_was_rejected_or_late', rows.filter((r) => /^ASN-/.test(r.document) && (db.prepare("SELECT count(*) n FROM errors e JOIN documents d ON d.doc_id = e.doc_id WHERE d.reference = ?").get(r.document).n
     || db.prepare("SELECT 1 x FROM events WHERE kind = 'tg.late_document' AND json_extract(data, '$.document') = ?").get(r.document))).map((r) => r.finding_id), []);
   const c = findingOutcomes(db, 'Ashby', { asOf: T }).caught_before_shipment;
-  eq('caught.quarter_totals', [c.findings, c.orders, c.scheduled_charge], [17, 12, 3881]);
+  eq('caught.quarter_totals', [c.findings, c.orders, c.scheduled_charge], [16, 12, 3071]); // P5 (26 November 2026): NR-460207 ships short, so its held ship notice ($810) is no longer caught
   eq('caught.quarter_by_cause', c.by_cause.map((b) => `${b.cause}:${b.findings}:${b.orders}:${b.scheduled_charge}`),
-    ['Ship notice held and corrected:8:6:3041', 'Invoice corrected before the batch:1:1:100', 'Missing document sent before its deadline:7:6:740', 'Order changed before shipment:1:1:0']);
+    ['Ship notice held and corrected:7:6:2231', 'Invoice corrected before the batch:1:1:100', 'Missing document sent before its deadline:7:6:740', 'Order changed before shipment:1:1:0']);
   ok('caught.kept_apart_from_value_proven', !JSON.stringify(findingOutcomes(db, 'Ashby', { asOf: T }).value_proven).includes('caught') && /Never added/.test(c.kept_apart));
   eq('caught.ashby_copy_holds_the_same_rows', ash.prepare('SELECT count(*) n FROM findings_caught').get().n, rows.length);
   eq('caught.northfield_copy_holds_none', nf.prepare('SELECT count(*) n FROM findings_caught').get().n, 0);

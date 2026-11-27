@@ -57,9 +57,7 @@ function generate(L, { W, buyerShipments }) {
       cartons_loaded: 659, cartons_expected: 660, by_sscc: true, note: `Carton ${crushed} crushed at staging, contents damaged; the order ships 659 of 660 unless a replacement case is loaded` });
     // Round plan, 26 November 2026 (EDI first): the damage reaches Ashby as Kinross's 947 at the same minute.
     L.doc({ batch: 2, type: '947', from: 'KINROSS', to: 'ASHBY', at: et('2026-12-08', '17:21'), po, ref: `WA-GRV-${po.replace(/^NR-/, '')}`, site_name: LOC['KIN-GRV'].name, site_gln: LOC['KIN-GRV'].gln, client_name: PARTY.ASHBY.name, client_gln: PARTY.ASHBY.gln, items: [{ sku: P5.carton.sku, cases: 1, sscc: crushed }] });
-    ev(et('2026-12-08', '17:46'), 'wms.load_scan', po, ...KIN, { shipment: 'SHP-460207', cartons_loaded: 660, cartons_expected: 660, by_sscc: true,
-      replacement: { sscc: repl, replaces: crushed, sku: P5.carton.sku, from: 'Cases Kinross holds back for damage replacement at Groveport; not counted in the 610 free' },
-      bol: 'BOL-91407', seal: 'SL-4471026', seals_in_minutes: 6 });
+    // The 17:46 replacement load scan is dropped (round plan, 26 November 2026): the case ships short and Kinross's 945 is the load record.
   }
 
   // ---------- 3. P13: three more orders on the 18 November 09:00 check ----------

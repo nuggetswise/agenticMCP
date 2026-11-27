@@ -301,17 +301,21 @@ export function finishRisks(L, W) {
     const n = O.po.slice(3); const dep = O.po === 'NR-460207' ? et('2026-12-08', '18:00') : et(O.po === 'NR-460219' ? '2026-12-09' : '2026-12-10', O.po === 'NR-460288' ? '18:00' : '15:00');
     const ship = Object.fromEntries(O.lines.map((l) => [l.line, l.qty]));
     if (O.po === 'NR-460262') ship[1] = 270; if (O.po === 'NR-460219') ship[2] = 176;
+    // NR-460207 (P5, round plan 26 November 2026): the crushed case is not replaced; order item 1 ships 399 of 400 and the
+    // 945, ship notice, invoice and receiving advice all carry 659 cartons. Northfield raises its short-carton charge (SH01).
+    const ordered = { ...ship }; if (O.po === 'NR-460207') ship[1] -= 1;
     // NR-460274 ships the 300 cases its purchase order says. The order change and change acknowledgment that carried the
     // 270 agreed by phone are withdrawn; their places in the numbering stay unused.
     if (O.po === 'NR-460274') { L.retire({ from: 'NORTHFIELD', to: O.supplier, at: et('2026-12-08', '18:20') }); L.retire({ from: O.supplier, to: 'NORTHFIELD', at: et('2026-12-08', '18:50') }); }
     if (O.po === 'NR-460262') { D.change(L, O, et('2026-12-09', '09:20'), 1, [{ line: 1, code: 'QD', qty: 270, qty_left: 270 }]); D.changeAck(L, O, et('2026-12-09', '09:50'), 1, 'CHA-460262', [{ line: 1, code: 'IA', qty: 270 }]); O.lines[0].qty = 270; }
-    const cartons = []; for (const l of O.lines) for (let k = 0; k < ship[l.line]; k++) cartons.push({ sscc: O.po === 'NR-460207' && l.line === 1 && k === 172 ? REPLACEMENT_SSCC(W) : W.sscc(serial++), line: l.line, qty: 1 });
+    const cartons = []; for (const l of O.lines) for (let k = 0; k < ordered[l.line]; k++) { if (O.po === 'NR-460207' && l.line === 1 && k === 172) continue; if (k >= ship[l.line] && O.po !== 'NR-460207') continue; cartons.push({ sscc: W.sscc(serial++), line: l.line, qty: 1 }); }
     D.whOrder(L, O, addH(dep, -20), `WSO-${n}`, { shipDate: etDay(dep), qty: ship });
     L.event({ at: dep, kind: 'wms.departure_scan', po: O.po, system: 'Kinross warehouse system', party: 'KINROSS', channel: 'API', data: { shipment: `SHP-${n}`, carrier: 'Lakeline Freight' } });
-    D.whAdvice(L, O, addH(dep, 0.2), `WSA-${n}`, { shipmentId: `SHP-${n}`, shippedAt: dep, ordered: ship, shipped: ship });
+    D.whAdvice(L, O, addH(dep, 0.2), `WSA-${n}`, { shipmentId: `SHP-${n}`, shippedAt: dep, ordered, shipped: ship });
     D.asn(L, O, addH(dep, 0.1), { ref: `ASN-${n}`, shippedAt: dep, deliveryDate: etDay(addD(dep, 1)), cartons, qty: ship, shipTo: 'DC2', ...(O.po === 'NR-460207' ? { bol: 'BOL-91407', seal: 'SL-4471026' } : {}) });
     D.invoice(L, O, addH(dep, 1.5), { ref: O.po === 'NR-460219' ? 'INV-8012' : `INV-${n}`, qty: ship });
     D.receipt(L, O, et(etDay(addD(dep, 1)), '08:20'), { ref: O.po === 'NR-460207' ? 'RCV-DC2-81420' : `RCV-DC2-${n}`, asnRef: `ASN-${n}`, qty: ship });
+    if (O.po === 'NR-460207') L.event({ at: et(etDay(addD(dep, 1)), '08:20'), kind: 'charge.raised', po: O.po, system: 'Northfield deduction case', party: 'NORTHFIELD', channel: 'API', data: { charge: 'SH01', rule: 'SH01', amount: 104, line: 1, sku: 'ASH-MUG-12', cartons: 1, basis: 'Order item 1 shipped 399 of 400 cases: carton cost $54.00 plus $50', receiving_advice: 'RCV-DC2-81420' } });
     O.shipped = ship; O.departed = dep;
   }
 }

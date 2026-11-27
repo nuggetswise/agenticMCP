@@ -60,7 +60,7 @@ export default function ({ db, ash, nf, ok, eq, none, n, ROOT }) {
   const w945 = []; for (const d of db.prepare("SELECT po, body FROM documents WHERE doc_type = '945'").all()) for (const l of J(d.body).lines) w945.push({ po: d.po, ...l });
   const shipQ = new Map(picks.map((p) => [`${p.po}|${p.sku}`, p.qty]));
   const contra = w945.filter((l) => shipQ.get(`${l.po}|${l.sku}`) !== l.shipped);
-  eq('planning.945_shipped_agrees_with_every_pick', [contra.length, w945.filter((l) => l.shipped < l.ordered).length], [0, 40]);
+  eq('planning.945_shipped_agrees_with_every_pick', [contra.length, w945.filter((l) => l.shipped < l.ordered).length], [0, 41]); // 41: NR-460207 ships 399 of 400 (P5, 26 November 2026)
   { const asn = new Map(db.prepare("SELECT sl.po, sl.sku, sum(sl.qty) q FROM shipment_lines sl JOIN warehouse_orders w ON w.po = sl.po GROUP BY sl.po, sl.sku").all().map((r) => [`${r.po}|${r.sku}`, r.q]));
     const scan = new Map(db.prepare("SELECT po, json_extract(data,'$.cartons_loaded') n FROM events WHERE kind = 'wms.load_scan'").all().map((r) => [r.po, r.n])); const byPo = new Map(); for (const l of w945) byPo.set(l.po, (byPo.get(l.po) || 0) + l.shipped);
     const short = w945.filter((l) => l.shipped < l.ordered);

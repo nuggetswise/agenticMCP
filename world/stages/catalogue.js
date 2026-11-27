@@ -127,7 +127,8 @@ const DOCS = {
   // PO4 (pack, inner pack), CTP cost with its own effective DTM, and one G39 per packaging level.
   832: { func: 'SC', name: 'Price and item catalogue',
     body: (d) => [seg('BCT', 'PC', d.ref, '', '', '', '', '', '', '', '00'), seg('DTM', '007', d8(d.effective)), ...parties(d),
-      ...d.items.flatMap((it) => [seg('LIN', it.line, 'VN', it.sku, 'UK', it.gtin, 'UP', it.upc, ...(it.nrf ? ['CM', it.nrf.colour, 'SM', it.nrf.size] : [])), // CM and SM: NRF colour and size codes (P25, 26 November 2026) seg('PID', 'F', '', '', '', clean(it.description)),
+      // CM and SM: NRF colour and size codes (P25, 26 November 2026).
+      ...d.items.flatMap((it) => [seg('LIN', it.line, 'VN', it.sku, 'UK', it.gtin, 'UP', it.upc, ...(it.nrf ? ['CM', it.nrf.colour, 'SM', it.nrf.size] : [])), seg('PID', 'F', '', '', '', clean(it.description)),
         seg('PO4', it.pack, 1, it.uom, '', '', '', '', '', '', '', '', '', '', it.inner || ''), seg('CTP', '', 'INV', money(it.cost), '', 'CA'), seg('DTM', '007', d8(it.cost_from)), ...it.levels.map(g39)]),
       seg('CTT', d.items.length)],
     read: (S) => { const items = []; let cur = null; let inLin = false;

@@ -420,84 +420,61 @@ E.onClick = function(e){
 
 </script>
 <script>
-/* P5 Shipment Watch. Values from the shared demo world (RetailStrategy, read only) at the P5 moment
-   in the story calendar, and the records that follow it. t = minutes from 00:00 ET Tuesday. */
+/* P5 Shipment Watch, round plan 26 November (EDI first). Values from the shared demo world (RetailStrategy, read only)
+   at the P5 moment and the records that follow it. The 3PL warehouse's shipping advice (EDI 945) is the load record;
+   the ship notice is built from it. t = minutes from 00:00 ET Tuesday 8 December. */
 (function(){
 "use strict";
 const {esc, money} = E;
 const T = (d, h, m) => d * 1440 + h * 60 + m;
+/* The ship notice's release minute: the demo world records ASN-460207 at 18:20, after the 945 at 18:12. */
+const REL_T = T(0,18,20);
+const WH = "Ashby's 3PL warehouse", CARRIER = "Northfield's carrier";
 const W = E.W = {
   docs: {
     "850:NR-460207": {name:"Purchase order", ref:"NR-460207", iface:"EDI 850", from:"Northfield Retailer", to:"Ashby Supplier", at:T(-4,9,0),
       kv:[["Ship to","Northfield DC 4"],["Programme","Wholesale"]], lines:[["1","ASH-MUG-12","400 cases","$54.00"],["2","ASH-NAP-4","260 cases","$38.40"]], total:"660 cases · $31,584.00"},
     "860:NR-460207 Change 1": {name:"Order change", ref:"NR-460207 Change 1", iface:"EDI 860", from:"Northfield Retailer", to:"Ashby Supplier", at:T(-1,14,0),
       kv:[["Ship to","Northfield DC 2"],["Previous ship to","Northfield DC 4"]], lines:[["1","ASH-MUG-12","400 cases","$54.00"],["2","ASH-NAP-4","260 cases","$38.40"]]},
-    "ERP-SO-207": {name:"Sales order", ref:"NR-460207", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(-1,14,0),
-      kv:[["Ship to","Northfield DC 4"],["Order change 1","Ship to Northfield DC 2"]]},
-    "SCAN-207-1": {name:"Load scan", ref:"SHP-460207", iface:"Kinross scan · API", from:"Kinross Groveport", to:"Trading Grid", at:T(0,16,48),
-      kv:[["Cartons loaded","659 of 660, by SSCC"],["Not loaded","006141410006005172 · Staged"],["Bill of lading","BOL-91407"],["Seal","SL-4471026"],["Trailer seals","17:52"]]},
-    "DMG-207": {name:"Damage scan", ref:"SHP-460207", iface:"Kinross scan · API", from:"Kinross Groveport", to:"Trading Grid", at:T(0,17,21),
-      kv:[["Carton","006141410006005172"],["Item","ASH-MUG-12, order item 1"],["Condition","Crushed, contents damaged"],["State","Cannot be loaded"],["Cartons loaded","659 of 660"]]},
-    "SCAN-207-2": {name:"Load scan", ref:"SHP-460207", iface:"Kinross scan · API", from:"Kinross Groveport", to:"Trading Grid", at:T(0,17,46),
-      kv:[["Cartons loaded","660 of 660, by SSCC"],["Replacement carton","006141410009050018"],["Replaces","006141410006005172"],["From","Cases Kinross holds for damage replacement"],["Bill of lading","BOL-91407"],["Seal","SL-4471026"]]},
+    "ERP-SO-207": {name:"Sales order", ref:"SO-460207", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(-1,14,0),
+      kv:[["Purchase order","NR-460207"],["Ship to","Northfield DC 4"],["Order change 1","Ship to Northfield DC 2"]]},
+    "947:WA-GRV-460207": {name:"Inventory adjustment advice", ref:"WA-GRV-460207", iface:"EDI 947", from:WH + ", Groveport", to:"Ashby Supplier", at:T(0,17,21),
+      kv:[["Purchase order","NR-460207"],["Carton","006141410006005172"],["Item","ASH-MUG-12, order item 1"],["Reason","Damaged"],["Adjustment","1 case"]]},
     "ERP-COR-207": {name:"Sales order correction", ref:"SO-460207", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(0,17,50),
-      kv:[["Purchase order","NR-460207"],["Ship-to","DC 4 to DC 2"],["Corrected by","Ashby order desk"],["Basis","Order change 1"]]},
-    "DEP-207": {name:"Departure scan", ref:"SHP-460207", iface:"Kinross scan · API", from:"Kinross Groveport", to:"Trading Grid", at:T(0,18,0), kv:[["Departed","18:00"],["Carrier","Lakeline Freight"]]},
-    "856:ASN-460207": {name:"Ship notice", ref:"ASN-460207", iface:"EDI 856", from:"Ashby Supplier", to:"Northfield Retailer", at:T(0,18,6),
-      kv:[["Ship from","Kinross Groveport"],["Ship to","Northfield DC 2"],["Shipped","18:00"],["Cartons","660"],["Bill of lading","BOL-91407"],["Seal","SL-4471026"]],
-      lines:[["1","ASH-MUG-12","400 cases",""],["2","ASH-NAP-4","260 cases",""]], total:"660 cartons"},
-    "997:FA-N2997": {name:"Technical acknowledgment", ref:"FA-N2997", iface:"EDI 997", from:"Northfield Retailer", to:"Ashby Supplier", at:T(0,18,8), kv:[["For","Ship notice ASN-460207"],["Result","Technically acknowledged"]]},
-    "945:WSA-460207": {name:"Warehouse shipping advice", ref:"WSA-460207", iface:"EDI 945", from:"Kinross Logistics", to:"Ashby Supplier", at:T(0,18,12), kv:[["Warehouse order","WSO-460207"],["Shipped","18:00"],["Cartons","660"]]},
+      kv:[["Purchase order","NR-460207"],["Ship to","DC 4 to DC 2"],["Corrected by","Ashby order desk"],["Basis","Order change 1"]]},
+    "945:WSA-460207": {name:"Warehouse shipping advice", ref:"WSA-460207", iface:"EDI 945", from:WH + ", Groveport", to:"Ashby Supplier", at:T(0,18,12),
+      kv:[["Warehouse order","WSO-460207"],["Shipment","SHP-460207"],["Shipped","18:00"],["Bill of lading","BOL-91407"],["Cartons","659, each with its SSCC"]],
+      lines:[["1","ASH-MUG-12","399 of 400 cases",""],["2","ASH-NAP-4","260 of 260 cases",""]], total:"659 cartons shipped"},
+    "856:ASN-460207": {name:"Ship notice", ref:"ASN-460207", iface:"EDI 856", from:"Ashby Supplier", to:"Northfield Retailer", at:REL_T,
+      kv:[["Ship from",WH + ", Groveport"],["Ship to","Northfield DC 2"],["Shipped","18:00"],["Carrier",CARRIER],["Cartons","659"],["Bill of lading","BOL-91407"],["Seal","SL-4471026"]],
+      lines:[["1","ASH-MUG-12","399 cases",""],["2","ASH-NAP-4","260 cases",""]], total:"659 cartons"},
+    "997:FA-N2999": {name:"Technical acknowledgment", ref:"FA-N2999", iface:"EDI 997", from:"Northfield Retailer", to:"Ashby Supplier", at:REL_T + 5, kv:[["For","Ship notice ASN-460207"],["Result","Technically acknowledged"]]},
     "861:RCV-DC2-81420": {name:"Receiving advice", ref:"RCV-DC2-81420", iface:"EDI 861", from:"Northfield Retailer", to:"Ashby Supplier", at:T(1,8,20),
-      kv:[["Ship notice","ASN-460207"],["Received at","Northfield DC 2"],["Short","0"]], lines:[["1","ASH-MUG-12","400 of 400 cases",""],["2","ASH-NAP-4","260 of 260 cases",""]], total:"660 cases received"},
-    "ERP-INV-8012": {name:"Invoice draft", ref:"INV-8012", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(0,15,12),
-      kv:[["Purchase order","NR-460219"],["Invoice batch","18:00"],["Line 2 allocated to ship","176 cases"],["Over","$153.60"]], lines:[["1","ASH-MUG-12","90 cases","$54.00"],["2","ASH-NAP-4","180 cases","$38.40"]], total:"$11,772.00"},
+      kv:[["Ship notice","ASN-460207"],["Received at","Northfield DC 2"],["Short against the order","1 case, order item 1"]], lines:[["1","ASH-MUG-12","399 of 400 cases",""],["2","ASH-NAP-4","260 of 260 cases",""]], total:"659 cases received"},
+    "CHG-207": {name:"Short-carton charge", ref:"", iface:"Northfield deduction case", from:"Northfield Retailer", to:"Ashby Supplier", at:T(1,8,20),
+      kv:[["Purchase order","NR-460207"],["Amount","$104.00"],["Basis","Order item 1 shipped 399 of 400 cases: case cost $54.00 plus $50"],["Raised with","Receiving advice RCV-DC2-81420"]]},
     "ERP-QTY-219": {name:"Shipment quantity", ref:"SHP-460219", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(0,14,50),
-      kv:[["Purchase order","NR-460219"],["Line 2","ASH-NAP-4"],["Ordered","180 cases"],["Allocated to ship","176 cases"],["Not allocated","4 cases"]]},
+      kv:[["Purchase order","NR-460219"],["Order item 2","ASH-NAP-4"],["Ordered","180 cases"],["Allocated to ship","176 cases"],["Not allocated","4 cases"]]},
+    "ERP-INV-8012": {name:"Invoice draft", ref:"INV-8012", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(0,15,12),
+      kv:[["Purchase order","NR-460219"],["Invoice batches","18:00 Tuesday, then 16:30 Wednesday"],["Order item 2 allocated to ship","176 cases"],["Over","$153.60"]], lines:[["1","ASH-MUG-12","90 cases","$54.00"],["2","ASH-NAP-4","180 cases","$38.40"]], total:"$11,772.00"},
     "810:INV-8012": {name:"Invoice", ref:"INV-8012", iface:"EDI 810", from:"Ashby Supplier", to:"Northfield Retailer", at:T(1,16,30),
       kv:[["Purchase order","NR-460219"]], lines:[["1","ASH-MUG-12","90 cases","$54.00"],["2","ASH-NAP-4","176 cases","$38.40"]], total:"$11,618.40"},
-    "997:FA-N3144": {name:"Technical acknowledgment", ref:"FA-N3144", iface:"EDI 997", from:"Northfield Retailer", to:"Ashby Supplier", at:T(1,16,38), kv:[["For","Invoice INV-8012"],["Result","Technically acknowledged"]]},
-    "850:NR-460241": {name:"Purchase order", ref:"NR-460241", iface:"EDI 850", from:"Northfield Retailer", to:"Ashby Supplier", at:T(-1,11,0),
-      kv:[["Ship to","Northfield DC 2"],["Programme","Wholesale"]], lines:[["1","ASH-MUG-12","220 cases","$54.00"]], total:"220 cases · $11,880.00"},
-    "FT-JOL": {name:"Freight terms", ref:"Kinross Joliet", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid",
-      kv:[["Terms","Collect"],["Routed by","Northfield"],["Carrier","Lakeline Freight"],["Basis","Northfield routes Kinross freight for peak"]]},
-    "753:RR-460241": {name:"Routing request", ref:"RR-460241", iface:"EDI 753", from:"Ashby Supplier", to:"Northfield Retailer", at:T(0,17,19),
-      kv:[["Purchase order","NR-460241"],["Ship from","Kinross Joliet"],["Ship to","Northfield DC 2"],["Ready","15:00 Thursday"],["Latest pickup","17:00 Thursday"],["Weight","3,410"],["Approved by","Priya Raman"]], lines:[["1","ASH-MUG-12","220 cases",""]]},
-    "997:FA-NS350000001": {name:"Technical acknowledgment", ref:"FA-NS350000001", iface:"EDI 997", from:"Northfield Retailer", to:"Ashby Supplier", at:T(0,17,25), kv:[["For","Routing request RR-460241"],["Result","Technically acknowledged"]]},
-    "754:NRL-460241": {name:"Routing instructions", ref:"NRL-460241", iface:"EDI 754", from:"Northfield Retailer", to:"Ashby Supplier", at:T(0,19,5),
-      kv:[["Routing request","RR-460241"],["Carrier","Lakeline Freight"],["Pickup","15:00 to 17:00 Thursday"],["Ship from","Kinross Joliet"],["Ship to","Northfield DC 2"],["Weight","3,410"]]},
-    "997:FA-AS350000005": {name:"Technical acknowledgment", ref:"FA-AS350000005", iface:"EDI 997", from:"Ashby Supplier", to:"Northfield Retailer", at:T(0,19,12), kv:[["For","Routing instructions NRL-460241"],["Result","Technically acknowledged"]]},
-    "856:ASN-460241": {name:"Ship notice", ref:"ASN-460241", iface:"EDI 856", from:"Ashby Supplier", to:"Northfield Retailer", at:T(2,15,6), kv:[["Ship from","Kinross Joliet"],["Ship to","Northfield DC 2"],["Shipped","15:00"],["Cartons","220"]]},
-    "861:RCV-DC2-460241": {name:"Receiving advice", ref:"RCV-DC2-460241", iface:"EDI 861", from:"Northfield Retailer", to:"Ashby Supplier", at:T(3,8,20), kv:[["Ship notice","ASN-460241"],["Received at","Northfield DC 2"],["Short","0"]], lines:[["1","ASH-MUG-12","220 of 220 cases",""]]},
-    "INV-GRV": {name:"Inventory read", ref:"Kinross Groveport", iface:"Kinross inventory · API", from:"Kinross Groveport", to:"Trading Grid", at:T(0,16,42),
+    "846:IA-GRV-20261208-2142": {name:"Inventory advice", ref:"IA-GRV-20261208-2142", iface:"EDI 846", from:WH + ", Groveport", to:"Ashby Supplier", at:T(0,16,42),
       kv:[["Item","ASH-MUG-12"],["Free to release","610 cases"],["Held for damage replacement","2 cases, not counted as free"],["Ordered on open orders","640 cases"],["Short","30 cases"]],
       lines:[["NR-460262","ASH-MUG-12","300 cases",""],["NR-460274","ASH-MUG-12","300 cases",""],["NR-46620","ASH-MUG-12","40 cases",""]]},
-    "860:NR-460262 Change 1": {name:"Order change", ref:"NR-460262 Change 1", iface:"EDI 860", from:"Northfield Retailer", to:"Ashby Supplier", at:T(1,9,20), kv:[["Change","Quantity decrease"]], lines:[["1","ASH-MUG-12","300 to 270 cases","$54.00"]], total:"270 cases · $14,580.00"},
-    "861:RCV-DC2-460262": {name:"Receiving advice", ref:"RCV-DC2-460262", iface:"EDI 861", from:"Northfield Retailer", to:"Ashby Supplier", at:T(3,8,20), kv:[["Ship notice","ASN-460262"],["Received at","Northfield DC 2"],["Short","0"]], lines:[["1","ASH-MUG-12","270 of 270 cases",""]]},
-    "LBL-233": {name:"Label scan", ref:"NR-460233", iface:"Kinross scan · API", from:"Kinross Joliet", to:"Trading Grid", at:T(0,16,30),
-      kv:[["Cartons scanned","96"],["SSCCs used before","12, first used on NR-449512"],["Loading starts","15:18 Wednesday"]]},
-    "856:ASN-460233": {name:"Ship notice", ref:"ASN-460233", iface:"EDI 856", from:"Ashby Supplier", to:"Northfield Retailer", at:T(2,15,6), kv:[["Ship from","Kinross Joliet"],["Ship to","Northfield DC 2"],["Shipped","15:00"],["Cartons","96, none used before"]], lines:[["1","ASH-HNY-340","96 cases",""]]},
-    "861:RCV-DC2-460233": {name:"Receiving advice", ref:"RCV-DC2-460233", iface:"EDI 861", from:"Northfield Retailer", to:"Ashby Supplier", at:T(3,8,20), kv:[["Ship notice","ASN-460233"],["Received at","Northfield DC 2"],["Short","0"]], lines:[["1","ASH-HNY-340","96 of 96 cases",""]]},
-    "ERP-F-288": {name:"Fulfilment", ref:"SHP-460288", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(2,14,5), kv:[["Fulfilment posted","14:05"],["Cartons","140"]]},
-    "SCAN-288": {name:"Load scan", ref:"SHP-460288", iface:"Kinross scan · API", from:"Kinross Joliet", to:"Trading Grid", at:T(2,14,20), kv:[["Cartons loaded","140 of 140, by SSCC"],["Trailer","At door 7, not departed"]]},
-    "DEP-288": {name:"Departure scan", ref:"SHP-460288", iface:"Kinross scan · API", from:"Kinross Joliet", to:"Trading Grid", at:T(2,18,0), kv:[["Departed","18:00"],["Carrier","Lakeline Freight"]]},
-    "856:ASN-460288": {name:"Ship notice", ref:"ASN-460288", iface:"EDI 856", from:"Ashby Supplier", to:"Northfield Retailer", at:T(2,18,6), kv:[["Ship from","Kinross Joliet"],["Ship to","Northfield DC 2"],["Shipped","18:00"],["Cartons","140"]], lines:[["1","ASH-NAP-4","140 cases",""]]},
-    "997:FA-N3372": {name:"Technical acknowledgment", ref:"FA-N3372", iface:"EDI 997", from:"Northfield Retailer", to:"Ashby Supplier", at:T(2,18,10), kv:[["For","Ship notice ASN-460288"],["Result","Technically acknowledged"]]},
-    "861:RCV-DC2-460288": {name:"Receiving advice", ref:"RCV-DC2-460288", iface:"EDI 861", from:"Northfield Retailer", to:"Ashby Supplier", at:T(3,8,20), kv:[["Ship notice","ASN-460288"],["Received at","Northfield DC 2"],["Short","0"]], lines:[["1","ASH-NAP-4","140 of 140 cases",""]]}
+    "860:NR-460262 Change 1": {name:"Order change", ref:"NR-460262 Change 1", iface:"EDI 860", from:"Northfield Retailer", to:"Ashby Supplier", at:T(1,9,20), kv:[["Change","Quantity decrease"]], lines:[["1","ASH-MUG-12","300 to 270 cases","$54.00"]], total:"270 cases · $14,580.00"}
   },
   rules: {
     carton: {text:"The ship notice matches the shipment carton for carton; a mismatch is charged $150 plus $1 per carton.", src:"Northfield guide"},
     shipto: {text:"The ship-to matches the current order; a mismatch is charged $150.", src:"Northfield guide"},
     asn1h: {text:"Send the ship notice within 1 hour of departure.", src:"Northfield guide"},
+    build: {text:"A ship notice from the 3PL warehouse is built from its shipping advice, never from the order.", src:"Ashby rule"},
     release: {text:"A held ship notice is released only by a person, after every failure on it is fixed.", src:"Ashby rule"},
-    routing: {text:"Collect freight needs a routing request by 11:00 DC local time, two business days before the ready date; a miss is charged $150.", src:"Northfield guide"},
-    sscc: {text:"An SSCC is not reused within 18 months; reuse is charged $150 plus $1 per carton.", src:"Northfield guide"},
-    backorder: {text:"No backorders: a short line is cancelled and the shipped quantity reported.", src:"Northfield guide"},
+    backorder: {text:"No backorders: a short order item is cancelled and the shipped quantity reported.", src:"Northfield guide"},
+    shortage: {text:"A case received short is charged its cost plus $50.", src:"Northfield charge schedule"},
     invoice: {text:"The invoice bills the shipped quantity at the accepted price; an invoice that bills more is held and charged $100.", src:"Northfield guide"},
-    approve: {text:"Nothing goes to Northfield until a person sends it.", src:"Ashby rule"},
-    order: {text:"Open exceptions are worked earliest cutoff first, then largest charge at risk.", src:"Ashby rule"},
-    shortage: {text:"A short carton is charged its invoice cost plus $50.", src:"Northfield charge schedule"},
-    fill: {text:"A line shipped short is charged 3% of its cost, quarterly; months under $1,000 are waived.", src:"Northfield charge schedule"}
+    fill: {text:"An order item shipped short is charged 3% of its cost, quarterly; months under $1,000 are waived.", src:"Northfield charge schedule"},
+    order: {text:"Open exceptions are worked earliest cutoff first, then largest charge at risk.", src:"Ashby rule"}
   }
 };
 const D = {0:"Tue", 1:"Wed", 2:"Thu", 3:"Fri"}; D[-1] = "Mon"; D[-2] = "Sun"; D[-3] = "Sat"; D[-4] = "Fri";
@@ -507,112 +484,105 @@ document.getElementById("who").textContent = "Priya Raman";
 document.querySelector(".pagehead").insertAdjacentHTML("beforeend", `<div class="figs" id="tiles" role="group" aria-label="Key figures"></div>`);
 const S = E.S;
 /* one flag per finding: each button changes only its own finding and its own charge */
-const F = S.f = {dmg:false, c207load:false, c207ship:false, dep:false, rel207:"held", rcv207:false, c219:false, c262:false, c233:false};
+const F = S.f = {dmg:false, c207ship:false, wsa:false, rel207:"held", rcv207:false, c219:false, c262:false};
 
-/* history before the moment, source time order */
 [[T(-4,9,0),"Purchase order PO 460207 received · 660 cases to DC 4","Northfield","850:NR-460207"],
  [T(-1,14,0),"Order change 1 on PO 460207 · ship-to DC 4 to DC 2","Northfield","860:NR-460207 Change 1"],
  [T(0,14,50),"Shipment quantity for PO 460219 · order item 2: 176 of 180 allocated to ship","Supplier ERP","ERP-QTY-219"],
- [T(0,15,12),"Invoice draft INV-8012 · order item 2 bills 180 · 176 allocated to ship","Supplier ERP","ERP-INV-8012"],
- [T(0,16,30),"Label scan on PO 460233 · 12 SSCCs used before","Kinross","LBL-233"],
- [T(0,16,42),"Inventory read at Kinross Groveport · 610 cases free","Kinross","INV-GRV"],
- [T(0,16,48),"Load scan on PO 460207 · 659 of 660 cartons","Kinross","SCAN-207-1"],
- [T(0,17,12),"Shipment check · 123 open orders read · 4 break a Northfield rule","Rule"]
+ [T(0,15,12),"Invoice draft for PO 460219 · order item 2 bills 180 · 176 allocated to ship","Supplier ERP","ERP-INV-8012"],
+ [T(0,16,42),"Inventory advice from the 3PL warehouse, Groveport · 610 cases free","3PL warehouse","846:IA-GRV-20261208-2142"],
+ [T(0,17,12),"Shipment check · 3 shipments break a Northfield rule","Rule"]
 ].forEach(h => E.hist(h[0], h[1], h[2], h[3]));
 
-/* charges from Northfield's charge schedule, per finding */
-const CH = {load:104 + 151, ship:150, inv:100, fill:48.6, sscc:162};
+/* charges from Northfield's charge schedule, per finding; the short case is raised whatever Ashby does */
+const CH = {ship:150, asn:151, short:104, inv:100, fill:48.6};
 const charge = id => ({
-  "NR-460207":(F.c207load ? 0 : CH.load) + (F.c207ship ? 0 : CH.ship),
-  "NR-460219":F.c219 ? 0 : CH.inv,
-  "NR-460262":F.c262 ? 0 : CH.fill, "NR-460233":F.c233 ? 0 : CH.sscc})[id];
-const FULL = {"NR-460207":CH.load + CH.ship, "NR-460219":CH.inv, "NR-460262":CH.fill, "NR-460233":CH.sscc};
-const CARRY = {"NR-460207":"receiving advice, remittance, Northfield's charge invoice", "NR-460219":"invoice held, Northfield's charge invoice", "NR-460262":"quarterly fill-rate charge", "NR-460233":"remittance, Northfield's charge invoice"};
-const ORDER = ["NR-460207","NR-460219","NR-460262","NR-460233"];
+  "NR-460207":(F.c207ship ? 0 : CH.ship) + (F.rel207 === "sent" ? 0 : CH.asn),
+  "NR-460219":F.c219 ? 0 : CH.inv, "NR-460262":F.c262 ? 0 : CH.fill})[id];
+const FULL = {"NR-460207":CH.ship + CH.asn, "NR-460219":CH.inv, "NR-460262":CH.fill};
+const CARRY = {"NR-460207":"receiving advice, remittance, Northfield's charge invoice", "NR-460219":"invoice held, Northfield's charge invoice", "NR-460262":"quarterly fill-rate charge"};
+const ORDER = ["NR-460207","NR-460219","NR-460262"];
 const total = () => ORDER.reduce((s, id) => s + charge(id), 0);
-const done = id => ({"NR-460207":F.rel207 === "sent", "NR-460219":F.c219, "NR-460262":F.c262, "NR-460233":F.c233})[id];
+const done = id => ({"NR-460207":F.rel207 === "sent", "NR-460219":F.c219, "NR-460262":F.c262})[id];
 const openN = () => ORDER.filter(id => !done(id)).length;
-
-const DL = {"NR-460207":T(0,17,52), "NR-460219":T(0,18,0), "NR-460262":T(1,13,30), "NR-460233":T(1,15,18)};
-const left = id => E.dur(DL[id] - S.clock);
+const DUE = T(0,19,0);
+const BATCH = () => S.clock < T(0,18,0) ? T(0,18,0) : T(1,16,30);
+const DL = {"NR-460207":DUE, get "NR-460219"(){ return BATCH(); }, "NR-460262":T(1,13,30)};
 const strike = (a, b) => `<s class="was">${a}</s> <span class="now">${b}</span>`;
 
 function chip(id){
   switch(id){
-    case "NR-460207": return F.rcv207 ? ["Received at DC 2","brand"] : F.rel207 === "sent" ? ["Ship notice sent",""] : F.dep ? ["Ready for review","amber"] : F.c207load && F.c207ship ? ["Waiting on departure",""] : F.dmg && !F.c207load ? ["Carton crushed","red"] : !F.c207load ? ["Carton not loaded","red"] : ["Ship-to wrong","red"];
+    case "NR-460207": return F.rcv207 ? ["Received at DC 2","brand"] : F.rel207 === "sent" ? ["Ship notice sent",""] : !F.c207ship ? ["Ship-to wrong","red"] : F.wsa ? ["Ready for review","amber"] : ["Waiting on the 3PL warehouse",""];
     case "NR-460219": return F.c219 ? ["Fix confirmed","brand"] : ["Invoice overbills","red"];
     case "NR-460262": return F.c262 ? ["Fix confirmed","brand"] : ["30 cases short","amber"];
-    case "NR-460233": return F.c233 ? ["Fix confirmed","brand"] : ["SSCCs reused","red"];
   }
 }
 function deadline(id){
   if (done(id)) return null;
-  if (id === "NR-460207") { if (F.dep) return ["Ship notice due in " + E.dur(T(0,19,0) - S.clock), ""]; return S.clock < DL[id] ? ["Trailer seals in " + left(id), "red"] : null; }
-  if (id === "NR-460219") return S.clock < DL[id] ? ["Invoice batch in " + left(id), ""] : null;
-  if (id === "NR-460262") return S.clock < DL[id] ? ["Change cutoff in " + left(id), ""] : null;
-  if (id === "NR-460233") return S.clock < DL[id] ? ["Loading starts in " + left(id), ""] : null;
+  if (id === "NR-460207") return F.wsa && S.clock < DUE ? ["Ship notice due in " + E.dur(DUE - S.clock), ""] : null;
+  if (id === "NR-460219") return S.clock < BATCH() ? [(BATCH() === T(0,18,0) ? "Invoice batch in " : "Next invoice batch in ") + E.dur(BATCH() - S.clock), ""] : null;
+  if (id === "NR-460262") return S.clock < DL[id] ? ["Change cutoff in " + E.dur(DL[id] - S.clock), ""] : null;
 }
 const LINE = {
-  "NR-460207":() => F.rcv207 ? "660 of 660 received at DC 2" : `Load ${F.c207load ? "660" : "659"} of 660 · ship-to ${F.c207ship ? "DC 2" : "DC 4, order says DC 2"}`,
+  "NR-460207":() => F.rcv207 ? "659 cartons received at DC 2 · 1 case short" : F.wsa ? `659 cartons shipped · ship-to ${F.c207ship ? "DC 2" : "DC 4, order says DC 2"}` : `1 case damaged · ship-to ${F.c207ship ? "DC 2" : "DC 4, order says DC 2"}`,
   "NR-460219":() => F.c219 ? "Invoice order item 2 bills 176 cases" : "Invoice order item 2 bills 180 · 176 allocated to ship",
-  "NR-460262":() => F.c262 ? "Order cut to 270 cases" : "Groveport 610 free · 640 ordered on 3 orders · 30 short",
-  "NR-460233":() => F.c233 ? "0 of 96 cartons carry used SSCCs" : "12 of 96 cartons carry SSCCs already used"
+  "NR-460262":() => F.c262 ? "Order cut to 270 cases" : "Groveport 610 free · 640 ordered on 3 orders · 30 short"
 };
-const sub = id => { const c = charge(id), d = deadline(id); return (c ? money(c) + " at stake" : "No charge") + (d ? " · " + d[0] : ""); };
-/* headline tiles filter the list to the shipments they count */
+const sub = id => { const c = charge(id), d = deadline(id); return (c ? money(c) + " at stake" : "No charge at stake") + (id === "NR-460207" ? " · " + money(CH.short) + (F.rcv207 ? " raised" : " short-carton charge") : "") + (d ? " · " + d[0] : ""); };
 const stakeIds = () => ORDER.filter(id => charge(id) > 0);
 const fixedIds = () => ORDER.filter(id => charge(id) < FULL[id]);
 const fixedV = () => ORDER.reduce((a, id) => a + FULL[id] - charge(id), 0);
 S.tile = "stake";
 const inTile = id => !S.tile || (S.tile === "stake" ? charge(id) > 0 : charge(id) < FULL[id]);
+const listRowsAll = () => ORDER.map(id => ({id, title:"PO " + id.slice(3), chip:chip(id), line:esc(LINE[id]()), sub:sub(id), subRed:false, c:done(id) ? 1 : 0, d:DL[id]})).sort((a, b) => a.c - b.c || a.d - b.d);
 const listRows = () => listRowsAll().filter(r => inTile(r.id));
-const listRowsAll = () => ORDER.map(id => ({id, title:"PO " + id.slice(3), chip:chip(id), line:esc(LINE[id]()), sub:sub(id), subRed:!!(deadline(id) && deadline(id)[1] === "red"), c:done(id) ? 1 : 0, d:DL[id]})).sort((a, b) => a.c - b.c || a.d - b.d);
 
 /* ---------- record parts ---------- */
 const R = W.rules;
 const ruleList = keys => keys.map(k => `<p>${esc(R[k].text)} <span class="k">· ${esc(R[k].src)}</span></p>`).join("");
 const readList = docs => `<p class="k">Records read</p>` + docs.map(d => `<p><button class="tag" type="button" data-doc="${esc(d)}">${esc(W.docs[d].name + (W.docs[d].ref ? " " + W.docs[d].ref : ""))}</button> <span class="k">· ${esc(W.docs[d].iface)}</span></p>`).join("");
 const whoList = rows => `<p class="k" style="margin-top:var(--space-2)">Who did what</p>` + E.who3(rows);
-/* owner fixes: what is wrong, owner, where to fix, charge, and the supplier's Confirm fix */
-const fixTable = rows => `<table class="ow fx"><thead><tr><th>What is wrong</th><th>Owner</th><th>Where to fix</th><th>Charge</th><th></th></tr></thead><tbody>${rows.map(r => `<tr${r.ok ? ' class="ok enter"' : ""}><td>${r.what}</td><td>${esc(r.owner)}</td><td>${esc(r.where)}</td><td class="nw">${r.ok ? strike(money(r.charge), money(0)) : money(r.charge)}</td><td class="ac">${r.ok ? `<span class="by">Confirmed by Priya Raman</span>${r.undo ? `<button class="lnk" type="button" data-act="u:${esc(r.act)}" ${S.busy ? 'aria-disabled="true"' : ""}>Undo</button>` : ""}` : `<button class="btn sm" type="button" data-act="${esc(r.act)}" ${S.busy ? 'aria-disabled="true"' : ""}>Confirm fix</button>`}</td></tr>`).join("")}</tbody></table>`;
+/* rows: a Confirm fix row has act; a row without act names who settles it in place of the button */
+const fixTable = rows => `<table class="ow fx"><thead><tr><th>What is wrong</th><th>Owner</th><th>Where to fix</th><th>Charge</th><th></th></tr></thead><tbody>${rows.map(r => `<tr${r.ok ? ' class="ok enter"' : ""}><td>${r.what}</td><td>${esc(r.owner)}</td><td>${esc(r.where)}</td><td class="nw">${r.ok ? strike(money(r.charge), money(0)) : r.raised ? `<span class="st-${r.rcv ? "red" : "amber"}">${money(r.charge)}</span>` : money(r.charge)}</td><td class="ac">${r.ok ? `<span class="by">${esc(r.okBy || "Confirmed by Priya Raman")}</span>${r.undo ? `<button class="lnk" type="button" data-act="u:${esc(r.act)}" ${S.busy ? 'aria-disabled="true"' : ""}>Undo</button>` : ""}` : r.act ? `<button class="btn sm" type="button" data-act="${esc(r.act)}" ${S.busy ? 'aria-disabled="true"' : ""}>Confirm fix</button>` : `<span class="by">${esc(r.state)}</span>`}</td></tr>`).join("")}</tbody></table>`;
 const cash = id => { const now = charge(id); return `<div class="cash"><div class="cc${now ? " on" : ""}"><span>Not fixed</span><b>${money(FULL[id])}</b><em>${esc(CARRY[id])}</em></div><div class="cc${now ? "" : " on"}"><span>Fixed</span><b>${money(0)}</b></div><div class="cc"><span>At stake now</span><b>${money(now)}</b></div></div>`; };
+const nextBtn = () => `<div class="bar"><button class="tb" type="button" data-act="next" ${S.busy ? 'aria-disabled="true"' : ""}>Next: the 3PL warehouse's shipping advice</button></div>`;
 
 function rec207(){
+  const sent = F.rel207 === "sent";
   const wrong = [];
-  wrong.push(F.c207load ? {v:`<b>Load</b> · ${strike("659 of 660", "660 of 660")} cartons · replacement case loaded`, tags:[["Kinross scan · API","SCAN-207-2"]]}
-    : {v:`<b>Load</b> · 659 of 660 cartons · staged carton ${F.dmg ? '<span class="st-red">Crushed, cannot be loaded</span>' : '<span class="st-red">Staged, not loaded</span>'}`, tags:[["Kinross scan · API", F.dmg ? "DMG-207" : "SCAN-207-1"]]});
-  wrong.push(F.c207ship ? {v:`<b>Ship-to</b> · ${strike("DC 4", "DC 2")} on the sales order, matching order change 1`, tags:[["Supplier ERP · API","ERP-COR-207"],["EDI 860","860:NR-460207 Change 1"]]}
-    : {v:`<b>Ship-to</b> · sales order <span class="st-red">DC 4</span> · order change 1 says DC 2`, tags:[["Supplier ERP","ERP-SO-207"],["EDI 860","860:NR-460207 Change 1"]]});
-  if (F.dep) wrong.push({v:`<b>Departure</b> · Kinross Groveport at 18:00 · Lakeline Freight`, tags:[["Kinross scan · API","DEP-207"]]});
+  wrong.push({v:`<b>Damaged case</b> · 1 of 400 cases of order item 1 · <span class="st-${F.rcv207 ? "red" : "amber"}">${F.rcv207 ? "short-carton charge raised" : "ships short"}</span>`, tags:[["Inventory adjustment advice · EDI 947","947:WA-GRV-460207"]]});
+  wrong.push(F.c207ship ? {v:`<b>Ship-to</b> · ${strike("DC 4", "DC 2")} on the sales order, matching order change 1`, tags:[["Sales order · API","ERP-COR-207"],["Order change · EDI 860","860:NR-460207 Change 1"]]}
+    : {v:`<b>Ship-to</b> · sales order <span class="st-red">DC 4</span> · order change 1 says DC 2`, tags:[["Sales order · API","ERP-SO-207"],["Order change · EDI 860","860:NR-460207 Change 1"]]});
+  if (F.wsa) wrong.push({v:`<b>Shipped</b> · 659 cartons at 18:00 · order item 1 399 of 400 cases`, tags:[["Warehouse shipping advice · EDI 945","945:WSA-460207"]]});
   const stages = [];
-  const reads = ["SCAN-207-1"].concat(F.dmg ? ["DMG-207"] : [], F.c207load ? ["SCAN-207-2"] : [], ["860:NR-460207 Change 1", F.c207ship ? "ERP-COR-207" : "ERP-SO-207"]);
-  if (!F.dep) {
-    const both = F.c207load && F.c207ship;
-    stages.push({key:"fix", state:"now", title:both ? "Wait for departure" : "Fix the load and ship-to", chip:both ? ["Waiting on departure",""] : ["Owner fixes","amber"],
+  const reads = ["947:WA-GRV-460207","860:NR-460207 Change 1", F.c207ship ? "ERP-COR-207" : "ERP-SO-207"].concat(F.wsa ? ["945:WSA-460207"] : []);
+  if (!sent) {
+    stages.push({key:"fix", state:"now", title:F.c207ship && F.wsa ? "Ship notice matches the load" : "Fix the ship-to and wait for the shipping advice", chip:F.c207ship && F.wsa ? ["Fixes in place","brand"] : ["Owner fixes","amber"],
       body:fixTable([
-        {act:"c207load", ok:F.c207load, undo:true, charge:CH.load, owner:"Kinross", where:F.dmg ? "Replacement case at Kinross" : "Kinross loading",
-         what:F.c207load ? `Load · ${strike("659 of 660", "660 of 660")}` : `Staged carton · ${F.dmg ? "Crushed" : "Staged"}`},
         {act:"c207ship", ok:F.c207ship, undo:true, charge:CH.ship, owner:"Ashby order desk", where:"Supplier ERP",
-         what:F.c207ship ? `Ship-to · ${strike("DC 4", "DC 2")}` : `Ship-to on the sales order · DC 4, should be DC 2`}])
-        + `<p class="desc">${both ? "The ship notice waits for the departure scan." : F.c207load ? "Supplier ERP still reads DC 4." : F.dmg ? "The order ships 659 of 660 unless Kinross loads a replacement case." : "Not loaded before the seal: the order ships 659 of 660 cartons."}</p>` + cash("NR-460207"),
-      details:ruleList(["carton","shipto","shortage"]) + readList(reads) + whoList([["Found by","Rule · Northfield guide"],["Load fixed by","Kinross"],["Ship-to fixed by","Ashby order desk"],["Fixes confirmed by","Priya Raman"]])});
-  } else stages.push({key:"fix", state:"done", summary:"Load 660 of 660 and ship-to DC 2, confirmed by Priya Raman", sub:"Departed Kinross Groveport at 18:00 · charge at stake " + money(0),
-      detailsDone:readList(["DMG-207","SCAN-207-2","ERP-COR-207","DEP-207"]) + whoList([["Load fixed by","Kinross"],["Ship-to fixed by","Ashby order desk"],["Fixes confirmed by","Priya Raman"]])});
+         what:F.c207ship ? `Ship-to · ${strike("DC 4", "DC 2")}` : `Ship-to on the sales order · DC 4, should be DC 2`},
+        {charge:CH.asn, owner:"Trading Grid", where:"Built from the shipping advice", state:F.wsa ? "Built: 659 cartons" : "Waits on the shipping advice",
+         what:F.wsa ? `Ship notice draft · ${strike("660", "659")} cartons` : `Ship notice · 660 cartons on the sales order`},
+        {raised:true, charge:CH.short, owner:WH, where:"None: ships short", state:"Raised when Northfield receives", what:"Damaged case · 1 of 400, order item 1"}])
+        + cash("NR-460207") + (F.wsa ? "" : nextBtn()),
+      details:ruleList(["build","carton","shipto","shortage","backorder"]) + readList(reads) + whoList([["Found by","Rule · Northfield guide"],["Ship-to fixed by","Ashby order desk"],["Fix confirmed by","Priya Raman"],["Ship notice built by","Trading Grid, from the shipping advice"]])});
+  }
+  const ready = F.wsa && F.c207ship;
   const act = {id:"rel207", button:"Release ship notice", rows:[{action:"Release ship notice", now:"Held", after:"Sent", goesTo:"Northfield", via:"EDI 856"}],
-    says:"Sends the ship notice to Northfield: 660 cartons to DC 2, with the bill of lading and seal.", nodecision:"Not sent by 19:00: the ship notice is late.", ruleTag:"A person releases"};
-  if (F.rel207 === "sent") stages.push({key:"rel", state:"done", summary:"Ship notice delivered to Northfield", sub:"Technically acknowledged by Northfield",
-      detailsDone:readList(["856:ASN-460207","997:FA-N2997","945:WSA-460207"]) + whoList([["Recommended by","Rule · Ashby rule"],["Released by","Priya Raman"],["Carried by","Trading Grid"]])});
-  else if (F.dep) stages.push({key:"rel", state:"now", title:"Release ship notice", chip:["Ready for review","amber"], amber:true,
-      body:E.nowAfter(act) + `<p class="reason"><b>Reason.</b> Kinross's load scan shows 660 of 660 cartons and the trailer left at 18:00.</p>` + E.decision(act),
-      details:ruleList(["release","asn1h","carton"]) + readList(["SCAN-207-2","DEP-207","860:NR-460207 Change 1","ERP-COR-207"]) + whoList([["Recommended by","Rule · Ashby rule"],["Released by","Priya Raman, on Release ship notice"],["Carried by","Trading Grid"]])});
+    says:"Sends the ship notice to Northfield: 659 cartons to DC 2, order item 1 at 399 of 400 cases.", nodecision:"Not sent by 19:00: the ship notice is late.", ruleTag:"A person releases"};
+  if (sent) stages.push({key:"rel", state:"done", summary:"Ship notice delivered to Northfield · 659 cartons to DC 2", sub:"Technically acknowledged by Northfield",
+      detailsDone:readList(["856:ASN-460207","997:FA-N2999","945:WSA-460207","ERP-COR-207"]) + whoList([["Recommended by","Rule · Ashby rule"],["Released by","Priya Raman"],["Carried by","Trading Grid"]])});
+  else if (ready) stages.push({key:"rel", state:"now", title:"Release ship notice", chip:["Ready for review","amber"], amber:true,
+      body:E.nowAfter(act) + `<p class="reason"><b>Reason.</b> The 3PL warehouse's shipping advice shows 659 cartons shipped at 18:00, and the sales order ships to DC 2.</p>` + E.decision(act),
+      details:ruleList(["release","asn1h","build"]) + readList(["945:WSA-460207","ERP-COR-207","860:NR-460207 Change 1"]) + whoList([["Recommended by","Rule · Ashby rule"],["Released by","Priya Raman, on Release ship notice"],["Carried by","Trading Grid"]])});
   else stages.push({key:"rel", state:"next", title:"Release ship notice"});
-  if (F.rcv207) stages.push({key:"rcv", state:"done", summary:"Northfield received 660 cartons at DC 2", sub:"Receiving advice · 660 cartons at DC 2", detailsDone:readList(["861:RCV-DC2-81420"])});
+  if (F.rcv207) stages.push({key:"rcv", state:"done", summary:"Northfield received 659 cartons at DC 2", sub:"Short-carton charge raised · " + money(CH.short), detailsDone:readList(["861:RCV-DC2-81420","CHG-207"]) + ruleList(["shortage"])});
+  else if (sent) stages.push({key:"rcv", state:"now", title:"Northfield receives at DC 2", chip:["Waiting on Northfield",""], body:`<div class="bar"><button class="tb" type="button" data-act="rcv" ${S.busy ? 'aria-disabled="true"' : ""}>Next: Northfield's receiving advice</button></div>`});
   else stages.push({key:"rcv", state:"next", title:"Northfield receives at DC 2"});
-  return {title:"PO 460207", chip:chip("NR-460207"), deadline:deadline("NR-460207"), meta:"Northfield Retailer · Kinross Groveport to DC 2 · 660 cartons · Wholesale",
-    banner:F.rcv207 ? ["Received at DC 2 as the ship notice describes", "660 of 660 cartons, nothing short · the receiving advice matches the ship notice.", "$405.00 in charges did not arise on PO 460207."] : null,
-    wrongLabel:F.c207load && F.c207ship ? "Records" : "What is wrong", wrong, stages};
+  return {title:"PO 460207", chip:chip("NR-460207"), deadline:deadline("NR-460207"), meta:"Northfield Retailer · 3PL warehouse, Groveport to DC 2 · 660 cases ordered · Wholesale",
+    banner:F.rcv207 ? ["Received at DC 2 as the ship notice describes", "659 cartons · order item 1 399 of 400 cases · the receiving advice matches the ship notice.", "Prevented: " + money(CH.ship + CH.asn) + " in ship notice and ship-to charges.", "Raised: " + money(CH.short) + " short-carton charge for the damaged case."] : null,
+    wrongLabel:sent ? "Records" : "What is wrong", wrong, stages};
 }
-/* one owner fix: the card before and after Confirm fix */
 function single(id, o){
   const stages = [];
   stages.push({key:"fix", state:"now", title:o.ok ? o.doneText : o.title, chip:o.ok ? ["Fix confirmed","brand"] : ["Owner fixes","amber"],
@@ -621,86 +591,60 @@ function single(id, o){
   stages.push({key:"next", state:"next", title:o.next});
   return {title:"PO " + id.slice(3), chip:chip(id), deadline:deadline(id), meta:o.meta, wrongLabel:o.ok ? "Records" : "What is wrong", wrong:[o.ok ? o.wrongAfter : o.wrongBefore], stages};
 }
-const rec219 = () => single("NR-460219", {ok:F.c219, act:"c219", title:"Correct the invoice", owner:"Ashby billing", where:"Supplier ERP, before the invoice batch",
+const rec219 = () => single("NR-460219", {ok:F.c219, act:"c219", title:"Correct the invoice", owner:"Ashby billing", where:"Supplier ERP, before the next invoice batch",
   what:"Invoice draft · order item 2 · 180 cases, 176 allocated to ship", rules:["invoice"], reads:["ERP-QTY-219","ERP-INV-8012"], after:["810:INV-8012"],
-  doneText:"Ashby billing corrected order item 2", whatAfter:`Invoice draft · order item 2 · ${strike("180", "176")} cases`, next:"Invoice goes in the 18:00 batch",
-  meta:"Northfield Retailer · Kinross Groveport to DC 2 · 2 lines · $11,772.00",
-  wrongBefore:{v:`<b>Invoice draft</b> · order item 2 bills 180 cases · 176 allocated to ship · <span class="st-red">${money(153.6)} over</span>`, tags:[["Supplier ERP · API","ERP-INV-8012"]]},
-  wrongAfter:{v:`<b>Invoice</b> · order item 2 bills ${strike("180", "176")} cases · ${money(11618.4)}`, tags:[["EDI 810","810:INV-8012"]]}});
+  doneText:"Ashby billing corrected order item 2", whatAfter:`Invoice draft · order item 2 · ${strike("180", "176")} cases`, next:"Invoice goes in the next batch",
+  meta:"Northfield Retailer · 3PL warehouse, Groveport to DC 2 · 2 order items · $11,772.00",
+  wrongBefore:{v:`<b>Invoice draft</b> · order item 2 bills 180 cases · 176 allocated to ship · <span class="st-red">${money(153.6)} over</span>`, tags:[["Invoice draft · API","ERP-INV-8012"]]},
+  wrongAfter:{v:`<b>Invoice</b> · order item 2 bills ${strike("180", "176")} cases · ${money(11618.4)}`, tags:[["Invoice · EDI 810","810:INV-8012"]]}});
 const rec262 = () => single("NR-460262", {ok:F.c262, act:"c262", title:"Decide the short order", owner:"Ashby order desk", where:"Supplier ERP",
-  what:"ASH-MUG-12 at Kinross Groveport · 610 free, 640 ordered · 30 short", rules:["backorder","fill"], reads:["INV-GRV"], after:["860:NR-460262 Change 1"],
+  what:"ASH-MUG-12 at the 3PL warehouse, Groveport · 610 free, 640 ordered · 30 short", rules:["backorder","fill"], reads:["846:IA-GRV-20261208-2142"], after:["860:NR-460262 Change 1"],
   desc:"3 orders share the stock.",
   extra:`<table class="ow"><thead><tr><th>Order</th><th>Ordered</th></tr></thead><tbody><tr><td>PO 460262</td><td>300 cases</td></tr><tr><td>PO 460274</td><td>300 cases</td></tr><tr><td>PO 46620</td><td>40 cases</td></tr></tbody></table>`,
-  doneText:"NR-460262 cut to 270 cases", whatAfter:`NR-460262 order item 1 · ${strike("300", "270")} cases`, next:"Northfield receives at DC 2",
-  meta:"Northfield Retailer · Kinross Groveport to DC 2 · ASH-MUG-12",
-  wrongBefore:{v:`<b>Stock</b> · Kinross Groveport 610 cases free · 640 ordered on 3 orders · <span class="st-amber">30 short</span>`, tags:[["Kinross inventory · API","INV-GRV"]]},
-  wrongAfter:{v:`<b>Order</b> · order item 1 ${strike("300", "270")} cases · nothing short`, tags:[["EDI 860","860:NR-460262 Change 1"]]}});
-const rec233 = () => single("NR-460233", {ok:F.c233, act:"c233", title:"Relabel cartons", owner:"Kinross", where:"Kinross labelling",
-  what:"12 of 96 cartons · SSCCs first used on an earlier order", rules:["sscc"], reads:["LBL-233"], after:["856:ASN-460233"],
-  doneText:"Kinross relabelled the cartons", whatAfter:`Cartons with used SSCCs · ${strike("12 of 96", "0 of 96")}`, next:"Northfield receives at DC 2",
-  meta:"Northfield Retailer · Kinross Joliet to DC 2 · 96 cartons ASH-HNY-340",
-  wrongBefore:{v:`<b>Labels</b> · <span class="st-red">12 of 96</span> cartons carry SSCCs already used`, tags:[["Kinross scan · API","LBL-233"]]},
-  wrongAfter:{v:`<b>Labels</b> · ${strike("12 of 96", "0 of 96")} cartons carry SSCCs already used`, tags:[["EDI 856","856:ASN-460233"]]}});
-const REC = {"NR-460207":rec207, "NR-460219":rec219, "NR-460262":rec262, "NR-460233":rec233};
-const RULES_FOR = {"NR-460207":[["carton","659 of 660 loaded"],["shipto","Supplier ERP shows DC 4; order change says DC 2"],["shortage","1 carton short if it ships"],["release","Release stays with Priya Raman"],["asn1h","Due within 1 hour of departure"]],
+  doneText:"Order cut to 270 cases", whatAfter:`Order item 1 · ${strike("300", "270")} cases`, next:"Northfield receives at DC 2",
+  meta:"Northfield Retailer · 3PL warehouse, Groveport to DC 2 · ASH-MUG-12",
+  wrongBefore:{v:`<b>Stock</b> · 3PL warehouse, Groveport 610 cases free · 640 ordered on 3 orders · <span class="st-amber">30 short</span>`, tags:[["Inventory advice · EDI 846","846:IA-GRV-20261208-2142"]]},
+  wrongAfter:{v:`<b>Order</b> · order item 1 ${strike("300", "270")} cases · nothing short`, tags:[["Order change · EDI 860","860:NR-460262 Change 1"]]}});
+const REC = {"NR-460207":rec207, "NR-460219":rec219, "NR-460262":rec262};
+const RULES_FOR = {"NR-460207":[["build","The ship notice waits for the shipping advice"],["carton","Shipping advice 659 cartons; sales order 660"],["shipto","Supplier ERP shows DC 4; order change says DC 2"],["shortage","1 case damaged, not replaced"],["backorder","Order item 1 reports 399 of 400"],["release","Release stays with Priya Raman"],["asn1h","Due by 19:00"]],
   "NR-460219":[["invoice","Order item 2 bills 180; 176 allocated to ship"]],
-  "NR-460262":[["backorder","30 cases short across 3 orders"],["fill","Order item ships 30 short"]], "NR-460233":[["sscc","12 SSCCs first used on an earlier order"]]};
+  "NR-460262":[["backorder","30 cases short across 3 orders"],["fill","Order item ships 30 short"]]};
 
-/* ---------- header: title, tiles and total follow the findings ---------- */
 function head(){
   const n = openN(), t = total();
-  E.setHead(n ? `${n} Northfield ${n === 1 ? "shipment breaks" : "shipments break"} a rule before ${n === 1 ? "it leaves" : "they leave"} Kinross. ${money(t)} in charges at stake.` : `Every flagged Northfield shipment is fixed or sent. ${money(t)} in charges at stake.`);
+  E.setHead(n ? `${n} Northfield ${n === 1 ? "shipment breaks" : "shipments break"} a rule before Northfield receives ${n === 1 ? "it" : "them"}. ${money(t)} in charges at stake${F.rcv207 ? `, plus ${money(CH.short)} raised` : ""}.` : `Every flagged Northfield shipment is fixed or sent. ${money(t)} in charges at stake${F.rcv207 ? `, plus ${money(CH.short)} raised` : ""}.`);
   const k = stakeIds().length, f = fixedIds().length;
-  document.getElementById("tiles").innerHTML = [["At stake", money(t), t ? "risk" : "", "stake", `${k} ${k === 1 ? "shipment" : "shipments"}`], ["Fixed before departure", money(fixedV()), "", "fixed", `${f} ${f === 1 ? "shipment" : "shipments"}`]]
+  document.getElementById("tiles").innerHTML = [["At stake", money(t), t ? "warn" : "", "stake", `${k} ${k === 1 ? "shipment" : "shipments"}`], ["Avoided", money(fixedV()), "", "fixed", `${f} ${f === 1 ? "shipment" : "shipments"}`]]
     .map(x => `<button class="fig${x[2] ? " " + x[2] : ""}" type="button" data-tile="${x[3]}" aria-pressed="${S.tile === x[3]}"><span>${x[0]}</span><b>${x[1]}</b><em>${x[4]}</em></button>`).join("");
 }
-
+E.openRules = () => {
+  const rs = E.page.rulesFor(S.sel);
+  E.openDrawer("Rules for PO " + S.sel.slice(3), rs.map(r => `<div class="rl"><div class="s">${esc(r.src)}</div><div>${esc(r.text)}</div>${r.found ? `<div class="f">Here: ${esc(r.found)}</div>` : ""}</div>`).join(""));
+};
 E.page = {
   listRows, listCount:() => openN() + " open",
-  emptyText:() => S.tile === "fixed" ? "No fix confirmed yet" : "No charge at stake",
+  emptyText:() => S.tile === "fixed" ? "No charge avoided yet" : "No charge at stake",
   record:id => REC[id](),
   rulesFor:id => RULES_FOR[id].map(r => ({text:R[r[0]].text, src:R[r[0]].src, found:r[1]})).concat([{text:R.order.text, src:R.order.src, found:"Sorts the list"}]),
-  questions:["Why is PO 460207 held?","What happens if Kinross can't load a replacement case?"],
+  questions:["Why is this ship notice held?","What did rule breaks at the 3PL warehouse cost Ashby this quarter?"],
   approve, act,
-  after:() => { head(); mapState(); }
+  after:() => head()
 };
 
-/* ---------- route map ---------- */
-E.buildMap({w:1100, h:160,
-  nodes:[{id:"erp", x:16, y:6, w:236, h:72, title:"Supplier ERP", sub:"Ashby orders and invoices"},
-         {id:"kin", x:16, y:84, w:236, h:72, title:"Kinross Logistics", sub:"3PL warehouse · Groveport, Joliet"},
-         {id:"nf", x:848, y:30, w:236, h:104, title:"Northfield Retailer", sub:"Retailer · DC 2"}],
-  tg:{x:438, y:34, w:236, h:100, subs:[]},
-  lines:[{id:"erp", d:"M252 42 C 345 42, 345 62, 438 62", label:"Sales order · API", lx:345, ly:40, from:"Supplier ERP", to:"Trading Grid"},
-         {id:"kin", d:"M252 120 C 345 120, 345 104, 438 104", label:"Load scan · API", lx:345, ly:138, from:"Kinross", to:"Trading Grid"},
-         {id:"nfin", d:"M848 62 L674 62", label:"Order change · EDI 860", lx:761, ly:54, from:"Northfield", to:"Trading Grid"},
-         {id:"nfout", d:"M674 112 L848 112", label:"Ship notice · EDI 856", lx:761, ly:130, from:"Trading Grid", to:"Northfield"}],
-  summary:() => "Supplier ERP and Kinross reach Trading Grid by API; documents travel between Trading Grid and Northfield as EDI."});
-["kin","nfout"].forEach(id => E.rest(id));
-["erp","nfin"].forEach(id => { S.lines[id].state = "settled"; E.settle(id, true); });
-function mapState(){
-  E.setRec("erp", F.c207ship ? "Sales order · DC 2" : "Sales order · DC 4");
-  E.setRec("kin", F.dep ? "Load · departed 18:00" : F.c207load ? "Load · 660 of 660" : F.dmg ? "Load · carton crushed" : "Load · 659 of 660");
-  E.setRec("nf", F.rcv207 ? "Receiving advice · 660 at DC 2" : F.rel207 === "sent" ? "Ship notice · 660 cartons" : "Order change · ship-to DC 2");
-  const n = openN();
-  E.status(n ? n + (n === 1 ? " shipment" : " shipments") + " with a finding" : "No open findings");
-}
-
-/* ---------- world time: records arrive at their own source times ---------- */
 function advance(t){
   if (t > S.clock) S.clock = t;
-  if (!F.dmg && S.clock >= T(0,17,21)) { F.dmg = true; E.hist(T(0,17,21), "Damage scan on PO 460207 · carton 006141410006005172 crushed", "Kinross", "DMG-207"); }
+  if (!F.dmg && S.clock >= T(0,17,21)) { F.dmg = true; E.hist(T(0,17,21), "Inventory adjustment advice on PO 460207 · 1 case damaged", "3PL warehouse", "947:WA-GRV-460207"); }
 }
 const step = (t, fn, text) => { advance(t); fn(); E.event(text); E.render(); };
 
-/* Confirm fix: Priya records that the owner fixed it in its own system; Trading Grid sends nothing to the owner */
-const UNDO = {c207load:["c207load","SCAN-207-2","Load fix on PO 460207"], c207ship:["c207ship","ERP-COR-207","Ship-to fix on PO 460207"], c219:["c219",null,"Invoice fix on PO 460219"], c262:["c262",null,"Short-order fix on PO 460262"], c233:["c233",null,"Relabel fix on PO 460233"]};
+/* Confirm fix records Priya's confirmation; Trading Grid sends nothing to the owner */
+const UNDO = {c207ship:["c207ship","ERP-COR-207","Ship-to fix on PO 460207"], c219:["c219",null,"Invoice fix on PO 460219"], c262:["c262",null,"Short-order fix on PO 460262"]};
 function undo(id){
-  const u = UNDO[id]; if (!u || !F[u[0]] || (F.dep && id.startsWith("c207"))) return;
+  const u = UNDO[id]; if (!u || !F[u[0]] || (id === "c207ship" && F.rel207 === "sent")) return;
   F[u[0]] = false;
   S.hist = S.hist.filter(h => !(u[1] && h.doc === u[1]) && !h.text.startsWith(u[2]));
   E.hist(S.clock, u[2] + " withdrawn by Priya Raman", "Person");
-  E.event(u[2].replace(" on ", " on ") + " withdrawn. " + money(id === "c207load" ? CH.load : id === "c207ship" ? CH.ship : FULL[{c219:"NR-460219", c262:"NR-460262", c233:"NR-460233"}[id]]) + " back at stake.");
+  E.event(u[2] + " withdrawn. " + money(id === "c207ship" ? CH.ship : FULL[{c219:"NR-460219", c262:"NR-460262"}[id]]) + " back at stake.");
   E.render(); E.say("Fix withdrawn.");
 }
 async function act(id){
@@ -708,57 +652,34 @@ async function act(id){
   if (id.startsWith("u:")) { undo(id.slice(2)); return; }
   S.busy = true; E.renderRec();
   try {
-    if (id === "c207load") {
-      if (!F.dmg) advance(T(0,17,21));
-      E.light("dx", true, "Kinross scans · API");
-      await E.travel("kin", "Load scan", false);
-      step(T(0,17,46), () => { F.c207load = true; E.hist(T(0,17,46), "Load scan on PO 460207 · 660 of 660 with a replacement case", "Kinross", "SCAN-207-2"); E.hist(S.clock, "Load fix on PO 460207 confirmed by Priya Raman", "Person"); }, "Kinross loaded the replacement case: 660 of 660 on PO 460207. " + money(CH.load) + " no longer at stake.");
-      E.light("dx", false, "");
-    } else if (id === "c207ship") {
-      E.light("dx", true, "Supplier ERP · API");
-      await E.travel("erp", "Sales order", false);
-      step(T(0,17,50), () => { F.c207ship = true; E.hist(T(0,17,50), "Sales order for PO 460207 corrected · ship-to DC 4 to DC 2 by Ashby order desk", "Supplier ERP", "ERP-COR-207"); E.hist(S.clock, "Ship-to fix on PO 460207 confirmed by Priya Raman", "Person"); }, "Ashby order desk corrected the ship-to for PO 460207 to DC 2. " + money(CH.ship) + " no longer at stake.");
-      E.light("dx", false, "");
+    if (id === "c207ship") {
+      step(Math.max(S.clock, T(0,17,50)), () => { F.c207ship = true; E.hist(S.clock, "Sales order for PO 460207 corrected · ship-to DC 4 to DC 2 by Ashby order desk", "Supplier ERP", "ERP-COR-207"); E.hist(S.clock, "Ship-to fix on PO 460207 confirmed by Priya Raman", "Person"); }, "Ashby order desk corrected the ship-to for PO 460207 to DC 2. " + money(CH.ship) + " no longer at stake.");
+    } else if (id === "next") {
+      if (F.wsa) return;
+      step(T(0,18,12), () => { F.wsa = true; E.hist(T(0,18,12), "Warehouse shipping advice on PO 460207 · 659 cartons shipped at 18:00", "3PL warehouse", "945:WSA-460207"); E.hist(T(0,18,12), "Ship notice draft for PO 460207 built from the shipping advice · 659 cartons", "Rule · Trading Grid"); }, "The 3PL warehouse's shipping advice for PO 460207: 659 cartons shipped at 18:00. The ship notice draft now matches the load.");
+      E.say(F.c207ship ? "PO 460207 is ready for review: release the ship notice." : "PO 460207: the ship-to still reads DC 4.");
+    } else if (id === "rcv") {
+      await receive();
     } else if (id === "c219") {
       step(S.clock, () => { F.c219 = true; E.hist(S.clock, "Invoice fix on PO 460219 confirmed by Priya Raman · order item 2 at 176", "Person"); }, "Priya Raman confirmed the invoice fix on PO 460219. " + money(CH.inv) + " no longer at stake.");
     } else if (id === "c262") {
       step(S.clock, () => { F.c262 = true; E.hist(S.clock, "Short-order fix on PO 460262 confirmed by Priya Raman · 270 cases", "Person"); }, "Priya Raman confirmed the order fix on PO 460262. " + money(CH.fill) + " no longer at stake.");
-    } else if (id === "c233") {
-      step(S.clock, () => { F.c233 = true; E.hist(S.clock, "Relabel fix on PO 460233 confirmed by Priya Raman", "Person"); }, "Priya Raman confirmed the relabel fix on PO 460233. " + money(CH.sscc) + " no longer at stake.");
-    }
-    if (F.c207load && F.c207ship && !F.dep && (id === "c207load" || id === "c207ship")) {
-      await E.wait(600);
-      E.light("dx", true, "Kinross scans · API");
-      await E.travel("kin", "Departure scan", false);
-      step(T(0,18,0), () => { F.dep = true; E.hist(T(0,18,0), "Departure scan on PO 460207 · 18:00", "Kinross", "DEP-207"); }, "Kinross departure scan: PO 460207 left at 18:00. The ship notice is ready to release.");
-      E.light("dx", false, "");
-      E.say("NR-460207 is ready for review: release the ship notice.");
     }
   } finally { S.busy = false; E.render(); }
 }
-
-/* sends: Priya presses the outcome button and Trading Grid carries the document; only that record's own records follow */
 async function approve(id){
-  if (id === "rel207") {
-    const t = Math.max(S.clock, T(0,18,6));
-    E.light("dx", true, "Ship notice · EDI 856");
-    await E.travel("nfout", "Ship notice");
-    step(t, () => { F.rel207 = "sent"; E.hist(t, "Ship notice ASN-460207 delivered to Northfield · released by Priya Raman", "Trading Grid", "856:ASN-460207"); }, "Ship notice delivered to Northfield.");
-    E.say("Ship notice delivered to Northfield.");
-    await E.wait(500);
-    await E.travel("nfin", "Technical acknowledgment", false);
-    step(t + 2, () => E.hist(t + 2, "Technical acknowledgment FA-N2997 for ASN-460207", "Northfield", "997:FA-N2997"), "Northfield technically acknowledged the ship notice.");
-    await E.wait(250);
-    await E.travel("kin", "Shipping advice", false);
-    step(t + 6, () => E.hist(t + 6, "Warehouse shipping advice WSA-460207 · 660 cartons", "Kinross", "945:WSA-460207"), "Kinross shipping advice for PO 460207: 660 cartons.");
-    await E.wait(250);
-    await E.travel("nfin", "Receiving advice", false);
-    step(T(1,8,20), () => { F.rcv207 = true; E.hist(T(1,8,20), "Receiving advice RCV-DC2-81420 · 660 of 660 at DC 2", "Northfield", "861:RCV-DC2-81420"); }, "Northfield received PO 460207 at DC 2: 660 of 660 cartons, as the ship notice describes.");
-    E.light("dx", false, "");
-    S.sel = "NR-460207";
-    E.say("Northfield received PO 460207 at DC 2. $405.00 in charges did not arise.");
-    return;
-  }
+  if (id !== "rel207" || !F.wsa || !F.c207ship || F.rel207 === "sent") return;
+  const t = Math.max(S.clock, REL_T);
+  step(t, () => { F.rel207 = "sent"; E.hist(t, "Ship notice ASN-460207 delivered to Northfield · 659 cartons · released by Priya Raman", "Rule · Priya Raman · Trading Grid", "856:ASN-460207"); }, "Ship notice delivered to Northfield: 659 cartons to DC 2. " + money(CH.asn) + " no longer at stake.");
+  E.say("Ship notice delivered to Northfield.");
+  await E.wait(500);
+  step(t + 5, () => E.hist(t + 5, "Technically acknowledged by Northfield · ship notice ASN-460207", "Northfield", "997:FA-N2999"), "Northfield technically acknowledged the ship notice.");
+}
+async function receive(){
+  if (F.rel207 !== "sent" || F.rcv207) return;
+  step(T(1,8,20), () => { F.rcv207 = true; E.hist(T(1,8,20), "Receiving advice RCV-DC2-81420 · 659 cartons at DC 2 · order item 1 399 of 400", "Northfield", "861:RCV-DC2-81420"); E.hist(T(1,8,20), "Short-carton charge on PO 460207 · " + money(CH.short), "Northfield", "CHG-207"); }, "Northfield received PO 460207 at DC 2 as the ship notice describes. Short-carton charge raised: " + money(CH.short) + ".");
+  S.sel = "NR-460207";
+  E.say("Northfield received PO 460207 at DC 2. " + money(CH.ship + CH.asn) + " in charges did not arise; " + money(CH.short) + " short-carton charge raised.");
 }
 E.page.onEdited = () => {};
 document.getElementById("tiles").addEventListener("click", e => {
@@ -769,18 +690,14 @@ document.getElementById("tiles").addEventListener("click", e => {
   E.say(S.tile ? `${b.querySelector("span").textContent}: ${listRows().length} shown` : "All shipments shown");
 });
 
-/* ---------- first screen ---------- */
-E.setHead("", "Checked when the Kinross load scan arrived: 123 open orders.",
-  "A shipment that breaks a Northfield rule is corrected before departure.");
+/* ---------- first screen: the damage advice is the opening event ---------- */
+E.setHead("", "Checked against Northfield's rules before each ship notice goes.",
+  "Every ship notice matches the load before Northfield receives it.");
 S.sel = "NR-460207";
 advance(T(0,17,21));
 E.render();
+E.event("The 3PL warehouse reported a damaged case on PO 460207: order item 1 ships 399 of 400.");
 S.started = true;
-(async () => {
-  E.light("dx", true, "Load scan"); await E.travel("kin", "Load scan", false); await E.read("dx"); E.light("dx", false, "");
-  if (!F.dmg) { E.light("dx", true, "Kinross scans · API"); await E.travel("kin", "Damage scan", false); E.light("dx", false, "");
-    if (!F.dmg) step(T(0,17,21), () => {}, "Kinross damage scan: the staged carton is crushed and cannot be loaded."); }
-})();
 })();
 
 </script>

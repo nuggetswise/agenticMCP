@@ -324,7 +324,9 @@ export function finishRisks(L, W) {
     D.whOrder(L, O, addH(dep, -20), `WSO-${n}`, { shipDate: etDay(dep), qty: ship });
     L.event({ at: dep, kind: 'wms.departure_scan', po: O.po, system: 'Kinross warehouse system', party: 'KINROSS', channel: 'API', data: { shipment: `SHP-${n}`, carrier: 'Lakeline Freight' } });
     D.whAdvice(L, O, addH(dep, 0.2), `WSA-${n}`, { shipmentId: `SHP-${n}`, shippedAt: dep, ordered, shipped: ship, cartons, tracking: O.po === 'NR-460207' ? 'BOL-91407' : null });
-    D.asn(L, O, addH(dep, 0.1), { ref: `ASN-${n}`, shippedAt: dep, deliveryDate: etDay(addD(dep, 1)), cartons, qty: ship, shipTo: 'DC2', ...(O.po === 'NR-460207' ? { bol: 'BOL-91407', seal: 'SL-4471026' } : {}) });
+    // NR-460207 (P5, round plan 26 November 2026): the ship notice is built from the 3PL warehouse's 945 (18:12), so it goes at
+    // 18:20, inside Northfield's 1-hour deadline after the 18:00 departure; the other orders keep 6 minutes after departure.
+    D.asn(L, O, addH(dep, O.po === 'NR-460207' ? 20 / 60 : 0.1), { ref: `ASN-${n}`, shippedAt: dep, deliveryDate: etDay(addD(dep, 1)), cartons, qty: ship, shipTo: 'DC2', ...(O.po === 'NR-460207' ? { bol: 'BOL-91407', seal: 'SL-4471026' } : {}) });
     D.invoice(L, O, addH(dep, 1.5), { ref: O.po === 'NR-460219' ? 'INV-8012' : `INV-${n}`, qty: ship });
     D.receipt(L, O, et(etDay(addD(dep, 1)), '08:20'), { ref: O.po === 'NR-460207' ? 'RCV-DC2-81420' : `RCV-DC2-${n}`, asnRef: `ASN-${n}`, qty: ship });
     if (O.po === 'NR-460207') L.event({ at: et(etDay(addD(dep, 1)), '08:20'), kind: 'charge.raised', po: O.po, system: 'Northfield deduction case', party: 'NORTHFIELD', channel: 'API', data: { charge: 'SH01', rule: 'SH01', amount: 104, line: 1, sku: 'ASH-MUG-12', cartons: 1, basis: 'Order item 1 shipped 399 of 400 cases: carton cost $54.00 plus $50', receiving_advice: 'RCV-DC2-81420' } });

@@ -30,11 +30,12 @@ const PRIYA = 'Priya Raman', JORDAN = 'Jordan Ellis', BOTH = 'Priya Raman, then 
 // 24 November 2026 (rebuild plan Step 4, Bucket 4): P27 opens at 09:00 ET on Wednesday 25 November, after P14, with Ashby's
 // unpaid Northfield invoices already read as clean or not (Kanmon agreement KN-1).
 // P24 merges into P8 (decided 23 November): P8 opens at 17:30 ET on 9 December, the moment P24 used, and P24's row retires.
-// 26 November 2026 (round plan): P24 is its own page again, at P8's moment, Northfield only. P4 opens at 10:30 ET on
-// 27 September, after Jordan's 10:00 invitation and before the 11:30 item check, so P4 precedes P2 (owner decision, 26 November). P15 is named "Rule changes and their cost".
+// 26 November 2026 (round plan): P24 is its own page again, at P8's moment, Northfield only. P4 opens at 10:00 ET on
+// 27 September on Ashby's side, at Jordan's invitation; Ashby accepts (10:20) and sends its catalogue (10:30), and the GS1 check
+// runs on arrival (10:35), so P4 precedes P2 (owner decisions, 26 and 27 November). P15 is named "Rule changes and their cost".
 export const CALENDAR = () => [
   { id: 'P2', stage: STAGE.req, week: 3, moment: 'Drop-ship and warehouse readiness', seen_by: PRIYA, prototype: 'P2 Programme Readiness', as_of: '2026-10-12T13:00:00.000Z', anchor: 'Drop-ship programme' },
-  { id: 'P4', stage: STAGE.req, week: 1, moment: 'Marketplace supplier approved and activated for Wholesale, and its first Wholesale order', seen_by: 'Jordan Ellis, then Priya Raman', prototype: 'P4 Marketplace to Wholesale', as_of: '2026-09-27T14:30:00.000Z', anchor: 'Wholesale programme' },
+  { id: 'P4', stage: STAGE.req, week: 1, moment: 'Wholesale invitation arrives; Ashby sends its catalogue, the GS1 check runs on arrival, and Northfield approves, activates and sends the first Wholesale order', seen_by: 'Priya Raman, then Jordan Ellis', prototype: 'P4 Marketplace to Wholesale', as_of: '2026-09-27T14:00:00.000Z', anchor: 'Wholesale programme' },
   { id: 'P21', stage: STAGE.req, week: 8, moment: 'Each company sets its own rules and sees the effect of a change before it applies', seen_by: BOTH, prototype: 'P21 Admin and rules', as_of: '2026-11-17T16:00:00.000Z', anchor: "Both companies' rules" },
   { id: 'P15', stage: STAGE.req, week: 14, moment: 'A draft rule replayed against the quarter before publishing', seen_by: JORDAN, prototype: 'P15 Rule changes and their cost', as_of: '2026-12-28T16:00:00.000Z', anchor: 'NFD-1' },
   { id: 'P23', stage: STAGE.ful, week: 6, moment: 'Northfield changes an order twice before it ships; order change 3 arrives', seen_by: PRIYA, prototype: 'P23 Order change before shipment', as_of: '2026-11-02T20:30:00.000Z', anchor: 'NR-450118' },

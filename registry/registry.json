@@ -109,6 +109,7 @@
    ],
    "anchors": [
     "order:$p4",
+    "event:catalogue.sent",
     "event:catalogue.item_conflict"
    ],
    "acceptance": [

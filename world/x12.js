@@ -152,7 +152,11 @@ const BODY = {
     seg('W06', 'N', d.ref, d8(d.shipped_at), d.shipment_id, '', d.po),
     seg('N1', 'WH', clean(d.site_name), 'UL', d.site_gln),
     seg('G62', '11', d8(d.shipped_at), 'W', t4(d.shipped_at)),
-    ...d.lines.flatMap((l, i) => [seg('LX', i + 1), seg('W12', l.shipped === l.ordered ? 'CC' : 'CP', l.ordered, l.shipped, l.ordered - l.shipped, 'CA', '', 'VN', l.sku)]),
+    ...(d.tracking ? [seg('N9', 'BM', d.tracking)] : []),
+    // Round plan, 26 November 2026: on the pages' orders each carton follows its order item: MAN GM (SSCC), N9 LT (lot) and
+    // DTM 036 (best before) where the item carries them. Invented usage, after the VICS 945's carton loop.
+    ...d.lines.flatMap((l, i) => [seg('LX', i + 1), seg('W12', l.shipped === l.ordered ? 'CC' : 'CP', l.ordered, l.shipped, l.ordered - l.shipped, 'CA', '', 'VN', l.sku),
+      ...(l.cartons || []).flatMap((c) => [seg('MAN', 'GM', c.sscc), ...(c.lot ? [seg('N9', 'LT', c.lot)] : []), ...(c.best_before ? [seg('DTM', '036', String(c.best_before).replace(/-/g, ''))] : [])])]),
     seg('W03', d.lines.reduce((a, l) => a + l.shipped, 0)),
   ],
   852: (d) => [
@@ -246,7 +250,7 @@ const READ = {
   820: (S) => { const itemsOut = []; for (const e of S) { if (e[0] === 'RMR') itemsOut.push({ invoice: e[2], paid: +e[4], invoice_amount: +e[5], adjustments: [] }); if (e[0] === 'REF' && e[1] === 'PO' && itemsOut.length) itemsOut[itemsOut.length - 1].po = e[2]; if (e[0] === 'ADX') itemsOut[itemsOut.length - 1].adjustments.push({ amount: +e[1], reason: e[2], ref: e[4], note: null }); if (e[0] === 'NTE' && e[1] === 'PMT') { const adj = itemsOut[itemsOut.length - 1].adjustments; adj[adj.length - 1].note = e[2]; } }
     return { ref: first(S, 'TRN')[2], amount: +first(S, 'BPR')[2], pay_date: day8(first(S, 'BPR')[16]), parties: n1(S), items: itemsOut, po: itemsOut[0]?.po || null }; },
   940: (S) => { const w = first(S, 'W05'); return { ref: w[2], po: w[3], parties: n1(S), ship_date: day8(first(S, 'G62', '10')[2]), lines: S.filter((e) => e[0] === 'W01').map((e) => ({ qty: +e[1], sku: e[5] })) }; },
-  945: (S) => { const w = first(S, 'W06'); const g = first(S, 'G62', '11'); return { ref: w[2], po: w[6], shipment_id: w[4], parties: n1(S), shipped_at: iso8(g[2], g[4] + '00'), lines: S.filter((e) => e[0] === 'W12').map((e) => ({ ordered: +e[2], shipped: +e[3], sku: e[8] })), units: +first(S, 'W03')[1] }; },
+  945: (S) => { const w = first(S, 'W06'); const g = first(S, 'G62', '11'); return { ref: w[2], po: w[6], shipment_id: w[4], parties: n1(S), shipped_at: iso8(g[2], g[4] + '00'), cartons: (() => { const out = []; let sku = null; for (const e of S) { if (e[0] === 'W12') sku = e[8]; else if (e[0] === 'MAN' && e[1] === 'GM') out.push({ sku, sscc: e[2], lot: null, best_before: null }); else if (e[0] === 'N9' && e[1] === 'LT' && out.length) out[out.length - 1].lot = e[2]; else if (e[0] === 'DTM' && e[1] === '036' && out.length) out[out.length - 1].best_before = `${e[2].slice(0, 4)}-${e[2].slice(4, 6)}-${e[2].slice(6, 8)}`; } return out; })(), tracking: (S.find((e) => e[0] === 'N9' && e[1] === 'BM') || [])[2] || null, lines: S.filter((e) => e[0] === 'W12').map((e) => ({ ordered: +e[2], shipped: +e[3], sku: e[8] })), units: +first(S, 'W03')[1] }; },
   852: (S) => { const x = first(S, 'XQ'); const its = []; let k = null; for (const e of S) { if (e[0] === 'LIN') its.push({ upc: e[3], sku: e[5], stores: new Map() }); if (e[0] === 'ZA') k = e[1]; if (e[0] === 'SDQ') for (let i = 3; i + 1 < e.length; i += 2) { const m = its[its.length - 1].stores; const r = m.get(e[i]) || { store: e[i], sold: 0, on_hand: 0 }; const q = +e[i + 1];
       if (k === 'QS') r.sold = q; else if (k === 'QA') r.on_hand = q; else if (k === 'QR') r.received = q; else if (k === 'QZ') { r.transfer_in = q > 0 ? q : 0; r.transfer_out = q < 0 ? -q : 0; } m.set(e[i], r); } }
     return { ref: `PA-${x[2]}-${x[3]}`, po: null, period_start: day8(x[2]), period_end: day8(x[3]), parties: n1(S), items: its.map((i) => ({ ...i, stores: [...i.stores.values()] })) }; },

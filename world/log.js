@@ -42,6 +42,15 @@ export class Log {
 
   /** Renders the log. Returns interchanges in send order: { text, from, to, at, doc }. */
   emit() {
+    // Round plan, 26 November 2026 (EDI first): on the orders P6 and P22 show, the 3PL warehouse's 945 carries each carton's
+    // SSCC (and lot where the item has one) and the bill of lading, taken from the ship notice for the same shipment.
+    const CARTON_945 = new Set(["NR-447976", "NR-448011", "NR-448137", "NR-448249", "NR-448263", "NR-448326", "NR-448424", "NR-448487", "NR-448501", "NR-448515", "NR-448564", "NR-448571", "NR-448578", "NR-448669", "NR-448753", "NR-448809", "NR-448879", "NR-449047", "NR-449075", "NR-449145", "NR-449236", "NR-449257", "NR-449292", "NR-449313", "NR-449334", "NR-449425", "NR-449453", "NR-449481", "NR-449551", "NR-449607", "NR-449621", "NR-449635", "NR-449642", "NR-449649", "NR-449663", "NR-449677", "NR-449740", "NR-449761", "NR-449775", "NR-449803", "NR-449824", "NR-449845", "NR-449873", "NR-449950", "NR-450083", "NR-450097", "NR-450111", "NR-450118", "NR-450146", "NR-450188", "NR-450279", "NR-450390", "NR-450415", "NR-451207", "NR-460207", "NR-460219", "NR-460233", "NR-460241", "NR-460262", "NR-460288", "NR-462410", "NR-462411", "NR-462412", "NR-470001", "NR-470004"]);
+    for (const d of this.docs) if (d.type === '945' && CARTON_945.has(d.po) && !d.lines.some((l) => l.cartons)) {
+      const asn = this.docs.find((x) => x.type === '856' && x.po_ref === d.po && x.shipped_at === d.shipped_at && x.cartons);
+      if (!asn) continue; const byLine = (line) => (asn.lines.find((l) => l.line === line) || {});
+      d.tracking ??= asn.bol || null;
+      for (const l of d.lines) l.cartons = asn.cartons.filter((c) => byLine(c.line).sku === l.sku).map((c) => ({ sscc: c.sscc, lot: byLine(c.line).lot || null, best_before: byLine(c.line).best_before || null }));
+    }
     // A document sent later than first planned keeps its place in the numbering (`numAt`), so moving it renumbers nothing else.
     const key = (d) => d.numAt || d.at;
     const docs = [...this.docs].sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : a._n - b._n));
@@ -65,7 +74,7 @@ export class Log {
       const from = PARTY[d.from], to = PARTY[d.to];
       // A stage document (D60) takes control numbers from its own range on the pair, so adding it renumbers no existing
       // document: 700,000,000 up, and 600,000,000 up for its 997s (the same ranges as main after dfef3cd).
-      d.ctl = nextCtl(d, `${d.from}>${d.to}${d.stage ? ':S' : ''}`, d.stage ? 700000000 : [d.from, d.to].includes('MARKETPLACE') ? 300000000 : 1000); // Northfield Marketplace (P4): its own range
+      d.ctl = nextCtl(d, `${d.from}>${d.to}${d.stage ? ':S' : ''}`, d.stage ? 700000000 : [d.from, d.to].includes('MARKETPLACE') ? 300000000 : [d.from, d.to].includes('TRADINGGRID') ? 200000000 : 1000); // Northfield Marketplace (P4): its own range
       if (d.retired) { if (!d.no_ack) acks.push({ d, numAt: iso(new Date(Date.parse(d.numAt || d.at) + d.ackDelay * 60000)), fa: { from: d.to, to: d.from } }); continue; }
       if (typeof d.answers_gs === 'function') d.answers_gs = d.answers_gs();
       let text = writeInterchange(d, { isaSender: from.isa, isaReceiver: to.isa, ctl: d.ctl });
@@ -145,6 +154,6 @@ export const D = {
   },
   whAdvice(L, O, at, ref, o = {}) {
     const site = LOC[O.site];
-    return L.doc({ type: '945', from: 'KINROSS', to: 'ASHBY', at, ref, po: O.po, shipment_id: o.shipmentId, site_name: site.name, site_gln: site.gln, shipped_at: iso(o.shippedAt || at), lines: O.lines.map((l) => ({ sku: l.sku, ordered: o.ordered?.[l.line] ?? l.qty, shipped: o.shipped?.[l.line] ?? l.qty })) });
+    return L.doc({ type: '945', from: 'KINROSS', to: 'ASHBY', at, ref, po: O.po, shipment_id: o.shipmentId, site_name: site.name, site_gln: site.gln, shipped_at: iso(o.shippedAt || at), tracking: o.tracking || null, ...(o.noLedger ? { no_ledger: true } : {}), lines: O.lines.filter((l) => !o.shipped || (o.ordered?.[l.line] ?? l.qty) > 0 || o.shipped[l.line] > 0).map((l) => ({ sku: l.sku, ordered: o.ordered?.[l.line] ?? l.qty, shipped: o.shipped?.[l.line] ?? l.qty, cartons: o.cartons ? o.cartons.filter((c) => c.line === l.line).map(({ sscc, lot, best_before }) => ({ sscc, lot: lot || null, best_before: best_before || null })) : null })) });
   },
 };

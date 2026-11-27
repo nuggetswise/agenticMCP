@@ -105,10 +105,10 @@ function derive(files, events) {
   const idCount = new Map(); const byCtl = new Map(); const byRef = new Map();
   for (const d of docs) {
     d.sender = ref.partyByIsa[d.isa_sender].id; d.receiver = ref.partyByIsa[d.isa_receiver].id;
-    const others = [d.sender, d.receiver].filter((x) => x !== 'NORTHFIELD' && x !== 'KINROSS' && x !== 'LAKELINE' && x !== 'MARKETPLACE');
-    d.partner = [d.sender, d.receiver].includes('MARKETPLACE') ? 'MARKETPLACE' : [d.sender, d.receiver].includes('KINROSS') ? 'KINROSS' : [d.sender, d.receiver].includes('LAKELINE') ? 'LAKELINE' : 'NORTHFIELD'; d.supplier = others[0] || 'ASHBY';
+    const others = [d.sender, d.receiver].filter((x) => x !== 'NORTHFIELD' && x !== 'KINROSS' && x !== 'LAKELINE' && x !== 'MARKETPLACE' && x !== 'TRADINGGRID');
+    d.partner = [d.sender, d.receiver].includes('TRADINGGRID') ? 'TRADINGGRID' : [d.sender, d.receiver].includes('MARKETPLACE') ? 'MARKETPLACE' : [d.sender, d.receiver].includes('KINROSS') ? 'KINROSS' : [d.sender, d.receiver].includes('LAKELINE') ? 'LAKELINE' : 'NORTHFIELD'; d.supplier = others[0] || 'ASHBY';
     // A 997 has no reference of its own in X12: it is named by its sender and interchange control number.
-    if (d.type === '997') d.ref = `FA-${d.sender === 'NORTHFIELD' ? (d.receiver === 'ASHBY' ? 'N' : `N${d.receiver.slice(3)}-`) : d.sender === 'ASHBY' ? (d.receiver === 'KINROSS' ? 'AK' : d.receiver === 'LAKELINE' ? 'AL' : d.receiver === 'MARKETPLACE' ? 'AM' : 'A') : d.sender === 'MARKETPLACE' ? 'M' : d.sender === 'KINROSS' ? 'K' : d.sender === 'LAKELINE' ? 'L' : `S${d.sender.slice(3)}-`}${d.isa_ctl > 600000000 ? `S${d.isa_ctl - 600000000}` : d.isa_ctl > 500000000 ? d.isa_ctl - 500000000 : `H${d.isa_ctl}`}`;
+    if (d.type === '997') d.ref = `FA-${d.sender === 'NORTHFIELD' ? (d.receiver === 'ASHBY' ? 'N' : `N${d.receiver.slice(3)}-`) : d.sender === 'ASHBY' ? (d.receiver === 'KINROSS' ? 'AK' : d.receiver === 'LAKELINE' ? 'AL' : d.receiver === 'MARKETPLACE' ? 'AM' : d.receiver === 'TRADINGGRID' ? 'AT' : 'A') : d.sender === 'MARKETPLACE' ? 'M' : d.sender === 'TRADINGGRID' ? 'T' : d.sender === 'KINROSS' ? 'K' : d.sender === 'LAKELINE' ? 'L' : `S${d.sender.slice(3)}-`}${d.isa_ctl > 600000000 ? `S${d.isa_ctl - 600000000}` : d.isa_ctl > 500000000 ? d.isa_ctl - 500000000 : `H${d.isa_ctl}`}`;
     const base = `${d.type}:${d.ref}`; const n = (idCount.get(base) || 0) + 1; idCount.set(base, n); d.doc_id = n === 1 ? base : `${base}#${n}`;
     byCtl.set(`${d.sender}>${d.receiver}:${d.type}:${d.gs_ctl}`, d);
     if (d.type !== '997' && d.type !== '824') (byRef.get(`${d.type}:${d.ref}:${d.sender}`) || byRef.set(`${d.type}:${d.ref}:${d.sender}`, []).get(`${d.type}:${d.ref}:${d.sender}`)).push(d);
@@ -200,7 +200,7 @@ function derive(files, events) {
     } else if (d.type === '940') {
       T.warehouse_orders.push({ ref: d.ref, po: d.po, site: loc(d.parties.WH.gln), sent_at: d.at, advice_at: null, shipped_at: null });
     } else if (d.type === '945') {
-      const w = T.warehouse_orders.find((x) => x.po === d.po); if (w) { w.advice_at = d.at; w.shipped_at = d.shipped_at; }
+      const w = T.warehouse_orders.find((x) => x.po === d.po); if (w && !w.advice_at) { w.advice_at = d.at; w.shipped_at = d.shipped_at; } // the first 945 answers the order (26 November 2026: PO 450118 has one per shipment)
     } else if (d.type === '852') {
       for (const it of d.items) for (const s of it.stores) T.store_activity.push({ period_start: d.period_start, period_end: d.period_end, sent_at: d.at, sku: it.sku, store: s.store, sold: s.sold, on_hand: s.on_hand, received: s.received ?? null, transfer_in: s.received == null ? null : s.transfer_in || 0, transfer_out: s.received == null ? null : s.transfer_out || 0 });
     } else if (STAGE_BY_TYPE[d.type]) STAGE_BY_TYPE[d.type].derive(d, T, ctx);
@@ -335,7 +335,7 @@ function buildNorthfieldView() {
     INSERT INTO parties SELECT * FROM m.parties WHERE kind IN ('Retailer','Supplier');
     INSERT INTO people SELECT * FROM m.people; INSERT INTO locations SELECT * FROM m.locations; INSERT INTO items SELECT * FROM m.items;
     INSERT INTO rules SELECT * FROM m.rules WHERE owner NOT LIKE 'Ashby%'; INSERT INTO calendar SELECT * FROM m.calendar;
-    INSERT INTO documents SELECT * FROM m.documents WHERE doc_type NOT IN ('940','945') AND partner_id <> 'LAKELINE';
+    INSERT INTO documents SELECT * FROM m.documents WHERE doc_type NOT IN ('940','945') AND partner_id NOT IN ('LAKELINE','TRADINGGRID');
     -- On collect freight Northfield routes the load and Lakeline is its carrier (NF-3.3, freight_terms tendered_by NORTHFIELD),
     -- so Lakeline's shipment status (214) on a routed load is Northfield's record too (P19 ship notice chase, owner 16 Nov).
     INSERT INTO documents SELECT * FROM m.documents WHERE doc_type = '214' AND partner_id = 'LAKELINE' AND po IN (SELECT po FROM m.routing_requests);

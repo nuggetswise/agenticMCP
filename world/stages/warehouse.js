@@ -230,7 +230,7 @@ CREATE TABLE receiving_discrepancies (discrepancy_id TEXT PRIMARY KEY, receipt T
     SEG: {
       W27: ['ID 1 2!', 'ID 2 4'],
       W04: ['R 1 10!', 'ID 2 2!', 'AN 12 12', 'ID 2 2', 'AN 1 48', 'ID 2 2', 'AN 1 48'],
-      N9: ['ID 2 3!', 'AN 1 30'],
+      N9: ['ID 2 3!', 'AN 1 30', 'AN 1 45'],
       W17: ['ID 1 1!', 'DT 8 8!', 'AN 1 12!', 'AN 1 22', 'AN 1 30'],
       W07: ['R 1 7!', 'ID 2 2!', 'AN 12 12', 'ID 2 2', 'AN 1 48', 'ID 2 2', 'AN 1 48'],
       W13: ['R 1 15!', 'ID 2 2!', 'ID 2 2!', 'AN 1 12', 'ID 2 2'],

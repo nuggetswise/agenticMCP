@@ -11,9 +11,9 @@ const minus = (iso, h) => new Date(Date.parse(iso) - h * 3600000).toISOString();
 export default function ({ db, ash, nf, ok, eq, none, n, ROOT }) {
   // ---- documents, both X12 checks run over them in validate and botscheck ----
   const count = (t) => n('SELECT count(*) n FROM documents WHERE doc_type = ? AND test = 0', t);
-  eq('planning.documents_exchanged', [count('830'), count('846'), count('870')], [6, 366, 40]);
+  eq('planning.documents_exchanged', [count('830'), count('846'), count('870')], [6, 370, 40]);
   none('planning.every_document_accepted', "SELECT doc_id, status FROM documents WHERE doc_type IN ('830','846','870') AND status <> 'Delivered'");
-  none('planning.parties_as_designed', "SELECT doc_id FROM documents WHERE (doc_type = '830' AND NOT (sender_id = 'NORTHFIELD' AND receiver_id = 'ASHBY')) OR (doc_type = '846' AND NOT ((sender_id = 'KINROSS' AND receiver_id = 'ASHBY') OR (sender_id = 'ASHBY' AND receiver_id = 'NORTHFIELD'))) OR (doc_type = '870' AND NOT (sender_id = 'ASHBY' AND receiver_id = 'NORTHFIELD'))");
+  none('planning.parties_as_designed', "SELECT doc_id FROM documents WHERE (doc_type = '830' AND NOT (sender_id = 'NORTHFIELD' AND receiver_id = 'ASHBY')) OR (doc_type = '846' AND NOT ((sender_id = 'KINROSS' AND receiver_id = 'ASHBY') OR (sender_id = 'ASHBY' AND receiver_id IN ('NORTHFIELD', 'MARKETPLACE', 'TRADINGGRID')))) OR (doc_type = '870' AND NOT (sender_id = 'ASHBY' AND receiver_id = 'NORTHFIELD'))");
   // Round plan, 26 November 2026 (EDI first): Ashby sends Northfield a daily 846 per 3PL site (R30), one for each of Kinross's
   // daily 846s, plus one from its own warehouse on 28 Sep (P4, in place of Northfield's API read); Kinross's intraday read at Groveport on 8 December (P5) is one more 846 to Ashby.
   const ash846 = n("SELECT count(*) n FROM documents WHERE doc_type = '846' AND sender_id = 'ASHBY' AND receiver_id = 'NORTHFIELD'");
@@ -43,7 +43,8 @@ export default function ({ db, ash, nf, ok, eq, none, n, ROOT }) {
   // Every Kinross pick wave: the 846 states the stock at the wave, it covers what the ship notices say was shipped, and
   // where Kinross short-picked it equals what was picked and is below what the wave's orders asked for ("stock below
   // the available-to-promise figure").
-  const picks = db.prepare("SELECT w.po, w.site, w.shipped_at, s.sku, sum(s.qty) qty FROM warehouse_orders w JOIN shipment_lines s ON s.po = w.po GROUP BY w.po, s.sku").all();
+  // 26 November 2026: PO 450118 and P26's orders ship from the 3PL warehouse for their cartons only, outside the stock ledger.
+  const picks = db.prepare("SELECT w.po, w.site, w.shipped_at, s.sku, sum(s.qty) qty FROM warehouse_orders w JOIN shipment_lines s ON s.po = w.po WHERE w.po NOT IN ('NR-450118', 'NR-47400', 'NR-47403') GROUP BY w.po, s.sku").all();
   const need = new Map(db.prepare('SELECT po, sku, sum(qty_ordered) n FROM order_lines GROUP BY po, sku').all().map((r) => [`${r.po}|${r.sku}`, r.n]));
   const waves = new Map(); for (const p of picks) { const k = `${p.site}|${p.sku}|${minus(p.shipped_at, PICK_LEAD_H)}`; const w = waves.get(k) || waves.set(k, { qty: 0, need: 0, pos: [] }).get(k); w.qty += p.qty; w.need += need.get(`${p.po}|${p.sku}`) || p.qty; w.pos.push(p.po); }
   const waveRow = db.prepare("SELECT available FROM stock_positions WHERE site = ? AND sku = ? AND as_of = ? AND kind = 'Pick wave'");
@@ -57,7 +58,8 @@ export default function ({ db, ash, nf, ok, eq, none, n, ROOT }) {
   eq('planning.stock_agrees_with_short_picks', [sp.length, spBad.map((e) => e.po)], [31, []]);
   // 18 November 2026: every Kinross shipping advice (945) reports the quantity Kinross picked and loaded, the same figure its
   // pick record, load scan and the ship notice carry. Until then 40 short-shipped and allocation-cut lines reported the ordered quantity.
-  const w945 = []; for (const d of db.prepare("SELECT po, body FROM documents WHERE doc_type = '945'").all()) for (const l of J(d.body).lines) w945.push({ po: d.po, ...l });
+  // 26 November 2026: the 945s added for PO 450118 (moved to the 3PL warehouse) and P26 carry cartons only; they stay out of the stock ledger.
+  const w945 = []; for (const d of db.prepare("SELECT po, body FROM documents WHERE doc_type = '945' AND po NOT IN ('NR-450118', 'NR-47400', 'NR-47403')").all()) for (const l of J(d.body).lines) w945.push({ po: d.po, ...l });
   const shipQ = new Map(picks.map((p) => [`${p.po}|${p.sku}`, p.qty]));
   const contra = w945.filter((l) => shipQ.get(`${l.po}|${l.sku}`) !== l.shipped);
   eq('planning.945_shipped_agrees_with_every_pick', [contra.length, w945.filter((l) => l.shipped < l.ordered).length], [0, 41]); // 41: NR-460207 ships 399 of 400 (P5, 26 November 2026)
@@ -74,14 +76,14 @@ export default function ({ db, ash, nf, ok, eq, none, n, ROOT }) {
   // ---- the document flow ----
   none('planning.870_reports_on_its_850', "SELECT d.doc_id FROM documents d WHERE d.doc_type = '870' AND NOT EXISTS (SELECT 1 FROM document_links l JOIN documents p ON p.doc_id = l.prev_doc_id WHERE l.doc_id = d.doc_id AND l.kind = 'reports on' AND p.doc_type = '850' AND p.po = d.po)");
   none('planning.830_names_the_830_it_supersedes', "SELECT f.forecast_id FROM forecasts f JOIN forecasts p ON p.forecast_id = f.supersedes WHERE NOT EXISTS (SELECT 1 FROM document_links l WHERE l.doc_id = f.doc_id AND l.prev_doc_id = p.doc_id AND l.kind = 'supersedes')");
-  eq('planning.846_follows_the_previous_from_its_site', n("SELECT count(*) n FROM document_links l JOIN documents d ON d.doc_id = l.doc_id JOIN documents p ON p.doc_id = l.prev_doc_id WHERE d.doc_type = '846' AND p.doc_type = '846' AND l.kind = 'follows' AND json_extract(d.body, '$.parties.WH.gln') = json_extract(p.body, '$.parties.WH.gln')"), count('846') - 5); // five chains: two Kinross sites, two Ashby sites, Ashby's own warehouse (28 Sep, P4)
+  eq('planning.846_follows_the_previous_from_its_site', n("SELECT count(*) n FROM document_links l JOIN documents d ON d.doc_id = l.doc_id JOIN documents p ON p.doc_id = l.prev_doc_id WHERE d.doc_type = '846' AND p.doc_type = '846' AND l.kind = 'follows' AND json_extract(d.body, '$.parties.WH.gln') = json_extract(p.body, '$.parties.WH.gln')"), count('846') - 8); // eight chains (26 November 2026 adds the Supplier ERP's two sites and the marketplace offer): two Kinross sites, two Ashby sites, Ashby's own warehouse (28 Sep, P4)
 
   // ---- who sees what ----
   const v = (x, sql) => x.prepare(sql).get().n;
   eq('planning.northfield_sees_830_870_and_ashby_846', [v(nf, "SELECT count(*) n FROM documents WHERE doc_type = '830'"), v(nf, "SELECT count(*) n FROM documents WHERE doc_type = '870'"), v(nf, "SELECT count(*) n FROM documents WHERE doc_type = '846'"),
     v(nf, "SELECT count(*) n FROM documents d JOIN documents a ON a.doc_id = d.answers_doc_id WHERE a.doc_type = '846'"), v(nf, "SELECT count(*) n FROM document_links WHERE doc_id LIKE '846:%' OR prev_doc_id LIKE '846:%'"), v(nf, 'SELECT count(*) n FROM stock_positions'),
     v(nf, 'SELECT count(*) n FROM forecasts'), v(nf, 'SELECT count(*) n FROM order_status')],
-  [count('830'), count('870'), ash846, ash846, 2 * ash846 - 3, 0, n('SELECT count(*) n FROM forecasts'), n('SELECT count(*) n FROM order_status')]);
+  [count('830'), count('870'), ash846 + 1, ash846 + 1, 2 * ash846 - 2, 0, n('SELECT count(*) n FROM forecasts'), n('SELECT count(*) n FROM order_status')]);
   eq('planning.ashby_sees_all_of_its_own', [v(ash, "SELECT count(*) n FROM documents WHERE doc_type IN ('830','846','870')"), v(ash, 'SELECT count(*) n FROM stock_positions'), v(ash, 'SELECT count(*) n FROM forecast_lines'), v(ash, 'SELECT count(*) n FROM order_status')],
     [n("SELECT count(*) n FROM documents WHERE doc_type IN ('830','846','870')"), n('SELECT count(*) n FROM stock_positions'), n('SELECT count(*) n FROM forecast_lines'), n('SELECT count(*) n FROM order_status')]);
 

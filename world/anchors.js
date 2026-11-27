@@ -2,8 +2,11 @@
 // the risk queue, the trade test and programme setup. Each sits at its moment on the story calendar.
 import { et, addH, addD, etDay } from './lib.js';
 import { D, iso } from './log.js';
+import { lotOf } from './lots.js';
 import { ITEM, BUYER_FX, locations, PARTY } from './ref.js';
-const LOC_WH1 = locations.find((l) => l.id === 'ASH-WH1'); const ASHBY_GLN = PARTY.ASHBY.gln;
+const LOC_WH1 = locations.find((l) => l.id === 'ASH-WH1'); const ASHBY_GLN = PARTY.ASHBY.gln; const LOC_JOL = locations.find((l) => l.id === 'KIN-JOL');
+/** Supplier ERP stock read sent to Trading Grid as an 846 (round plan, 26 November 2026, EDI first): Ashby's own record. */
+const erp846 = (L, at, ref, site, items) => L.doc({ type: '846', from: 'ASHBY', to: 'TRADINGGRID', at, as_of: iso(at), ref, site_name: site.name, site_gln: site.gln, client_name: 'Ashby Supplier', client_gln: ASHBY_GLN, items: items.map((x) => ({ gtin: ITEM[x.sku].gtin, waves: [], ...x })) });
 import { P5 } from './p5-physical.js';
 
 const day = (d, hm) => et(d, hm);
@@ -39,7 +42,10 @@ export function anchors(L, W) {
     // Round plan, 26 November 2026 (EDI first): Northfield no longer reads Ashby's ERP by API (R30). Ashby's ERP read stays
     // Ashby's own, and Ashby's inventory advice (846) reaches Northfield after the acknowledgment, with available stock only.
     ev(L, day('2026-09-28', '08:00'), 'erp.inventory_read', null, 'Supplier ERP', 'ASHBY', 'API', { sku: 'ASH-MUG-12', on_hand: 410, meaning: 'On hand' });
-    L.doc({ type: '846', from: 'ASHBY', to: 'NORTHFIELD', at: day('2026-09-28', '08:55'), as_of: iso(day('2026-09-28', '08:55')), ref: 'IA-ASH-WH1-20260928', site_name: LOC_WH1.name, site_gln: LOC_WH1.gln, client_name: 'Ashby Supplier', client_gln: ASHBY_GLN, items: [{ sku: 'ASH-MUG-12', gtin: ITEM['ASH-MUG-12'].gtin, on_hand: 290, available: 290, waves: [] }] }); // 410 on hand less 120 reserved for NR-449510; ASH-NAP-4 waits on Chat D's figure
+    ev(L, day('2026-09-28', '08:00'), 'erp.inventory_read', null, 'Supplier ERP', 'ASHBY', 'API', { sku: 'ASH-NAP-4', on_hand: 186, meaning: 'On hand', site: 'ASH-WH1', basis: 'Invented (owner, 27 November 2026)' });
+    L.doc({ type: '846', from: 'ASHBY', to: 'NORTHFIELD', at: day('2026-09-28', '08:55'), as_of: iso(day('2026-09-28', '08:55')), ref: 'IA-ASH-WH1-20260928', site_name: LOC_WH1.name, site_gln: LOC_WH1.gln, client_name: 'Ashby Supplier', client_gln: ASHBY_GLN, items: [{ sku: 'ASH-MUG-12', gtin: ITEM['ASH-MUG-12'].gtin, on_hand: 290, available: 290, waves: [] }, { sku: 'ASH-NAP-4', gtin: ITEM['ASH-NAP-4'].gtin, on_hand: 138, available: 138, waves: [] }] }); // 410 less 120 and 186 less 48 reserved for NR-449510
+    // The platform's offer quantity per item: Ashby's 846 to Northfield Marketplace, the same available stock (owner, 27 November).
+    L.doc({ type: '846', from: 'ASHBY', to: 'MARKETPLACE', at: day('2026-09-28', '08:56'), as_of: iso(day('2026-09-28', '08:55')), ref: 'IA-MKT-20260928', site_name: LOC_WH1.name, site_gln: LOC_WH1.gln, client_name: 'Ashby Supplier', client_gln: ASHBY_GLN, items: [{ sku: 'ASH-MUG-12', gtin: ITEM['ASH-MUG-12'].gtin, on_hand: 290, available: 290, waves: [] }, { sku: 'ASH-NAP-4', gtin: ITEM['ASH-NAP-4'].gtin, on_hand: 138, available: 138, waves: [] }] });
     D.po(L, O, day('2026-09-28', '08:05')); D.ack(L, O, day('2026-09-28', '08:50'));
     const dep = day('2026-10-01', '15:00'); const c = cartonsFor(W, 2001, [[1, 120], [2, 48]]);
     ev(L, dep, 'wms.departure_scan', po, 'Supplier ERP', 'ASHBY', 'API', { shipment: `SHP-${po.slice(3)}`, carrier: 'Lakeline Freight' });
@@ -117,7 +123,8 @@ export function anchors(L, W) {
     act(day('2026-10-25', '06:10'), '2026-10-18', '2026-10-24', w1, (r) => flows(PREV_W1[r.n] ?? r.oh, r));
     act(day('2026-11-01', '06:10'), '2026-10-25', '2026-10-31', w2, (r) => flows(w1.find((x) => x.n === r.n).oh, r, { 207: -24, 118: 24 }));
     W.storeWeeks = { w1, w2, prior };
-    ev(L, day('2026-10-26', '08:05'), 'erp.inventory_read', null, 'Supplier ERP', 'ASHBY', 'API', { sku: 'ASH-TRL-09', available: 980, unit: 'Pairs', meaning: 'Available' });
+    ev(L, day('2026-10-26', '08:05'), 'erp.inventory_read', null, 'Supplier ERP', 'ASHBY', 'EDI 846', { sku: 'ASH-TRL-09', available: 980, unit: 'Pairs', meaning: 'Available' });
+    erp846(L, day('2026-10-26', '08:05'), 'IA-ERP-20261026-0805', LOC_WH1, [{ sku: 'ASH-TRL-09', on_hand: 980, available: 980 }]);
     ev(L, day('2026-10-26', '08:07'), 'rule.recommendation', null, 'Trading Grid', 'ASHBY', 'API', { found_by: 'Ashby replenishment rule AP-6.1', acting_for: 'Priya Raman', store: 114, finding: 'Empty shelf', recommend: 'New order', pairs: 40, approved_by: 'Priya Raman' });
     const po = A.p9 = 'NR-451207'; const O = { po, supplier: 'ASHBY', shipTo: 'STORE114', site: 'ASH-WH1', programme: 'STORE', requested: '2026-10-27', poDate: iso(day('2026-10-26', '10:20')), stream: 'store', lines: [{ line: 1, sku: 'ASH-TRL-09', qty: 40, price: 38, uom: 'PR' }] };
     D.po(L, O, day('2026-10-26', '10:20')); D.ack(L, O, day('2026-10-26', '10:50'));
@@ -135,12 +142,14 @@ export function anchors(L, W) {
 
   // ---------- Week 6: the order story, PO NR-450118 ----------
   {
-    const po = 'NR-450118'; const O = A.story = mk(po, [['ASH-MUG-12', 300], ['ASH-NAP-4', 120], ['ASH-HNY-340', 80]], { requested: '2026-11-07', poDate: iso(day('2026-11-02', '09:12')) });
+    const po = 'NR-450118'; const O = A.story = mk(po, [['ASH-MUG-12', 300], ['ASH-NAP-4', 120], ['ASH-HNY-340', 80]], { site: 'KIN-JOL', requested: '2026-11-07', poDate: iso(day('2026-11-02', '09:12')) }); // ships from Ashby's 3PL warehouse (26 November 2026)
     D.po(L, O, day('2026-11-02', '09:12'));
     D.change(L, O, day('2026-11-02', '10:40'), 2, [{ line: 1, code: 'QD', qty: 250, qty_left: 250 }]);
     D.change(L, O, day('2026-11-02', '13:05'), 3, [{ line: 1, code: 'QI', qty: 300, qty_left: 300 }, { line: 2, code: 'RS', qty: 120, qty_left: 120, date: '2026-11-09' }]);
-    ev(L, day('2026-11-02', '15:30'), 'erp.inventory_read', po, 'Supplier ERP', 'ASHBY', 'API', { sku: 'ASH-MUG-12', on_hand: 410, committed: 140, available: 270, meaning: 'On hand', site: 'ASH-WH1' });
-    ev(L, day('2026-11-02', '15:52'), 'erp.inventory_read', po, 'Supplier ERP', 'ASHBY', 'API', { sku: 'ASH-HNY-340', on_hand: 96, meaning: 'On hand', note: 'Earlier reading was 31 hours old and stale' });
+    ev(L, day('2026-11-02', '15:30'), 'erp.inventory_read', po, 'Supplier ERP', 'ASHBY', 'EDI 846', { sku: 'ASH-MUG-12', on_hand: 410, committed: 140, available: 270, meaning: 'On hand', site: 'KIN-JOL' });
+    erp846(L, day('2026-11-02', '15:30'), 'IA-ERP-20261102-1530', LOC_JOL, [{ sku: 'ASH-MUG-12', on_hand: 410, available: 270 }]);
+    ev(L, day('2026-11-02', '15:52'), 'erp.inventory_read', po, 'Supplier ERP', 'ASHBY', 'EDI 846', { sku: 'ASH-HNY-340', on_hand: 96, meaning: 'On hand', note: 'Earlier reading was 31 hours old and stale' });
+    erp846(L, day('2026-11-02', '15:52'), 'IA-ERP-20261102-1552', LOC_JOL, [{ sku: 'ASH-HNY-340', on_hand: 96, available: 96 }]);
     ev(L, day('2026-11-02', '16:10'), 'approval', po, 'Trading Grid', 'ASHBY', 'API', { approved_by: 'Priya Raman', what: 'Change response: line 1 270 cases, line 2 120 cases on 9 Nov, line 3 80 cases' });
     D.changeAck(L, O, day('2026-11-02', '16:12'), 3, 'CHA-450118', [{ line: 1, code: 'IQ', qty: 270 }, { line: 2, code: 'IA', qty: 120, date: '2026-11-09' }, { line: 3, code: 'IA', qty: 80 }]);
     // 17 November 2026: no quantity rests on a phone agreement. Northfield answers the change response with order change 4
@@ -152,18 +161,21 @@ export function anchors(L, W) {
     const c1 = [...cartonsFor(W, 1, [[1, 270]]), ...cartonsFor(W, 391, [[3, 80]])];
     ev(L, day('2026-11-06', '11:00'), 'tg.hold', po, 'Trading Grid', 'ASHBY', 'API', { document: 'ASN-450118-1 draft', rule: 'NF-4.5', finding: 'Line 1 ship notice 300 against 270 accepted', exposure_estimate: 150, corrected_by: 'Priya Raman', corrected_from: 'Load scan for SHP-450118-1: 350 cartons, 270 on line 1 and 80 on line 3', release_rule: 'AP-1.3', approved_by: 'Priya Raman', approved_at: iso(day('2026-11-06', '18:18')), released_at: iso(day('2026-11-06', '18:20')) });
     const dep1 = day('2026-11-06', '18:00');
-    ev(L, addH(dep1, -0.5), 'wms.load_scan', po, 'Supplier ERP', 'ASHBY', 'API', { shipment: 'SHP-450118-1', cartons_loaded: 350, cartons_expected: 350, by_sscc: true });
-    ev(L, dep1, 'wms.departure_scan', po, 'Supplier ERP', 'ASHBY', 'API', { shipment: 'SHP-450118-1', carrier: 'Lakeline Freight' });
+    D.whOrder(L, O, day('2026-11-06', '06:00'), 'WSO-450118', { shipDate: '2026-11-06', qty: { 1: 270, 2: 120, 3: 80 } }); // one warehouse shipping order; Kinross answers it with a 945 per shipment
+    ev(L, addH(dep1, -0.5), 'wms.load_scan', po, 'Kinross warehouse system', 'KINROSS', 'API', { shipment: 'SHP-450118-1', cartons_loaded: 350, cartons_expected: 350, by_sscc: true });
+    ev(L, dep1, 'wms.departure_scan', po, 'Kinross warehouse system', 'KINROSS', 'API', { shipment: 'SHP-450118-1', carrier: 'Lakeline Freight' });
+    D.whAdvice(L, O, addH(dep1, 0.2), 'WSA-450118-1', { shipmentId: 'SHP-450118-1', shippedAt: dep1, ordered: { 1: 270, 2: 0, 3: 80 }, shipped: { 1: 270, 2: 0, 3: 80 }, cartons: c1.map((c) => ({ ...c, ...(c.line === 3 ? lotOf('ASH-HNY-340', iso(dep1)) || {} : {}) })), tracking: 'BOL-88190', noLedger: true });
     // 17 November 2026: the ship notice leaves after the 17:30 load scan that corrected it and the 18:00 departure, inside
     // NF-4.2's hour (it was sent at 11:25, before either). It keeps its control number (`numAt`); its 997 follows it.
     D.asn(L, O, day('2026-11-06', '18:20'), { ref: 'ASN-450118-1', shippedAt: dep1, deliveryDate: '2026-11-07', cartons: c1, qty: { 1: 270, 2: 0, 3: 80 }, bol: 'BOL-88190', seal: 'SL-3302871', status: 'BP' }).numAt = iso(day('2026-11-06', '11:25'));
     D.receipt(L, O, day('2026-11-07', '07:20'), { ref: 'RCV-DC2-77290', asnRef: 'ASN-450118-1', qty: { 1: 270, 3: 80 } });
     // Shipment 2: line 2, 120 cartons, sealed trailer.
     const c2 = cartonsFor(W, 271, [[2, 120]]); const dep2 = day('2026-11-08', '18:00');
-    ev(L, day('2026-11-08', '14:05'), 'wms.pack_scan', po, 'Supplier ERP', 'ASHBY', 'API', { shipment: 'SHP-450118-2', cartons_packed: 120 });
-    ev(L, day('2026-11-08', '17:21'), 'wms.load_scan', po, 'Supplier ERP', 'ASHBY', 'API', { shipment: 'SHP-450118-2', cartons_loaded: 120, cartons_expected: 120, by_sscc: true, includes: '006141410000003006', in_case: 'DC-40877' });
+    ev(L, day('2026-11-08', '14:05'), 'wms.pack_scan', po, 'Kinross warehouse system', 'KINROSS', 'API', { shipment: 'SHP-450118-2', cartons_packed: 120 });
+    ev(L, day('2026-11-08', '17:21'), 'wms.load_scan', po, 'Kinross warehouse system', 'KINROSS', 'API', { shipment: 'SHP-450118-2', cartons_loaded: 120, cartons_expected: 120, by_sscc: true, includes: '006141410000003006', in_case: 'DC-40877' });
     ev(L, day('2026-11-08', '17:48'), 'carrier.bill_of_lading', po, 'Lakeline Freight', 'LAKELINE', 'Portal API, image', { bol: 'BOL-88229', trailer: 'LKL-53-0612', terms: 'Collect; loaded and counted by shipper', seal: 'SL-3302918', in_case: 'DC-40877' });
-    ev(L, dep2, 'wms.departure_scan', po, 'Supplier ERP', 'ASHBY', 'API', { shipment: 'SHP-450118-2', carrier: 'Lakeline Freight' });
+    ev(L, dep2, 'wms.departure_scan', po, 'Kinross warehouse system', 'KINROSS', 'API', { shipment: 'SHP-450118-2', carrier: 'Lakeline Freight' });
+    D.whAdvice(L, O, addH(dep2, 0.05), 'WSA-450118-2', { shipmentId: 'SHP-450118-2', shippedAt: dep2, ordered: { 1: 0, 2: 120, 3: 0 }, shipped: { 1: 0, 2: 120, 3: 0 }, cartons: c2, tracking: 'BOL-88229', noLedger: true });
     D.asn(L, O, day('2026-11-08', '18:06'), { ref: 'ASN-450118-2', shippedAt: dep2, deliveryDate: '2026-11-09', cartons: c2, qty: { 1: 0, 2: 120, 3: 0 }, bol: 'BOL-88229', seal: 'SL-3302918' });
     const inv = D.invoice(L, O, day('2026-11-08', '10:00'), { ref: 'INV-7731', qty: { 1: 300, 2: 120, 3: 80 } });
     // 18 November 2026 (P14): sent on Jordan Ellis's approval at 09:04 on 10 November (was 10:20 on 8 November, as the invoice was
@@ -311,7 +323,7 @@ export function finishRisks(L, W) {
     const cartons = []; for (const l of O.lines) for (let k = 0; k < ordered[l.line]; k++) { if (O.po === 'NR-460207' && l.line === 1 && k === 172) continue; if (k >= ship[l.line] && O.po !== 'NR-460207') continue; cartons.push({ sscc: W.sscc(serial++), line: l.line, qty: 1 }); }
     D.whOrder(L, O, addH(dep, -20), `WSO-${n}`, { shipDate: etDay(dep), qty: ship });
     L.event({ at: dep, kind: 'wms.departure_scan', po: O.po, system: 'Kinross warehouse system', party: 'KINROSS', channel: 'API', data: { shipment: `SHP-${n}`, carrier: 'Lakeline Freight' } });
-    D.whAdvice(L, O, addH(dep, 0.2), `WSA-${n}`, { shipmentId: `SHP-${n}`, shippedAt: dep, ordered, shipped: ship });
+    D.whAdvice(L, O, addH(dep, 0.2), `WSA-${n}`, { shipmentId: `SHP-${n}`, shippedAt: dep, ordered, shipped: ship, cartons, tracking: O.po === 'NR-460207' ? 'BOL-91407' : null });
     D.asn(L, O, addH(dep, 0.1), { ref: `ASN-${n}`, shippedAt: dep, deliveryDate: etDay(addD(dep, 1)), cartons, qty: ship, shipTo: 'DC2', ...(O.po === 'NR-460207' ? { bol: 'BOL-91407', seal: 'SL-4471026' } : {}) });
     D.invoice(L, O, addH(dep, 1.5), { ref: O.po === 'NR-460219' ? 'INV-8012' : `INV-${n}`, qty: ship });
     D.receipt(L, O, et(etDay(addD(dep, 1)), '08:20'), { ref: O.po === 'NR-460207' ? 'RCV-DC2-81420' : `RCV-DC2-${n}`, asnRef: `ASN-${n}`, qty: ship });

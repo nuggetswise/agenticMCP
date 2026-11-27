@@ -15,12 +15,13 @@
 <elementType name="E_R_1_10" base="decimal" minLength="1" maxLength="10"/>
 <elementType name="E_AN_12_12" base="string" minLength="12" maxLength="12"/>
 <elementType name="E_AN_1_48" base="string" minLength="1" maxLength="48"/>
+<elementType name="E_AN_1_45" base="string" minLength="1" maxLength="45"/>
 <elementType name="E_N_1_7" base="numeric" minLength="1" maxLength="7"/>
 <segmentType name="W06"><sequence><element type="E_ID_1_1" minOccurs="1"/><element type="E_AN_1_22" minOccurs="0"/><element type="E_DT_8_8" minOccurs="0"/><element type="E_AN_1_30" minOccurs="0"/><element type="E_AN_1_30" minOccurs="0"/><element type="E_AN_1_22" minOccurs="0"/></sequence></segmentType>
 <segmentType name="N1"><sequence><element type="E_ID_2_3" minOccurs="1"/><element type="E_AN_1_60" minOccurs="0"/><element type="E_ID_1_2" minOccurs="0"/><element type="E_AN_2_80" minOccurs="0"/></sequence></segmentType>
 <segmentType name="G62"><sequence><element type="E_ID_2_2" minOccurs="0"/><element type="E_DT_8_8" minOccurs="0"/><element type="E_ID_1_2" minOccurs="0"/><element type="E_TM_4_8" minOccurs="0"/></sequence></segmentType>
 <segmentType name="W27"><sequence><element type="E_ID_1_2" minOccurs="1"/><element type="E_ID_2_4" minOccurs="0"/></sequence></segmentType>
 <segmentType name="W04"><sequence><element type="E_R_1_10" minOccurs="1"/><element type="E_ID_2_2" minOccurs="1"/><element type="E_AN_12_12" minOccurs="0"/><element type="E_ID_2_2" minOccurs="0"/><element type="E_AN_1_48" minOccurs="0"/><element type="E_ID_2_2" minOccurs="0"/><element type="E_AN_1_48" minOccurs="0"/></sequence></segmentType>
-<segmentType name="N9"><sequence><element type="E_ID_2_3" minOccurs="1"/><element type="E_AN_1_30" minOccurs="0"/></sequence></segmentType>
+<segmentType name="N9"><sequence><element type="E_ID_2_3" minOccurs="1"/><element type="E_AN_1_30" minOccurs="0"/><element type="E_AN_1_45" minOccurs="0"/></sequence></segmentType>
 <segmentType name="W03"><sequence><element type="E_N_1_7" minOccurs="1"/></sequence></segmentType>
 </schema>

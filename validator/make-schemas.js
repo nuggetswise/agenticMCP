@@ -26,6 +26,7 @@ const SEG = {
   TD5: ['ID 1 2', 'ID 1 2', 'AN 2 80'],
   PRF: ['AN 1 22!'],
   MAN: ['ID 1 2!', 'AN 1 48!'],
+  N9: ['ID 2 3!', 'AN 1 30', 'AN 1 45'], // 945 tracking and carton lot (26 November 2026)
   LIN: ['AN 1 20', 'ID 2 2!', 'AN 1 48!', ...pairs(4)], // a fifth pair: the 832's NRF size code (26 November 2026)
   SN1: ['AN 1 20', 'R 1 10!', 'ID 2 2!', 'R 1 15', 'R 1 15', 'ID 2 2', 'AN 1 20', 'ID 2 2'],
   BIG: ['DT 8 8!', 'AN 1 22!', 'DT 8 8', 'AN 1 22'],
@@ -75,7 +76,7 @@ const SET = {
   997: ['AK1!', L('AK2+', L('AK3+', 'AK4+'), 'AK5!'), 'AK9!'],
   820: ['BPR!', 'TRN', L('N1+'), L('ENT+', L('RMR+', 'REF+', L('ADX+', 'NTE+')))],
   940: ['W05!', L('N1+'), 'G62+', L('LX!+', L('W01+')), 'W76'],
-  945: ['W06!', L('N1+'), 'G62+', L('LX!+', L('W12+')), 'W03'],
+  945: ['W06!', L('N1+'), 'G62+', 'N9+', L('LX!+', L('W12+', L('MAN+', 'N9+', 'DTM+'))), 'W03'],
   852: ['XQ!', L('N1+'), L('LIN!+', L('ZA+', 'SDQ+')), 'CTT'],
 };
 // Stage modules (world/stages) bring their own sets and any segments not defined above.

@@ -24,6 +24,8 @@ export const parties = [
   { id: 'NORTHFIELD', name: 'Northfield Retailer', kind: 'Retailer', gln: '0614141000050', isa: 'NORTHFIELD' },
   { id: 'ASHBY', name: 'Ashby Supplier', kind: 'Supplier', gln: '0614141002085', isa: 'ASHBYSUP' },
   // P4 (round plan, 26 November 2026, EDI first): Northfield Marketplace trades with Ashby on its own interchange.
+  // Ashby's Supplier ERP sends its stock reads to Trading Grid as an 846 (26 November 2026); Ashby's records only.
+  { id: 'TRADINGGRID', name: 'Trading Grid', kind: 'Network', gln: gln(3960), isa: 'OTTRADINGGRID' },
   { id: 'MARKETPLACE', name: 'Northfield Marketplace', kind: 'Marketplace platform', gln: gln(3950), isa: 'NFMARKET' },
   { id: 'KINROSS', name: 'Kinross Logistics', kind: '3PL warehouse', gln: '0614141003006', isa: 'KINROSS' },
   { id: 'LAKELINE', name: 'Lakeline Freight', kind: 'Carrier', gln: gln(3900), isa: 'LAKELINE' },

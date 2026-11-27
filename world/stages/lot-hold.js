@@ -56,6 +56,9 @@ export function generateSecondHold(L, ctx) {
   ev(L, AT2.recheck, 'tg.check', P26_SECOND, TG, { document: doc2, version: 2, result: 'Every carton carries a lot and a best-before date', cartons_checked: 36, rules: [LOT_RULE] });
   ev(L, AT2.release, 'approval', P26_SECOND, TG, { document: doc2, approved_by: PRIYA, what: `Release ship notice ${doc2} version 2 after every carton carried a lot and a best-before date`, rule: 'AP-1.3', version: 2 });
   ev(L, AT2.departed, 'wms.departure_scan', P26_SECOND, KIN, { shipment: shipment2, carrier: 'Lakeline Freight' });
+  // Kinross's 945 (26 November 2026): each honey carton with its lot and best-before date, each napkin carton by SSCC.
+  D.whOrder(L, ORDER2, AT2.wso, `WSO-${P26_SECOND.slice(3)}`, { shipDate: '2027-01-18', qty: { 1: 36, 2: 12 } });
+  D.whAdvice(L, ORDER2, new Date(AT2.departed.getTime() + 5 * 60000), `WSA-${P26_SECOND.slice(3)}`, { shipmentId: shipment2, shippedAt: AT2.departed, cartons: cartons2.map((c) => (c.line === 1 ? { ...c, ...P26_LOT } : c)), noLedger: true });
   D.asn(L, ORDER2, AT2.sent, { ref: doc2, shippedAt: AT2.departed, deliveryDate: '2027-01-19', site: 'KIN-JOL', cartons: cartons2 });
   D.receipt(L, ORDER2, AT2.received, { ref: `RCV-DC4-${P26_SECOND.slice(3)}`, asnRef: doc2, qty: { 1: 36, 2: 12 } });
 }

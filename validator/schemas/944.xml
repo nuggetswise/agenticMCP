@@ -14,11 +14,12 @@
 <elementType name="E_ID_2_2" base="identifier" minLength="2" maxLength="2"/>
 <elementType name="E_AN_12_12" base="string" minLength="12" maxLength="12"/>
 <elementType name="E_AN_1_48" base="string" minLength="1" maxLength="48"/>
+<elementType name="E_AN_1_45" base="string" minLength="1" maxLength="45"/>
 <elementType name="E_R_1_15" base="decimal" minLength="1" maxLength="15"/>
 <segmentType name="W17"><sequence><element type="E_ID_1_1" minOccurs="1"/><element type="E_DT_8_8" minOccurs="1"/><element type="E_AN_1_12" minOccurs="1"/><element type="E_AN_1_22" minOccurs="0"/><element type="E_AN_1_30" minOccurs="0"/></sequence></segmentType>
 <segmentType name="N1"><sequence><element type="E_ID_2_3" minOccurs="1"/><element type="E_AN_1_60" minOccurs="0"/><element type="E_ID_1_2" minOccurs="0"/><element type="E_AN_2_80" minOccurs="0"/></sequence></segmentType>
 <segmentType name="W07"><sequence><element type="E_R_1_7" minOccurs="1"/><element type="E_ID_2_2" minOccurs="1"/><element type="E_AN_12_12" minOccurs="0"/><element type="E_ID_2_2" minOccurs="0"/><element type="E_AN_1_48" minOccurs="0"/><element type="E_ID_2_2" minOccurs="0"/><element type="E_AN_1_48" minOccurs="0"/></sequence></segmentType>
-<segmentType name="N9"><sequence><element type="E_ID_2_3" minOccurs="1"/><element type="E_AN_1_30" minOccurs="0"/></sequence></segmentType>
+<segmentType name="N9"><sequence><element type="E_ID_2_3" minOccurs="1"/><element type="E_AN_1_30" minOccurs="0"/><element type="E_AN_1_45" minOccurs="0"/></sequence></segmentType>
 <segmentType name="W13"><sequence><element type="E_R_1_15" minOccurs="1"/><element type="E_ID_2_2" minOccurs="1"/><element type="E_ID_2_2" minOccurs="1"/><element type="E_AN_1_12" minOccurs="0"/><element type="E_ID_2_2" minOccurs="0"/></sequence></segmentType>
 <segmentType name="W14"><sequence><element type="E_R_1_7" minOccurs="1"/></sequence></segmentType>
 </schema>

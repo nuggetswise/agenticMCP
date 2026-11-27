@@ -20,7 +20,7 @@
 // lots, the recall. Public basis for the rule: grocery retailers' published requirement that a food ship notice carry
 // lot and date at case level (see NF-4.17 in world/ref.js).
 //
-// No warehouse shipping order (940) or advice (945) is added for these orders: the inventory advice that covers each
+// No warehouse shipping order (940) is added for these orders (26 November 2026: their 945s are, at the existing times): the inventory advice that covers each
 // Kinross pick wave is built by the planning stage before this one runs, and a wave it does not cover would fail its gate.
 // Kinross's allocation, load scan and departure scan are the warehouse records here.
 //
@@ -34,6 +34,7 @@ import { generateSecondHold } from './lot-hold.js';
 
 const day = (d, hm) => et(d, hm);
 const PRIYA = 'Priya Raman';
+const addMin = (t, m) => new Date(t.getTime() + m * 60000);
 const HONEY = 'ASH-HNY-340';
 const ERP = ['Supplier ERP', 'ASHBY'], KIN = ['Kinross warehouse system', 'KINROSS'], TG = ['Trading Grid', 'ASHBY'];
 const ev = (L, at, kind, po, [system, party], data) => L.event({ at, kind, po, system, party, channel: 'API', data });
@@ -99,6 +100,11 @@ function generate(L, ctx) {
 
   // Departed, sent within the hour (NF-4.2), received case for case.
   ev(L, AT.departed, 'wms.departure_scan', P26_PO, KIN, { shipment, carrier: 'Lakeline Freight' });
+  // Round plan, 26 November 2026 (owner: keep the times, add the 945s): Kinross's 945 at 11:28 carries each carton's lot as
+  // first recorded, 12 of 60 without one; the corrected 945 follows at 11:30, and the ship notice at 11:32 matches it.
+  D.whOrder(L, ORDER, AT.wso, `WSO-${P26_PO.slice(3)}`, { shipDate: '2027-01-18', qty: { 1: 60 } });
+  D.whAdvice(L, ORDER, AT.wsa, `WSA-${P26_PO.slice(3)}`, { shipmentId: shipment, shippedAt: AT.departed, cartons: asScanned, noLedger: true });
+  D.whAdvice(L, ORDER, addMin(AT.wsa, 2), `WSA-${P26_PO.slice(3)}-C`, { shipmentId: shipment, shippedAt: AT.departed, cartons: corrected, noLedger: true });
   D.asn(L, ORDER, AT.sent, { ref: doc, shippedAt: AT.departed, deliveryDate: '2027-01-19', site: 'KIN-JOL', cartons });
   D.receipt(L, ORDER, AT.received, { ref: `RCV-DC2-${P26_PO.slice(3)}`, asnRef: doc, qty: { 1: 60 } });
 

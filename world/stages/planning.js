@@ -169,7 +169,7 @@ export function stockLedger(allDocs, events) {
   }
   const groups = new Map(); const picks = [];
   for (const d of docs) {
-    if (d.type !== '945' || d.from !== 'KINROSS') continue;
+    if (d.type !== '945' || d.from !== 'KINROSS' || d.no_ledger) continue; // no_ledger: 945s added 26 November 2026 for cartons only
     const site = LOC_BY_GLN[d.site_gln].id; const t = Math.floor(Date.parse(d.shipped_at) / 60000) * 60000 - PICK_LEAD_H * H; // minute precision, as the 945's G62 carries it
     for (const l of d.lines) {
       const sp = short.get(`${d.po}|${l.sku}`); const q = sp ?? (alloc.has(d.po) && d.lines.length === 1 ? alloc.get(d.po) : l.shipped);
@@ -351,7 +351,7 @@ CREATE TABLE order_status (po TEXT NOT NULL REFERENCES orders(po), line INTEGER 
   prev(d, ctx) {
     if (d.type === '870') return [{ doc: ctx.latest(d.po, '850', d.at), kind: 'reports on' }];
     let c = linkCache.get(ctx.docs);
-    if (!c) { c = new Map(); const last = new Map(); for (const x of ctx.docs) { if (x.type !== '830' && x.type !== '846') continue; const k = x.type === '830' ? '830' : `846|${x.sender}|${x.parties.WH.gln}`; c.set(x.doc_id, last.get(k) || null); last.set(k, x); } linkCache.set(ctx.docs, c); }
+    if (!c) { c = new Map(); const last = new Map(); for (const x of ctx.docs) { if (x.type !== '830' && x.type !== '846') continue; const k = x.type === '830' ? '830' : `846|${x.sender}>${x.receiver}|${x.parties.WH.gln}`; c.set(x.doc_id, last.get(k) || null); last.set(k, x); } linkCache.set(ctx.docs, c); }
     const p = c.get(d.doc_id);
     return p ? [{ doc: p, kind: d.type === '830' ? 'supersedes' : 'follows' }] : [];
   },
@@ -386,7 +386,7 @@ CREATE TABLE order_status (po TEXT NOT NULL REFERENCES orders(po), line INTEGER 
       BSR: ['ID 1 2!', 'ID 2 2!', 'AN 1 30!', 'DT 8 8!'],
       ISR: ['ID 2 2!', 'DT 8 8'],
       W15: ['DT 8 8!', 'AN 1 30!'],
-      N9: ['ID 2 3!', 'AN 1 30'],
+      N9: ['ID 2 3!', 'AN 1 30', 'AN 1 45'],
       W19: ['ID 2 2!', 'R 1 15!', 'ID 2 2!', 'AN 1 12', 'ID 2 2', 'AN 1 48'],
     },
     SET: {

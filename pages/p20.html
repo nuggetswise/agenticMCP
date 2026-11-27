@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Promotion deductions with Vividly</title>
+<title>Promotion deductions</title>
 <style>
 /* Product UI weights and line heights from the design system (bundle.css). */
 :root{--space-16:64px;--space-20:80px}
@@ -617,7 +617,7 @@ window.TG_AVIATOR.side = function () { return E.side ? (E.cfg.sides.find(functio
 window.TG_AVIATOR.context = function () { var id = E.S.sel[E.S.side]; return id ? "Promotion deduction " + id : ""; };
 </script>
 <script>
-/* P20 Promotion deductions with Vividly. Values from the shared demo world at P20's moment, Wednesday 6 January 2027
+/* P20 Promotion deductions. Values from the shared demo world at P20's moment, Wednesday 6 January 2027
    09:00 ET (remittance PMT-990168, disputes PC-27104, PC-27102, PC-27105, repayment PMT-991307).
    t = minutes from 00:00 ET Wednesday 6 January 2027. */
 (function(){
@@ -630,7 +630,6 @@ const W = E.W = {docs:{
   "PMT-990168": {name:"Remittance", ref:"PMT-990168", iface:"EDI 820", from:"Northfield Retailer", to:"Ashby Supplier", at:T(0,8,0), kv:[["Paid","$29,201.70 on 30 invoices"],["Promotion deductions","5 · $3,452.70"]],
     items:[["Deduction","Invoice","Deal","Withheld"],["PD-2701-04","INV-46480","NFP-2612-03","$1,600.20"],["PD-2701-01","INV-46468","NFP-2610-01","$728.00"],["PD-2701-03","INV-46470","NFP-2611-02","$714.00"],["PD-2701-02","INV-46484","NFP-2610-01","$370.00"],["PD-2701-05","INV-46487","NFP-2702-04","$40.50"]]},
   "PMT-991307": {name:"Remittance", ref:"PMT-991307", iface:"EDI 820", from:"Northfield Retailer", to:"Ashby Supplier", at:T(1,16,0), kv:[["Repaid","$677.20"]], items:[["Repays","Invoice","Case","Amount"],["PD-2701-04","INV-46480","PC-27104","$266.70"],["PD-2701-02","INV-46484","PC-27102","$370.00"],["PD-2701-05","INV-46487","PC-27105","$40.50"]]},
-  "ERP-991307": {name:"Receivables match", ref:"PMT-991307", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(2,9,0), kv:[["Matched","PD-2701-04, PD-2701-02, PD-2701-05"],["Amount","$677.20"]]},
   "NFP-2612-03": {name:"Promotion announcement", ref:"NFP-2612-03", iface:"EDI 889", from:"Ashby Supplier", to:"Northfield Retailer", kv:[["Item","ASH-HNY-340 wildflower honey"],["Type","Bill-back on cases shipped in the promoted week"],["Rate","$0.50 a case"],["Status","Ended"]]},
   "NFP-2610-01": {name:"Promotion announcement", ref:"NFP-2610-01", iface:"EDI 889", from:"Ashby Supplier", to:"Northfield Retailer", kv:[["Item","ASH-TRL-09 trail runner"],["Type","Scan-based on pairs sold in stores"],["Rate","$0.25 a pair"],["Promoted period","3 weeks"],["Status","Ended"]]},
   "NFP-2611-02": {name:"Promotion announcement", ref:"NFP-2611-02", iface:"EDI 889", from:"Ashby Supplier", to:"Northfield Retailer", kv:[["Item","ASH-MUG-12 stoneware mug"],["Type","Bill-back on cases shipped in the promoted week"],["Rate","$1.20 a case"],["Status","Ended"]]},
@@ -639,19 +638,14 @@ const W = E.W = {docs:{
   "ASN-MUG": {name:"Ship notices", ref:"ASH-MUG-12", iface:"EDI 856", from:"Ashby Supplier", to:"Northfield Retailer", kv:[["Promoted week","40 ship notices"],["Cases shipped","595"]]},
   "SA-TRL": {name:"Store activity", ref:"ASH-TRL-09", iface:"EDI 852", from:"Northfield Retailer", to:"Ashby Supplier", items:[["Week","Stores","Pairs sold"],["Deal week 1","40","1,447"],["Deal week 2","40","1,465"],["Deal week 3","Missing","Missing"]]},
   "INV-46487": {name:"Invoice", ref:"INV-46487", iface:"EDI 810", from:"Ashby Supplier", to:"Northfield Retailer", kv:[["Order","NR-46487, placed before the order window"],["Total","$1,458.00"]], items:[["Item","Cases","Price"],["ASH-HNY-340","9","$46.80"],["ASH-NAP-4","27","$38.40"]]},
-  "V-04": {name:"Vividly match", ref:"PD-2701-04", iface:"Vividly · API", from:"Vividly", to:"Trading Grid", at:T(0,8,5), kv:[["Deal","NFP-2612-03 · $0.50 a case"],["Claimed","2,667 cases at $0.60"],["Supported","$1,333.50"],["Not supported","$266.70"],["Finding","Rate above the deal"]]},
-  "V-02": {name:"Vividly match", ref:"PD-2701-02", iface:"Vividly · API", from:"Vividly", to:"Trading Grid", at:T(0,8,5), kv:[["Deal","NFP-2610-01 · $0.25 a pair"],["Claimed","1,480 pairs in deal week 3"],["Supported","$0.00"],["Not supported","$370.00"],["Finding","No store activity report for the claimed week"]]},
-  "V-05": {name:"Vividly match", ref:"PD-2701-05", iface:"Vividly · API", from:"Vividly", to:"Trading Grid", at:T(0,8,5), kv:[["Deal","NFP-2702-04 · $1.50 a case"],["Claimed","27 cases on invoice INV-46487"],["Supported","$0.00"],["Not supported","$40.50"],["Finding","Outside the deal's order window"]]},
-  "V-01": {name:"Vividly match", ref:"PD-2701-01", iface:"Vividly · API", from:"Vividly", to:"Trading Grid", at:T(0,8,5), kv:[["Deal","NFP-2610-01 · $0.25 a pair"],["Claimed","2,912 pairs in deal weeks 1 and 2"],["Supported","$728.00"],["Finding","Matched to store activity"]]},
-  "V-03": {name:"Vividly match", ref:"PD-2701-03", iface:"Vividly · API", from:"Vividly", to:"Trading Grid", at:T(0,8,5), kv:[["Deal","NFP-2611-02 · $1.20 a case"],["Claimed","595 cases"],["Supported","$714.00"],["Finding","Matched to ship notices"]]}
 }};
 const R = {
-  rate:{text:"A deduction claimed at a rate above the deal is disputed for the excess, with the promotion announcement.", src:"Ashby rule"},
-  sales:{text:"A scan-based deduction for a week with no store sales on record is disputed with the store activity history.", src:"Ashby rule"},
-  window:{text:"An off-invoice allowance claimed outside its order window is disputed with the deal's window.", src:"Ashby rule"},
-  match:{text:"A deduction its deal supports at the agreed rate stands; no action.", src:"Ashby rule"},
+  rate:{text:"A deduction claimed at a rate above the deal is disputed for the excess, with the promotion announcement.", src:"Trading Grid"},
+  sales:{text:"A scan-based deduction for a week with no store sales on record is disputed with the store activity history.", src:"Trading Grid"},
+  window:{text:"An off-invoice allowance claimed outside its order window is disputed with the deal's window.", src:"Trading Grid"},
+  match:{text:"A deduction its deal supports at the agreed rate stands; no action.", src:"Trading Grid"},
   contrast:{text:"Fixed rule for contrast: accept every deduction carrying a promotion reason code. It would accept all 5 and keep $677.20 not supported by a deal.", src:"Ashby rule"},
-  vividly:{text:"Vividly holds the promotion terms and matches each deduction to its deal.", src:"Vividly · API"},
+  vividly:{text:"Each promotion deduction is checked against the deal on Ashby's promotion announcement, the ship notices, store activity, invoices and the remittance.", src:"Trading Grid"},
   dwin:{text:"Dispute once per deduction, within 60 days of the remittance, in the deduction case.", src:"Northfield guide"},
   decide:{text:"Northfield's claims reviewer decides each deduction in the case.", src:"Northfield guide"},
   repay:{text:"A waived deduction is repaid on a later remittance that references it.", src:"Northfield guide"},
@@ -677,14 +671,14 @@ DISP.concat(MATCH).forEach(id => Object.assign(D[id], {dsp:false, dec:null}));
 let repaid = false;
 const TOTAL = 3452.70, NS = 677.20;
 
-E.init({docTitle:"Promotion deductions with Vividly", start:T(0,9,0), days:DAYS, sides:[
+E.init({docTitle:"Promotion deductions", start:T(0,9,0), days:DAYS, sides:[
   {id:"ashby", person:"Priya Raman", company:"Ashby Supplier", label:"Deductions", aviator:"ashby"},
   {id:"nf", person:"Jordan Ellis", company:"Northfield Retailer", label:"Supplier charges", aviator:"northfield"}]});
 S.sel = {ashby:"PD-2701-04", nf:"PD-2701-04"};
 S.tile = {ashby:"ns"};
 const H = (t, text, roles, doc, sides) => E.hist(t, text, roles, doc, sides);
 H(T(0,8,0), "Remittance PMT-990168 · 5 promotion deductions · $3,452.70", "Northfield", "PMT-990168", "ashby,nf");
-H(T(0,8,5), "Matched with Vividly · 2 supported, 3 not supported", "Rule · Ashby rule · Vividly", "", "ashby");
+H(T(0,8,5), "Checked against the deals · 2 supported, 3 not supported", "Rule · Trading Grid", "", "ashby");
 
 const disputed = () => DISP.filter(id => D[id].dsp), open = () => DISP.filter(id => D[id].dsp && !D[id].dec);
 const days = () => Math.max(0, 60 - Math.floor(S.clock / 1440));
@@ -704,30 +698,30 @@ function groupsA(){
     {label:"Disputed", rows:DISP.filter(id => D[id].dsp).map(id => Object.assign(row(id), {chip:chipA(D[id])}))},
     {label:"Supported by deal", rows:MATCH.map(row)}].filter(g => g.rows.length);
 }
-const factRows = (d, side) => d.facts.map(f => ({v:`<b>${esc(f[0])}</b> · ${esc(f[1])}`, tags:[[f[2], f[3]]]})).concat([{v:`<b>Vividly</b> · ${esc(d.finding)}`, tags:[["Vividly · API", d.vid]]}]);
+const factRows = (d, side) => d.facts.map(f => ({v:`<b>${esc(f[0])}</b> · ${esc(f[1])}`, tags:[[f[2], f[3]]]})).concat([{v:`<b>Promotion rule</b> · ${esc(d.finding)}`, tags:[["Trading Grid", ""]]}]);
 function recA(id){
   const d = D[id];
   let body = E.facts("What the rules found", factRows(d)), action = null, banner = null;
   if (!d.ns) {
-    body += `<div class="card plain"><div class="th"><span class="tt">Supported by its deal</span>${E.chip("No action","")}</div><p class="vals">${money(d.withheld)} stands under the deal</p>${E.details("m:" + id, ruleList(["match","vividly"]) + readList(["PMT-990168", d.vid].concat(d.ev)))}</div>`;
+    body += `<div class="card plain"><div class="th"><span class="tt">Supported by its deal</span>${E.chip("No action","")}</div><p class="vals">${money(d.withheld)} stands under the deal</p>${E.details("m:" + id, ruleList(["match","vividly"]) + readList(["PMT-990168"].concat(d.ev)))}</div>`;
   } else if (!d.dsp) {
     body += `<div class="card amber"><div class="th"><span class="tt">${d.ns < d.withheld ? "Dispute the excess" : "Dispute the deduction"}</span>${E.chip("Ready for review","amber")}</div>`
       + E.nowAfter([[d.ns < d.withheld ? "Dispute excess" : "Dispute deduction", "Withheld " + money(d.withheld), money(d.ns) + " disputed", "Northfield", "Trading Grid deductions"]])
       + `<p class="reason"><b>Reason.</b> ${esc(d.reason)}</p>`
       + `<div class="cash"><div class="cc on"><span>Not disputed</span><b>${money(d.ns)}</b><em>stays deducted</em></div><div class="cc"><span>Won</span><b>${money(d.ns)}</b><em>back on a Northfield remittance</em></div>${d.ns < d.withheld ? `<div class="cc"><span>Stands under the deal</span><b>${money(d.withheld - d.ns)}</b></div>` : ""}</div>`
-      + E.details("a:" + id, ruleList([d.ruleK, "vividly", "dwin"]) + readList(["PMT-990168", d.vid].concat(d.ev)) + `<p class="k" style="margin-top:var(--space-2)">Who did what</p>` + E.who3([["Recommended","Rule · Ashby rule, with Vividly's match"],["Authorised","Priya Raman, on Open dispute"],["Carried out","Trading Grid deductions"]]))
+      + E.details("a:" + id, ruleList([d.ruleK, "vividly", "dwin"]) + readList(["PMT-990168"].concat(d.ev)) + `<p class="k" style="margin-top:var(--space-2)">Who did what</p>` + E.who3([["Recommended","Rule · Trading Grid's promotion rules"],["Authorised","Priya Raman, on Open dispute"],["Carried out","Trading Grid deductions"]]))
       + `</div>`;
-    action = {says:`Opens a ${money(d.ns)} dispute on Deduction ${d.n} in Trading Grid's deductions, with ${d.attach} and Vividly's finding.${d.ns < d.withheld ? ` ${money(d.withheld - d.ns)} stands under the deal.` : ""}`,
+    action = {says:`Opens a ${money(d.ns)} dispute on Deduction ${d.n} in Trading Grid's deductions, with ${d.attach} and the promotion rule's finding.${d.ns < d.withheld ? ` ${money(d.withheld - d.ns)} stands under the deal.` : ""}`,
       buttons:[{id:"d:" + id, label:"Open dispute", busyLabel:"Opening dispute"}], ruleTag:"Within 60 days", nod:`Not disputed in ${days()} days: the deduction stands.`};
   } else if (repaid && d.dec === "waived") {
-    body = E.facts("Settled by", [{v:`<b>Remittance</b> · +${money(d.ns)} against the deduction`, tags:[["EDI 820","PMT-991307"]]}, {v:`<b>Receivables match</b> · ${money(d.ns)}`, tags:[["Supplier ERP · API","ERP-991307"]]}]);
+    body = E.facts("Settled by", [{v:`<b>Remittance</b> · +${money(d.ns)} against the deduction`, tags:[["EDI 820","PMT-991307"]]}, {v:`<b>Matched to the dispute</b> · ${money(d.ns)}`, tags:[["Trading Grid",""]]}]);
   } else if (d.dec) {
     body += `<div class="card plain" data-flash><div class="th"><span class="tt">${d.dec === "waived" ? "Waived" : "Upheld"} by Jordan Ellis</span>${E.chip(d.dec === "waived" ? "Awaiting remittance" : "Stands","")}</div><p class="vals">${d.dec === "waived" ? money(d.ns) + " comes back on a later Northfield remittance" : "The deduction stands"}</p>${E.details("r:" + id, ruleList(["repay"]))}</div>`;
     if (d.dec === "waived" && !open().length && disputed().every(x => D[x].dec === "waived") && disputed().length === 3 && !repaid) action = {says:"Moves the story to Northfield's next remittance. Nothing is sent.", buttons:[{id:"next", label:"Next: Northfield's remittance", busyLabel:"Reading the remittance"}]};
   } else {
-    body += `<div class="card plain" data-flash><div class="th"><span class="tt">Northfield decides</span>${E.chip("Awaiting Jordan Ellis","")}</div><p class="vals">Dispute open in Trading Grid's deductions · ${money(d.ns)} at stake</p>${E.details("o:" + id, readList([d.vid].concat(d.ev)) + E.who3([["Recommended","Rule · Ashby rule"],["Authorised","Priya Raman"],["Carried out","Trading Grid deductions"]]))}</div>`;
+    body += `<div class="card plain" data-flash><div class="th"><span class="tt">Northfield decides</span>${E.chip("Awaiting Jordan Ellis","")}</div><p class="vals">Dispute open in Trading Grid's deductions · ${money(d.ns)} at stake</p>${E.details("o:" + id, readList(d.ev) + E.who3([["Recommended","Rule · Trading Grid's promotion rules"],["Authorised","Priya Raman"],["Carried out","Trading Grid deductions"]]))}</div>`;
   }
-  if (repaid && id === "PD-2701-04" || repaid && d.dec === "waived") banner = [`${money(NS)} repaid on Northfield's remittance`, "Each repayment matched to its dispute in Trading Grid and in Supplier ERP receivables.", `${money(TOTAL - NS)} stands, supported by its deals.`];
+  if (repaid && id === "PD-2701-04" || repaid && d.dec === "waived") banner = [`${money(NS)} repaid on Northfield's remittance`, "Each repayment matched to its dispute in Trading Grid.", `${money(TOTAL - NS)} stands, supported by its deals.`];
   return {title:"Deduction " + d.n, chip:chipA(d), meta:`Northfield Retailer · ${esc(d.kind.toLowerCase())} promotion · ${esc(d.item.toLowerCase())}${d.ns && !d.dsp ? " · " + days() + " days left to dispute" : ""}`, banner, body, action};
 }
 
@@ -740,13 +734,13 @@ function groupsN(){
 }
 function recN(id){
   const d = D[id];
-  const facts = factRows(d).filter(f => !(d.dsp ? false : /Vividly/.test(f.v)));
-  if (!d.dsp) return {title:"Deduction " + d.n, chip:chipN(d), meta:`Ashby Supplier · ${esc(d.kind.toLowerCase())} promotion · ${money(d.withheld)} deducted`, body:E.facts("Northfield's records", facts.filter(f => !/Vividly/.test(f.v)))};
+  const facts = factRows(d).filter(f => !(d.dsp ? false : /Promotion rule/.test(f.v)));
+  if (!d.dsp) return {title:"Deduction " + d.n, chip:chipN(d), meta:`Ashby Supplier · ${esc(d.kind.toLowerCase())} promotion · ${money(d.withheld)} deducted`, body:E.facts("Northfield's records", facts.filter(f => !/Promotion rule/.test(f.v)))};
   let body = E.facts("In the dispute", facts), action = null;
   if (d.dec) body += `<div class="card plain" data-flash><div class="th"><span class="tt">${d.dec === "waived" ? "Waived" : "Upheld"} by Jordan Ellis</span></div><p class="vals">${d.dec === "upheld" ? money(d.withheld) + " stays deducted" : repaid ? "Repaid " + money(d.ns) + " on Northfield's remittance · matched to this dispute" : "Repayment of " + money(d.ns) + " due on a later remittance"}</p></div>`;
   else {
     body += `<div class="card amber"><div class="th"><span class="tt">Decide the dispute · ${money(d.ns)}</span>${E.chip("Ready for review","amber")}</div><p class="reason"><b>Reason.</b> ${esc(d.reason)}</p>`
-      + E.details("n:" + id, ruleList(["decide","noevid","repay"]) + readList([d.vid].concat(d.ev)) + E.who3([["Opened by","Priya Raman, from Ashby's promotion rules"],["Decides","Jordan Ellis"],["Carried out","Trading Grid deductions"]])) + `</div>`;
+      + E.details("n:" + id, ruleList(["decide","noevid","repay"]) + readList(d.ev) + E.who3([["Opened by","Priya Raman, from Trading Grid's promotion rules"],["Decides","Jordan Ellis"],["Carried out","Trading Grid deductions"]])) + `</div>`;
     action = {says:`Waive deduction repays ${money(d.ns)} to Ashby on a later remittance${d.ns < d.withheld ? `; ${money(d.withheld - d.ns)} stays deducted` : ""}. Uphold deduction keeps ${money(d.withheld)} deducted.`,
       buttons:[{id:"wv:" + id, label:"Waive deduction"}, {id:"up:" + id, label:"Uphold deduction", primary:false}], ruleTag:"Jordan decides", nod:"Not decided: the case stays open and nothing is repaid."};
   }
@@ -771,7 +765,7 @@ E.page = {
   head(){
     const won = DISP.filter(id => D[id].dec === "waived").reduce((s, id) => s + D[id].ns, 0);
     if (S.side === "ashby") return {title:`Northfield took ${money(TOTAL)} in promotion deductions; ${money(NS)} is not supported by the deals`,
-      event:"Vividly matched each deduction when the remittance arrived: 2 supported, 3 not.", goal:"Dispute only what the deal does not support, with the record.",
+      event:"Trading Grid's promotion rules checked each deduction when the remittance arrived: 2 supported, 3 not.", goal:"Dispute only what the deal does not support, with the record.",
       figs:tiles("ashby")};
     const o = open();
     return {title: disputed().length ? `Ashby disputes ${money(disputed().reduce((s, id) => s + D[id].ns, 0))} of Northfield's promotion deductions with the records that contradict them` : `Northfield took ${money(TOTAL)} in promotion deductions from Ashby; none disputed yet`,
@@ -783,25 +777,24 @@ E.page = {
   nextUp:() => S.side === "ashby" ? DISP.find(id => !D[id].dsp) || null : open()[0] || null,
   record:id => S.side === "ashby" ? recA(id) : recN(id),
   rules(id){ const d = D[id]; return S.side === "ashby" ? [d.ruleK, "vividly", "dwin", "contrast"].map(k => ({text:R[k].text, src:R[k].src, found:k === d.ruleK ? d.finding : k === "dwin" ? days() + " days left" : ""})) : ["decide","noevid","repay","dwin"].map(k => ({text:R[k].text, src:R[k].src, found:""})); },
-  questions:() => S.side === "ashby" ? ["Why dispute deduction 2701-04?", "Which deal covers deduction 2701-03?"] : ["Why waive deduction 2701-02?", "Which record contradicts deduction 2701-05?"],
+  questions:() => S.side === "ashby" ? ["Which deductions should we dispute, and on what record?", "Which promotion covers these deductions?"] : ["Which deductions should we waive, and why?", "Which deductions does a record contradict?"],
   inTile:(k, id) => { const t = TL[S.side].find(x => x.k === k); return !!t && t.ids().includes(id); },
   onSwitch(){ if (S.side === "nf" && !S.tile.nf) S.tile.nf = disputed().length ? "dsp" : "ded"; if (S.side === "nf") { const o = open(); if (o.length && !o.includes(S.sel.nf)) S.sel.nf = o[0]; } },
   act(key){
     const [k, id] = key.split(":");
     if (k === "d") { const d = D[id]; return E.wait(900).then(() => { S.clock = Math.max(S.clock + 1, d.dAt); d.dsp = true;
-      H(S.clock, `Dispute on ${id} opened · ${money(d.ns)} · ${d.attach} and Vividly's finding`, "Rule · Priya Raman · Trading Grid", "", "ashby,nf");
+      H(S.clock, `Dispute on ${id} opened · ${money(d.ns)} · ${d.attach} and the promotion rule's finding`, "Rule · Priya Raman · Trading Grid", "", "ashby,nf");
       E.event(`Dispute on Deduction ${d.n} opened in Trading Grid's deductions, where Jordan Ellis sees it.`, true); E.say(`Dispute opened on deduction ${d.n}.`); }); }
     if (k === "wv" || k === "up") { const d = D[id]; return E.wait(600).then(() => { S.clock = Math.max(S.clock + 1, d.decAt); d.dec = k === "wv" ? "waived" : "upheld";
       H(S.clock, `Deduction ${id} ${d.dec} by Jordan Ellis · ${money(d.dec === "waived" ? d.ns : d.withheld)}`, "Rule · Jordan Ellis · Trading Grid", "", "ashby,nf");
       E.event(`Jordan Ellis ${d.dec} Deduction ${d.n}.`, true, true); E.say(`Decision recorded on deduction ${d.n}.`); }); }
     if (key === "next") return E.wait(900).then(() => { repaid = true;
       H(T(1,16,0), "Remittance PMT-991307 · +$677.20 · each repayment matched to its dispute by Trading Grid", "Northfield · Trading Grid", "PMT-991307", "ashby,nf");
-      H(T(2,9,0), "Supplier ERP matched PMT-991307 in receivables", "Supplier ERP", "ERP-991307", "ashby");
-      S.clock = T(2,9,0); E.event("Northfield's remittance repaid $677.20; Trading Grid matched each repayment to its dispute.", true, true); E.say("$677.20 repaid and matched."); return "banner"; });
+      S.clock = T(1,16,0); E.event("Northfield's remittance repaid $677.20; Trading Grid matched each repayment to its dispute.", true, true); E.say("$677.20 repaid and matched."); return "banner"; });
   }
 };
 E.start();
-E.event("Vividly matched each deduction when the remittance arrived: 2 supported, 3 not.", true);
+E.event("Trading Grid's promotion rules checked each deduction when the remittance arrived: 2 supported, 3 not.", true);
 })();
 
 </script>

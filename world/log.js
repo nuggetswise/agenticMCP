@@ -65,7 +65,7 @@ export class Log {
       const from = PARTY[d.from], to = PARTY[d.to];
       // A stage document (D60) takes control numbers from its own range on the pair, so adding it renumbers no existing
       // document: 700,000,000 up, and 600,000,000 up for its 997s (the same ranges as main after dfef3cd).
-      d.ctl = nextCtl(d, `${d.from}>${d.to}${d.stage ? ':S' : ''}`, d.stage ? 700000000 : 1000);
+      d.ctl = nextCtl(d, `${d.from}>${d.to}${d.stage ? ':S' : ''}`, d.stage ? 700000000 : [d.from, d.to].includes('MARKETPLACE') ? 300000000 : 1000); // Northfield Marketplace (P4): its own range
       if (d.retired) { if (!d.no_ack) acks.push({ d, numAt: iso(new Date(Date.parse(d.numAt || d.at) + d.ackDelay * 60000)), fa: { from: d.to, to: d.from } }); continue; }
       if (typeof d.answers_gs === 'function') d.answers_gs = d.answers_gs();
       let text = writeInterchange(d, { isaSender: from.isa, isaReceiver: to.isa, ctl: d.ctl });
@@ -100,10 +100,11 @@ const NF = PARTY.NORTHFIELD;
 export const D = {
   po(L, O, at) {
     const sup = PARTY[O.supplier];
-    return L.doc({ type: '850', from: 'NORTHFIELD', to: O.supplier, at, po: O.po, programme: O.programme || 'WHSL', requested_delivery: O.requested, buyer_name: NF.name, buyer_gln: NF.gln, ship_to_name: LOC[O.shipTo].name, ship_to_gln: LOC[O.shipTo].gln, vendor_name: sup.name, vendor_gln: sup.gln, lines: O.lines.map(lineOf) });
+    const by = PARTY[O.partner || 'NORTHFIELD'];
+    return L.doc({ type: '850', from: O.partner || 'NORTHFIELD', to: O.supplier, at, po: O.po, programme: O.programme || 'WHSL', requested_delivery: O.requested, buyer_name: by.name, buyer_gln: by.gln, ship_to_name: LOC[O.shipTo].name, ship_to_gln: LOC[O.shipTo].gln, vendor_name: sup.name, vendor_gln: sup.gln, lines: O.lines.map(lineOf) });
   },
   ack(L, O, at, { codes = {}, qty = {}, dates = {}, backorder = {}, ref, numAt } = {}) {
-    return L.doc({ type: '855', from: O.supplier, to: 'NORTHFIELD', at, ...(numAt ? { numAt: iso(numAt) } : {}), po: O.po, ref: ref || `ACK-${O.po.slice(3)}`, lines: O.lines.map((l) => ({ ...lineOf(l), qty_ordered: l.qty, code: codes[l.line] || 'IA', qty: qty[l.line] ?? l.qty, date: dates[l.line] || null, backorder: backorder[l.line] || 0 })) });
+    return L.doc({ type: '855', from: O.supplier, to: O.partner || 'NORTHFIELD', at, ...(numAt ? { numAt: iso(numAt) } : {}), po: O.po, ref: ref || `ACK-${O.po.slice(3)}`, lines: O.lines.map((l) => ({ ...lineOf(l), qty_ordered: l.qty, code: codes[l.line] || 'IA', qty: qty[l.line] ?? l.qty, date: dates[l.line] || null, backorder: backorder[l.line] || 0 })) });
   },
   change(L, O, at, seq, changes) {
     return L.doc({ type: '860', from: 'NORTHFIELD', to: O.supplier, at, po: O.po, seq, po_date: O.poDate, changes: changes.map((c) => ({ ...lineOf(O.lines.find((l) => l.line === c.line)), ...c })) });
@@ -116,7 +117,7 @@ export const D = {
     // A food line carries its lot and best-before date (P26): the lot it shipped from, world/lots.js.
     const lines = (o.lines || O.lines.map((l) => ({ line: l.line, sku: l.sku, qty: o.qty?.[l.line] ?? l.qty }))).filter((l) => l.qty > 0).map((l) => { const x = lineOf({ ...O.lines.find((y) => y.line === l.line), ...l }); return { ...x, ...(lotOf(x.sku, o.shippedAt) || {}) }; });
     (L.shippedAt ??= new Map()).set(o.ref, iso(o.shippedAt));
-    return L.doc({ type: '856', from: O.supplier, to: 'NORTHFIELD', at, ref: o.ref, resend: !!o.resend, po_ref: o.poRef || O.po, carton_count: o.cartonCount ?? (o.cartons ? o.cartons.length : lines.reduce((a, l) => a + l.qty, 0)), scac: o.scac ?? 'LKLF', bol: o.bol || null, seal: o.seal || null,
+    return L.doc({ type: '856', from: O.supplier, to: O.partner || 'NORTHFIELD', at, ref: o.ref, resend: !!o.resend, po_ref: o.poRef || O.po, carton_count: o.cartonCount ?? (o.cartons ? o.cartons.length : lines.reduce((a, l) => a + l.qty, 0)), scac: o.scac ?? 'LKLF', bol: o.bol || null, seal: o.seal || null,
       shipped_at: iso(o.shippedAt), trip_id: o.tripId !== undefined ? o.tripId : carriesTrip(O.supplier, iso(o.shippedAt)) ? tripIdOf(o.ref, iso(o.shippedAt)) : null, delivery_date: o.deliveryDate, ship_to_name: st.name, ship_to_gln: o.shipToGln || st.gln, ship_from_name: site.name, ship_from_gln: site.gln, lines, cartons: o.cartons || null, status: o.status || 'CC', fault: o.fault || null });
   },
   invoice(L, O, at, o) {

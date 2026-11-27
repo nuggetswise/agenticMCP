@@ -40,13 +40,14 @@ function rowOf(db, s, c) {
   return { id: c.case, record: c.case, po: v.po, charge: v.charge, amount: v.amount, what, state, closed: !!(st.matched || st.accepted || (st.decision && st.decision.decision === 'Upheld')), dispute_window: v.dispute_window, nf_7_4_complete: v.nf_7_4_complete, evidence: Object.fromEntries(v.evidence.map((e) => [e.evidence, e.state])) };
 }
 
-// ---------- Promotion deductions (P20): Northfield's remittance PMT-990168 takes five promotion deductions. Vividly owns the
-// promotion terms and matches each deduction to its deal; its answer here is synthetic, computed from the world's own deal
-// settlement (deals, 852, 856, 810), and labelled the partner's answer. Claim Agent disputes only what the deal does not support.
+// ---------- Promotion deductions (P20): Northfield's remittance PMT-990168 takes five promotion deductions. Round plan,
+// 26 November 2026: Trading Grid's promotion rules check each deduction against Ashby's promotion announcement (889) for
+// its deal, the store activity reports (852), the ship notices (856), the invoice (810) and the remittance (820), from the
+// world's own deal settlement. The Vividly path is retired. Only what the deal does not support is disputed.
 const PROMO_MOMENT = '2027-01-06 09:00 ET';
-const PROMO_INSTRUCTION = `Northfield's remittance PMT-990168 took five promotion deductions. Vividly, the partner that owns the promotion terms, matches each one to the deal Ashby agreed. For every deduction in the queue: read_promotion_deduction, then vividly_match. Then exactly one of:
-- Vividly matched it to its deal: propose ashby_accepts_charge.
-- Vividly found it not supported (a rate above the deal, no store activity report for the claimed period, or outside the deal's order window): propose submit_dispute. It disputes only the unsupported amount, with the record that contradicts it; the supported part stands. Never accept a deduction Vividly found unsupported, and never dispute one it matched.
+const PROMO_INSTRUCTION = `Northfield's remittance PMT-990168 took five promotion deductions. Trading Grid's promotion rules check each one against the deal on Ashby's promotion announcement. For every deduction in the queue: read_promotion_deduction, then promotion_check. Then exactly one of:
+- The rules matched it to its deal: propose ashby_accepts_charge.
+- The rules found it not supported (a rate above the deal, no store activity report for the claimed period, or outside the deal's order window): propose submit_dispute. It disputes only the unsupported amount, with the record that contradicts it; the supported part stands. Never accept a deduction the rules found unsupported, and never dispute one they matched.
 Never decide a deduction; Northfield's reviewer does. A waived charge is not money until the repayment arrives: when it does, propose ashby_matches_repayment.`;
 const isPromo = (s) => s.moment === PROMO_MOMENT;
 const promoRows = (db) => db.prepare("SELECT * FROM deal_settlements WHERE supplier_id = 'ASHBY' ORDER BY deduction_ref").all();
@@ -57,14 +58,14 @@ function promoView(db, s, ref) {
     claim: { from: r.claim_from, to: r.claim_to, qty: r.claimed_qty, uom: r.claimed_uom, rate: r.claimed_rate }, session: st, _settlement: r,
     evidence_records: recs.length > 6 ? [...recs.slice(0, 6), `and ${recs.length - 6} more`] : recs };
 }
-const vividlyOf = (v) => { const r = v._settlement; return { partner: 'Vividly', synthetic: true, answer_basis: 'Synthetic: the partner\'s answer, computed from the world\'s deal settlement (deal 889, 852 product activity, 856 ship notices, 810 invoice)',
+const promoCheckOf = (v) => { const r = v._settlement; return { rule: 'Trading Grid promotion rules', answer_basis: 'Ashby’s promotion announcement (889) for the deal, store activity reports (852), ship notices (856), the invoice (810) and the remittance (820)',
   deduction: r.deduction_ref, deal: r.deal_id || r.claimed_deal, match: r.decision === 'Matched' ? 'Matched to its deal' : /Rate/.test(r.reason) ? 'Rate above the deal' : /852|product activity/.test(r.reason) ? 'No store activity report for the claimed period' : /order window/.test(r.reason) ? 'Outside the deal\'s order window' : 'Not supported by the deal',
   reason: r.reason, agreed_rate: r.agreed_rate, recomputed_qty: r.recomputed_qty, supported_amount: r.authorised_amount, unsupported_amount: r.unauthorised_amount }; };
 function promoRow(db, s, r) {
-  const st = caseState(s, r.deduction_ref); const v = vividlyOf({ _settlement: r });
-  const what = `${r.kind} deduction $${r.claimed_amount.toFixed(2)} on ${r.payment} for deal ${r.claimed_deal}; ${st.vividly ? v.match : 'not yet matched'}`;
-  const state = st.matched ? 'Repayment matched' : st.repaid ? 'Repaid; to match' : st.decision ? `${st.decision.decision} by Jordan Ellis` : st.disputed ? 'Disputed; awaiting Northfield' : st.accepted ? 'Accepted' : st.vividly ? 'Matched by Vividly' : 'Open';
-  return { id: r.deduction_ref, record: r.deduction_ref, deal: r.claimed_deal, charge: `Promotion ${r.kind}`, amount: r.claimed_amount, what, state, closed: !!(st.matched || st.accepted || (st.decision && st.decision.decision === 'Upheld')), vividly: st.vividly ? v.match : null };
+  const st = caseState(s, r.deduction_ref); const v = promoCheckOf({ _settlement: r });
+  const what = `${r.kind} deduction $${r.claimed_amount.toFixed(2)} on ${r.payment} for deal ${r.claimed_deal}; ${st.checked ? v.match : 'not yet matched'}`;
+  const state = st.matched ? 'Repayment matched' : st.repaid ? 'Repaid; to match' : st.decision ? `${st.decision.decision} by Jordan Ellis` : st.disputed ? 'Disputed; awaiting Northfield' : st.accepted ? 'Accepted' : st.checked ? 'Matched by Vividly' : 'Open';
+  return { id: r.deduction_ref, record: r.deduction_ref, deal: r.claimed_deal, charge: `Promotion ${r.kind}`, amount: r.claimed_amount, what, state, closed: !!(st.matched || st.accepted || (st.decision && st.decision.decision === 'Upheld')), checked: st.checked ? v.match : null };
 }
 const spec = {
   agent: 'Claim Agent', prefix: 'CL', person: 'Priya Raman', company: 'Ashby Supplier', prototype: 'P6 Charge Resolution (Ashby side)',
@@ -105,8 +106,8 @@ const spec = {
       run: (db, s, a) => { const v = view(db, s, a.record || ''); if (!v.found) return v; const { history, ...rest } = v; return { ...rest, rules: { evidence: D.rule(db, 'NF-7.4'), tally: D.rule(db, 'NF-5.3'), not_reviewed: D.rule(db, 'NF-7.5'), carrier: D.rule(db, 'NF-10.2') } }; } },
     read_promotion_deduction: { description: 'One promotion deduction on Northfield’s remittance as Ashby sees it: the deal it names, the item, the claimed period, quantity, unit and rate, the amount withheld and the invoice it sits on. Promotion moment only.', input: { record: z.string().describe('Deduction reference, for example PD-2701-04') },
       run: (db, s, a) => { const v = promoView(db, s, a.record || ''); if (!v.found) return v; const { _settlement, ...rest } = v; const deal = db.prepare('SELECT deal_id, sku, kind, rate, rate_uom, period_start, period_end, order_start, order_end, terms, announced_doc_id FROM deals WHERE deal_id = ?').get(v.deal); return { ...rest, deal_on_the_889: deal || 'No deal on record' }; } },
-    vividly_match: { description: 'Vividly’s match of one promotion deduction to the promotion Ashby agreed: matched, or not supported and why, with the supported and unsupported amounts. The partner’s answer, synthetic in this demo.', input: { record: z.string().describe('Deduction reference, for example PD-2701-04') },
-      run: (db, s, a) => { const v = promoView(db, s, a.record || ''); if (!v.found) return v; v.session.vividly = true; return vividlyOf(v); } },
+    promotion_check: { description: 'Trading Grid’s promotion rules on one promotion deduction against the promotion Ashby announced: matched, or not supported and why, with the supported and unsupported amounts. The partner’s answer, synthetic in this demo.', input: { record: z.string().describe('Deduction reference, for example PD-2701-04') },
+      run: (db, s, a) => { const v = promoView(db, s, a.record || ''); if (!v.found) return v; v.session.checked = true; return promoCheckOf(v); } },
     read_rules: { description: 'Rules by id (for example NF-7.4, NF-5.3, NF-7.5, NF-10.2, AP-4.1, AP-4.2) or by topic words.', input: { ids: z.array(z.string()).optional(), topic: z.string().optional() },
       run: (db, s, a) => a.ids?.length ? { rules: a.ids.map((id) => D.rule(db, id)).filter(Boolean) } : D.rules(db, { topic: a.topic || '' }) },
   },
@@ -117,8 +118,8 @@ const spec = {
       switch (action) {
         case 'ashby_accepts_charge': if (st.disputed) return `${v.case} is disputed; Northfield decides it.`; if (st.accepted) return `${v.case} is already accepted.`; return null;
         case 'submit_dispute': if (st.disputed) return `NF-7.3: ${v.case} was already disputed once.`; if (st.accepted) return `${v.case} was accepted.`;
-          if (!st.vividly) return `Read Vividly’s match for ${v.case} first: a promotion deduction is disputed only with the record that contradicts it.`;
-          if (r.decision === 'Matched') return `Vividly matched ${v.case} to deal ${r.deal_id}; a matched deduction is not disputed.`; return null;
+          if (!st.checked) return `Run the promotion check on ${v.case} first: a promotion deduction is disputed only with the record that contradicts it.`;
+          if (r.decision === 'Matched') return `The promotion rules matched ${v.case} to deal ${r.deal_id}; a matched deduction is not disputed.`; return null;
         case 'ashby_matches_repayment': if (!st.repaid) return `No repayment for ${v.case} has arrived; a waived charge is not money until it is repaid (NF-7.6).`; if (st.matched) return 'Already matched.'; return null;
         default: return `${action} does not apply to a promotion deduction.`;
       }
@@ -190,13 +191,13 @@ const spec = {
   outcome: (db, s) => {
     if (isPromo(s)) {
       const cs = s.state.cases || {}; const rows = promoRows(db); const violations = [];
-      for (const r of rows) { const st = cs[r.deduction_ref] || {}; if (st.disputed && r.decision === 'Matched') violations.push(`${r.deduction_ref} disputed though matched to its deal`); if (st.disputed && !st.vividly) violations.push(`${r.deduction_ref} disputed without Vividly's match`); if (st.matched && !st.repaid) violations.push(`${r.deduction_ref} matched before a repayment arrived`); }
+      for (const r of rows) { const st = cs[r.deduction_ref] || {}; if (st.disputed && r.decision === 'Matched') violations.push(`${r.deduction_ref} disputed though matched to its deal`); if (st.disputed && !st.checked) violations.push(`${r.deduction_ref} disputed without the promotion check`); if (st.matched && !st.repaid) violations.push(`${r.deduction_ref} matched before a repayment arrived`); }
       const tot = (pick) => Math.round(rows.reduce((t, r) => t + (pick(r) || 0), 0) * 100) / 100;
       return { as_of: fmtET(iso(s.clock)), payment: 'PMT-990168', deductions: rows.map((r) => promoRow(db, s, r)).map((r) => ({ deduction: r.record, deal: r.deal, amount: r.amount, state: r.state })),
         disputed: rows.filter((r) => cs[r.deduction_ref]?.disputed).map((r) => r.deduction_ref), accepted: rows.filter((r) => cs[r.deduction_ref]?.accepted).map((r) => r.deduction_ref),
         recovered_and_matched: tot((r) => cs[r.deduction_ref]?.matched ? cs[r.deduction_ref].matched.amount : 0), waived_not_yet_repaid: tot((r) => cs[r.deduction_ref]?.decision?.decision === 'Waived' && !cs[r.deduction_ref]?.matched ? cs[r.deduction_ref].decision.amount : 0),
         accepted_amount: tot((r) => cs[r.deduction_ref]?.accepted ? r.claimed_amount : 0), unsupported_on_record: tot((r) => r.unauthorised_amount), violations,
-        synthetic: 'Vividly matches, Northfield decisions and repayments at the promotion moment are synthetic, from the world’s deal settlement and the rules in src/claim.js.' };
+        synthetic: 'Northfield decisions and repayments at the promotion moment are synthetic, from the world’s deal settlement and the rules in src/claim.js.' };
     }
     const rows = openCases(db, s).map((c) => rowOf(db, s, c)); const cs = s.state.cases || {}; const violations = [];
     for (const [k, st] of Object.entries(cs)) { if (st.matched && !st.repaid) violations.push(`${k} matched before a repayment arrived`); if (st.disputed && !st.disputed.evidence.includes('Bill of lading with seal')) violations.push(`${k} disputed without the NF-7.4 pack`); }

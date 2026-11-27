@@ -3,12 +3,12 @@
  "validator_published": "2026-11-08",
  "jar_bytes": 323801,
  "corpus": {
-  "sha256": "e928e67da71f4adcfdb659dfd6a1446dbcdf5d97dd9989ac034d499998463b3f",
-  "files": 4418
+  "sha256": "e41c7fac0879b3d5bcaa1fd29c9417a81901584b4be2c4a31443d643c4b6d0f4",
+  "files": 4422
  },
  "passed": true,
- "files": 4418,
- "transaction_sets": 38794,
+ "files": 4422,
+ "transaction_sets": 38800,
  "faulted_files": 10,
  "rejections_matched": 12,
  "injected": [

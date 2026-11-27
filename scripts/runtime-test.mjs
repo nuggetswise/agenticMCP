@@ -39,9 +39,9 @@ const act = (rt, d, s, by = 'Test agent') => (action, args) => { const r = rt.pr
   const a = Claim.startSession(db, { variation: Claim.branchWith('promotions') }); const go = act(Claim, db, a);
   ok(Claim.queue(db, a).rows.length === 5, 'claim promotions: five deductions in the queue');
   ok(Claim.propose(db, a, 'x', 'submit_dispute', { record: 'PD-2701-04' }).state === 'Refused', 'claim promotions: no dispute before Vividly\'s match');
-  const m = Object.fromEntries(['PD-2701-01', 'PD-2701-02', 'PD-2701-03', 'PD-2701-04', 'PD-2701-05'].map((r) => [r, Claim.read(db, a, 'vividly_match', { record: r })]));
-  ok(m['PD-2701-04'].match === 'Rate above the deal' && m['PD-2701-04'].unsupported_amount === 266.7 && m['PD-2701-04'].synthetic === true, 'vividly_match: rate above the deal, $266.70, labelled synthetic');
-  ok(m['PD-2701-02'].match === 'No store activity report for the claimed period' && m['PD-2701-05'].match === "Outside the deal's order window", 'vividly_match: no 852 week; outside the order window');
+  const m = Object.fromEntries(['PD-2701-01', 'PD-2701-02', 'PD-2701-03', 'PD-2701-04', 'PD-2701-05'].map((r) => [r, Claim.read(db, a, 'promotion_check', { record: r })]));
+  ok(m['PD-2701-04'].match === 'Rate above the deal' && m['PD-2701-04'].unsupported_amount === 266.7 && m['PD-2701-04'].rule === 'Trading Grid promotion rules', 'promotion_check: rate above the deal, $266.70, credited to Trading Grid’s promotion rules');
+  ok(m['PD-2701-02'].match === 'No store activity report for the claimed period' && m['PD-2701-05'].match === "Outside the deal's order window", 'promotion_check: no 852 week; outside the order window');
   ok(Claim.propose(db, a, 'x', 'submit_dispute', { record: 'PD-2701-01' }).state === 'Refused', 'claim promotions: a matched deduction is never disputed');
   go('ashby_accepts_charge', { record: 'PD-2701-01' }); go('ashby_accepts_charge', { record: 'PD-2701-03' });
   for (const r of ['PD-2701-04', 'PD-2701-02', 'PD-2701-05']) go('submit_dispute', { record: r });

@@ -33,8 +33,8 @@ const PUBLISHED = { 'CAT-ASH-2026-01': '2026-02-23T19:00:00.000Z', [CATALOGUE_20
 const UPC = { 'ASH-TRL-09': upcOf('00016'), 'ASH-NAP-4': upcOf('00013'), 'ASH-SHT-M': upcOf('00019'), 'ASH-SHT-L': upcOf('00020'), 'ASH-SHT-XL': upcOf('00021') };
 /** Fields follow the catalogue export: product, item number and type, description, NRF colour and size, brand line. */
 export const CATALOGUE_RECORDS = [
-  { sku: 'ASH-TRL-09', product: 'Trail runner', description: 'Trail runner', colour_code: '001', colour: 'Black', size_code: '50555', size: '11 Medium', message: 'CAT-ASH-2026-01' }, // NRF size code from the GS1 US size code table (23 November 2026)
-  { sku: 'ASH-NAP-4', product: 'Linen napkin 4-pack', description: 'Linen napkin 4-pack', colour_code: '260', colour: 'Ivory', size_code: '30001', size: 'One size', message: 'CAT-ASH-2026-01' },
+  { sku: 'ASH-TRL-09', product: 'Trail runner', description: 'Trail runner', colour_code: '001', colour: 'Black', size_code: '50555', size: '11 Medium', message: CATALOGUE_2027 }, // NRF size code from the GS1 US size code table (23 November 2026)
+  { sku: 'ASH-NAP-4', product: 'Linen napkin 4-pack', description: 'Linen napkin 4-pack', colour_code: '260', colour: 'Ivory', size_code: '30001', size: 'One size', message: CATALOGUE_2027 },
   { sku: 'ASH-SHT-M', product: 'Shirt', description: 'Shirt', colour_code: '410', colour: 'Navy', size_code: '10970', size: 'Medium', message: CATALOGUE_2027 },
   { sku: 'ASH-SHT-L', product: 'Shirt', description: 'Shirt', colour_code: '410', colour: 'Navy', size_code: '10975', size: 'Large', message: CATALOGUE_2027 },
 ].map((r) => ({ supplier_id: 'ASHBY', sku: r.sku, product: r.product, item_number: UPC[r.sku], item_type: 'UP', description: r.description, colour_code: r.colour_code, colour: r.colour,
@@ -101,8 +101,9 @@ function generate(L, ctx) {
   const ash = PARTY.ASHBY, nf = PARTY.NORTHFIELD;
   // The catalogue Northfield pulls: Ashby's shirt, Medium and Large, with case GTIN and UPC; Northfield accepts both.
   L.doc({ type: '832', from: 'ASHBY', to: 'NORTHFIELD', at: AT.catalogue, ref: CATALOGUE_2027, effective: '2027-01-11', vendor_name: ash.name, vendor_gln: ash.gln, buyer_name: nf.name, buyer_gln: nf.gln,
-    items: ['ASH-SHT-M', 'ASH-SHT-L'].map((sku, i) => catalogueLine(sku, '2027-01-11', i + 1, '2027-01-11')) });
-  L.event({ at: AT.accepted, kind: 'catalogue.decision', po: null, system: 'Northfield item setup', party: 'NORTHFIELD', channel: 'Trading Grid', data: { message: CATALOGUE_2027, doc_type: '832', lines: ['ASH-SHT-M', 'ASH-SHT-L'].map((sku) => ({ sku, decision: 'Accepted', item_version: 1 })) } });
+    // P25 (26 November 2026): the trail runner and napkin join the shirts, every item with its NRF colour and size codes.
+    items: ['ASH-SHT-M', 'ASH-SHT-L', 'ASH-TRL-09', 'ASH-NAP-4'].map((sku, i) => { const c = CATALOGUE_RECORDS.find((r) => r.sku === sku); return { ...catalogueLine(sku, '2027-01-11', i + 1, '2027-01-11'), nrf: { colour: c.colour_code, size: c.size_code } }; }) });
+  L.event({ at: AT.accepted, kind: 'catalogue.decision', po: null, system: 'Northfield item setup', party: 'NORTHFIELD', channel: 'Trading Grid', data: { message: CATALOGUE_2027, doc_type: '832', lines: [...['ASH-SHT-M', 'ASH-SHT-L'].map((sku) => ({ sku, decision: 'Accepted', item_version: 1 })), ...['ASH-TRL-09', 'ASH-NAP-4'].map((sku) => ({ sku, decision: 'Accepted', item_version: 1 }))] } });
 
   // The order and the other open orders.
   D.po(L, ORDER, AT.po); D.ack(L, ORDER, AT.ack);

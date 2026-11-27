@@ -127,11 +127,11 @@ const DOCS = {
   // PO4 (pack, inner pack), CTP cost with its own effective DTM, and one G39 per packaging level.
   832: { func: 'SC', name: 'Price and item catalogue',
     body: (d) => [seg('BCT', 'PC', d.ref, '', '', '', '', '', '', '', '00'), seg('DTM', '007', d8(d.effective)), ...parties(d),
-      ...d.items.flatMap((it) => [seg('LIN', it.line, 'VN', it.sku, 'UK', it.gtin, 'UP', it.upc), seg('PID', 'F', '', '', '', clean(it.description)),
+      ...d.items.flatMap((it) => [seg('LIN', it.line, 'VN', it.sku, 'UK', it.gtin, 'UP', it.upc, ...(it.nrf ? ['CM', it.nrf.colour, 'SM', it.nrf.size] : [])), // CM and SM: NRF colour and size codes (P25, 26 November 2026) seg('PID', 'F', '', '', '', clean(it.description)),
         seg('PO4', it.pack, 1, it.uom, '', '', '', '', '', '', '', '', '', '', it.inner || ''), seg('CTP', '', 'INV', money(it.cost), '', 'CA'), seg('DTM', '007', d8(it.cost_from)), ...it.levels.map(g39)]),
       seg('CTT', d.items.length)],
     read: (S) => { const items = []; let cur = null; let inLin = false;
-      for (const e of S) { if (e[0] === 'LIN') { cur = { line: +e[1], sku: e[3], gtin: e[5], upc: e[7], levels: [] }; items.push(cur); inLin = true; }
+      for (const e of S) { if (e[0] === 'LIN') { cur = { line: +e[1], sku: e[3], gtin: e[5], upc: e[7], levels: [], ...(e[8] === 'CM' ? { nrf: { colour: e[9], size: e[11] } } : {}) }; items.push(cur); inLin = true; }
         else if (!inLin) continue; else if (e[0] === 'PID') cur.description = e[5]; else if (e[0] === 'PO4') Object.assign(cur, { pack: +e[1], uom: e[3], inner: e[14] ? +e[14] : null }); else if (e[0] === 'CTP') cur.cost = +e[3]; else if (e[0] === 'DTM' && e[1] === '007') cur.cost_from = day8(e[2]); else if (e[0] === 'G39') cur.levels.push(readG39(e)); }
       return { ref: first(S, 'BCT')[2], po: null, effective: day8(first(S, 'DTM', '007')[2]), parties: n1(S), items }; } },
   // 888 Item Maintenance: BGN, parties, N9 naming the catalogue it updates, process date; per item G53 (003 add, 001

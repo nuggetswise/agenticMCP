@@ -21,13 +21,25 @@ export function anchors(L, W) {
   {
     const po = A.p4 = numberNear(-41, 1); const O = mk(po, [['ASH-MUG-12', 120], ['ASH-NAP-4', 48]], { requested: '2026-10-02', poDate: iso(day('2026-09-28', '08:05')) });
     ev(L, day('2026-09-27', '10:00'), 'programme.invited', null, 'Northfield supplier programme', 'NORTHFIELD', 'API', { programme: 'Wholesale', supplier: 'Ashby Supplier', by: 'Jordan Ellis', basis: 'Marketplace demand', marketplace_state: 'Active, unchanged' });
-    ev(L, day('2026-09-27', '11:30'), 'catalogue.item_conflict', null, 'Trading Grid', 'ASHBY', 'API', { sku: 'ASH-NAP-4', marketplace_gtin: '10614142000131', wholesale_gtin: ITEM['ASH-NAP-4'].gtin, resolution: 'Wholesale item setup accepted on Trading Grid; Marketplace listing unchanged' });
-    ev(L, day('2026-09-27', '15:00'), 'programme.activated', null, 'Northfield supplier programme', 'NORTHFIELD', 'API', { programme: 'Wholesale', approved_by: 'Jordan Ellis', tests: 'Passed' });
-    ev(L, day('2026-09-28', '07:40'), 'marketplace.order', 'MKT-20931', 'Marketplace platform', 'NORTHFIELD', 'API', { programme: 'Marketplace', sku: 'ASH-MUG-12', cases: 2, status: 'Shipped with tracking' });
+    ev(L, day('2026-09-27', '11:30'), 'catalogue.item_conflict', null, 'Trading Grid', 'ASHBY', 'API', { check: 'Check against GS1: company prefix 0614141 and the Wholesale item record', in_sync: [{ sku: 'ASH-MUG-12', gtin: ITEM['ASH-MUG-12'].gtin }], sku: 'ASH-NAP-4', marketplace_gtin: '10614142000131', wholesale_gtin: ITEM['ASH-NAP-4'].gtin, finding: 'Marketplace GTIN outside Ashby’s GS1 company prefix 0614141', resolution: 'Wholesale item setup accepted on Trading Grid; Marketplace listing unchanged' });
+    // Round plan, 26 November 2026: approval and activation are separate records. Approval record version 1 carries the
+    // 12 setup values P2's reuse rule classifies for Drop-ship.
+    ev(L, day('2026-09-27', '14:50'), 'programme.approved', null, 'Northfield supplier programme', 'NORTHFIELD', 'API', { programme: 'Wholesale', approved_by: 'Jordan Ellis', record: 'Wholesale approval, version 1', setup: [
+      { field: 'Company', value: 'Ashby Supplier', drop_ship: 'Reusable' }, { field: 'Contact', value: 'Priya Raman', drop_ship: 'Reusable' }, { field: 'Contact email', value: 'priya@ashby.example', drop_ship: 'Reusable' },
+      { field: 'Supplier GLN', value: '0614141002085', drop_ship: 'Reusable' }, { field: 'Item reference', value: 'ASH-MUG-12', drop_ship: 'Reusable' },
+      { field: 'Fulfilment origin', value: 'Ashby warehouse ASH-WH1 (GLN 0614141002122)', drop_ship: 'Different: Kinross Groveport, setup code EX-WH1, GLN 0614141003013' },
+      { field: 'Returns contact', value: null, drop_ship: 'Missing' }, { field: 'Return-to-vendor address', value: null, drop_ship: 'Missing' }, { field: 'Ship methods', value: null, drop_ship: 'Missing' },
+      { field: 'Carrier account', value: null, drop_ship: 'Missing' }, { field: 'Labels', value: null, drop_ship: 'Missing' },
+      { field: 'DC appointment', value: 'DC 2 dock window 06:00 to 14:00', drop_ship: 'Not applicable: parcel orders have none' }] });
+    ev(L, day('2026-09-27', '15:00'), 'programme.activated', null, 'Northfield supplier programme', 'NORTHFIELD', 'API', { programme: 'Wholesale', activated_by: 'Jordan Ellis', tests: 'Passed' });
+    // MKT-20931 travels as EDI on Northfield Marketplace's own interchange (owner decision, 27 November 2026).
+    { const M = mk('MKT-20931', [['ASH-MUG-12', 2]], { partner: 'MARKETPLACE', stream: 'marketplace', programme: 'MKTP', shipTo: 'MKT-CUST', requested: '2026-09-30', poDate: iso(day('2026-09-28', '07:40')) });
+      D.po(L, M, day('2026-09-28', '07:40')); D.ack(L, M, day('2026-09-28', '07:55'), { ref: 'ACK-MKT-20931' });
+      const mdep = day('2026-09-29', '14:00'); D.asn(L, M, addH(mdep, 0.2), { ref: 'ASN-MKT-20931', shippedAt: mdep, deliveryDate: '2026-09-30', scac: 'UPSN', status: 'CC', cartons: cartonsFor(W, 2951, [[1, 2]]) }); }
     // Round plan, 26 November 2026 (EDI first): Northfield no longer reads Ashby's ERP by API (R30). Ashby's ERP read stays
-    // Ashby's own, and the same figure reaches Northfield as Ashby's inventory advice (846) at the same minute.
+    // Ashby's own, and Ashby's inventory advice (846) reaches Northfield after the acknowledgment, with available stock only.
     ev(L, day('2026-09-28', '08:00'), 'erp.inventory_read', null, 'Supplier ERP', 'ASHBY', 'API', { sku: 'ASH-MUG-12', on_hand: 410, meaning: 'On hand' });
-    L.doc({ type: '846', from: 'ASHBY', to: 'NORTHFIELD', at: day('2026-09-28', '08:00'), as_of: iso(day('2026-09-28', '08:00')), ref: 'IA-ASH-WH1-20260928', site_name: LOC_WH1.name, site_gln: LOC_WH1.gln, client_name: 'Ashby Supplier', client_gln: ASHBY_GLN, items: [{ sku: 'ASH-MUG-12', gtin: ITEM['ASH-MUG-12'].gtin, on_hand: 410, available: 410, waves: [] }] });
+    L.doc({ type: '846', from: 'ASHBY', to: 'NORTHFIELD', at: day('2026-09-28', '08:55'), as_of: iso(day('2026-09-28', '08:55')), ref: 'IA-ASH-WH1-20260928', site_name: LOC_WH1.name, site_gln: LOC_WH1.gln, client_name: 'Ashby Supplier', client_gln: ASHBY_GLN, items: [{ sku: 'ASH-MUG-12', gtin: ITEM['ASH-MUG-12'].gtin, on_hand: 290, available: 290, waves: [] }] }); // 410 on hand less 120 reserved for NR-449510; ASH-NAP-4 waits on Chat D's figure
     D.po(L, O, day('2026-09-28', '08:05')); D.ack(L, O, day('2026-09-28', '08:50'));
     const dep = day('2026-10-01', '15:00'); const c = cartonsFor(W, 2001, [[1, 120], [2, 48]]);
     ev(L, dep, 'wms.departure_scan', po, 'Supplier ERP', 'ASHBY', 'API', { shipment: `SHP-${po.slice(3)}`, carrier: 'Lakeline Freight' });
@@ -52,10 +64,22 @@ export function anchors(L, W) {
   }
 
   // ---------- Week 3: Drop-ship and warehouse readiness (P2) ----------
-  ev(L, day('2026-10-12', '09:00'), 'programme.agreed', null, 'Northfield supplier programme', 'NORTHFIELD', 'API', { programme: 'Drop-ship', supplier: 'Ashby Supplier', wholesale_state: 'Live, unchanged' });
-  ev(L, day('2026-10-13', '14:00'), 'programme.test', null, 'Trading Grid', 'KINROSS', 'API', { programme: 'Drop-ship', test: 'Shipment status from Kinross Groveport', result: 'Passed', documents: '850, 855, 856, 846' });
+  ev(L, day('2026-10-12', '09:00'), 'programme.agreed', null, 'Northfield supplier programme', 'NORTHFIELD', 'API', { programme: 'Drop-ship', supplier: 'Ashby Supplier', wholesale_state: 'Live, unchanged', draft_from: 'Wholesale approval, version 1', reuse_rule: 'Same supplier and retailer, Drop-ship draft only: each Wholesale value is classified against Northfield’s Drop-ship requirements (Trading Grid rule)' });
+  // P2 (round plan, 26 November 2026): Priya's Drop-ship entries are the page's starting values; the attribute check, the
+  // 3PL tests (Pipe17 by API, Trading Grid by EDI) and Northfield's tests are separate records; the 13 October test folds in.
+  ev(L, day('2026-10-12', '09:00'), 'programme.setup_entered', null, 'Trading Grid', 'ASHBY', 'API', { programme: 'Drop-ship', by: 'Priya Raman', values: [
+    { field: 'Returns contact', value: 'returns@ashby.example' }, { field: 'Return-to-vendor address', value: 'Kinross Groveport' }, { field: 'Ship methods', value: 'Ground, Two-day' },
+    { field: 'Carrier account', value: 'Northfield’s carrier account' }, { field: 'Labels', value: 'Printed by Kinross' }] });
+  ev(L, day('2026-10-12', '09:00'), 'catalogue.attribute_compliance', null, 'Trading Grid', 'ASHBY', 'API', { programme: 'Drop-ship', sku: 'ASH-MUG-12', requirements: 'Northfield Drop-ship attribute requirements', compliance_pct: 100 });
+  for (const [hm, route, test] of [['10:00', 'Pipe17 · API', 'Drop-ship order'], ['10:20', 'Pipe17 · API', 'Fulfilment, one tracking number per package'], ['10:40', 'Pipe17 · API', 'Inventory'], ['11:00', 'Pipe17 · API', 'Customer cancellation before pick'],
+    ['11:20', 'Trading Grid · EDI 940', 'Warehouse shipping order'], ['11:40', 'Trading Grid · EDI 945', 'Warehouse shipping advice with SSCC per carton and tracking']])
+    ev(L, day('2026-10-13', hm), 'programme.test', null, 'Trading Grid', 'KINROSS', route.endsWith('API') ? 'API' : route.slice(-7), { programme: 'Drop-ship', suite: '3PL tests at Kinross Groveport', route, test, result: 'Passed' });
+  for (const [hm, set, test] of [['13:00', 'EDI 850', 'Purchase order to a test sales order in the Supplier ERP'], ['13:20', 'EDI 855', 'Order acknowledgment inside 24 hours'], ['13:40', 'EDI 856', 'Ship notice with tracking'],
+    ['14:00', 'EDI 846', 'Inventory advice: ASH-MUG-12, 108 cases available at Kinross Groveport (Kinross’s 12:00 reading)'], ['14:20', 'EDI 870', 'Order status with a reason code']])
+    ev(L, day('2026-10-13', hm), 'programme.test', null, 'Trading Grid', 'NORTHFIELD', set, { programme: 'Drop-ship', suite: 'Northfield tests', route: `Trading Grid · ${set}`, test, result: 'Passed' });
+  ev(L, day('2026-10-14', '11:00'), 'programme.submitted', null, 'Trading Grid', 'ASHBY', 'API', { programme: 'Drop-ship', by: 'Priya Raman', to: 'Northfield Retailer' });
   ev(L, day('2026-10-15', '10:00'), 'programme.approved', null, 'Northfield supplier programme', 'NORTHFIELD', 'API', { programme: 'Drop-ship', approved_by: 'Jordan Ellis' });
-  ev(L, day('2026-10-15', '16:00'), 'programme.activated', null, 'Northfield supplier programme', 'NORTHFIELD', 'API', { programme: 'Drop-ship', activated_by: 'Priya Raman' });
+  ev(L, day('2026-10-15', '16:00'), 'programme.activated', null, 'Northfield supplier programme', 'NORTHFIELD', 'API', { programme: 'Drop-ship', activated_by: 'Jordan Ellis' }); // owner decision, 26 November 2026
 
   // ---------- Weeks 4 and 5: store activity to a refill order (P9) ----------
   {

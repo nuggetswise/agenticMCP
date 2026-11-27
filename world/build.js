@@ -30,11 +30,11 @@ const PRIYA = 'Priya Raman', JORDAN = 'Jordan Ellis', BOTH = 'Priya Raman, then 
 // 24 November 2026 (rebuild plan Step 4, Bucket 4): P27 opens at 09:00 ET on Wednesday 25 November, after P14, with Ashby's
 // unpaid Northfield invoices already read as clean or not (Kanmon agreement KN-1).
 // P24 merges into P8 (decided 23 November): P8 opens at 17:30 ET on 9 December, the moment P24 used, and P24's row retires.
-// 26 November 2026 (round plan): P24 is its own page again, at P8's moment, Northfield only. P4 opens at 10:00 ET on
-// 27 September, with Jordan's Wholesale invitation, where its records sit (owner decision, 26 November). P15 is named "Rule changes and their cost".
+// 26 November 2026 (round plan): P24 is its own page again, at P8's moment, Northfield only. P4 opens at 10:30 ET on
+// 27 September, after Jordan's 10:00 invitation and before the 11:30 item check, so P4 precedes P2 (owner decision, 26 November). P15 is named "Rule changes and their cost".
 export const CALENDAR = () => [
   { id: 'P2', stage: STAGE.req, week: 3, moment: 'Drop-ship and warehouse readiness', seen_by: PRIYA, prototype: 'P2 Programme Readiness', as_of: '2026-10-12T13:00:00.000Z', anchor: 'Drop-ship programme' },
-  { id: 'P4', stage: STAGE.req, week: 1, moment: 'Marketplace supplier approved and activated for Wholesale, and its first Wholesale order', seen_by: 'Jordan Ellis, then Priya Raman', prototype: 'P4 Marketplace to Wholesale', as_of: '2026-09-27T14:00:00.000Z', anchor: 'Wholesale programme' },
+  { id: 'P4', stage: STAGE.req, week: 1, moment: 'Marketplace supplier approved and activated for Wholesale, and its first Wholesale order', seen_by: 'Jordan Ellis, then Priya Raman', prototype: 'P4 Marketplace to Wholesale', as_of: '2026-09-27T14:30:00.000Z', anchor: 'Wholesale programme' },
   { id: 'P21', stage: STAGE.req, week: 8, moment: 'Each company sets its own rules and sees the effect of a change before it applies', seen_by: BOTH, prototype: 'P21 Admin and rules', as_of: '2026-11-17T16:00:00.000Z', anchor: "Both companies' rules" },
   { id: 'P15', stage: STAGE.req, week: 14, moment: 'A draft rule replayed against the quarter before publishing', seen_by: JORDAN, prototype: 'P15 Rule changes and their cost', as_of: '2026-12-28T16:00:00.000Z', anchor: 'NFD-1' },
   { id: 'P23', stage: STAGE.ful, week: 6, moment: 'Northfield changes an order twice before it ships; order change 3 arrives', seen_by: PRIYA, prototype: 'P23 Order change before shipment', as_of: '2026-11-02T20:30:00.000Z', anchor: 'NR-450118' },
@@ -105,10 +105,10 @@ function derive(files, events) {
   const idCount = new Map(); const byCtl = new Map(); const byRef = new Map();
   for (const d of docs) {
     d.sender = ref.partyByIsa[d.isa_sender].id; d.receiver = ref.partyByIsa[d.isa_receiver].id;
-    const others = [d.sender, d.receiver].filter((x) => x !== 'NORTHFIELD' && x !== 'KINROSS' && x !== 'LAKELINE');
-    d.partner = [d.sender, d.receiver].includes('KINROSS') ? 'KINROSS' : [d.sender, d.receiver].includes('LAKELINE') ? 'LAKELINE' : 'NORTHFIELD'; d.supplier = others[0] || 'ASHBY';
+    const others = [d.sender, d.receiver].filter((x) => x !== 'NORTHFIELD' && x !== 'KINROSS' && x !== 'LAKELINE' && x !== 'MARKETPLACE');
+    d.partner = [d.sender, d.receiver].includes('MARKETPLACE') ? 'MARKETPLACE' : [d.sender, d.receiver].includes('KINROSS') ? 'KINROSS' : [d.sender, d.receiver].includes('LAKELINE') ? 'LAKELINE' : 'NORTHFIELD'; d.supplier = others[0] || 'ASHBY';
     // A 997 has no reference of its own in X12: it is named by its sender and interchange control number.
-    if (d.type === '997') d.ref = `FA-${d.sender === 'NORTHFIELD' ? (d.receiver === 'ASHBY' ? 'N' : `N${d.receiver.slice(3)}-`) : d.sender === 'ASHBY' ? (d.receiver === 'KINROSS' ? 'AK' : d.receiver === 'LAKELINE' ? 'AL' : 'A') : d.sender === 'KINROSS' ? 'K' : d.sender === 'LAKELINE' ? 'L' : `S${d.sender.slice(3)}-`}${d.isa_ctl > 600000000 ? `S${d.isa_ctl - 600000000}` : d.isa_ctl > 500000000 ? d.isa_ctl - 500000000 : `H${d.isa_ctl}`}`;
+    if (d.type === '997') d.ref = `FA-${d.sender === 'NORTHFIELD' ? (d.receiver === 'ASHBY' ? 'N' : `N${d.receiver.slice(3)}-`) : d.sender === 'ASHBY' ? (d.receiver === 'KINROSS' ? 'AK' : d.receiver === 'LAKELINE' ? 'AL' : d.receiver === 'MARKETPLACE' ? 'AM' : 'A') : d.sender === 'MARKETPLACE' ? 'M' : d.sender === 'KINROSS' ? 'K' : d.sender === 'LAKELINE' ? 'L' : `S${d.sender.slice(3)}-`}${d.isa_ctl > 600000000 ? `S${d.isa_ctl - 600000000}` : d.isa_ctl > 500000000 ? d.isa_ctl - 500000000 : `H${d.isa_ctl}`}`;
     const base = `${d.type}:${d.ref}`; const n = (idCount.get(base) || 0) + 1; idCount.set(base, n); d.doc_id = n === 1 ? base : `${base}#${n}`;
     byCtl.set(`${d.sender}>${d.receiver}:${d.type}:${d.gs_ctl}`, d);
     if (d.type !== '997' && d.type !== '824') (byRef.get(`${d.type}:${d.ref}:${d.sender}`) || byRef.set(`${d.type}:${d.ref}:${d.sender}`, []).get(`${d.type}:${d.ref}:${d.sender}`)).push(d);
@@ -170,8 +170,8 @@ function derive(files, events) {
     T.documents.push({ doc_id: d.doc_id, reference: d.ref, po: d.po || null, doc_type: d.type, name: ref.docNames[d.type], sender_id: d.sender, receiver_id: d.receiver, supplier_id: d.supplier, partner_id: d.partner, sent_at: d.at, isa_ctl: d.isa_ctl, gs_ctl: d.gs_ctl, st_ctl: d.st_ctl, status: d.status, answers_doc_id: d.answers, test: d.test ? 1 : 0, file: d.source, body, raw: d.raw });
     if (d.rejected || d.test) continue;
     if (d.type === '850') {
-      const stream = d.programme === 'STORE' ? 'store' : d.programme === 'DSD' ? 'buyer' : /^NR-\d{5}$/.test(d.po) ? 'replenishment' : 'buyer';
-      const o = { po: d.po, supplier_id: d.supplier, retailer_id: 'NORTHFIELD', programme: { WHSL: 'Wholesale', STORE: 'Wholesale, store order', DSD: 'Direct store delivery' }[d.programme] || d.programme, stream, ship_to: loc(d.parties.ST.gln), received_at: d.at, requested_delivery: d.requested_delivery, order_value: Math.round(d.lines.reduce((a, l) => a + l.qty * l.price, 0) * 100) / 100, accepted_value: null };
+      const stream = d.partner === 'MARKETPLACE' ? 'marketplace' : d.programme === 'STORE' ? 'store' : d.programme === 'DSD' ? 'buyer' : /^NR-\d{5}$/.test(d.po) ? 'replenishment' : 'buyer';
+      const o = { po: d.po, supplier_id: d.supplier, retailer_id: d.partner === 'MARKETPLACE' ? 'MARKETPLACE' : 'NORTHFIELD', programme: { WHSL: 'Wholesale', STORE: 'Wholesale, store order', DSD: 'Direct store delivery' }[d.programme] || d.programme, stream, ship_to: loc(d.parties.ST.gln), received_at: d.at, requested_delivery: d.requested_delivery, order_value: Math.round(d.lines.reduce((a, l) => a + l.qty * l.price, 0) * 100) / 100, accepted_value: null };
       order.set(d.po, o); T.orders.push(o);
       for (const l of d.lines) { const r = { po: d.po, line: l.line, sku: l.sku, northfield_item: l.nf_item || null, qty_original: l.qty, qty_ordered: l.qty, qty_accepted: null, price: l.price, uom: l.uom, delivery_date: d.requested_delivery, price_original: l.price }; line.set(lineKey(d.po, l.line), r); T.order_lines.push(r); }
     } else if (d.type === '860') {

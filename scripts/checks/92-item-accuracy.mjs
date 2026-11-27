@@ -21,7 +21,7 @@ export default function ({ db, ash, nf, ok, eq, none, n }) {
   none('p25.catalogue_upcs_valid', "SELECT item_number FROM catalogue_records WHERE length(item_number) <> 12 OR substr(item_number, 1, 6) <> '614141'");
   eq('p25.catalogue_upcs_check_digit', recs.filter((r) => !gs1Valid(r.item_number)).map((r) => r.item_number), []);
   none('p25.catalogue_upc_is_the_each_level', "SELECT r.sku FROM catalogue_records r WHERE NOT EXISTS (SELECT 1 FROM packaging_levels p WHERE p.sku = r.sku AND p.level = 'Each' AND p.gtin = '00' || r.item_number)");
-  eq('p25.shirt_catalogue_accepted', db.prepare("SELECT sku || ' ' || status || ' v' || item_version r FROM item_setup_messages WHERE message = 'CAT-ASH-2027-01' ORDER BY sku").all().map((r) => r.r), ['ASH-SHT-L Accepted v1', 'ASH-SHT-M Accepted v1']);
+  eq('p25.shirt_catalogue_accepted', db.prepare("SELECT sku || ' ' || status || ' v' || item_version r FROM item_setup_messages WHERE message = 'CAT-ASH-2027-01' ORDER BY sku").all().map((r) => r.r), ['ASH-NAP-4 Accepted v1', 'ASH-SHT-L Accepted v1', 'ASH-SHT-M Accepted v1', 'ASH-TRL-09 Accepted v1']); // the trail runner and napkin join (26 November 2026)
   eq('p25.x_large_never_published', [n("SELECT count(*) n FROM catalogue_records WHERE item_number = '614141000210'"), n("SELECT count(*) n FROM items WHERE gtin LIKE '%000217'"), n("SELECT count(*) n FROM supplier_item_records WHERE sku = 'ASH-SHT-XL'")], [0, 0, 1]);
 
   // The hold: three lines, the check each failed, the ordered item, one owner and where to fix it.

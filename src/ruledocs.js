@@ -148,10 +148,9 @@ export function cleanInvoices(db, asOf = storyClock(), { list = false } = {}) {
     note: 'Northfield’s payables and budget decisions are Northfield’s; this reads Ashby’s own invoices and the documents Northfield sent Ashby.' };
 }
 
-/** P20: a promotion deduction Northfield took on a remittance, read the same on both sides: the deal it names (Northfield's
+/** P20: a promotion deduction Northfield took on a remittance, read the same on both sides: the deal it names (Ashby's
  *  promotion announcement, 889), the claim, and the check of the claim against the deal, the store activity reports (852),
- *  the ship notices (856) and the invoice (810). Ashby's side names the check as Vividly's match (Ashby's partner, synthetic
- *  in this demo); Northfield's side reads it as the evidence Ashby's dispute carries. With no reference: every promotion
+ *  the ship notices (856) and the invoice (810). Both sides read the check as Trading Grid's promotion rules (26 November 2026; the Vividly path is retired). With no reference: every promotion
  *  deduction on the remittance. A name such as 2701-04 reads as PD-2701-04. */
 export function promotionDeduction(db, ref, viewer = 'ashby', asOf = storyClock()) {
   const T = asOf.toISOString(); const ITEM = (sku) => db.prepare('SELECT description FROM items WHERE sku = ?').get(sku)?.description || sku;
@@ -159,7 +158,7 @@ export function promotionDeduction(db, ref, viewer = 'ashby', asOf = storyClock(
   const view = (r) => ({ deduction: r.deduction_ref, remittance: r.payment, invoice: r.invoice, item: ITEM(r.sku), kind: r.kind,
     claim: { deal: r.claimed_deal, from: r.claim_from, to: r.claim_to, quantity: r.claimed_qty, unit: r.claimed_uom === 'EA' ? 'each' : 'cases', rate: r.claimed_rate, withheld: money(r.claimed_amount) },
     deal_announced: deal(r.claimed_deal),
-    [viewer === 'ashby' ? 'vividly_match' : 'deal_check']: { result: r.decision === 'Matched' ? 'Supported by the deal' : 'Not supported by the deal', why: r.reason, agreed_rate: r.agreed_rate, quantity_from_records: r.recomputed_qty, supported: money(r.authorised_amount), not_supported: money(r.unauthorised_amount), records: J(r.records) || [] } });
+    promotion_check: { result: r.decision === 'Matched' ? 'Supported by the deal' : 'Not supported by the deal', why: r.reason, agreed_rate: r.agreed_rate, quantity_from_records: r.recomputed_qty, supported: money(r.authorised_amount), not_supported: money(r.unauthorised_amount), records: J(r.records) || [] } });
   const rows = db.prepare("SELECT * FROM deal_settlements WHERE supplier_id = 'ASHBY' AND paid_at <= ? ORDER BY deduction_ref").all(T);
   if (!rows.length) return { found: false, message: `No promotion deduction on a remittance at ${fmtET(asOf)}` };
   if (ref) { const m = String(ref).match(/(?:PD-)?(\d{4}-\d{2})/); const id = m ? `PD-${m[1]}` : String(ref); const r = rows.find((x) => x.deduction_ref === id);

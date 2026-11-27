@@ -26,7 +26,7 @@ const SEG = {
   TD5: ['ID 1 2', 'ID 1 2', 'AN 2 80'],
   PRF: ['AN 1 22!'],
   MAN: ['ID 1 2!', 'AN 1 48!'],
-  LIN: ['AN 1 20', 'ID 2 2!', 'AN 1 48!', ...pairs(3)],
+  LIN: ['AN 1 20', 'ID 2 2!', 'AN 1 48!', ...pairs(4)], // a fifth pair: the 832's NRF size code (26 November 2026)
   SN1: ['AN 1 20', 'R 1 10!', 'ID 2 2!', 'R 1 15', 'R 1 15', 'ID 2 2', 'AN 1 20', 'ID 2 2'],
   BIG: ['DT 8 8!', 'AN 1 22!', 'DT 8 8', 'AN 1 22'],
   ITD: ['ID 2 2', 'ID 1 2', 'R 1 6', 'DT 8 8', 'N 1 3', 'DT 8 8', 'N 1 3'],

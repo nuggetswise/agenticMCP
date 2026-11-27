@@ -96,6 +96,66 @@
    "links": []
   },
   {
+   "id": "NF-12.1",
+   "owner": "Northfield",
+   "statement": "A Drop-ship supplier names its fulfilment origins, returns contact, return-to-vendor address, ship methods, carrier account and who prints labels before approval",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-12.2",
+   "owner": "Northfield",
+   "statement": "Acknowledge a Drop-ship order within 24 hours",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-12.3",
+   "owner": "Northfield",
+   "statement": "Every Drop-ship ship notice carries the parcel tracking number",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-12.4",
+   "owner": "Northfield",
+   "statement": "Send inventory advice for Drop-ship items daily",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-12.5",
+   "owner": "Northfield",
+   "statement": "Report a supplier cancellation on an order status with a reason code",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
+   "id": "NF-12.6",
+   "owner": "Northfield",
+   "statement": "Confirm a Drop-ship shipment within 2 business days of the order",
+   "implements": [],
+   "charge": "",
+   "basis": "Invented",
+   "source": "",
+   "links": []
+  },
+  {
    "id": "NF-1.1",
    "owner": "Northfield",
    "statement": "The current PO revision is the commitment; a change counts only on an order change",

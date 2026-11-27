@@ -1178,7 +1178,7 @@
    "get": {
     "operationId": "promotion_deduction",
     "summary": "Promotion deductions and their deals",
-    "description": "A promotion deduction Northfield took on its remittance (for example 2701-04 or PD-2701-04): the deal it names on Northfield’s promotion announcement (889), the claim (period, quantity, rate, amount withheld) and Vividly’s match of the claim to the deal, the store activity reports, the ship notices and the invoice: supported or not, why, and the supported and unsupported amounts. Vividly is Ashby’s partner; its match is synthetic in this demo. Without a deduction: every promotion deduction on the remittance.",
+    "description": "A promotion deduction Northfield took on its remittance (for example 2701-04 or PD-2701-04): the deal it names on Ashby’s promotion announcement (889), the claim (period, quantity, rate, amount withheld) and Trading Grid’s promotion rules on the claim against the deal, the store activity reports, the ship notices and the invoice: supported or not, why, and the supported and unsupported amounts. Without a deduction: every promotion deduction on the remittance.",
     "tags": [
      "Deduction triage"
     ],

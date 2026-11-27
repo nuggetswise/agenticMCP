@@ -23,6 +23,8 @@ export const QUARTER = { start: '2026-09-27', end: '2026-12-26', weeks: 13 };
 export const parties = [
   { id: 'NORTHFIELD', name: 'Northfield Retailer', kind: 'Retailer', gln: '0614141000050', isa: 'NORTHFIELD' },
   { id: 'ASHBY', name: 'Ashby Supplier', kind: 'Supplier', gln: '0614141002085', isa: 'ASHBYSUP' },
+  // P4 (round plan, 26 November 2026, EDI first): Northfield Marketplace trades with Ashby on its own interchange.
+  { id: 'MARKETPLACE', name: 'Northfield Marketplace', kind: 'Marketplace platform', gln: gln(3950), isa: 'NFMARKET' },
   { id: 'KINROSS', name: 'Kinross Logistics', kind: '3PL warehouse', gln: '0614141003006', isa: 'KINROSS' },
   { id: 'LAKELINE', name: 'Lakeline Freight', kind: 'Carrier', gln: gln(3900), isa: 'LAKELINE' },
   { id: 'KANMON', name: 'Kanmon', kind: 'Lender', gln: null, isa: null }, // P27: funds clean invoices by API; no EDI interchange // T1.15: interchange id so it exchanges 204, 214 and 210 with Ashby
@@ -40,6 +42,7 @@ export const people = [
 ];
 
 export const locations = [
+  { id: 'MKT-CUST', party_id: 'MARKETPLACE', name: 'Marketplace customer', gln: gln(3951), active: 1, note: 'Consumer address held by the marketplace' },
   { id: 'DC2', party_id: 'NORTHFIELD', name: 'Northfield DC 2', gln: '0614141002061', active: 1, note: 'Dock window 06:00 to 14:00' },
   { id: 'DC4', party_id: 'NORTHFIELD', name: 'Northfield DC 4', gln: '0614141002115', active: 1, note: 'Dock window 07:00 to 15:00' },
   { id: 'STORE114', party_id: 'NORTHFIELD', name: 'Northfield Store 114', gln: '0614141002078', active: 1, note: null },
@@ -187,6 +190,13 @@ export const rules = [
   R('NF-6.1', 'ticketing', null, 'Every selling unit carries a scannable price ticket showing the retail on the order; a carton received without one is re-ticketed at the DC', { code: 'TK01', charge: '$100 per PO plus $1 per carton re-ticketed', basis: 'adapted', pub: [pub('gordmans', 'Merchandise without a scannable UPC is charged non-compliant expense; ticket retail matches the PO retail (pp. 21 to 22)'), pub('dxl', 'Missing price tickets and hang tags are inspection failures (p. 5)')] }),
   R('NF-6.2', 'packing', null, 'A carton holds one PO and one case pack, weighs at most 60 lb and is at most 25.5 in high; a carton outside this is reworked at the DC', { code: 'PK01', charge: '$100 per PO plus $1 per carton reworked', basis: 'adapted', pub: [pub('gordmans', 'Cartons at most 60 lb and 25.5 in high; one PO and one case pack per carton (p. 6)'), pub('dxl', 'Carton non-compliance results in a rework charge (p. 7)')] }),
   R('NF-6.3', 'pallets', null, 'Full loads ship on 40 x 48 in four-way pallets, stretch-wrapped', { code: 'PL01', charge: '$100 per load', basis: 'adapted', pub: [pub('gordmans', 'Loads on 40 x 48 four-way pallets, shrink-wrapped (p. 37)'), pub('dxl', 'Pallet violations are charged back, minimum $100 (p. 31)')] }),
+  // P2 (round plan, 26 November 2026): Northfield's Drop-ship requirements, basis invented (no public source opened).
+  R('NF-12.1', 'drop-ship setup', null, 'A Drop-ship supplier names its fulfilment origins, returns contact, return-to-vendor address, ship methods, carrier account and who prints labels before approval'),
+  R('NF-12.2', 'drop-ship acknowledgment', '855', 'Acknowledge a Drop-ship order within 24 hours', { window: 24 }),
+  R('NF-12.3', 'drop-ship ship notice', '856', 'Every Drop-ship ship notice carries the parcel tracking number'),
+  R('NF-12.4', 'drop-ship inventory', '846', 'Send inventory advice for Drop-ship items daily'),
+  R('NF-12.5', 'drop-ship order status', '870', 'Report a supplier cancellation on an order status with a reason code'),
+  R('NF-12.6', 'drop-ship shipment', '856', 'Confirm a Drop-ship shipment within 2 business days of the order'),
   R('NF-11.1', 'rules', null, "A draft rule is published to suppliers only after it is replayed against the quarter's exchanged documents"),
   ...ASHBY_RULES,
 ];

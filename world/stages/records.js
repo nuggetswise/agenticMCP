@@ -55,6 +55,8 @@ function generate(L, { W, buyerShipments }) {
     const po = P5.po; const crushed = P5.carton.sscc; const repl = REPLACEMENT_SSCC(W);
     ev(et('2026-12-08', '17:21'), 'wms.damage_scan', po, ...KIN, { shipment: 'SHP-460207', sscc: crushed, line: 1, sku: P5.carton.sku, condition: 'Crushed', contents: 'Damaged', state: 'Cannot be loaded',
       cartons_loaded: 659, cartons_expected: 660, by_sscc: true, note: `Carton ${crushed} crushed at staging, contents damaged; the order ships 659 of 660 unless a replacement case is loaded` });
+    // Round plan, 26 November 2026 (EDI first): the damage reaches Ashby as Kinross's 947 at the same minute.
+    L.doc({ batch: 2, type: '947', from: 'KINROSS', to: 'ASHBY', at: et('2026-12-08', '17:21'), po, ref: `WA-GRV-${po.replace(/^NR-/, '')}`, site_name: LOC['KIN-GRV'].name, site_gln: LOC['KIN-GRV'].gln, client_name: PARTY.ASHBY.name, client_gln: PARTY.ASHBY.gln, items: [{ sku: P5.carton.sku, cases: 1, sscc: crushed }] });
     ev(et('2026-12-08', '17:46'), 'wms.load_scan', po, ...KIN, { shipment: 'SHP-460207', cartons_loaded: 660, cartons_expected: 660, by_sscc: true,
       replacement: { sscc: repl, replaces: crushed, sku: P5.carton.sku, from: 'Cases Kinross holds back for damage replacement at Groveport; not counted in the 610 free' },
       bol: 'BOL-91407', seal: 'SL-4471026', seals_in_minutes: 6 });

@@ -17,7 +17,7 @@ export const NOT_AVAILABLE_NF = 'Not available to Northfield';
 const J = (s) => (s ? JSON.parse(s) : {});
 const H = 3600000;
 /** Document sets Northfield is a party to. The 940 and 945 pass between Ashby and its warehouse only. */
-export const SHARED_SETS = ['850', '855', '856', '810', '860', '865', '861', '824', '997', '820', '852'];
+export const SHARED_SETS = ['850', '855', '856', '810', '860', '865', '861', '824', '997', '820', '852', '846']; // 846: Ashby's inventory advice to Northfield (26 November 2026)
 /** Collect freight (NF-3.3): Northfield routes the load, so the routing request (753) and routing instructions (754) it
  * exchanged with the supplier, and Lakeline's shipment status (214) on a load Northfield routed, are Northfield's records
  * too (owner decision of 20 November 2026). The supplier's own carrier exchanges (204, 210, and 214 on a prepaid load)

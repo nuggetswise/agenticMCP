@@ -119,6 +119,15 @@ const docs = {
       return { ref: b[3], po: null, report_type: b[2], parties, items: its };
     },
   },
+  // 947 (round plan, 26 November 2026, EDI first): Kinross's damage scan reaches Ashby as a warehouse inventory adjustment
+  // advice, one adjustment per damaged carton. Invented for this world: W1901 07 (damaged) and the carton's SSCC in N9 LS.
+  947: {
+    func: 'AW', name: 'Warehouse inventory adjustment advice',
+    body: (d) => [seg('W15', d8(d.at), d.ref), seg('N1', 'WH', clean(d.site_name), 'UL', d.site_gln), seg('N1', 'SE', clean(d.client_name), 'UL', d.client_gln),
+      ...d.items.flatMap((it, i) => [seg('LX', i + 1), seg('W19', '07', -it.cases, 'CA', '', 'VN', it.sku), seg('N9', 'LS', it.sscc), seg('N9', 'PO', d.po)])],
+    read: (S) => { const w = first(S, 'W15'); const its = []; for (const e of S) { if (e[0] === 'W19') its.push({ reason: e[1], cases: -Number(e[2]), sku: e[6] }); else if (e[0] === 'N9' && e[1] === 'LS' && its.length) its[its.length - 1].sscc = e[2]; }
+      const po = (S.find((e) => e[0] === 'N9' && e[1] === 'PO') || [])[2] || null; return { ref: w[2], po, parties: n1(S), items: its }; },
+  },
   870: {
     func: 'RS', name: 'Order status report',
     body: (d) => {
@@ -338,7 +347,7 @@ CREATE TABLE order_status (po TEXT NOT NULL REFERENCES orders(po), line INTEGER 
 
   // The 830 starts a flow (a plan answers no document) and names the 830 it replaces; the 846 is a periodic report,
   // like the 852, and names the previous 846 from the same site; the 870 reports on its 850.
-  origins: ['830', '846'],
+  origins: ['830', '846', '947'],
   prev(d, ctx) {
     if (d.type === '870') return [{ doc: ctx.latest(d.po, '850', d.at), kind: 'reports on' }];
     let c = linkCache.get(ctx.docs);
@@ -361,6 +370,9 @@ CREATE TABLE order_status (po TEXT NOT NULL REFERENCES orders(po), line INTEGER 
       "DELETE FROM document_links WHERE doc_id IN (SELECT doc_id FROM documents WHERE (doc_type = '846' AND sender_id = 'KINROSS') OR answers_doc_id IN (SELECT doc_id FROM documents WHERE doc_type = '846' AND sender_id = 'KINROSS')) OR prev_doc_id IN (SELECT doc_id FROM documents WHERE doc_type = '846' AND sender_id = 'KINROSS')",
       "DELETE FROM documents WHERE doc_type = '997' AND answers_doc_id IN (SELECT doc_id FROM documents WHERE doc_type = '846' AND sender_id = 'KINROSS')",
       "DELETE FROM documents WHERE doc_type = '846' AND sender_id = 'KINROSS'",
+      "DELETE FROM document_links WHERE doc_id IN (SELECT doc_id FROM documents WHERE doc_type = '947' OR answers_doc_id IN (SELECT doc_id FROM documents WHERE doc_type = '947'))",
+      "DELETE FROM documents WHERE doc_type = '997' AND answers_doc_id IN (SELECT doc_id FROM documents WHERE doc_type = '947')",
+      "DELETE FROM documents WHERE doc_type = '947'",
     ],
   },
 
@@ -373,10 +385,14 @@ CREATE TABLE order_status (po TEXT NOT NULL REFERENCES orders(po), line INTEGER 
       QTY: ['ID 2 2!', 'R 1 15', 'ID 2 2'],
       BSR: ['ID 1 2!', 'ID 2 2!', 'AN 1 30!', 'DT 8 8!'],
       ISR: ['ID 2 2!', 'DT 8 8'],
+      W15: ['DT 8 8!', 'AN 1 30!'],
+      N9: ['ID 2 3!', 'AN 1 30'],
+      W19: ['ID 2 2!', 'R 1 15!', 'ID 2 2!', 'AN 1 12', 'ID 2 2', 'AN 1 48'],
     },
     SET: {
       830: ['BFR!', ['N1+'], ['LIN!+', 'UIT', ['N1+'], 'FST+'], 'CTT'],
       846: ['BIA!', ['N1+'], ['LIN!+', ['QTY+', 'DTM+']], 'CTT'],
+      947: ['W15!', ['N1+'], ['LX!+', 'W19!', 'N9+']],
       870: ['BSR!', ['HL!+', 'PRF', ['N1+'], ['PO1+', ['ISR+', 'QTY+']]], 'CTT'],
     },
   },

@@ -173,7 +173,8 @@ export function explainRejection(db, reference) {
 /** EDI health for Ashby with Northfield over N days ending at a time. */
 export function health(db, days = 30, asOf = storyClock()) {
   const end = asOf.toISOString(), start = new Date(asOf.getTime() - days * 24 * H).toISOString();
-  const where = "supplier_id = ? AND partner_id = 'NORTHFIELD' AND test = 0 AND sent_at > ? AND sent_at <= ?";
+  // The inventory advice (846, from 26 November 2026) is a periodic report, not an order document: left out of EDI health.
+  const where = "supplier_id = ? AND partner_id = 'NORTHFIELD' AND test = 0 AND sent_at > ? AND sent_at <= ? AND doc_type <> '846' AND NOT (doc_type = '997' AND answers_doc_id IN (SELECT doc_id FROM documents WHERE doc_type = '846'))";
   const byType = db.prepare(`SELECT doc_type, name, count(*) n FROM documents WHERE ${where} GROUP BY doc_type, name ORDER BY n DESC`).all(COMPANY, start, end);
   const total = byType.reduce((a, r) => a + r.n, 0);
   const all = db.prepare(`SELECT e.cause, e.channel, d.reference, d.status dst, c.sent_at corrected_at FROM errors e JOIN documents d ON d.doc_id = e.doc_id LEFT JOIN documents c ON c.doc_id = e.corrected_by

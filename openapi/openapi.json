@@ -1291,7 +1291,7 @@
    "get": {
     "operationId": "store_shelves",
     "summary": "Store shelves and replenishment",
-    "description": "Every Northfield store’s latest week from the store activity reports Northfield sends Ashby (852): units sold, on hand, received, sell-through (Measured or Estimated) and weeks of supply, with what Ashby’s replenishment rules recommend for each store (a new order for an empty shelf, a transfer out of a store with too much stock, or nothing), the stores that need a new order, the stores that can spare stock, and Ashby’s available pairs. With a store: its weeks on record and its recommendation. Northfield decides every order and transfer.",
+    "description": "Every Northfield store’s latest week from the store activity reports Northfield sends Ashby (852): units sold, on hand, received, sell-through over the last 4 weeks and in the week against Ashby’s target of 40% to 80%, the share across all stores, and weeks of supply, with what Ashby’s replenishment rules recommend for each store (a new order for an empty shelf, a transfer out of a store with too much stock, or nothing), the stores that need a new order, the stores that can spare stock, and Ashby’s available pairs. With a store: its weeks on record and its recommendation. Northfield decides every order and transfer.",
     "tags": [
      "Sell-through review"
     ],

@@ -49,7 +49,7 @@ export function trail(db, { po: poIn, supplier, days = 30, asOf = storyClock() }
   }
   const s = findSupplier(db, supplier); if (!s) return { found: false, message: `No supplier ${supplier} trades with Northfield` };
   const from = new Date(asOf.getTime() - days * 24 * H).toISOString();
-  const where = `supplier_id = ? AND partner_id = 'NORTHFIELD' AND test = 0 AND sent_at > ? AND sent_at <= ? AND doc_type IN (${SHARED_SETS.map(() => '?').join(',')})`;
+  const where = `supplier_id = ? AND partner_id = 'NORTHFIELD' AND test = 0 AND sent_at > ? AND sent_at <= ? AND doc_type IN (${SHARED_SETS.map(() => '?').join(',')}) AND doc_type <> '846' AND NOT (doc_type = '997' AND answers_doc_id IN (SELECT doc_id FROM documents WHERE doc_type = '846'))`; // 846: as in EDI health
   const docs = db.prepare(`SELECT doc_type, count(*) n FROM documents WHERE ${where} GROUP BY doc_type ORDER BY n DESC`).all(s.id, from, T, ...SHARED_SETS);
   const all = db.prepare(`SELECT e.cause, e.channel, d.reference, d.status dst, c.sent_at corrected_at FROM errors e JOIN documents d ON d.doc_id = e.doc_id LEFT JOIN documents c ON c.doc_id = e.corrected_by WHERE d.supplier_id = ? AND d.partner_id = 'NORTHFIELD' AND d.test = 0 AND d.sent_at > ? AND d.sent_at <= ?`).all(s.id, from, T);
   const fails = all.filter((f) => !/^Held/.test(f.dst)); const open = (f) => !(f.corrected_at && f.corrected_at <= T);
@@ -84,7 +84,23 @@ export function scorecardNF(db, supplier, asOf = storyClock(), { lines = false, 
 /** Buyer purchase orders received after the closed history (29 March to 27 June 2026). */
 const HISTORY_END = '2026-06-28';
 const STAGE_NAMES = ['Ordered', 'Acknowledged', 'Shipped', 'Received', 'Invoiced'];
-export function openOrders(db, asOf = storyClock(), { period = null, supplier = null, list = false } = {}) {
+// Billed above received over a period the page chooses (round plan, 26 November): This quarter, Closed period (the closed
+// quarter of history, 29 March to 27 June) and All trading. Each invoice item billed above what the receiving advice records
+// on its order item, valued at the invoice price.
+export const BILLED_PERIODS = { this_quarter: { label: 'This quarter', from: '2026-09-27', to: '2026-12-26' }, closed_period: { label: 'Closed period', from: '2026-03-29', to: '2026-06-27' }, all_trading: { label: 'All trading', from: '2026-03-29', to: null } };
+export function billedAboveReceived(db, asOf = storyClock(), key = 'this_quarter', supplier = null) {
+  const P = BILLED_PERIODS[key] || BILLED_PERIODS.this_quarter; const T = asOf.toISOString(); const sup = supplier ? findSupplier(db, supplier) : null;
+  const inv = db.prepare(`SELECT i.invoice, i.po, i.sent_at, o.supplier_id FROM invoices i JOIN orders o ON o.po = i.po WHERE o.stream = 'buyer' AND i.sent_at <= ? AND i.status NOT LIKE 'Rejected%' AND i.status NOT LIKE '%replaced%' ${sup ? 'AND o.supplier_id = ?' : ''}`).all(...[T, ...(sup ? [sup.id] : [])])
+    .filter((i) => { const d = etDay(new Date(i.sent_at)); return d >= P.from && (!P.to || d <= P.to); });
+  const rcv = db.prepare('SELECT po, line, sum(qty) q FROM receipts WHERE received_at <= ? GROUP BY po, line').all(T); const got = new Map(rcv.map((r) => [`${r.po}|${r.line}`, r.q]));
+  const lines = db.prepare('SELECT invoice, po, line, qty, price FROM invoice_lines'); const byInv = new Map(); for (const l of lines.all()) (byInv.get(l.invoice) || byInv.set(l.invoice, []).get(l.invoice)).push(l);
+  const money = (n) => Math.round(n * 100) / 100; const out = [];
+  for (const i of inv) { let v = 0, items = 0; for (const l of byInv.get(i.invoice) || []) { const r = got.get(`${l.po}|${l.line}`); if (r == null) continue; const over = l.qty - r; if (over > 0) { v += over * l.price; items++; } }
+    if (v > 0) out.push({ supplier: supplierName(db, i.supplier_id), po: i.po, invoice: i.invoice, order_items: items, amount: money(v) }); }
+  return { period: P.label, from: P.from, to: P.to || etDay(asOf), invoices: out.length, value: money(out.reduce((t, x) => t + x.amount, 0)), basis: 'Invoice items billed above the quantity on the receiving advice, at the invoice price; items with no receiving advice yet are left out', list: out.sort((a, b) => b.amount - a.amount).slice(0, 40) };
+}
+
+export function openOrders(db, asOf = storyClock(), { period = null, supplier = null, list = false, billed_period = 'this_quarter' } = {}) {
   const T = asOf.toISOString(); const sup = supplier ? findSupplier(db, supplier) : null; if (supplier && !sup) return { found: false, message: `No supplier ${supplier}` };
   const orders = db.prepare(`SELECT po, supplier_id, order_value, accepted_value FROM orders WHERE stream = 'buyer' AND received_at >= ? AND received_at <= ? ${sup ? 'AND supplier_id = ?' : ''}`).all(...[HISTORY_END, T, ...(sup ? [sup.id] : [])]);
   const paid = new Set(db.prepare('SELECT DISTINCT po FROM remittance_items WHERE paid_at <= ?').all(T).map((r) => r.po));
@@ -109,6 +125,7 @@ export function openOrders(db, asOf = storyClock(), { period = null, supplier = 
     unfilled_at_acknowledgment: { orders: unf.length, value: sum(unf, (r) => r.unfilled_at_acknowledgment), basis: 'Ordered value less acknowledged value', list: unf.sort((a, b) => b.unfilled_at_acknowledgment - a.unfilled_at_acknowledgment).slice(0, 40).map(({ supplier, po, unfilled_at_acknowledgment: v }) => ({ supplier, po, unfilled: v })) },
     period_covered: { from: per.from, to: per.to, basis: per.basis, counts: 'Invoices on open orders with a due date in the period' },
     due_in_period: { invoices: due.length, orders: new Set(due.map((d) => d.po)).size, value: sum(due, (d) => d.amount), list: due },
+    billed_above_received: billedAboveReceived(db, asOf, billed_period, supplier),
     by_supplier: Object.values(bySup).sort((a, b) => b.open_value - a.open_value), ...(list || sup ? { open_order_list: rows.sort((a, b) => b.value - a.value).slice(0, 200) } : {}) };
 }
 

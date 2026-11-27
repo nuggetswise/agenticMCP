@@ -41,6 +41,8 @@ export const CARD_ACTIONS = {
   northfield: {
     send_application_advice: { write: 'send_application_advice', permission: 'send_application_advice', rule: 'NF-7.8', takes: 'document (an 810 or 856 Northfield received), optional messages per error code', does: 'Reject a document with an application advice (824)' },
     decide_charge: { write: 'decide_charge', permission: 'decide_charge', rule: 'NF-7.7', takes: 'case, charge, decision (Waived or Upheld), reason', does: 'Waive or uphold a disputed deduction' },
+    // P6 (round plan, 26 November): one card for a group of verified cases, listing each; one press records a decision on each.
+    decide_charges: { write: 'decide_charge', permission: 'decide_charge', rule: 'NF-7.7', takes: 'cases (DC-… list), decision (Waived or Upheld), optional charge and reason', does: 'Waive or uphold the disputed charge on a group of verified cases, one decision per case' },
     decide_chargeback: { write: 'decide_chargeback', permission: 'decide_chargeback', rule: 'NF-3.6', takes: 'po, decision (Apply or Waive)', does: 'Apply or waive a readiness chargeback' },
     draft_rule: { write: 'draft_rule', permission: 'draft_rule', rule: 'NF-11.1', takes: 'statement, optional check, value and charge, optional document and section', does: 'Draft a Northfield rule into Draft rules' },
     publish_rule: { write: 'publish_rule', permission: 'publish_rule', rule: 'NF-11.1', takes: 'draft (NFD-…)', does: 'Publish a draft rule to suppliers after its replay' },
@@ -290,6 +292,22 @@ function buildDecision(db, side, a, T) {
   return { ok: true, card: { record: c.case, po: c.po, to: `${c.supplier} (deduction case)`, args: { case: c.case, po: c.po, charge, decision, amount, reason, recommended: rec?.next_step || null },
     detail: { case: c.case, po: c.po, charge: chargeName(charge), charge_code: charge, amount, decision, reason, recommendation: rec, repayment_on_next_remittance: decision === 'Waived' } } };
 }
+function buildDecisions(db, side, a, T) {
+  const list = (Array.isArray(a.cases) ? a.cases : String(a.cases || a.record || '').split(/[,\s]+/)).map((x) => String(x).trim()).filter(Boolean);
+  if (!list.length) return { ok: false, message: 'Name the cases to decide.' };
+  const items = [], excluded = [];
+  for (const id of [...new Set(list.map((x) => x.toUpperCase()))]) {
+    const r = buildDecision(db, side, { case: id, charge: a.charge, decision: a.decision, reason: a.reason }, T);
+    if (!r.ok) { excluded.push({ case: id, reason: r.message }); continue; }
+    const rec = r.card.detail.recommendation; // documents not read: no verified basis, so the case stays out of a group decision
+    if (!rec || !rec.decision || rec.decision === 'Not reviewed') { excluded.push({ case: id, reason: 'Its documents were not read; decide it on its own' }); continue; }
+    items.push(r.card);
+  }
+  if (!items.length) return { ok: false, message: `None of the cases can be decided together: ${excluded.map((x) => `${x.case} (${x.reason})`).join('; ')}` };
+  const decision = items[0].args.decision; const total = Math.round(items.reduce((t, c) => t + c.args.amount, 0) * 100) / 100;
+  return { ok: true, card: { record: items.map((c) => c.record).join(', '), po: items[0].po, to: [...new Set(items.map((c) => c.to))].join(', '), args: { decision, items: items.map((c) => c.args) },
+    detail: { decision, cases: items.map((c) => ({ case: c.detail.case, po: c.detail.po, charge: c.detail.charge, amount: c.detail.amount, reason: c.detail.reason })), count: items.length, total, excluded, repayment_on_next_remittance: decision === 'Waived' } } };
+}
 function buildChargeback(db, side, a, T) {
   const po = D.normPo(String(a.po || a.record || '')); const miss = evsOf(db, po, 'carrier.pickup_missed', T).pop();
   if (!miss) return { ok: false, message: `Lakeline reports no missed pickup on ${po} at this moment, so there is no readiness chargeback to decide.` };
@@ -345,7 +363,7 @@ function buildDraftRule(db, side, a, T) {
 }
 const BUILD = { open_dispute: buildDispute, release_held_ship_notice: buildRelease, send_acknowledgment: (db, s, a, T) => buildDocument(db, s, a, T, '855'), answer_order_change: (db, s, a, T) => buildDocument(db, s, a, T, '865'),
   send_ship_notice: (db, s, a, T) => buildDocument(db, s, a, T, '856'), send_invoice: (db, s, a, T) => buildDocument(db, s, a, T, '810'), answer_application_advice: buildAnswerAdvice,
-  send_application_advice: buildAdvice, decide_charge: buildDecision, decide_chargeback: buildChargeback, publish_rule: buildPublish,
+  send_application_advice: buildAdvice, decide_charge: buildDecision, decide_charges: buildDecisions, decide_chargeback: buildChargeback, publish_rule: buildPublish,
   change_rule: buildChangeRule, add_rule: buildAddRule, draft_rule: buildDraftRule };
 
 /** Builds the card for one action on one side at one moment, or says plainly why there is none. */
@@ -377,6 +395,8 @@ export function checkAnswer(answer, { cards = [], results = [], outside = null, 
   const hay = raw.toLowerCase().replace(/\\[nrt]|\s+/g, ' ');
   const cardHay = cards.map(fieldsOf).join(' ').toLowerCase().replace(/\s+/g, ' ');
   const code = text.match(/\b(?:NF|AP|AM|KX)-\d+(?:\.\d+)?\b|\b[A-Z]{2}\d{2}\b(?!-)|\b\d[\d,]*\s*(?:CA|EA)\b|\b[a-z]+_[a-z_]+\b|\b(?:wms|carrier|erp|tg|case|rule)\.[a-z_]+\b/);
+  const party = text.match(/\b(Kinross|Lakeline)\b/); // round plan, 26 November: roles on screen
+  if (party) fail('role', `It names ${party[1]}. Call it ${party[1] === 'Kinross' ? '“Ashby’s 3PL warehouse”' : '“Northfield’s carrier”'} instead.`);
   if (code && !codes.includes(code[0])) fail('code', `It contains "${code[0]}". Write plain words: say whose rule it is, the charge by name, cases or each, and records by their reference and what they are; no codes or field names.`);
   if (/\*\*|^#+ |^\s*[-*] /m.test(text)) fail('markdown', 'It uses markdown. Write plain sentences.');
   // No date, weekday, clock time or year in an answer (Aviator card; rebuild plan Step 9): timing is said in relative words.
@@ -431,6 +451,7 @@ export function applyCard(db, card, by) {
       const doc = x12Doc(db, { type: '824', ref: a.ref, po: card.po, from: 'NORTHFIELD', to: a.supplier, T, answers: a.answers, body: a.body, name: 'Application advice' });
       appendDocument(db, doc); deriveRows(db, doc, a.body); return { document: doc.reference, event: ev('tg.sent', card.po, { document: doc.reference, set: '824', rejects: a.document, approved_by: by }) }; }
     case 'decide_charge': return { event: ev('case.decision', a.po, { case: a.case, charge: a.charge, amount: a.amount, decision: a.decision, decided_by: by, reason: a.reason, recommended_by: a.recommended ? 'Northfield’s evidence rules' : null }, 'Northfield deduction case') };
+    case 'decide_charges': { const events = a.items.map((x) => ev('case.decision', x.po, { case: x.case, charge: x.charge, amount: x.amount, decision: x.decision, decided_by: by, reason: x.reason, recommended_by: x.recommended ? 'Northfield’s evidence rules' : null, group: a.items.map((y) => y.case) }, 'Northfield deduction case')); return { event: events[0], events }; }
     case 'decide_chargeback': return a.decision === 'Apply'
       ? { case: a.case, event: ev('case.opened', a.po, { case: a.case, charge: 'RT01', amount: a.amount, deduction: null, opened_by: by, basis: `Lakeline reports the collect load not ready at the assigned pickup ${fmtET(a.assigned_pickup)}`, dispute_deadline: new Date(Date.parse(T) + 60 * 86400000).toISOString().slice(0, 10) }, 'Northfield deduction case') }
       : { event: ev('compliance.chargeback_waived', a.po, { charge: 'RT01', amount: a.amount, waived_by: by }, 'Northfield compliance record') };
@@ -453,6 +474,7 @@ export function rereadOf(card, result) {
     case 'send_acknowledgment': case 'answer_order_change': case 'send_ship_notice': case 'send_invoice': case 'answer_application_advice': return ['get_document', { reference: result.document }];
     case 'send_application_advice': return ['get_document', { reference: result.document }];
     case 'decide_charge': return ['review_deduction_case', { case: a.case, as_of: T }];
+    case 'decide_charges': return ['list_deduction_cases', { as_of: T }];
     case 'decide_chargeback': return a.decision === 'Apply' ? ['review_deduction_case', { case: a.case, as_of: T }] : ['supplier_document_trail', { po: a.po, as_of: T }];
     case 'publish_rule': return ['list_draft_rules', {}];
     case 'change_rule': case 'add_rule': return ['list_rules_by_source', {}];

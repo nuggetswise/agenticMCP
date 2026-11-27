@@ -591,7 +591,7 @@ app.get('/p', (req, res) => res.set('X-Robots-Tag', 'noindex').json({ pages: Obj
 
 // Labels for record kinds in the list of records an answer read (wms.load_scan reads Kinross load scan). Labels only:
 // the server never rewrites the model's answer.
-const KIND_WORDS = { wms: 'Kinross', carrier: 'Lakeline', erp: 'Supplier ERP', tg: 'Trading Grid', case: 'deduction case', rule: 'rule' };
+const KIND_WORDS = { wms: 'Ashby’s 3PL warehouse', carrier: 'Northfield’s carrier', erp: 'Supplier ERP', tg: 'Trading Grid', case: 'deduction case', rule: 'rule' };
 const kindLabel = (ref) => String(ref).replace(/^([a-z]+)\.([a-z_]+)$/, (m, k, f) => `${KIND_WORDS[k] || k} ${f.replace(/_/g, ' ')}`);
 /** The records an answer read, by their business names. `read`: the records the answer names, then the record the
  *  question was about (a reference in the question, or the record on screen the server read first). `also`: every other
@@ -691,6 +691,8 @@ async function pageAviator(page, req, res) {
   if (!m.ok) { res.set('Retry-After', String(m.retry_after)); return refuse(429, 'rate_limited', { retry_after: m.retry_after }); }
   const question = String(b.question || '').trim(); if (!question) return refuse(400, 'empty_question');
   if (question.length > MAX_QUESTION) return refuse(400, 'question_too_long', { max: MAX_QUESTION });
+  // P8's period switch (round plan, 26 November): the page sends the period it shows; billed above received reads that period.
+  const BILLED = { 'This quarter': 'this_quarter', 'Closed period': 'closed_period', 'All trading': 'all_trading' }; const billedPeriod = BILLED[String(b.period || '')] || null;
   const turns = Array.isArray(b.history) ? b.history : []; if (turns.length > MAX_TURNS) return refuse(400, 'too_many_turns', { max: MAX_TURNS });
   // An area page (the overview) scopes Aviator to one area of the story calendar, at that area's latest moment.
   const area = page.areas ? (Object.keys(AREAS).includes(String(b.area || '')) ? String(b.area) : null) : null;
@@ -717,7 +719,7 @@ async function pageAviator(page, req, res) {
   const carried = outside ? null : Cards.carriedMessage(question, sideName);
   const actions = Object.keys(Cards.CARD_ACTIONS[sideName]);
   const PROPOSE = { name: 'propose_action', description: `Raise an action card for ${SD.person} when asked to do something Trading Grid does. The server builds the card from ${SD.company}’s rules and the records and returns it as data; nothing happens until ${SD.person} presses Approve. Explain the card from its fields. Actions: ${actions.map((k) => `${k} (${Cards.CARD_ACTIONS[sideName][k].does}; takes ${Cards.CARD_ACTIONS[sideName][k].takes})`).join('; ')}.`,
-    input: { action: z.enum(actions), lines: z.array(z.number()).optional().describe('Lines the person named, when they named any'), note: z.string().optional().describe('The person’s own words to the other company, when the record carries them: an application advice’s message, or a dispute’s note'), case: z.string().optional(), charge: z.string().optional(), decision: z.string().optional().describe('Waived or Upheld; Apply or Waive'), reason: z.string().optional(), po: z.string().optional(), document: z.string().optional(), draft: z.string().optional(), advice: z.string().optional(),
+    input: { action: z.enum(actions), lines: z.array(z.number()).optional().describe('Lines the person named, when they named any'), note: z.string().optional().describe('The person’s own words to the other company, when the record carries them: an application advice’s message, or a dispute’s note'), case: z.string().optional(), cases: z.array(z.string()).optional().describe('With decide_charges: every case in the group, for one card listing them all; use it whenever more than one case is decided together'), charge: z.string().optional(), decision: z.string().optional().describe('Waived or Upheld; Apply or Waive'), reason: z.string().optional(), po: z.string().optional(), document: z.string().optional(), draft: z.string().optional(), advice: z.string().optional(),
       messages: z.array(z.object({ code: z.string(), message: z.string() })).optional().describe('With send_application_advice: a plain message per error code, at most 60 characters'),
       rule: z.string().optional().describe('With change_rule: the Ashby manual rule to change'), params: z.record(z.number()).optional().describe('With change_rule: the new parameter values, as the rule holds them'),
       statement: z.string().optional().describe('With add_rule or draft_rule: what the rule requires, in the person’s words or as the document states it'), section: z.string().optional().describe('With add_rule or draft_rule: the section of the rule document named in document'),
@@ -755,10 +757,11 @@ async function pageAviator(page, req, res) {
     runCards.forEach((c) => session.cards.delete(c.id)); runCards = []; lastRefusal = null;
     const callTool = (name, args) => { if (name === 'propose_action') { const r = proposeAction(args); results.push(r); return r; } const t = tools.find((x) => x.name === name); const a = { ...(args || {}) };
       if (t && t.input && 'as_of' in t.input && (!a.as_of || !asOfIso(a.as_of) || new Date(asOfIso(a.as_of)) > at)) a.as_of = asOf;
+      if (billedPeriod && name === 'open_order_value' && !a.billed_period) a.billed_period = billedPeriod;
       const r = S.withSession(session.id, () => withVia(via, () => present(call(cid, name, a)))); results.push(r); if (periodTools.has(name)) periods.push(r && r.period_covered ? r.period_covered : null); return r; };
     const pre = prereadFor(sideName, question, context, new Set(readTools.map((t) => t.name))); let preread = [], preText = '';
     if (pre) { const r = callTool(pre.tool, pre.arguments); if (readOk(r)) { preread = [pre]; preText = ` The record on screen, read for you with ${pre.tool} ${JSON.stringify(pre.arguments)}: ${JSON.stringify(r)}`; } }
-    const q = `${question}\n(As of ${fmtET(at)}.${context ? ` On screen: ${context}.` : ''}${asked ? ` The question's period, ${asked.words}, is ${asked.from} to ${asked.to}: pass from ${asked.from} and to ${asked.to} to the tool that takes a period, and answer for those days only.` : ''}${facts ? ` ${facts}` : ''}${hint || ''})`;
+    const q = `${question}\n(As of ${fmtET(at)}.${billedPeriod ? ` The page shows ${b.period} for billed above received.` : ''}${context ? ` On screen: ${context}.` : ''}${asked ? ` The question's period, ${asked.words}, is ${asked.from} to ${asked.to}: pass from ${asked.from} and to ${asked.to} to the tool that takes a period, and answer for those days only.` : ''}${facts ? ` ${facts}` : ''}${hint || ''})`;
     // The server checks each answer; a mismatch goes back to the model with the reason, at most twice.
     const check = (answer) => Cards.checkAnswer(answer, { cards: runCards, results, outside, question, expect: expect && { ...expect, refused: !!lastRefusal } });
     let out; try { out = await Aviator.ask({ question: q, history, tools, callTool, side: { person: SD.person, company: SD.company, other: SD.other }, clock: fmtET(at), routes, cards: true, check, preread, prereadText: preText }); } catch (e) { console.error(e); out = { ok: false, status: 500 }; }

@@ -23,8 +23,9 @@
 //   stock at each pick can be read back; no public 3PL guide states those values.
 //
 // Who exchanges what: Northfield sends Ashby the 830 and Ashby answers at-risk orders with an 870. Kinross, a 3PL,
-// reports its client Ashby's stock on an 846. Ashby does not send an 846 to Northfield: Northfield reads Ashby's
-// inventory by API in real time (guide R30), as the erp.inventory_read records show.
+// reports its client Ashby's stock on an 846. Round plan, 26 November 2026 (EDI first): Ashby sends Northfield its own
+// daily 846 per 3PL site (guide R30), the inventory record P4 and P8 read; Kinross's inventory read at Groveport on
+// 8 December (P5) also travels as an 846, at the same minute and with the same figures.
 import { rng, et, addH, etDay } from '../lib.js';
 import { PARTY, ITEM, locations } from '../ref.js';
 import { seg, d8, t4, money, clean, itemIds, first, n1, items as idsOf, day8 } from '../x12.js';
@@ -269,7 +270,13 @@ CREATE TABLE order_status (po TEXT NOT NULL REFERENCES orders(po), line INTEGER 
         // cases free for orders, and reports them apart. One replaces NR-460207's crushed carton at 17:46 ET on 8 December.
         const heldOf = (k) => (k === 'KIN-GRV|ASH-MUG-12' ? (asOf >= Date.parse('2026-12-08T22:46:00Z') ? 1 : 2) : null);
         const its = keys.map((k) => { const sku = k.split('|')[1]; const lv = led.level(k, asOf); const held = heldOf(k); return { sku, gtin: ITEM[sku].gtin, on_hand: lv + (held || 0), available: lv, ...(held != null ? { held } : {}), waves: led.waves.filter((w) => w.key === k && w.t > from && w.t <= asOf).map((w) => ({ at: new Date(w.t).toISOString(), available: w.available })) }; });
-        doc({ type: '846', from: 'KINROSS', to: 'ASHBY', at: new Date(asOf + 10 * 60000), as_of: new Date(asOf).toISOString(), ref: `IA-${site.slice(4)}-${ymd(day)}`, site_name: LOC[site].name, site_gln: LOC[site].gln, client_name: ASH.name, client_gln: ASH.gln, items: its });
+        doc({ type: '846', from: 'KINROSS', to: 'ASHBY', at: new Date(asOf + 10 * 60000), as_of: new Date(asOf).toISOString(), ref: `IA-${site.slice(4)}-${ymd(day)}`, site_name: LOC[site].name, site_gln: LOC[site].gln, client_name: ASH.name, client_gln: ASH.gln, items: its });        // Ashby's own 846 to Northfield, 15 minutes later: on hand and available per item, without pick waves or held stock.
+        doc({ type: '846', from: 'ASHBY', to: 'NORTHFIELD', at: new Date(asOf + 25 * 60000), as_of: new Date(asOf).toISOString(), ref: `IA-ASH-${site.slice(4)}-${ymd(day)}`, site_name: LOC[site].name, site_gln: LOC[site].gln, client_name: ASH.name, client_gln: ASH.gln, items: its.map(({ held, waves, ...x }) => ({ ...x, on_hand: x.available, waves: [] })) });
+      }
+      // Kinross's intraday inventory reads (P5, 8 December) travel as an 846 at the same minute, from the same ledger.
+      for (const e of L.events.filter((x) => x.kind === 'wms.inventory' && locations.find((l) => l.name === x.data.site)?.id === site)) {
+        const asOf = Date.parse(e.at); const k = `${site}|${e.data.sku}`; const lv = led.level(k, asOf); const held = e.data.held_for_damage_replacement ?? null;
+        doc({ type: '846', from: 'KINROSS', to: 'ASHBY', at: new Date(asOf), as_of: new Date(asOf).toISOString(), ref: `IA-${site.slice(4)}-${ymd(etDay(new Date(asOf)))}-${new Date(asOf).toISOString().slice(11, 16).replace(':', '')}`, site_name: LOC[site].name, site_gln: LOC[site].gln, client_name: ASH.name, client_gln: ASH.gln, items: [{ sku: e.data.sku, gtin: ITEM[e.data.sku].gtin, on_hand: lv + (held || 0), available: lv, ...(held != null ? { held } : {}), waves: [] }] });
       }
     }
 
@@ -299,6 +306,7 @@ CREATE TABLE order_status (po TEXT NOT NULL REFERENCES orders(po), line INTEGER 
       T.forecasts.push({ forecast_id: d.ref, doc_id: d.doc_id, period, issued_by: d.sender, issued_to: d.receiver, issued_at: d.at, purpose: d.purpose === '00' ? 'Original' : 'Replace', horizon_start: d.horizon_start, horizon_end: d.horizon_end, valid_from: d.at, valid_to: null, status: 'Current', supersedes: cur ? cur.forecast_id : null, superseded_by: null });
       for (const l of d.lines) for (const w of l.weeks) T.forecast_lines.push({ forecast_id: d.ref, sku: l.sku, location: ctx.loc(l.loc_gln), week_start: w.start, week_end: w.end, qty: w.qty, uom: 'CA' });
     } else if (d.type === '846') {
+      if (d.sender === 'ASHBY') return; // Ashby's 846 to Northfield repeats Kinross's figures; the stock positions come from Kinross's
       const site = ctx.loc(d.parties.WH.gln);
       for (const it of d.items) {
         const byAt = new Map(); for (const r of it.readings) (byAt.get(r.at) || byAt.set(r.at, []).get(r.at)).push(r);
@@ -334,7 +342,7 @@ CREATE TABLE order_status (po TEXT NOT NULL REFERENCES orders(po), line INTEGER 
   prev(d, ctx) {
     if (d.type === '870') return [{ doc: ctx.latest(d.po, '850', d.at), kind: 'reports on' }];
     let c = linkCache.get(ctx.docs);
-    if (!c) { c = new Map(); const last = new Map(); for (const x of ctx.docs) { if (x.type !== '830' && x.type !== '846') continue; const k = x.type === '830' ? '830' : `846|${x.parties.WH.gln}`; c.set(x.doc_id, last.get(k) || null); last.set(k, x); } linkCache.set(ctx.docs, c); }
+    if (!c) { c = new Map(); const last = new Map(); for (const x of ctx.docs) { if (x.type !== '830' && x.type !== '846') continue; const k = x.type === '830' ? '830' : `846|${x.sender}|${x.parties.WH.gln}`; c.set(x.doc_id, last.get(k) || null); last.set(k, x); } linkCache.set(ctx.docs, c); }
     const p = c.get(d.doc_id);
     return p ? [{ doc: p, kind: d.type === '830' ? 'supersedes' : 'follows' }] : [];
   },
@@ -350,9 +358,9 @@ CREATE TABLE order_status (po TEXT NOT NULL REFERENCES orders(po), line INTEGER 
     northfield: [
       'INSERT INTO planning_periods SELECT * FROM m.planning_periods', 'INSERT INTO forecasts SELECT * FROM m.forecasts', 'INSERT INTO forecast_lines SELECT * FROM m.forecast_lines',
       'INSERT INTO order_status SELECT * FROM m.order_status',
-      "DELETE FROM document_links WHERE doc_id IN (SELECT doc_id FROM documents WHERE doc_type = '846' OR answers_doc_id IN (SELECT doc_id FROM documents WHERE doc_type = '846')) OR prev_doc_id IN (SELECT doc_id FROM documents WHERE doc_type = '846')",
-      "DELETE FROM documents WHERE doc_type = '997' AND answers_doc_id IN (SELECT doc_id FROM documents WHERE doc_type = '846')",
-      "DELETE FROM documents WHERE doc_type = '846'",
+      "DELETE FROM document_links WHERE doc_id IN (SELECT doc_id FROM documents WHERE (doc_type = '846' AND sender_id = 'KINROSS') OR answers_doc_id IN (SELECT doc_id FROM documents WHERE doc_type = '846' AND sender_id = 'KINROSS')) OR prev_doc_id IN (SELECT doc_id FROM documents WHERE doc_type = '846' AND sender_id = 'KINROSS')",
+      "DELETE FROM documents WHERE doc_type = '997' AND answers_doc_id IN (SELECT doc_id FROM documents WHERE doc_type = '846' AND sender_id = 'KINROSS')",
+      "DELETE FROM documents WHERE doc_type = '846' AND sender_id = 'KINROSS'",
     ],
   },
 

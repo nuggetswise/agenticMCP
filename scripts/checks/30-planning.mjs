@@ -11,11 +11,13 @@ const minus = (iso, h) => new Date(Date.parse(iso) - h * 3600000).toISOString();
 export default function ({ db, ash, nf, ok, eq, none, n, ROOT }) {
   // ---- documents, both X12 checks run over them in validate and botscheck ----
   const count = (t) => n('SELECT count(*) n FROM documents WHERE doc_type = ? AND test = 0', t);
-  eq('planning.documents_exchanged', [count('830'), count('846'), count('870')], [6, 182, 40]);
+  eq('planning.documents_exchanged', [count('830'), count('846'), count('870')], [6, 365, 40]);
   none('planning.every_document_accepted', "SELECT doc_id, status FROM documents WHERE doc_type IN ('830','846','870') AND status <> 'Delivered'");
-  none('planning.parties_as_designed', "SELECT doc_id FROM documents WHERE (doc_type = '830' AND NOT (sender_id = 'NORTHFIELD' AND receiver_id = 'ASHBY')) OR (doc_type = '846' AND NOT (sender_id = 'KINROSS' AND receiver_id = 'ASHBY')) OR (doc_type = '870' AND NOT (sender_id = 'ASHBY' AND receiver_id = 'NORTHFIELD'))");
-  // Ashby does not send an 846 to Northfield: Northfield reads Ashby's stock by API (R30).
-  eq('planning.no_846_between_ashby_and_northfield', n("SELECT count(*) n FROM documents WHERE doc_type = '846' AND 'NORTHFIELD' IN (sender_id, receiver_id)"), 0);
+  none('planning.parties_as_designed', "SELECT doc_id FROM documents WHERE (doc_type = '830' AND NOT (sender_id = 'NORTHFIELD' AND receiver_id = 'ASHBY')) OR (doc_type = '846' AND NOT ((sender_id = 'KINROSS' AND receiver_id = 'ASHBY') OR (sender_id = 'ASHBY' AND receiver_id = 'NORTHFIELD'))) OR (doc_type = '870' AND NOT (sender_id = 'ASHBY' AND receiver_id = 'NORTHFIELD'))");
+  // Round plan, 26 November 2026 (EDI first): Ashby sends Northfield a daily 846 per 3PL site (R30), one for each of Kinross's
+  // daily 846s; Kinross's intraday read at Groveport on 8 December (P5) is one more 846 to Ashby.
+  const ash846 = n("SELECT count(*) n FROM documents WHERE doc_type = '846' AND sender_id = 'ASHBY' AND receiver_id = 'NORTHFIELD'");
+  eq('planning.ashby_846_to_northfield_daily', [ash846, n("SELECT count(*) n FROM documents WHERE doc_type = '846' AND sender_id = 'KINROSS'")], [182, 183]);
   // P10's window: no 830 or 870, and no 997 answering one, between 18 Oct 11:00 ET and 17 Nov 11:00 ET.
   none('planning.nothing_in_p10_window', "SELECT d.doc_id FROM documents d LEFT JOIN documents a ON a.answers_doc_id = d.doc_id AND a.doc_type = '997' WHERE d.doc_type IN ('830','870') AND ((d.sent_at > '2026-10-18T15:00:00.000Z' AND d.sent_at <= '2026-11-17T16:00:00.000Z') OR (a.sent_at > '2026-10-18T15:00:00.000Z' AND a.sent_at <= '2026-11-17T16:00:00.000Z'))");
 
@@ -72,14 +74,14 @@ export default function ({ db, ash, nf, ok, eq, none, n, ROOT }) {
   // ---- the document flow ----
   none('planning.870_reports_on_its_850', "SELECT d.doc_id FROM documents d WHERE d.doc_type = '870' AND NOT EXISTS (SELECT 1 FROM document_links l JOIN documents p ON p.doc_id = l.prev_doc_id WHERE l.doc_id = d.doc_id AND l.kind = 'reports on' AND p.doc_type = '850' AND p.po = d.po)");
   none('planning.830_names_the_830_it_supersedes', "SELECT f.forecast_id FROM forecasts f JOIN forecasts p ON p.forecast_id = f.supersedes WHERE NOT EXISTS (SELECT 1 FROM document_links l WHERE l.doc_id = f.doc_id AND l.prev_doc_id = p.doc_id AND l.kind = 'supersedes')");
-  eq('planning.846_follows_the_previous_from_its_site', n("SELECT count(*) n FROM document_links l JOIN documents d ON d.doc_id = l.doc_id JOIN documents p ON p.doc_id = l.prev_doc_id WHERE d.doc_type = '846' AND p.doc_type = '846' AND l.kind = 'follows' AND json_extract(d.body, '$.parties.WH.gln') = json_extract(p.body, '$.parties.WH.gln')"), count('846') - 2);
+  eq('planning.846_follows_the_previous_from_its_site', n("SELECT count(*) n FROM document_links l JOIN documents d ON d.doc_id = l.doc_id JOIN documents p ON p.doc_id = l.prev_doc_id WHERE d.doc_type = '846' AND p.doc_type = '846' AND l.kind = 'follows' AND json_extract(d.body, '$.parties.WH.gln') = json_extract(p.body, '$.parties.WH.gln')"), count('846') - 4);
 
   // ---- who sees what ----
   const v = (x, sql) => x.prepare(sql).get().n;
-  eq('planning.northfield_sees_830_and_870_only', [v(nf, "SELECT count(*) n FROM documents WHERE doc_type = '830'"), v(nf, "SELECT count(*) n FROM documents WHERE doc_type = '870'"), v(nf, "SELECT count(*) n FROM documents WHERE doc_type = '846'"),
+  eq('planning.northfield_sees_830_870_and_ashby_846', [v(nf, "SELECT count(*) n FROM documents WHERE doc_type = '830'"), v(nf, "SELECT count(*) n FROM documents WHERE doc_type = '870'"), v(nf, "SELECT count(*) n FROM documents WHERE doc_type = '846'"),
     v(nf, "SELECT count(*) n FROM documents d JOIN documents a ON a.doc_id = d.answers_doc_id WHERE a.doc_type = '846'"), v(nf, "SELECT count(*) n FROM document_links WHERE doc_id LIKE '846:%' OR prev_doc_id LIKE '846:%'"), v(nf, 'SELECT count(*) n FROM stock_positions'),
     v(nf, 'SELECT count(*) n FROM forecasts'), v(nf, 'SELECT count(*) n FROM order_status')],
-  [count('830'), count('870'), 0, 0, 0, 0, n('SELECT count(*) n FROM forecasts'), n('SELECT count(*) n FROM order_status')]);
+  [count('830'), count('870'), ash846, ash846, 2 * ash846 - 2, 0, n('SELECT count(*) n FROM forecasts'), n('SELECT count(*) n FROM order_status')]);
   eq('planning.ashby_sees_all_of_its_own', [v(ash, "SELECT count(*) n FROM documents WHERE doc_type IN ('830','846','870')"), v(ash, 'SELECT count(*) n FROM stock_positions'), v(ash, 'SELECT count(*) n FROM forecast_lines'), v(ash, 'SELECT count(*) n FROM order_status')],
     [n("SELECT count(*) n FROM documents WHERE doc_type IN ('830','846','870')"), n('SELECT count(*) n FROM stock_positions'), n('SELECT count(*) n FROM forecast_lines'), n('SELECT count(*) n FROM order_status')]);
 

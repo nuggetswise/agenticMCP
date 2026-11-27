@@ -140,7 +140,8 @@ export function build(nPre, jitter) {
     L.aside(() => st.generate(L, { W, G, P10_WINDOW, buyerShipments }));
     for (const x of L.docs.slice(d0)) x.stage = st.id; for (const x of L.events.slice(e0)) x.stage = st.id;
   }
-  const inWindow = L.docs.filter((d) => d.stage && d.stage !== 'records' && !d.test && P10_PAIR(d) && Date.parse(d.at) > P10_WINDOW.start && Date.parse(d.at) <= P10_WINDOW.end);
+  // P10 is retired; Ashby's daily 846 to Northfield (round plan, 26 November 2026) is allowed in its old window.
+  const inWindow = L.docs.filter((d) => d.stage && d.stage !== 'records' && !d.test && d.type !== '846' && P10_PAIR(d) && Date.parse(d.at) > P10_WINDOW.start && Date.parse(d.at) <= P10_WINDOW.end);
   if (inWindow.length) throw new Error(`Stage documents between Ashby and Northfield fall in P10's 30-day window, which would move its document count: ${inWindow.slice(0, 3).map((d) => `${d.stage} ${d.type} ${d.at}`).join(', ')}`);
   return { L, W, G };
 }
@@ -181,8 +182,9 @@ function windowCount(L) {
   const start = addD(CLOCK10, -30).getTime(), end = CLOCK10.getTime(); let n = 0;
   const pair = (d) => (d.from === 'ASHBY' && d.to === 'NORTHFIELD') || (d.from === 'NORTHFIELD' && d.to === 'ASHBY');
   for (const d of L.docs) {
+    // Ashby's 846 (26 November 2026) is left out too.
     // Records added on 17 November 2026 (stage `records`) are left out of the tuning count, so the replenishment volume, and with it every existing record, stays as it was.
-    if (!pair(d) || d.test || d.stage === 'records') continue; const t = Date.parse(d.at);
+    if (!pair(d) || d.test || d.stage === 'records' || d.type === '846') continue; const t = Date.parse(d.at);
     if (t > start && t <= end) n++;
     const fa = t + d.ackDelay * 60000; if (!d.no_ack && fa > start && fa <= end) n++;
   }

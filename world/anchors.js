@@ -2,7 +2,8 @@
 // the risk queue, the trade test and programme setup. Each sits at its moment on the story calendar.
 import { et, addH, addD, etDay } from './lib.js';
 import { D, iso } from './log.js';
-import { ITEM, BUYER_FX } from './ref.js';
+import { ITEM, BUYER_FX, locations, PARTY } from './ref.js';
+const LOC_WH1 = locations.find((l) => l.id === 'ASH-WH1'); const ASHBY_GLN = PARTY.ASHBY.gln;
 import { P5 } from './p5-physical.js';
 
 const day = (d, hm) => et(d, hm);
@@ -23,7 +24,10 @@ export function anchors(L, W) {
     ev(L, day('2026-09-27', '11:30'), 'catalogue.item_conflict', null, 'Trading Grid', 'ASHBY', 'API', { sku: 'ASH-NAP-4', marketplace_gtin: '10614142000131', wholesale_gtin: ITEM['ASH-NAP-4'].gtin, resolution: 'Wholesale item setup accepted on Trading Grid; Marketplace listing unchanged' });
     ev(L, day('2026-09-27', '15:00'), 'programme.activated', null, 'Northfield supplier programme', 'NORTHFIELD', 'API', { programme: 'Wholesale', approved_by: 'Jordan Ellis', tests: 'Passed' });
     ev(L, day('2026-09-28', '07:40'), 'marketplace.order', 'MKT-20931', 'Marketplace platform', 'NORTHFIELD', 'API', { programme: 'Marketplace', sku: 'ASH-MUG-12', cases: 2, status: 'Shipped with tracking' });
-    ev(L, day('2026-09-28', '08:00'), 'erp.inventory_read', null, 'Supplier ERP', 'ASHBY', 'API', { sku: 'ASH-MUG-12', on_hand: 410, meaning: 'On hand', read_by: 'Northfield, read only' });
+    // Round plan, 26 November 2026 (EDI first): Northfield no longer reads Ashby's ERP by API (R30). Ashby's ERP read stays
+    // Ashby's own, and the same figure reaches Northfield as Ashby's inventory advice (846) at the same minute.
+    ev(L, day('2026-09-28', '08:00'), 'erp.inventory_read', null, 'Supplier ERP', 'ASHBY', 'API', { sku: 'ASH-MUG-12', on_hand: 410, meaning: 'On hand' });
+    L.doc({ type: '846', from: 'ASHBY', to: 'NORTHFIELD', at: day('2026-09-28', '08:00'), as_of: iso(day('2026-09-28', '08:00')), ref: 'IA-ASH-WH1-20260928', site_name: LOC_WH1.name, site_gln: LOC_WH1.gln, client_name: 'Ashby Supplier', client_gln: ASHBY_GLN, items: [{ sku: 'ASH-MUG-12', gtin: ITEM['ASH-MUG-12'].gtin, on_hand: 410, available: 410, waves: [] }] });
     D.po(L, O, day('2026-09-28', '08:05')); D.ack(L, O, day('2026-09-28', '08:50'));
     const dep = day('2026-10-01', '15:00'); const c = cartonsFor(W, 2001, [[1, 120], [2, 48]]);
     ev(L, dep, 'wms.departure_scan', po, 'Supplier ERP', 'ASHBY', 'API', { shipment: `SHP-${po.slice(3)}`, carrier: 'Lakeline Freight' });

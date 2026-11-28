@@ -13,8 +13,8 @@
 // its hold, two open honey orders allocated from the same lot, and the recall notice.
 //
 // Dates. Every record this stage adds is dated from Friday 15 January 2027, after P25's last record (Thursday 14
-// January), so no other prototype's moment sees it. P26 opens on Monday 18 January at 10:20 ET for both sides: the
-// hold is on Priya Raman's screen, and the recall notice reached Jordan Ellis at 09:00 that morning.
+// January), so no other prototype's moment sees it. P26 opens on Monday 18 January at 10:13 ET for both sides (owner, 27 November
+// 2026): PO NR-47403's hold is on Priya Raman's screen and NR-47400 waits on its shipping advice, and the recall notice reached Jordan Ellis at 09:00 that morning.
 //
 // What is invented (marked so in the build prompts doc): the lot scheme, the lot rule's charge, the order, the missing
 // lots, the recall. Public basis for the rule: grocery retailers' published requirement that a food ship notice carry

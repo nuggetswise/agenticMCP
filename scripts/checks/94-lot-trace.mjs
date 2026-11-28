@@ -52,7 +52,8 @@ export default function ({ db, ash, nf, ok, eq, none, n }) {
   eq('p26.second_hold', [h2.findings.length, h2.sent_to_northfield, f2.rule, f2.cartons.length, f2.cartons_checked, f2.owner, f2.fix_in, f2.exposure_estimate, lotCharge(36)], [1, false, 'NF-4.17', 36, 36, 'EDI operations', 'Ashby’s ship notice map', 330, 330]);
   const v2 = db.prepare("SELECT data FROM events WHERE kind = 'erp.ship_notice' AND po = ? ORDER BY at").all(P26_SECOND).map((e) => JSON.parse(e.data));
   eq('p26.second_first_version_has_lots_and_no_dates', v2.map((x) => [x.version, x.carton_lots.filter((c) => !c.lot).length, x.carton_lots.filter((c) => !c.best_before).length]), [[1, 0, 36], [2, 0, 0]]);
-  ok('p26.second_hold_open_at_the_moment', db.prepare('SELECT at FROM events WHERE kind = ? AND po = ?').get('tg.hold', P26_SECOND).at < cal.as_of && db.prepare("SELECT min(at) t FROM events WHERE kind = 'erp.correction' AND po = ?").get(P26_SECOND).t > cal.as_of);
+  // P26 opens at the hold itself, 10:13 (owner, 27 November 2026), so the hold may equal the moment.
+  ok('p26.second_hold_open_at_the_moment', db.prepare('SELECT at FROM events WHERE kind = ? AND po = ?').get('tg.hold', P26_SECOND).at <= cal.as_of && db.prepare("SELECT min(at) t FROM events WHERE kind = 'erp.correction' AND po = ?").get(P26_SECOND).t > cal.as_of);
   const seq2 = db.prepare("SELECT kind FROM events WHERE po = ? AND id >= 6000001 AND at >= (SELECT at FROM events WHERE kind = 'tg.hold' AND po = ?) ORDER BY at").all(P26_SECOND, P26_SECOND).map((e) => e.kind);
   eq('p26.second_fix_then_corrected_notice_then_check_then_release', seq2, ['tg.hold', 'erp.correction', 'erp.ship_notice', 'tg.check', 'approval', 'wms.departure_scan']);
   eq('p26.second_receipt_matches', db.prepare("SELECT r.line line, r.qty qty, r.short short FROM receipts r WHERE r.receipt = 'RCV-DC4-47403' ORDER BY r.line").all().map((r) => `${r.line} ${r.qty} ${r.short}`), ['1 36 0', '2 12 0']);

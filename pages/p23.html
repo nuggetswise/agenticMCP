@@ -541,7 +541,7 @@ body{overflow:hidden}
 </script>
 <script id="p23-app">
 /* P23 Order change before shipment. Ashby only. Values: the shared demo world for order NR-450118 (purchase order,
-   order changes 2 to 4, change acknowledgments, Supplier ERP stock read, ship notice hold, load scan, ship notice,
+   order changes 2 to 4, change acknowledgments, Supplier ERP inventory advice, ship notice hold, shipment, ship notice,
    receiving advice). t = minutes from midnight ET on the page's first day. Nothing changes without a click. */
 (function(){
 "use strict";
@@ -570,17 +570,16 @@ const DOCS = {
   po:   {name:"Purchase order", ref:"NR-450118", iface:"EDI 850", from:"Northfield Retailer", to:"Ashby Supplier", at:T(0,9,12), kv:[["Ship to","Northfield DC 2"],["Requested delivery","Saturday"],["Order item 1","ASH-MUG-12 · 300 cases at $54.00"],["Order item 2","ASH-NAP-4 · 120 cases at $38.40"],["Order item 3","ASH-HNY-340 · 80 cases at $46.80"],["Order value","$24,552.00"]]},
   c2:   {name:"Order change 2", ref:"NR-450118 change 2", iface:"EDI 860", from:"Northfield Retailer", to:"Ashby Supplier", at:T(0,10,40), kv:[["Order item 1","Quantity decrease to 250 cases"],["State","Superseded by order change 3"]]},
   c3:   {name:"Order change 3", ref:"NR-450118 change 3", iface:"EDI 860", from:"Northfield Retailer", to:"Ashby Supplier", at:T(0,13,5), kv:[["Order item 1","Quantity 300 cases, replacing change 2"],["Order item 2","120 cases moved to the later delivery, Monday"],["Order item 3","Unchanged, 80 cases"]]},
-  stock:{name:"Stock read", ref:"ASH-MUG-12", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(0,15,30), kv:[["Site","Ashby warehouse ASH-WH1"],["On hand","410 cases"],["Committed","140 cases"],["Available","270 cases"]]},
+  stock:{name:"Inventory advice", ref:"IA-ERP-20261102-1530", iface:"EDI 846", from:"Supplier ERP", to:"Trading Grid", at:T(0,15,30), kv:[["Item","ASH-MUG-12"],["Site","Ashby's 3PL warehouse, Joliet"],["On hand","410 cases"],["Available","270 cases"]]},
   a3:   {name:"Change acknowledgment", ref:"CHA-450118", iface:"EDI 865", from:"Ashby Supplier", to:"Northfield Retailer", at:T(0,16,12), kv:[["Answers","Order change 3"],["Order item 1","Accepted with changes · 270 cases"],["Order item 2","Accepted · 120 cases on the later delivery"],["Order item 3","Accepted · 80 cases"]]},
   f3:   {name:"Technical acknowledgment", ref:"FA-N1138", iface:"EDI 997", from:"Northfield Retailer", to:"Ashby Supplier", at:T(0,16,18), kv:[["For","Change acknowledgment CHA-450118"],["Result","Technically acknowledged"]]},
   c4:   {name:"Order change 4", ref:"NR-450118 change 4", iface:"EDI 860", from:"Northfield Retailer", to:"Ashby Supplier", at:T(0,16,40), kv:[["Order item 1","Quantity decrease to 270 cases"],["Order items 2 and 3","Unchanged"]]},
   a4:   {name:"Change acknowledgment", ref:"CHA-450118-4", iface:"EDI 865", from:"Ashby Supplier", to:"Northfield Retailer", at:T(0,16,54), kv:[["Answers","Order change 4"],["Order item 1","Accepted · 270 cases"]]},
   f4:   {name:"Technical acknowledgment", ref:"FA-NS300000001", iface:"EDI 997", from:"Northfield Retailer", to:"Ashby Supplier", at:T(0,16,57), kv:[["For","Change acknowledgment CHA-450118-4"],["Result","Technically acknowledged"]]},
-  draft:{name:"Ship notice draft", ref:"ASN-450118-1 draft", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(4,11,0), kv:[["Shipment","SHP-450118-1"],["Order item 1","300 cases"],["Order item 3","80 cases"],["State","Held by Trading Grid"]]},
-  load: {name:"Load scan", ref:"SHP-450118-1", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(4,17,30), kv:[["Cartons loaded","350 of 350, scanned by SSCC"],["Order item 1","270 cases"],["Order item 3","80 cases"]]},
-  dep:  {name:"Departure scan", ref:"SHP-450118-1", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(4,18,0), kv:[["Carrier","Lakeline Freight"],["Left","Ashby warehouse ASH-WH1"]]},
-  asn:  {name:"Ship notice", ref:"ASN-450118-1", iface:"EDI 856", from:"Ashby Supplier", to:"Northfield Retailer", at:T(4,18,20), kv:[["Shipment","SHP-450118-1 · 350 cartons"],["Order item 1","270 cases"],["Order item 3","80 cases"],["Carrier","Lakeline Freight"],["Ship to","Northfield DC 2"]]},
-  f5:   {name:"Technical acknowledgment", ref:"FA-N1255", iface:"EDI 997", from:"Northfield Retailer", to:"Ashby Supplier", at:T(4,18,27), kv:[["For","Ship notice ASN-450118-1"],["Result","Technically acknowledged"]]},
+  draft:{name:"Ship notice draft", ref:"ASN-450118-1 draft", iface:"EDI 856", from:"Supplier ERP", to:"Trading Grid", at:T(4,11,0), kv:[["Shipment","SHP-450118-1"],["Order item 1","300 cases"],["Order item 3","80 cases"],["State","Held by Trading Grid"]]},
+  load: {name:"Warehouse shipping advice", ref:"WSA-450118-1", iface:"EDI 945", from:"Ashby's 3PL warehouse, Joliet", to:"Ashby Supplier", at:T(4,18,12), kv:[["Shipment","SHP-450118-1"],["Shipped","18:00"],["Bill of lading","BOL-88190"],["Cartons","350, each with its SSCC"],["Order item 1","270 cases"],["Order item 3","80 cases"]]},
+  asn:  {name:"Ship notice", ref:"ASN-450118-1", iface:"EDI 856", from:"Ashby Supplier", to:"Northfield Retailer", at:T(4,18,20), kv:[["Ship from","Ashby's 3PL warehouse, Joliet"],["Shipment","SHP-450118-1 · 350 cartons"],["Shipped","18:00"],["Order item 1","270 cases"],["Order item 3","80 cases"],["Carrier","Northfield's carrier"],["Ship to","Northfield DC 2"]]},
+  f5:   {name:"Technical acknowledgment", ref:"FA-N1256", iface:"EDI 997", from:"Northfield Retailer", to:"Ashby Supplier", at:T(4,18,29), kv:[["For","Ship notice ASN-450118-1"],["Result","Technically acknowledged"]]},
   rcv:  {name:"Receiving advice", ref:"RCV-DC2-77290", iface:"EDI 861", from:"Northfield Retailer", to:"Ashby Supplier", at:T(5,7,20), kv:[["Ship notice","ASN-450118-1"],["Received at","Northfield DC 2"],["Order item 1","270 cases · 0 short"],["Order item 3","80 cases · 0 short"]]}
 };
 const RULES = {
@@ -602,8 +601,8 @@ H(T(0,10,40), "Order change 2 · order item 1 to 250 cases", "Northfield · EDI 
 H(T(0,10,44), "Technical acknowledgment of order change 2", "Ashby · EDI 997");
 H(T(0,13,5), "Order change 3 · order item 1 to 300 cases, order item 2 to the later delivery", "Northfield · EDI 860", "c3");
 H(T(0,13,10), "Technical acknowledgment of order change 3", "Ashby · EDI 997");
-H(T(0,15,30), "Stock read · ASH-MUG-12 · 270 cases available", "Supplier ERP · API", "stock");
-H(T(0,15,30), "Answer drafted from the stock read · order item 1 at 270 cases", "Rule · Trading Grid");
+H(T(0,15,30), "Inventory advice · ASH-MUG-12 · 270 cases available", "Supplier ERP · EDI 846", "stock");
+H(T(0,15,30), "Answer drafted from the inventory advice · order item 1 at 270 cases", "Rule · Trading Grid");
 
 /* ---------- shell ---------- */
 document.body.insertAdjacentHTML("afterbegin", `
@@ -647,10 +646,10 @@ function head(){
     "Northfield answered with order change 4: order item 1 at 270 cases.",
     "Northfield accepted order item 1 at 270 cases; the first shipment is next.",
     "The ship notice lists 300 cases against 270 accepted; an estimated $150.00 at stake.",
-    "The shipment is corrected to 270 and 80 cases; the ship notice is ready to release.",
+    "The 3PL warehouse shipped 270 and 80 cases; the rebuilt ship notice is ready to release.",
     "PO 450118 was received at DC 2 as the ship notice describes."][F.st];
   const ev = ["Read when order change 3 arrived.", "Read when order change 4 arrived.", "Read when the change acknowledgment was technically acknowledged.",
-    "Read when the ship notice draft for the first shipment was checked.", "Read when the load scan arrived.", "Read when Northfield's receiving advice arrived."][F.st];
+    "Read when the ship notice draft for the first shipment was checked.", "Read when the 3PL warehouse's shipping advice arrived.", "Read when Northfield's receiving advice arrived."][F.st];
   $("#title").textContent = t; $("#evline").textContent = ev; $("#goal").textContent = " · Ship what Northfield accepted, so ship notice and receipt agree.";
   $("#clock").textContent = when(F.clock) + " ET";
 }
@@ -660,25 +659,25 @@ const LISTLINE = {
   po:["Purchase order","3 order items · 500 cases · $24,552.00","EDI 850",null],
   c2:["Order change 2","Order item 1 to 250 cases","EDI 860",["Superseded",""]],
   c3:["Order change 3","Order item 1 to 300 · order item 2 later","EDI 860",null],
-  stock:["Stock read","ASH-MUG-12 · 270 cases available","Supplier ERP · API",null],
+  stock:["Inventory advice","ASH-MUG-12 · 270 cases available","EDI 846",null],
   a3:["Change acknowledgment","Order item 1 offered at 270","EDI 865",["Technically acknowledged",""]],
   c4:["Order change 4","Order item 1 to 270 cases","EDI 860",["Latest","live"]],
   a4:["Change acknowledgment","Order item 1 accepted at 270","EDI 865",["Technically acknowledged",""]],
-  draft:["Ship notice draft","Order item 1 · 300 cases","Supplier ERP · API",null],
-  load:["Load scan","350 cartons · 270 and 80 cases","Supplier ERP · API",null],
+  draft:["Ship notice draft","Order item 1 · 300 cases","EDI 856",null],
+  load:["Warehouse shipping advice","350 cartons · 270 and 80 cases","EDI 945",null],
   asn:["Ship notice","350 cartons · 270 and 80 cases","EDI 856",["Technically acknowledged",""]],
   rcv:["Receiving advice","270 and 80 cases · 0 short","EDI 861",["Received at DC 2","brand"]]};
 function listChip(k){
   if (k === "c3") return F.st >= 1 ? ["Superseded",""] : ["Latest","live"];
   if (k === "c4") return F.st === 1 ? ["Latest","live"] : ["Latest",""];
-  if (k === "draft") return F.st === 3 ? ["Held","red"] : ["Corrected",""];
+  if (k === "draft") return F.st === 3 ? ["Held","red"] : ["Rebuilt",""];
   return LISTLINE[k][3];
 }
 function renderList(){
   const unanswered = F.st === 0 || F.st === 1 ? 1 : 0;
   $("#cnt").textContent = F.st <= 2 ? `${unanswered} of 19 with an unanswered change` : "19 open orders";
   const docs = F.docs.slice().reverse().map(k => { const l = LISTLINE[k], c = listChip(k);
-    const line = k === "draft" && F.st >= 4 ? "Order item 1 · 270 cases, from the load scan" : l[1];
+    const line = k === "draft" && F.st >= 4 ? "Order item 1 · 270 cases, from the shipping advice" : l[1];
     return `<button class="drow sub${F.fresh[k] ? " enter" : ""}" type="button" data-doc="${k}" aria-current="${F.cur === k}"><div class="r1"><span class="nm">${esc(l[0])}</span>${c ? `<span class="chip ${c[1]}">${esc(c[0])}</span>` : ""}</div><div class="r2">${esc(line)}</div><div class="r3">${esc(when(DOCS[k].at))} · ${esc(l[2])}</div></button>`; }).join("");
   const hc = [["Unanswered change","amber"],["270 offered","live"],["Accepted","brand"],["Ship notice held","red"],["Ready to release","live"],["Received at DC 2","brand"]][F.st];
   const top = `<div class="orow cur"><div class="r1"><span class="nm">PO 450118</span><span class="chip ${hc[1]}">${esc(hc[0])}</span></div><div class="r2">3 order items · ${money(value())} · DC 2 · delivery Sat</div></div>`;
@@ -716,23 +715,23 @@ function card(){
     <p class="desc">Accepted on order change 4. The change acknowledgment was technically acknowledged.</p>${detBtn("d2", ruleList(["NF-1.5"]) + readList(["c4","a4","f4"]))}</div>`;
   if (F.st === 3 || F.st === 4) {
     const fixed = F.st === 4;
-    return `<div class="act ${fixed ? "" : "red"}"><div class="th"><span class="tt">${fixed ? "Release the corrected ship notice" : "Fix the shipment before the ship notice goes"}</span><span class="chip ${fixed ? "live" : "red"}">${fixed ? "Ready to release" : "Held"}</span></div>
-    <div class="tw"><table class="ow"><thead><tr><th>What is wrong</th><th>Owner</th><th>Where to fix</th><th>Charge</th><th></th></tr></thead><tbody><tr><td>Ship notice draft · order item 1 ${fixed ? `<span class="strike">300</span><b>270</b>` : "<b>300</b>"} cases against 270 accepted</td><td>Ashby shipping</td><td>Supplier ERP shipment</td><td>${fixed ? `<span class="strike">${money(EXPOSURE)}</span>$0.00` : money(EXPOSURE) + ' <span class="cb">Estimated</span>'}</td><td>${fixed ? `<span class="cb">Confirmed by Priya Raman</span><br><button class="undo" type="button" id="bUndo">Undo</button>` : `<button class="btn" type="button" id="bFix" ${btnAttr()}>Confirm fix</button>`}</td></tr></tbody></table></div>
-    <p class="reason"><b>Reason.</b> ${fixed ? "The load scan carries 350 cartons: 270 cases of order item 1 and 80 of order item 3." : "The ship notice must match the shipment carton for carton, and order item 1 was accepted at 270."}</p>
-    ${detBtn("d3", ruleList(fixed ? ["AP-1.4","AP-1.3","NF-4.5"] : ["AP-1.2","AP-1.4","NF-4.5"]) + readList(fixed ? ["draft","load","a4"] : ["draft","a4","c4"]) + `<p class="k" style="margin-top:var(--space-2)">Who does what</p><p>Rule finds it · Ashby shipping corrects the shipment in the Supplier ERP · Priya Raman confirms</p>`)}</div>`;
+    return `<div class="act ${fixed ? "" : "red"}"><div class="th"><span class="tt">${fixed ? "Release the rebuilt ship notice" : "Ship notice held until the 3PL warehouse's shipping advice"}</span><span class="chip ${fixed ? "live" : "red"}">${fixed ? "Ready to release" : "Held"}</span></div>
+    <div class="tw"><table class="ow"><thead><tr><th>What is wrong</th><th>Owner</th><th>Where to fix</th><th>Charge</th><th></th></tr></thead><tbody><tr><td>Ship notice draft · order item 1 ${fixed ? `<span class="strike">300</span><b>270</b>` : "<b>300</b>"} cases against 270 accepted</td><td>Ashby order operations</td><td>Supplier ERP shipment</td><td>${fixed ? `<span class="strike">${money(EXPOSURE)}</span>$0.00` : money(EXPOSURE) + ' <span class="cb">Estimated</span>'}</td><td>${fixed ? `<span class="cb">Rebuilt · 350 cartons</span>` : `<span class="cb">Waits on the shipping advice</span>`}</td></tr></tbody></table></div>
+    <p class="reason"><b>Reason.</b> ${fixed ? "The 3PL warehouse's shipping advice shows 350 cartons shipped at 18:00: 270 cases of order item 1 and 80 of order item 3." : "The ship notice must match the shipment carton for carton, and order item 1 was accepted at 270."}</p>
+    ${detBtn("d3", ruleList(fixed ? ["AP-1.4","AP-1.3","NF-4.5"] : ["AP-1.2","AP-1.4","NF-4.5"]) + readList(fixed ? ["draft","load","a4"] : ["draft","a4","c4"]) + `<p class="k" style="margin-top:var(--space-2)">Who does what</p><p>Rule finds it · Trading Grid rebuilds the draft from the 3PL warehouse's shipping advice · Priya Raman releases</p>`)}</div>`;
   }
   return "";
 }
 function banner(){
   if (F.st !== 5) return "";
-  return `<div class="bnr enter"><div class="bt">Received at DC 2 as the ship notice describes</div><p>270 and 80 cases, nothing short; the receiving advice matches the ship notice.</p><p>Prevented: ${money(EXPOSURE)} in charges did not arise on PO 450118.</p><p>Remaining: order item 2, 120 cases, ships on its own for the later delivery.</p></div>`;
+  return `<div class="bnr enter"><div class="bt">Received at DC 2 as the ship notice describes</div><p>270 and 80 cases, nothing short; the receiving advice matches the ship notice.</p><p>Prevented: ${money(EXPOSURE)} in charges did not arise on the first shipment.</p><p>Remaining: order item 2, 120 cases, ships on its own for the later delivery.</p></div>`;
 }
 function facts(){
-  if (F.st <= 1) return wr(`<b>Order item 1</b> · ASH-MUG-12 · ${F.st === 1 ? "change 4 asks <b>270</b> cases" : `change 3 asks <b>300</b> cases, replacing change 2's <span class="strike">250</span>`} · <b>270</b> available`, tag("EDI 860", F.st === 1 ? "c4" : "c3") + tag("Supplier ERP · API", "stock"))
+  if (F.st <= 1) return wr(`<b>Order item 1</b> · ASH-MUG-12 · ${F.st === 1 ? "change 4 asks <b>270</b> cases" : `change 3 asks <b>300</b> cases, replacing change 2's <span class="strike">250</span>`} · <b>270</b> available`, tag("EDI 860", F.st === 1 ? "c4" : "c3") + tag("EDI 846", "stock"))
     + (F.st === 0 ? wr(`<b>Order item 2</b> · ASH-NAP-4 · 120 cases moved to the later delivery`, tag("EDI 860", "c3")) : wr(`<b>Order item 1</b> · ${q1()} offered · technically acknowledged by Northfield`, tag("EDI 865", "a3") + tag("EDI 997", "f3")));
   if (F.st === 2) return wr(`<b>Order item 1</b> · 270 cases · accepted by Northfield on order change 4`, tag("EDI 860", "c4") + tag("EDI 865", "a4"));
-  if (F.st === 3) return wr(`<b>Ship notice draft</b> · order item 1 <span class="st-red">300 cases</span> · accepted 270`, tag("Supplier ERP · API", "draft"));
-  if (F.st === 4) return wr(`<b>Load scan</b> · 350 of 350 cartons · 270 and 80 cases`, tag("Supplier ERP · API", "load")) + wr(`<b>Ship notice draft</b> · order item 1 <span class="strike">300</span>270 cases`, tag("Supplier ERP · API", "draft"));
+  if (F.st === 3) return wr(`<b>Ship notice draft</b> · order item 1 <span class="st-red">300 cases</span> · accepted 270`, tag("Ship notice draft · EDI 856", "draft"));
+  if (F.st === 4) return wr(`<b>Shipped</b> · 350 cartons at 18:00 · 270 and 80 cases`, tag("Warehouse shipping advice · EDI 945", "load")) + wr(`<b>Ship notice draft</b> · order item 1 <span class="strike">300</span>270 cases`, tag("Ship notice draft · EDI 856", "draft"));
   return wr(`<b>Receiving advice</b> · 270 and 80 cases at DC 2 · 0 short`, tag("EDI 861", "rcv")) + wr(`<b>Ship notice</b> · 350 cartons · 270 and 80 cases`, tag("EDI 856", "asn"));
 }
 function chipHead(){
@@ -742,8 +741,8 @@ function actionBar(){
   if (F.st === 0) return `<div class="ab2"><button class="btn" type="button" id="bSend3" ${btnAttr()}>Send change acknowledgment</button><div class="says"><div>Sends a change acknowledgment to Northfield: order item 1 at ${q1()} cases; items 2 and 3 as requested.</div><div class="cb">Without a send, the 24-hour answer window closes Tue 13:05.</div></div></div>`;
   if (F.st === 1) return `<div class="ab2"><button class="btn" type="button" id="bSend4" ${btnAttr()}>Send change acknowledgment</button><div class="says"><div>Sends a change acknowledgment (EDI 865) to Northfield accepting order item 1 at 270 cases. Order items 2 and 3 stay as answered.</div><div class="cb">Without a send, the 24-hour answer window closes Tue 16:40.</div></div></div>`;
   if (F.st === 2) return `<div class="ab2"><button class="next" type="button" id="bNext" ${btnAttr()}>Next: ship notice draft</button><p class="says">Moves to Friday 11:00, when the ship notice draft for the first shipment is checked.</p></div>`;
-  if (F.st === 3) return `<div class="ab2"><button class="btn" type="button" aria-disabled="true">Release ship notice</button><div class="says"><div>Held until Ashby shipping corrects the shipment and you confirm the fix.</div></div></div>`;
-  if (F.st === 4) return `<div class="ab2"><button class="btn" type="button" id="bRel" ${btnAttr()}>Release ship notice</button><div class="says"><div>Sends the ship notice (EDI 856) for 350 cartons to Northfield: order item 1 at 270 cases, order item 3 at 80 cases. Order item 2 ships on its own.</div><div class="cb">Without a release, the ship notice stays held and the truck leaves without one.</div></div></div>`;
+  if (F.st === 3) return `<div class="ab2"><button class="next" type="button" id="bFix" ${btnAttr()}>Next: the 3PL warehouse's shipping advice</button><p class="says">Held until the 3PL warehouse's shipping advice arrives; the draft is rebuilt from it.</p></div>`;
+  if (F.st === 4) return `<div class="ab2"><button class="btn" type="button" id="bRel" ${btnAttr()}>Release ship notice</button><div class="says"><div>Sends the ship notice (EDI 856) for 350 cartons to Northfield: order item 1 at 270 cases, order item 3 at 80 cases. Order item 2 ships on its own.</div><div class="cb">Without a release by 19:00, the ship notice misses Northfield's 1-hour rule.</div></div></div>`;
   return `<div class="ab2"><p class="says">The first shipment is received. Order item 2 ships on its own for the later delivery.</p></div>`;
 }
 function renderDet(){
@@ -757,12 +756,12 @@ function render(){ head(); renderList(); renderDet(); if ($("#avp").classList.co
 let from = null;
 function openDrawer(title, html){ from = document.activeElement; $("#dtitle").textContent = title; $("#dbody").innerHTML = html; $("#drawer").classList.add("on"); $("#scrim").classList.add("on"); $("#dclose").focus(); }
 function closeDrawer(){ if (!$("#drawer").classList.contains("on")) return; $("#drawer").classList.remove("on"); $("#scrim").classList.remove("on"); if (from && document.body.contains(from)) from.focus(); }
-function openDoc(k){ const d = DOCS[k]; if (!d) return; const kv = k === "draft" && F.st >= 4 ? [["Shipment","SHP-450118-1"],["Order item 1","300 cases, corrected to 270 from the load scan"],["Order item 3","80 cases"],["State", F.st === 5 ? "Released as ship notice ASN-450118-1" : "Corrected; ready to release"]] : d.kv; openDrawer(d.name, `<dl class="kv"><dt>Document</dt><dd>${esc(d.name)} <span class="mono">${esc(d.ref)}</span></dd><dt>Interface</dt><dd>${esc(d.iface)}</dd><dt>From</dt><dd>${esc(d.from)}</dd><dt>To</dt><dd>${esc(d.to)}</dd><dt>Received</dt><dd>${esc(when(d.at))} ET</dd>${kv.map(r => `<dt>${esc(r[0])}</dt><dd>${esc(r[1])}</dd>`).join("")}</dl>`); }
+function openDoc(k){ const d = DOCS[k]; if (!d) return; const kv = k === "draft" && F.st >= 4 ? [["Shipment","SHP-450118-1"],["Order item 1","300 cases, rebuilt at 270 from the 3PL warehouse's shipping advice"],["Order item 3","80 cases"],["State", F.st === 5 ? "Released as ship notice ASN-450118-1" : "Rebuilt; ready to release"]] : d.kv; openDrawer(d.name, `<dl class="kv"><dt>Document</dt><dd>${esc(d.name)} <span class="mono">${esc(d.ref)}</span></dd><dt>Interface</dt><dd>${esc(d.iface)}</dd><dt>From</dt><dd>${esc(d.from)}</dd><dt>To</dt><dd>${esc(d.to)}</dd><dt>Received</dt><dd>${esc(when(d.at))} ET</dd>${kv.map(r => `<dt>${esc(r[0])}</dt><dd>${esc(r[1])}</dd>`).join("")}</dl>`); }
 function openHistory(){ const items = F.hist.filter(h => h.t <= F.clock).sort((a, b) => b.t - a.t); openDrawer("History", `<ul class="hi">${items.map(h => `<li><span class="tm">${esc(when(h.t))}</span><span>${h.doc ? `<button class="tag" style="font-size:var(--ui-fs-body);color:var(--text-heading)" type="button" data-doc="${h.doc}">${esc(h.text)}</button>` : esc(h.text)}<br><span class="by">${esc(h.by)}</span></span></li>`).join("")}</ul>`); }
 function openRules(){
   const here = {"NF-1.6": F.st <= 1 ? "Answer due in " + dur((F.st === 0 ? T(1,13,5) : T(1,16,40)) - F.clock) : "Answered within the window", "NF-1.5": F.st >= 2 ? "Accepted on order change 4" : F.st === 1 ? "270 offered; order change 4 matches it" : "Nothing accepted yet",
-    "AP-1.1": "Order item 1 answered at 270, the quantity available", "NF-2.1": "No backorder on order item 1", "NF-4.5": F.st >= 3 ? (F.st === 3 ? "Draft lists 300 against a shipment of 270" : "Ship notice matches the load scan") : "Checked when the ship notice is drafted",
-    "AP-1.2": F.st >= 3 ? "Draft held" : "No ship notice yet", "AP-1.4": F.st >= 4 ? "Corrected from the load scan" : "Not used yet", "AP-1.3": F.st === 5 ? "Released by Priya Raman" : F.st === 4 ? "Waiting for release" : "Not used yet"};
+    "AP-1.1": "Order item 1 answered at 270, the quantity available", "NF-2.1": "No backorder on order item 1", "NF-4.5": F.st >= 3 ? (F.st === 3 ? "Draft lists 300 against a shipment of 270" : "Ship notice matches the shipment") : "Checked when the ship notice is drafted",
+    "AP-1.2": F.st >= 3 ? "Draft held" : "No ship notice yet", "AP-1.4": F.st >= 4 ? "Rebuilt from the shipping advice" : "Not used yet", "AP-1.3": F.st === 5 ? "Released by Priya Raman" : F.st === 4 ? "Waiting for release" : "Not used yet"};
   openDrawer("Rules for PO 450118", Object.keys(RULES).map(i => `<div class="rl"><div class="s">${esc(RULES[i][0])}</div><div>${esc(RULES[i][1])}</div><div class="f">Here: ${esc(here[i])}</div></div>`).join(""));
 }
 
@@ -771,7 +770,7 @@ const C = window.TG_AVIATOR;
 C.side = () => "ashby";
 C.asOf = () => new Date(Date.parse("2026-11-02T05:00:00Z") + F.clock * 60000).toISOString();
 C.context = () => "PO NR-450118";
-const AVQ = ["Why is order item 1 at 270?", "Has Northfield accepted 270?"];
+const AVQ = ["Why did the order quantity change?", "Has Northfield accepted the new quantity?"];
 function mountAv(){ C.mount($("#avbody"), {questions: () => AVQ}); }
 function toggleAv(on){ const p = $("#avp"), b = $("#avb"); on = on == null ? !p.classList.contains("on") : on; if (on) mountAv(); p.classList.toggle("on", on); b.setAttribute("aria-expanded", on); if (on) $("#avclose").focus(); else b.focus(); }
 
@@ -802,11 +801,10 @@ const next = () => run(async () => {
   say("Ship notice draft held: order item 1 lists 300 cases against 270 accepted. $150.00 at stake.");
 });
 const fix = () => run(async () => {
-  F.clock = T(4,17,30); add("load"); F.cur = "load"; F.st = 4; F.emph = "At stake"; F.confirmedAt = F.clock;
-  H(T(4,17,30), "Shipment fix on PO 450118 confirmed by Priya Raman", "Person");
-  H(T(4,17,30), "Load scan · 350 of 350 cartons · 270 and 80 cases", "Supplier ERP · API", "load");
-  H(T(4,17,31), "Ship notice draft corrected from the load scan · order item 1 at 270 cases", "Rule · Trading Grid", "draft");
-  say("Fix confirmed. The load scan shows 270 and 80 cases; $150.00 no longer at stake.");
+  F.clock = T(4,18,12); add("load"); F.cur = "load"; F.st = 4; F.emph = "At stake";
+  H(T(4,18,12), "Warehouse shipping advice · 350 cartons shipped at 18:00 · 270 and 80 cases", "Ashby's 3PL warehouse · EDI 945", "load");
+  H(T(4,18,12), "Ship notice draft rebuilt from the shipping advice · order item 1 at 270 cases", "Rule · Trading Grid", "draft");
+  say("The 3PL warehouse's shipping advice: 270 and 80 cases. The draft is rebuilt; $150.00 no longer at stake.");
 });
 const undo = () => run(async () => {
   if (F.st !== 4) return;
@@ -816,11 +814,9 @@ const undo = () => run(async () => {
   say("Fix withdrawn. $150.00 back at stake.");
 });
 const release = () => run(async () => {
-  add("asn"); F.clock = T(4,18,27);
-  H(T(4,18,0), "Departure scan · Lakeline Freight", "Supplier ERP · API", "dep");
-  H(T(4,18,18), "Ship notice release · 350 cartons", "Rule · Priya Raman · Trading Grid");
-  H(T(4,18,20), "Ship notice · 350 cartons · 270 and 80 cases", "Ashby · EDI 856", "asn");
-  H(T(4,18,27), "Technical acknowledgment of the ship notice", "Northfield · EDI 997", "f5");
+  add("asn"); F.clock = T(4,18,29);
+  H(T(4,18,20), "Ship notice released · 350 cartons · 270 and 80 cases", "Rule · Priya Raman · Trading Grid", "asn");
+  H(T(4,18,29), "Technical acknowledgment of the ship notice", "Northfield · EDI 997", "f5");
   await wait(250);
   F.clock = T(5,7,20); add("rcv"); F.cur = "rcv"; F.st = 5; F.emph = "At stake";
   H(T(5,7,20), "Receiving advice · 270 and 80 cases at DC 2 · 0 short", "Northfield · EDI 861", "rcv");

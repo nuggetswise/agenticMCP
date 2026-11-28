@@ -163,14 +163,14 @@ export function anchors(L, W) {
     ev(L, day('2026-11-02', '16:52'), 'approval', po, 'Trading Grid', 'ASHBY', 'API', { approved_by: 'Priya Raman', what: 'Change acknowledgment to order change 4: line 1 270 cases accepted' });
     // Shipment 1: lines 1 and 3, 350 cartons. The first ship notice draft carried line 1 at 300 and was held.
     const c1 = [...cartonsFor(W, 1, [[1, 270]]), ...cartonsFor(W, 391, [[3, 80]])];
-    ev(L, day('2026-11-06', '11:00'), 'tg.hold', po, 'Trading Grid', 'ASHBY', 'API', { document: 'ASN-450118-1 draft', rule: 'NF-4.5', finding: 'Line 1 ship notice 300 against 270 accepted', exposure_estimate: 150, corrected_by: 'Priya Raman', corrected_from: 'Load scan for SHP-450118-1: 350 cartons, 270 on line 1 and 80 on line 3', release_rule: 'AP-1.3', approved_by: 'Priya Raman', approved_at: iso(day('2026-11-06', '18:18')), released_at: iso(day('2026-11-06', '18:20')) });
+    ev(L, day('2026-11-06', '11:00'), 'tg.hold', po, 'Trading Grid', 'ASHBY', 'API', { document: 'ASN-450118-1 draft', rule: 'NF-4.5', finding: 'Line 1 ship notice 300 against 270 accepted', exposure_estimate: 150, corrected_by: 'Priya Raman', corrected_from: "Shipping advice WSA-450118-1 (945) from Ashby's 3PL warehouse at 18:12: 350 cartons, 270 on line 1 and 80 on line 3", rebuilt_at: iso(day('2026-11-06', '18:12')), release_rule: 'AP-1.3', approved_by: 'Priya Raman', approved_at: iso(day('2026-11-06', '18:18')), released_at: iso(day('2026-11-06', '18:20')) });
     const dep1 = day('2026-11-06', '18:00');
     D.whOrder(L, O, day('2026-11-06', '06:00'), 'WSO-450118', { shipDate: '2026-11-06', qty: { 1: 270, 2: 120, 3: 80 } }); // one warehouse shipping order; Kinross answers it with a 945 per shipment
     ev(L, addH(dep1, -0.5), 'wms.load_scan', po, 'Kinross warehouse system', 'KINROSS', 'API', { shipment: 'SHP-450118-1', cartons_loaded: 350, cartons_expected: 350, by_sscc: true });
     ev(L, dep1, 'wms.departure_scan', po, 'Kinross warehouse system', 'KINROSS', 'API', { shipment: 'SHP-450118-1', carrier: 'Lakeline Freight' });
     D.whAdvice(L, O, addH(dep1, 0.2), 'WSA-450118-1', { shipmentId: 'SHP-450118-1', shippedAt: dep1, ordered: { 1: 270, 2: 0, 3: 80 }, shipped: { 1: 270, 2: 0, 3: 80 }, cartons: c1.map((c) => ({ ...c, ...(c.line === 3 ? lotOf('ASH-HNY-340', iso(dep1)) || {} : {}) })), tracking: 'BOL-88190', noLedger: true });
-    // 17 November 2026: the ship notice leaves after the 17:30 load scan that corrected it and the 18:00 departure, inside
-    // NF-4.2's hour (it was sent at 11:25, before either). It keeps its control number (`numAt`); its 997 follows it.
+    // 27 November 2026: the ship notice is rebuilt from the 3PL warehouse's 945 (18:12) and released at 18:20, inside
+    // NF-4.2's hour after the 18:00 departure (the held draft was sent at 11:25). It keeps its control number (`numAt`); its 997 follows it.
     D.asn(L, O, day('2026-11-06', '18:20'), { ref: 'ASN-450118-1', shippedAt: dep1, deliveryDate: '2026-11-07', cartons: c1, qty: { 1: 270, 2: 0, 3: 80 }, bol: 'BOL-88190', seal: 'SL-3302871', status: 'BP' }).numAt = iso(day('2026-11-06', '11:25'));
     D.receipt(L, O, day('2026-11-07', '07:20'), { ref: 'RCV-DC2-77290', asnRef: 'ASN-450118-1', qty: { 1: 270, 3: 80 } });
     // Shipment 2: line 2, 120 cartons, sealed trailer.

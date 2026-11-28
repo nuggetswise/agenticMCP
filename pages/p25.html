@@ -397,7 +397,7 @@ E.closeDrawer = () => { if (!$("#drawer").classList.contains("on")) return; $("#
 E.refy = v => /^(?:[A-Z]{2,5}-[A-Z0-9]+(?:-[A-Z0-9]+)*|\d{10,}|[A-Z]{3}-[A-Z]{3,4}-\d+)$/.test(String(v)) ? `<span class="mono">${esc(v)}</span>` : esc(v);
 E.docHTML = d => {
   let h = `<dl class="kv"><dt>Document</dt><dd>${esc(d.name)} <span class="mono">${esc(d.ref || "")}</span></dd><dt>Interface</dt><dd>${esc(d.iface)}</dd><dt>From</dt><dd>${esc(d.from)}</dd><dt>To</dt><dd>${esc(d.to)}</dd>${d.at != null ? `<dt>Received</dt><dd>${esc(E.when(d.at))} ET</dd>` : ""}${(d.kv || []).map(k => `<dt>${esc(k[0])}</dt><dd>${E.refy(k[1])}</dd>`).join("")}</dl>`;
-  if (d.lines) h += `<table class="t"><thead><tr><th>Order item</th><th>Item</th><th>Quantity</th><th>Price</th></tr></thead><tbody>${d.lines.map(l => `<tr><td>${esc(l[0])}</td><td class="mono">${esc(l[1])}</td><td>${esc(l[2])}</td><td>${esc(l[3] || "")}</td></tr>`).join("")}</tbody></table>`;
+  if (d.lines) h += `<table class="t"><thead><tr>${(d.cols || ["Order item","Item","Quantity","Price"]).map(c => `<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>${d.lines.map(l => `<tr><td>${esc(l[0])}</td><td>${((m) => m ? `<span class="mono">${esc(m[1])}</span>${esc(m[2])}` : esc(l[1]))(/^(\d+)([\s\S]*)$/.exec(String(l[1])))}</td><td>${esc(l[2])}</td><td>${esc(l[3] || "")}</td></tr>`).join("")}</tbody></table>`;
   if (d.total) h += `<p style="margin-top:var(--space-2);color:var(--text-heading);font-weight:var(--ui-fw-semibold)">${esc(d.total)}</p>`;
   return h;
 };
@@ -449,8 +449,8 @@ const L = {sku:"ASH-SHT-L", name:"Shirt, Navy, Large", upc:"614141000203", gtin:
 const R9 = {sku:"ASH-TRL-09", name:"Trail runner", upc:"614141000166", gtin:"10614141000163"};
 const W = E.W = {
   docs: {
-    "832:CAT-ASH-2027-01": {name:"Item catalogue", ref:"CAT-ASH-2027-01", iface:"EDI 832", from:"Ashby Supplier", to:"Northfield Retailer", at:T(-2,9,0),
-      kv:[["Accepted by Northfield","Monday 14:00, both items"]], lines:[["1","614141000197 · Shirt, Navy, Medium","Case of 12","$180.00"],["2","614141000203 · Shirt, Navy, Large","Case of 12","$180.00"]]},
+    "832:CAT-ASH-2027-01": {name:"Item catalogue", ref:"CAT-ASH-2027-01", iface:"EDI 832", cols:["Line","Item","Pack","Cost"], from:"Ashby Supplier", to:"Northfield Retailer", at:T(-2,9,0),
+      kv:[["Accepted by Northfield","Monday 14:00, all four items"]], lines:[["1","614141000197 · Shirt · 410 Navy · 10970 Medium","Case of 12","$180.00"],["2","614141000203 · Shirt · 410 Navy · 10975 Large","Case of 12","$180.00"],["3","614141000166 · Trail runner · 001 Black · 50555 11 Medium","Pair","$38.00"],["4","614141000135 · Linen napkin 4-pack · 260 Ivory · 30001 One size","Case of 24","$38.40"]]},
     "850:NR-47300": {name:"Purchase order", ref:"NR-47300", iface:"EDI 850", from:"Northfield Retailer", to:"Ashby Supplier", at:T(-1,9,30),
       kv:[["Ship to","Northfield DC 2"],["Delivery","Thursday"],["Programme","Wholesale"]],
       lines:[["1","10614141000194 · Shirt, Navy, Medium","24 cases","$180.00"],["2","10614141000200 · Shirt, Navy, Large","24 cases","$180.00"],["3","10614141000163 · Trail runner","12 cases","$38.00"]], total:"60 cases · $9,096.00"},
@@ -458,7 +458,7 @@ const W = E.W = {
     "855:ACK-47300": {name:"Order acknowledgment", ref:"ACK-47300", iface:"EDI 855", from:"Ashby Supplier", to:"Northfield Retailer", at:T(-1,10,15),
       kv:[["Purchase order","NR-47300"]], lines:[["1","Shirt, Navy, Medium","24 of 24 cases","Accepted"],["2","Shirt, Navy, Large","24 of 24 cases","Accepted"],["3","Trail runner","12 of 12 cases","Accepted"]]},
     "997:FA-NS370000002": {name:"Technical acknowledgment", ref:"FA-NS370000002", iface:"EDI 997", from:"Northfield Retailer", to:"Ashby Supplier", at:T(-1,10,21), kv:[["For","Order acknowledgment ACK-47300"],["Result","Technically acknowledged"]]},
-    "SN-1": {name:"Ship notice", ref:ASN + " · version 1", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(0,14,0),
+    "SN-1": {name:"Ship notice", ref:ASN + " · version 1", iface:"EDI 856", from:"Supplier ERP", to:"Trading Grid", at:T(0,14,0),
       kv:[["Ship from","Ashby warehouse"],["Ship to","Northfield DC 2"],["Cartons","60"],["State","Held, not sent to Northfield"]],
       lines:[["1","UPC 0614141000197","24 cases",""],["2","UPC 614141000210","24 cases",""],["3","UPC 614141000167","12 cases",""]]},
     "MAP-1": {name:"Ship notice map", ref:"Northfield", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(0,14,0),
@@ -473,13 +473,13 @@ const W = E.W = {
       kv:[["Ordered item","Shirt, Navy, Large"],["Mapped to UPC","614141000203, was 614141000210"],["Changed by","Master-data operations"],["Confirmed by","Priya Raman, in Supplier ERP"]]},
     "FIX-3": {name:"Item master change", ref:"ASH-TRL-09", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(0,15,0),
       kv:[["Item","Trail runner"],["UPC","614141000166, was 614141000167"],["Changed by","Master-data operations"]]},
-    "SN-2": {name:"Ship notice", ref:ASN + " · version 2", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(0,15,10),
+    "SN-2": {name:"Ship notice", ref:ASN + " · version 2", iface:"EDI 856", from:"Supplier ERP", to:"Trading Grid", at:T(0,15,10),
       kv:[["Ship from","Ashby warehouse"],["Ship to","Northfield DC 2"],["Cartons","60"],["Check","Every order item matches"]],
       lines:[["1","UPC 614141000197","24 cases",""],["2","UPC 614141000203","24 cases",""],["3","UPC 614141000166","12 cases",""]]},
     "LOAD": {name:"Load scan", ref:"SHP-47300", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(0,15,40), kv:[["Cartons loaded","60 of 60, by SSCC"]]},
-    "DEP": {name:"Departure scan", ref:"SHP-47300", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(0,16,0), kv:[["Departed","16:00"],["Carrier","Lakeline Freight"]]},
+    "DEP": {name:"Departure scan", ref:"SHP-47300", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(0,16,0), kv:[["Departed","16:00"],["Carrier","Northfield's carrier"]]},
     "856:ASN-47300": {name:"Ship notice", ref:ASN, iface:"EDI 856", from:"Ashby Supplier", to:"Northfield Retailer", at:T(0,16,10),
-      kv:[["Ship from","Ashby warehouse"],["Ship to","Northfield DC 2"],["Shipped","16:00"],["Carrier","Lakeline Freight"],["Cartons","60"]],
+      kv:[["Ship from","Ashby warehouse"],["Ship to","Northfield DC 2"],["Shipped","16:00"],["Carrier","Northfield's carrier"],["Cartons","60"]],
       lines:[["1","10614141000194 · UPC 614141000197","24 cases",""],["2","10614141000200 · UPC 614141000203","24 cases",""],["3","10614141000163 · UPC 614141000166","12 cases",""]], total:"60 cartons"},
     "997:FA-NS370000006": {name:"Technical acknowledgment", ref:"FA-NS370000006", iface:"EDI 997", from:"Northfield Retailer", to:"Ashby Supplier", at:T(0,16,15), kv:[["For","Ship notice ASN-47300"],["Result","Technically acknowledged"]]},
     "861:RCV-DC2-47300": {name:"Receiving advice", ref:"RCV-DC2-47300", iface:"EDI 861", from:"Northfield Retailer", to:"Ashby Supplier", at:T(1,7,30),
@@ -496,8 +496,8 @@ const W = E.W = {
   cat: [
     {sku:"ASH-SHT-M", product:"Shirt", upc:"614141000197", gtin:"10614141000194", colour:"410 Navy", size:"10970 Medium", msg:"CAT-ASH-2027-01"},
     {sku:"ASH-SHT-L", product:"Shirt", upc:"614141000203", gtin:"10614141000200", colour:"410 Navy", size:"10975 Large", msg:"CAT-ASH-2027-01"},
-    {sku:"ASH-TRL-09", product:"Trail runner", upc:"614141000166", gtin:"10614141000163", colour:"001 Black", size:"30001 One size", msg:"CAT-ASH-2026-01"},
-    {sku:"ASH-NAP-4", product:"Linen napkin 4-pack", upc:"614141000135", gtin:"10614141000132", colour:"260 Ivory", size:"30001 One size", msg:"CAT-ASH-2026-01"}
+    {sku:"ASH-TRL-09", product:"Trail runner", upc:"614141000166", gtin:"10614141000163", colour:"001 Black", size:"50555 11 Medium", msg:"CAT-ASH-2027-01"},
+    {sku:"ASH-NAP-4", product:"Linen napkin 4-pack", upc:"614141000135", gtin:"10614141000132", colour:"260 Ivory", size:"30001 One size", msg:"CAT-ASH-2027-01"}
   ],
   rules: {
     len:{text:"Every item number has the length and check digit GS1 sets: 12 digits for a UPC, the last a check digit.", src:"GS1 standard"},
@@ -523,8 +523,8 @@ const S = E.S;
 const F = S.f = {c1:false, c2:false, c3:false, fix1:false, fix2:false, fix3:false, sn2:false, corr:false, rel:false, dep:false, sent:false, ack:false, rcv:false, tok:{1:0,2:0,3:0}};
 
 /* history before the moment, source time order */
-[[T(-2,9,0),"Item catalogue CAT-ASH-2027-01 sent to Northfield · shirt, Medium and Large","Item records","832:CAT-ASH-2027-01"],
- [T(-2,14,0),"Northfield accepted shirt, Medium and Large","Northfield"],
+[[T(-2,9,0),"Item catalogue CAT-ASH-2027-01 sent to Northfield · 4 items","Item records","832:CAT-ASH-2027-01"],
+ [T(-2,14,0),"Northfield accepted all 4 items","Northfield"],
  [T(-1,9,30),"Purchase order NR-47300 received · 60 cases to DC 2","Northfield","850:NR-47300"],
  [T(-1,9,35),"Technical acknowledgment FA-AS370000001 for NR-47300","Trading Grid","997:FA-AS370000001"],
  [T(-1,10,15),"Order acknowledgment ACK-47300 delivered · every order item accepted","Trading Grid","855:ACK-47300"],
@@ -609,11 +609,11 @@ function record(id){
   const l = LN[id];
   const wrong = [];
   if (!F.corr) {
-    wrong.push({v:`<b>Ship notice</b> · order item ${l.n} carries ${mono(l.sent)} · <span class="st-red">${esc(l.why)}</span>`, tags:[["Supplier ERP · API","SN-1"]]});
+    wrong.push({v:`<b>Ship notice</b> · order item ${l.n} carries ${mono(l.sent)} · <span class="st-red">${esc(l.why)}</span>`, tags:[["Ship notice · EDI 856","SN-1"]]});
     wrong.push({v:`<b>Ordered</b> · ${esc(l.item.name)} · catalogue record <button class="tag" type="button" data-act="rec:${l.item.sku}" style="font-size:var(--ui-fs-body);color:var(--action-text)">${esc(l.item.upc)}</button>`, tags:[["EDI 850","850:NR-47300"],["Item records",null]]});
     wrong.push({v:`<b>Source</b> · ${esc(l.cause)}`, tags:[["Supplier ERP · API", ok(id) ? l.fixDoc : l.srcDoc]]});
   } else {
-    wrong.push({v:`<b>Ship notice</b> · order item ${l.n} carries ${strike(esc(l.sent), esc(l.now))}`, tags:[["Supplier ERP · API","SN-2"]]});
+    wrong.push({v:`<b>Ship notice</b> · order item ${l.n} carries ${strike(esc(l.sent), esc(l.now))}`, tags:[["Ship notice · EDI 856","SN-2"]]});
     wrong.push({v:`<b>Ordered</b> · ${esc(l.item.name)} · catalogue record <button class="tag" type="button" data-act="rec:${l.item.sku}" style="font-size:var(--ui-fs-body);color:var(--action-text)">${esc(l.item.upc)}</button>`, tags:[["EDI 850","850:NR-47300"]]});
   }
   const stages = [];
@@ -756,7 +756,7 @@ async function approve(id){
   step(Math.max(S.clock, T(0,15,20)), () => { F.rel = true; E.hist(T(0,15,20), "Ship notice ASN-47300 released by Priya Raman", "Person"); }, "Priya Raman released the ship notice. It sends when the truck departs.");
   await E.wait(500);
   E.light("dx", true, "Supplier ERP · API"); await E.travel("erp", "Departure scan", false); E.light("dx", false, "");
-  step(T(0,16,0), () => { F.dep = true; E.hist(T(0,15,40), "Load scan on SHP-47300 · 60 of 60 cartons", "Supplier ERP", "LOAD"); E.hist(T(0,16,0), "Departure scan on SHP-47300 · Lakeline Freight", "Supplier ERP", "DEP"); }, "The truck left the Ashby warehouse at 16:00 with 60 of 60 cartons.");
+  step(T(0,16,0), () => { F.dep = true; E.hist(T(0,15,40), "Load scan on SHP-47300 · 60 of 60 cartons", "Supplier ERP", "LOAD"); E.hist(T(0,16,0), "Departure scan on SHP-47300 · Northfield's carrier", "Supplier ERP", "DEP"); }, "The truck left the Ashby warehouse at 16:00 with 60 of 60 cartons.");
   E.light("dx", true, "Ship notice · EDI 856"); await E.travel("nf", "Ship notice");
   step(T(0,16,10), () => { F.sent = true; E.hist(T(0,16,10), "The ship notice was delivered to Northfield · released by Priya Raman", "Trading Grid", "856:ASN-47300"); }, "The ship notice was delivered to Northfield.");
   await E.wait(300);

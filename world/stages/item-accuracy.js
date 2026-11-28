@@ -23,7 +23,8 @@ import { catalogueLine } from './catalogue.js';
 
 const day = (d, hm) => et(d, hm);
 const PRIYA = 'Priya Raman';
-const ev = (L, at, kind, po, system, party, data) => L.event({ at, kind, po, system, party, channel: 'API', data });
+// Ship notice drafts reach Trading Grid as EDI 856 (round plan 26 November 2026: EDI first); every other event here is API.
+const ev = (L, at, kind, po, system, party, data, channel = 'API') => L.event({ at, kind, po, system, party, channel, data });
 const mk = (po, shipTo, lines, o) => ({ po, supplier: 'ASHBY', shipTo, site: 'ASH-WH1', stream: 'buyer', ...o, lines: lines.map(([sku, qty], i) => ({ line: i + 1, sku, qty, price: ITEM[sku].case_price })) });
 const upcOf = (ref5) => { const b = `614141${ref5}`; return b + gs1Check(b); }; // 12-digit UPC under Ashby's prefix 0614141
 
@@ -112,7 +113,7 @@ function generate(L, ctx) {
   // The Supplier ERP sends the ship notice to Trading Grid; the rules read it at once and hold it on three lines.
   const draft = linesAt(ORDER, AT.draft);
   const doc = `ASN-${P25_PO.slice(3)}`;
-  ev(L, AT.draft, 'erp.ship_notice', P25_PO, 'Supplier ERP', 'ASHBY', { document: doc, version: 1, sent_to: 'Trading Grid', cartons: 60, lines: draft });
+  ev(L, AT.draft, 'erp.ship_notice', P25_PO, 'Supplier ERP', 'ASHBY', { document: doc, version: 1, sent_to: 'Trading Grid', cartons: 60, lines: draft }, 'EDI 856');
   const findings = draft.map((l) => ({ l, f: checkLine(l) })).filter((x) => x.f).map(({ l, f }) => {
     const [owner, fixIn] = OWNER[sourceOf(l.sku, AT.draft)];
     return { line: l.line, rule: f.rule, check: f.check, sent: l.upc_sent, ordered_item: l.ordered_item, ordered_upc: l.ordered_upc, finding: f.finding, owner, fix_in: fixIn, exposure_estimate: Math.round(l.cases * ITEM[l.sku].case_price * 100) / 100 };
@@ -129,7 +130,7 @@ function generate(L, ctx) {
   // The corrected ship notice from the Supplier ERP is the record of the fix; the rules run again and every line matches.
   const corrected = linesAt(ORDER, AT.corrected);
   if (corrected.some(checkLine)) throw new Error('item-accuracy: the corrected ship notice still fails');
-  ev(L, AT.corrected, 'erp.ship_notice', P25_PO, 'Supplier ERP', 'ASHBY', { document: doc, version: 2, sent_to: 'Trading Grid', cartons: 60, lines: corrected });
+  ev(L, AT.corrected, 'erp.ship_notice', P25_PO, 'Supplier ERP', 'ASHBY', { document: doc, version: 2, sent_to: 'Trading Grid', cartons: 60, lines: corrected }, 'EDI 856');
   ev(L, AT.recheck, 'tg.check', P25_PO, 'Trading Grid', 'ASHBY', { document: doc, version: 2, result: 'Every line matches', lines_checked: corrected.length, rules: ['GS1-1', 'GS1-2', 'NF-4.16'] });
   ev(L, AT.release, 'approval', P25_PO, 'Trading Grid', 'ASHBY', { document: doc, approved_by: PRIYA, what: `Release ship notice ${doc} version 2 after every line matched`, rule: 'AP-1.3', version: 2 });
 

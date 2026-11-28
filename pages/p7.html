@@ -685,7 +685,7 @@ function reasonRec(k){
       ...(k === "K" ? [] : [{v:`<b>Fixing it recovers</b> · up to ${esc(c.pts)} of the 8.2 points lost`, tags:[]}])]);
   const where = E.facts(k === "K" ? "Where it went late" : "Where it first went wrong", [
       {v:`<b>${esc(r.first)}</b> · ${esc(NF() && r.whyNf ? r.whyNf : r.why)}`, tags:[[r.tag, null]]},
-      ...(NF() || !["S","C"].includes(k) ? [] : [{v:"<b>Shipped by</b> · Ashby's 3PL warehouse", tags:[["3PL scan · API", null]]}])]);
+      ...(NF() || !["S","C"].includes(k) ? [] : [{v:"<b>Shipped by</b> · Ashby's 3PL warehouse", tags:[["Warehouse shipping advice · EDI 945", null]]}])]);
   const cols = ["S","A"].includes(k) ? [["Cases ordered", l => n0(l.chg)], ["Cases received", l => n0(l.rv)]]
     : k === "R" ? [["Cases on ship notice", l => n0(l.sh)], ["Cases counted", l => n0(l.rv)]]
     : k === "C" ? [["Pickup window", l => l.route ? `${l.route[1]} to ${l.route[2]}` : ""], ["Carrier arrived", l => { const a = (l.c214 || []).find(c => c[2] === "X3+SD"); return a ? `${a[1]} · freight not ready` : "Freight not ready"; }]]

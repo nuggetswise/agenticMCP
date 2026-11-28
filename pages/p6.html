@@ -638,8 +638,12 @@ const W = E.W = {docs:{
     kv:[["Paid","$26,848.80"],["Deductions","5 · $586.80"]], items:[["Deduction","Order","Reason","Amount"],["DM-55102","NR-450118 order item 2","1 carton short","−$88.40"],["DM-55140","NR-450415 order item 1","2 cartons short","−$208.00"],["DM-55640","NR-46229 order item 1","1 carton short","−$96.80"],["DM-55655","NR-46237 order item 1","1 carton short","−$96.80"],["DM-55671","NR-46244 order item 1","1 carton short","−$96.80"]]},
   "RCV-DC2-77355": {name:"Receiving advice", ref:"RCV-DC2-77355", iface:"EDI 861", from:"Northfield Retailer", to:"Ashby Supplier", at:T(-22,7,20),
     kv:[["Purchase order","NR-450118"],["Ship notice","ASN-450118-2"],["Received at","Northfield DC 2"],["Not scanned","Carton 006141410000003006"]], items:[["Order item","Item","Received"],["2","ASH-NAP-4","119 of 120 cartons"]]},
-  "LS-450118": {name:"Load scan", ref:"SHP-450118-2", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(-23,17,21),
-    kv:[["Cartons loaded","120 of 120, by SSCC"],["Includes","Carton 006141410000003006"],["Departed","18:00 · Lakeline Freight"]]},
+  "LS-450118": {name:"Load scan", ref:"SHP-450118-2", iface:"3PL scan · API", from:"Kinross Logistics", to:"Trading Grid", at:T(-23,17,21),
+    kv:[["Cartons loaded","120 of 120, by SSCC"],["Includes","Carton 006141410000003006"],["Departed","18:00 · Lakeline Freight"],["Held by","Kinross warehouse system"]]},
+  "WSA-450118-2": {name:"Warehouse shipping advice", ref:"WSA-450118-2", iface:"EDI 945", from:"Kinross Logistics", to:"Ashby Supplier", at:T(-23,18,3), kv:[["Cartons shipped","120 of 120, by SSCC"],["Includes","Carton 006141410000003006"],["Bill of lading","BOL-88229"],["Shipped","18:00 · Lakeline Freight"],["Item","ASH-NAP-4"]]},
+  "WSA-46229": {name:"Warehouse shipping advice", ref:"WSA-46229", iface:"EDI 945", from:"Kinross Logistics", to:"Ashby Supplier", at:T(-6,15,26), kv:[["Cartons shipped","6 of 6, by SSCC"],["Item","ASH-HNY-340"]]},
+  "WSA-46237": {name:"Warehouse shipping advice", ref:"WSA-46237", iface:"EDI 945", from:"Kinross Logistics", to:"Ashby Supplier", at:T(-5,15,26), kv:[["Cartons shipped","15 of 15, by SSCC"],["Item","ASH-HNY-340"]]},
+  "WSA-46244": {name:"Warehouse shipping advice", ref:"WSA-46244", iface:"EDI 945", from:"Kinross Logistics", to:"Ashby Supplier", at:T(-4,15,21), kv:[["Cases shipped","6 of 6"],["Cartons by SSCC","Missing"],["Item","ASH-HNY-340"]]},
   "BOL-88229": {name:"Bill of lading", ref:"BOL-88229", iface:"Uploaded to the dispute · PDF", from:"Ashby Supplier", to:"Trading Grid", kv:[["Issued by","Lakeline Freight"],["Seal","SL-3302918"],["Terms","Collect; loaded and counted by shipper"]]},
   "POD-450118": {name:"Delivery receipt", ref:"SHP-450118-2", iface:"Uploaded to the dispute · PDF", from:"Ashby Supplier", to:"Trading Grid", kv:[["Issued by","Lakeline Freight"],["Delivered","120 cartons"],["Seal","SL-3302918 intact"],["Exceptions","None"]]},
   "LS-46229": {name:"Load scan", ref:"SHP-46229", iface:"3PL scan · API", from:"Kinross Logistics", to:"Trading Grid", at:T(-6,14,33), kv:[["Cartons loaded","6 of 6, by SSCC"],["Held by","Kinross warehouse system"]]},
@@ -679,10 +683,10 @@ const R = {
 /* Uploaded documents are read on arrival: values carry the AI reading tag and a confidence */
 Object.keys(W.docs).filter(k => W.docs[k].iface.startsWith("Uploaded")).forEach(k => { W.docs[k].kv = W.docs[k].kv.map(r => r[0] === "Issued by" ? r : [r[0], r[1], "High"]).concat([["Legibility","Readable","High"]]); });
 const C = {
-  "DC-40877":{n:"40877", po:"NR-450118", dm:"DM-55102", amt:88.40, cartons:1, item:2, proof:"scan", from:"Supplier ERP", proofDoc:"LS-450118", up:["BOL-88229","POD-450118"], proofText:"120 of 120 cartons loaded by SSCC"},
-  "DC-41102":{n:"41102", po:"NR-46229", dm:"DM-55640", amt:96.80, cartons:1, item:1, proof:"scan", from:"Kinross", proofDoc:"LS-46229", up:["BOL-46229","POD-46229"], proofText:"6 of 6 cartons loaded by SSCC"},
-  "DC-41118":{n:"41118", po:"NR-46237", dm:"DM-55655", amt:96.80, cartons:1, item:1, proof:"tally", from:"Kinross", proofDoc:"LT-46237", up:["BOL-46237","POD-46237"], proofText:"15 cartons counted by SSCC"},
-  "DC-41131":{n:"41131", po:"NR-46244", dm:"DM-55671", amt:96.80, cartons:1, item:1, proof:"none", up:["BOL-46244","POD-46244"]},
+  "DC-40877":{n:"40877", po:"NR-450118", dm:"DM-55102", amt:88.40, cartons:1, item:2, proof:"scan", from:"Kinross", proofDoc:"LS-450118", wsa:"WSA-450118-2", wsaText:"120 of 120 cartons shipped by SSCC", up:["BOL-88229","POD-450118"], proofText:"120 of 120 cartons loaded by SSCC"},
+  "DC-41102":{n:"41102", po:"NR-46229", dm:"DM-55640", amt:96.80, cartons:1, item:1, proof:"scan", from:"Kinross", proofDoc:"LS-46229", wsa:"WSA-46229", wsaText:"6 of 6 cartons shipped by SSCC", up:["BOL-46229","POD-46229"], proofText:"6 of 6 cartons loaded by SSCC"},
+  "DC-41118":{n:"41118", po:"NR-46237", dm:"DM-55655", amt:96.80, cartons:1, item:1, proof:"tally", from:"Kinross", proofDoc:"LT-46237", wsa:"WSA-46237", wsaText:"15 of 15 cartons shipped by SSCC", up:["BOL-46237","POD-46237"], proofText:"15 cartons counted by SSCC"},
+  "DC-41131":{n:"41131", po:"NR-46244", dm:"DM-55671", amt:96.80, cartons:1, item:1, proof:"none", wsa:"WSA-46244", wsaText:"6 cases shipped · <span class=\"st-amber\">no carton SSCCs</span>", up:["BOL-46244","POD-46244"]},
   "DC-40931":{n:"40931", po:"NR-450415", dm:"DM-55140", amt:208.00, cartons:2, item:1, proof:"carrier", up:["BOL-88412","POD-450415"]}
 };
 const READ = {
@@ -721,7 +725,7 @@ S.tile = {ashby:"held", nf:"decide"};
 
 /* history: roles line reads recommended · authorised · carried out */
 const H = (t, text, roles, doc, sides) => E.hist(t, text, roles, doc, sides);
-H(T(-23,17,21), "Load scan on NR-450118 · 120 of 120 cartons by SSCC", "Supplier ERP", "LS-450118", "ashby");
+H(T(-23,17,21), "Load scan on NR-450118 · 120 of 120 cartons by SSCC", "Ashby's 3PL warehouse", "LS-450118", "ashby"); H(T(-23,18,3), "Warehouse shipping advice on NR-450118 · 120 of 120 cartons by SSCC", "Ashby's 3PL warehouse", "WSA-450118-2", "ashby");
 H(T(-22,7,20), "Receiving advice RCV-DC2-77355 · 119 of 120 cartons at DC 2", "Northfield", "RCV-DC2-77355", "ashby,nf");
 H(T(-13,9,30), "Invoice INV-7790 rejected by Northfield's application advice", "Rule · Northfield guide", "", "ashby,nf");
 H(T(-12,14,0), "Corrected invoice INV-7790C sent to Northfield", "Ashby Supplier", "", "ashby,nf");
@@ -763,6 +767,7 @@ function recA(id){
   const c = C[id];
   const facts = [{v:`<b>Remittance</b> · ${money(c.amt)} withheld · ${c.cartons} carton${c.cartons > 1 ? "s" : ""} short`, tags:[["EDI 820","PMT-990412"]]}];
   if (id === "DC-40877") facts.push({v:`<b>Receiving advice</b> · 119 of 120 cartons at DC 2 · 1 carton not scanned`, tags:[["EDI 861","RCV-DC2-77355"]]});
+  if (c.wsa) facts.push({v:`<b>Warehouse shipping advice</b> · ${c.wsaText}`, tags:[["EDI 945", c.wsa]]});
   if (c.proofDoc) facts.push({v:`<b>${esc(W.docs[c.proofDoc].name)}</b> · ${esc(c.proofText)}`, tags:[[W.docs[c.proofDoc].iface, c.proofDoc]]});
   else if (c.proof === "none") facts.push({v:`<b>Load proof</b> · <span class="st-amber">Missing</span> · no load scan or tally at Ashby's 3PL warehouse`, tags:[["3PL scan · API",""]]});
   else facts.push({v:`<b>Freight</b> · prepaid · 2 cartons crushed in transit`, tags:[["Delivery receipt","POD-450415"]]});
@@ -775,7 +780,7 @@ function recA(id){
       + E.nowAfter([["Dispute shortage charge", "Withheld " + money(c.amt), "Disputed", "Northfield", "Trading Grid deductions"]])
       + `<p class="reason"><b>Reason.</b> Northfield withheld ${money(c.amt)} for ${c.cartons} carton${c.cartons > 1 ? "s" : ""}; ${esc(reason)}</p>`
       + `<div class="cash"><div class="cc on"><span>Not disputed</span><b>${money(c.amt)}</b><em>stays withheld</em></div><div class="cc"><span>Won</span><b>${money(c.amt)}</b><em>back on a Northfield remittance</em></div></div>`
-      + E.details("a:" + id, ruleList(["evid","window","ashby"].concat(c.proof === "carrier" ? ["carrier"] : [])) + readList(["PMT-990412"].concat(c.proofDoc ? [c.proofDoc] : [], c.up)) + `<p class="k" style="margin-top:var(--space-2)">Who did what</p>` + E.who3([["Recommended","Rule · Ashby rule"],["Authorised","Priya Raman, on Open dispute"],["Carried out","Trading Grid deductions"]]))
+      + E.details("a:" + id, ruleList(["evid","window","ashby"].concat(c.proof === "carrier" ? ["carrier"] : [])) + readList(["PMT-990412"].concat(c.proofDoc ? [c.proofDoc] : [], c.wsa ? [c.wsa] : [], c.up)) + `<p class="k" style="margin-top:var(--space-2)">Who did what</p>` + E.who3([["Recommended","Rule · Ashby rule"],["Authorised","Priya Raman, on Open dispute"],["Carried out","Trading Grid deductions"]]))
       + `</div>`;
     action = {says:`Opens a dispute on Case ${c.n} in Trading Grid's deductions for ${money(c.amt)}, with ${c.proofDoc ? "the " + (c.proof === "tally" ? "load tally" : "load scan") + ", " : "the "}${c.proofDoc ? "" : ""}${upList(c)}. Northfield's receipt stays unchanged unless Northfield revises it.`,
       buttons:[{id:"d:" + id, label:"Open dispute", busyLabel:"Opening dispute"}], ruleTag:"Within 60 days", nod:`Not disputed in ${days()} days: the deduction stands.`};

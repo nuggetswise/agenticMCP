@@ -88,7 +88,7 @@ function generate(L, { W, buyerShipments }) {
       ev(et('2026-11-18', '08:50'), 'tg.hold', O.po, ...TG, { document: `ASN-${n(O)} draft`, state: 'Held', rule: 'NF-4.2', finding: 'Supplier ERP fulfilment posted at 07:50; Kinross load scan at 07:58 shows the trailer at door 3, not departed; no departure scan',
         owner: 'Kinross Logistics', fix_in: 'Kinross warehouse system', closes_on: 'Kinross departure scan' });
       ev(dep, 'wms.departure_scan', O.po, ...KIN, { shipment: `SHP-${n(O)}`, carrier: 'Lakeline Freight' });
-      D.whAdvice(L, O, addH(dep, 0.17), `WSA-${n(O)}`, { shipmentId: `SHP-${n(O)}`, shippedAt: dep });
+      D.whAdvice(L, O, addH(dep, 0.17), `WSA-${n(O)}`, { shipmentId: `SHP-${n(O)}`, shippedAt: dep, cartons });
       ev(addH(dep, 0.23), 'tg.release', O.po, ...TG, { document: `ASN-${n(O)}`, state: 'Released', rule: 'AP-1.3', released_by: 'Priya Raman', basis: 'Kinross departure scan at 15:00 and warehouse shipping advice' });
       D.asn(L, O, addH(dep, 0.27), asnBase(O, cartons, dep));
       finish(O, cartons, dep, addH(dep, 1.5), '07:40');
@@ -119,7 +119,7 @@ function generate(L, { W, buyerShipments }) {
       ev(et('2026-11-18', '14:33'), 'wms.load_scan', O.po, ...KIN, { shipment: `SHP-${n(O)}`, cartons_loaded: cartons.length, cartons_expected: cartons.length, by_sscc: true });
       ev(et('2026-11-18', '14:40'), 'erp.fulfilment_posted', O.po, ...ERP, { shipment: `SHP-${n(O)}`, cartons: cartons.length });
       ev(dep, 'wms.departure_scan', O.po, ...KIN, { shipment: `SHP-${n(O)}`, carrier: 'Lakeline Freight' });
-      D.whAdvice(L, O, addH(dep, 0.23), `WSA-${n(O)}`, { shipmentId: `SHP-${n(O)}`, shippedAt: dep });
+      D.whAdvice(L, O, addH(dep, 0.23), `WSA-${n(O)}`, { shipmentId: `SHP-${n(O)}`, shippedAt: dep, cartons });
       D.asn(L, O, addH(dep, 0.37), asnBase(O, cartons, dep));
       finish(O, cartons, dep, addH(dep, 1.67), '08:10');
     }

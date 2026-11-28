@@ -726,7 +726,7 @@ const fp = p => p ? "PO " + String(p).replace(/^NR-/, "") : "";
 const mref = t => t ? `<span class="mono">${esc(t)}</span>` : "";
 const lc = s => s ? s.charAt(0).toLowerCase() + s.slice(1) : s;
 const parts = a => a.filter(x => x[1]).map(x => x[0]).join(" · ");
-const role = s => String(s == null ? "" : s).replace(/Kinross (Joliet|Groveport)/g, "3PL warehouse, $1").replace(/\bKinross Logistics\b/g, "3PL warehouse").replace(/\bKinross\b/g, "3PL warehouse");
+const role = s => String(s == null ? "" : s).replace(/Kinross (Joliet|Groveport)/g, "Ashby's 3PL warehouse, $1").replace(/\bKinross Logistics\b/g, "Ashby's 3PL warehouse").replace(/\bKinross\b/g, "Ashby's 3PL warehouse").replace(/\bLakeline Freight\b/g, "Northfield's carrier").replace(/\bLakeline\b/g, "Northfield's carrier");
 const team0 = o => o === "Supplier ERP" ? "Ashby, in the Supplier ERP" : o === "Jordan Ellis" ? "Northfield supplier operations" : o === "Priya Raman" ? "Ashby operations" : o;
 const team = o => role(team0(o));
 const perName = () => PERIODS.find(p => p[0] === V.per)[1].toLowerCase();
@@ -1059,7 +1059,7 @@ E.page = {
       {src:"Northfield guide", text:"Dispute once per deduction, within 60 days of the remittance date, in the deduction case.", found:V.side === "ashby" && md().window ? `Soonest window: ${md().window}` : ""},
       ...(V.side === "ashby" ? [{src:"Trading Grid", text:"Caught before shipment: a problem the rules found that its owner fixed before the document left Ashby, with the charge Northfield's guide sets for that failure. A ship notice or invoice later rejected or sent late is not counted.", found:CAUGHT().findings ? `${CAUGHT().findings} problems, ${E.money(CAUGHT().charge)} in charges the guide sets` : ""}] : []),
       {src:"Trading Grid", text:"Response runs from the problem to the owner's next record, from records that arrived; a missing record reads Unknown.", found:""}]; },
-  questions:() => V.side === "ashby" ? ["Where is fill rate losing cases, and who owns the shortfall?", "What happened to the finding on PO 46215?"] : ["Which suppliers ship the fewest cases they were ordered?", "What money moved because of findings?"],
+  questions:() => V.side === "ashby" ? ["Where is fill rate losing cases, and who owns the shortfall?", "What happened to the ship notice sent after the truck left?"] : ["Which suppliers ship the fewest cases they were ordered?", "What money moved because of findings?"],
   onSwitch:id => { V.side = id; },
   act:() => null
 };

@@ -642,8 +642,8 @@ const W = E.W = {docs:{
     kv:[["Cartons loaded","120 of 120, by SSCC"],["Includes","Carton 006141410000003006"],["Departed","18:00 · Lakeline Freight"]]},
   "BOL-88229": {name:"Bill of lading", ref:"BOL-88229", iface:"Uploaded to the dispute · PDF", from:"Ashby Supplier", to:"Trading Grid", kv:[["Issued by","Lakeline Freight"],["Seal","SL-3302918"],["Terms","Collect; loaded and counted by shipper"]]},
   "POD-450118": {name:"Delivery receipt", ref:"SHP-450118-2", iface:"Uploaded to the dispute · PDF", from:"Ashby Supplier", to:"Trading Grid", kv:[["Issued by","Lakeline Freight"],["Delivered","120 cartons"],["Seal","SL-3302918 intact"],["Exceptions","None"]]},
-  "LS-46229": {name:"Load scan", ref:"SHP-46229", iface:"Kinross scan · API", from:"Kinross Logistics", to:"Trading Grid", at:T(-6,14,33), kv:[["Cartons loaded","6 of 6, by SSCC"],["Held by","Kinross warehouse system"]]},
-  "LT-46237": {name:"Load tally by SSCC", ref:"SHP-46237", iface:"Kinross scan · API", from:"Kinross Logistics", to:"Trading Grid", at:T(-5,14,39), kv:[["Cartons counted","15, by SSCC"],["Held by","Kinross warehouse system"]]},
+  "LS-46229": {name:"Load scan", ref:"SHP-46229", iface:"3PL scan · API", from:"Kinross Logistics", to:"Trading Grid", at:T(-6,14,33), kv:[["Cartons loaded","6 of 6, by SSCC"],["Held by","Kinross warehouse system"]]},
+  "LT-46237": {name:"Load tally by SSCC", ref:"SHP-46237", iface:"3PL scan · API", from:"Kinross Logistics", to:"Trading Grid", at:T(-5,14,39), kv:[["Cartons counted","15, by SSCC"],["Held by","Kinross warehouse system"]]},
   "BOL-46229": {name:"Bill of lading", ref:"BOL-46229", iface:"Uploaded to the dispute · PDF", from:"Ashby Supplier", to:"Trading Grid", kv:[["Issued by","Lakeline Freight"],["Seal","SL-4622977"]]},
   "POD-46229": {name:"Delivery receipt", ref:"SHP-46229", iface:"Uploaded to the dispute · PDF", from:"Ashby Supplier", to:"Trading Grid", kv:[["Issued by","Lakeline Freight"],["Delivered","6 cartons"],["Seal","Intact"]]},
   "BOL-46237": {name:"Bill of lading", ref:"BOL-46237", iface:"Uploaded to the dispute · PDF", from:"Ashby Supplier", to:"Trading Grid", kv:[["Issued by","Lakeline Freight"],["Seal","SL-4623777"]]},
@@ -656,7 +656,6 @@ const W = E.W = {docs:{
   "DEC-40877": {name:"Charge decision", ref:"DC-40877 · shortage charge", iface:"Trading Grid deductions", from:"Northfield Retailer", to:"Ashby Supplier", at:T(4,10,0), kv:[["Decision","Waived"],["Decided by","Jordan Ellis"],["Reason","Load scan shows carton 006141410000003006 loaded before the seal"]]},
   "PMT-990877": {name:"Remittance", ref:"PMT-990877", iface:"EDI 820", from:"Northfield Retailer", to:"Ashby Supplier", at:T(14,8,0), kv:[["Compliance charges","CI-NF-2611-0418"],["Ship notice mismatch","−$151.00 · NR-450118 · case DC-40877"]]},
   "PMT-991204": {name:"Remittance", ref:"PMT-991204", iface:"EDI 820", from:"Northfield Retailer", to:"Ashby Supplier", at:T(35,8,0), kv:[["Paid","$42,198.80"],["Repayment","+$88.40 · deduction DM-55102"],["Note","Waived shortage charge, case DC-40877"]]},
-  "ERP-55102": {name:"Receivables match", ref:"DM-55102", iface:"Supplier ERP · API", from:"Supplier ERP", to:"Trading Grid", at:T(36,9,0), kv:[["Payment","PMT-991204"],["Amount","$88.40"]]}
 }};
 const R = {
   sh01:{text:"A short carton is charged its invoice cost plus $50.", src:"Northfield charge schedule"},
@@ -743,7 +742,7 @@ const TN = [{k:"decide", lab:"To decide", tone:"warn", f:c => true}, {k:"ver", l
 const toDecide = () => all().filter(([, c]) => c.dsp && !c.dec && !c.won);
 
 /* ---------- Ashby side ---------- */
-const PROOF = {scan:c => `Load scan at ${c.from}`, tally:() => "Load tally at Kinross", none:() => "No load scan or tally on record", carrier:() => "2 cartons crushed in transit · prepaid freight"};
+const PROOF = {scan:c => `Load scan at ${c.from === "Kinross" ? "Ashby's 3PL warehouse" : c.from}`, tally:() => "Load tally at Ashby's 3PL warehouse", none:() => "No load scan or tally on record", carrier:() => "2 cartons crushed in transit · prepaid freight"};
 function stateA(c){
   if (c.repaid) return ["Repaid · matched","brand"];
   if (c.won) return ["Won · confirmed","brand"];
@@ -765,7 +764,7 @@ function recA(id){
   const facts = [{v:`<b>Remittance</b> · ${money(c.amt)} withheld · ${c.cartons} carton${c.cartons > 1 ? "s" : ""} short`, tags:[["EDI 820","PMT-990412"]]}];
   if (id === "DC-40877") facts.push({v:`<b>Receiving advice</b> · 119 of 120 cartons at DC 2 · 1 carton not scanned`, tags:[["EDI 861","RCV-DC2-77355"]]});
   if (c.proofDoc) facts.push({v:`<b>${esc(W.docs[c.proofDoc].name)}</b> · ${esc(c.proofText)}`, tags:[[W.docs[c.proofDoc].iface, c.proofDoc]]});
-  else if (c.proof === "none") facts.push({v:`<b>Load proof</b> · <span class="st-amber">Missing</span> · no load scan or tally at Kinross`, tags:[["Kinross scan · API",""]]});
+  else if (c.proof === "none") facts.push({v:`<b>Load proof</b> · <span class="st-amber">Missing</span> · no load scan or tally at Ashby's 3PL warehouse`, tags:[["3PL scan · API",""]]});
   else facts.push({v:`<b>Freight</b> · prepaid · 2 cartons crushed in transit`, tags:[["Delivery receipt","POD-450415"]]});
   facts.push({v:`<b>Uploaded by Priya Raman</b> · ${esc(upList(c))}`, tags:c.up.map(d => [W.docs[d].name.split(" ")[0] === "Bill" ? "Bill of lading" : "Delivery receipt", d])});
   if (id === "DC-40877") facts.push({v:`<b>Linked charges</b> · ship notice mismatch ${money(151)}${c.as02 ? " billed" : ""} and backorder ${money(1.15)} projected · same carton, counted once`, tags:[["Rules",""]]});
@@ -781,8 +780,8 @@ function recA(id){
     action = {says:`Opens a dispute on Case ${c.n} in Trading Grid's deductions for ${money(c.amt)}, with ${c.proofDoc ? "the " + (c.proof === "tally" ? "load tally" : "load scan") + ", " : "the "}${c.proofDoc ? "" : ""}${upList(c)}. Northfield's receipt stays unchanged unless Northfield revises it.`,
       buttons:[{id:"d:" + id, label:"Open dispute", busyLabel:"Opening dispute"}], ruleTag:"Within 60 days", nod:`Not disputed in ${days()} days: the deduction stands.`};
   } else if (c.repaid) {
-    banner = [`${money(c.amt)} repaid on Northfield's remittance`, "Matched to the deduction in Trading Grid and in Supplier ERP receivables.", `Ship notice mismatch charge ${money(151)} stands · receipt unchanged at 119 of 120.`];
-    body = E.facts("Settled by", [{v:`<b>Remittance</b> · +${money(c.amt)} against the deduction`, tags:[["EDI 820","PMT-991204"]]}, {v:`<b>Receivables match</b> · ${money(c.amt)}`, tags:[["Supplier ERP · API","ERP-55102"]]}, {v:`<b>Ship notice mismatch</b> · ${money(151)} billed on compliance charges`, tags:[["EDI 820","PMT-990877"]]}]);
+    banner = [`${money(c.amt)} repaid on Northfield's remittance`, "Matched to the deduction in Trading Grid.", `Ship notice mismatch charge ${money(151)} stands · receipt unchanged at 119 of 120.`];
+    body = E.facts("Settled by", [{v:`<b>Remittance</b> · +${money(c.amt)} against the deduction`, tags:[["EDI 820","PMT-991204"]]}, {v:`<b>Matched to the deduction</b> · ${money(c.amt)}`, tags:[["Trading Grid",""]]}, {v:`<b>Ship notice mismatch</b> · ${money(151)} billed on compliance charges`, tags:[["EDI 820","PMT-990877"]]}]);
   } else if (c.dec === "waived") {
     body += `<div class="card plain" data-flash><div class="th"><span class="tt">Repayment</span>${E.chip("Awaiting remittance","")}</div><p class="vals">Waived by Jordan Ellis · ${money(c.amt)} comes back on a later Northfield remittance</p>${E.details("w:" + id, ruleList(["repay"]) + readList(id === "DC-40877" ? ["DEC-40877"] : []))}</div>`;
     if (id === "DC-40877") action = {says:"Moves the story to Northfield's next remittances. Nothing is sent.", buttons:[{id:"next", label:"Next: Northfield's remittances", busyLabel:"Reading remittances"}]};
@@ -875,7 +874,7 @@ E.page = {
     const found = {evid: c ? (groupOf(c) === "missing" ? "Load proof missing" : "Load proof by SSCC present") : "", window: S.side === "ashby" ? days() + " days left" : "", order:"Sorts the list", sort:"Sorts the list", as02:"Same carton, counted once", receipt:"Receipt stays at 119 of 120", carrier: "Prepaid freight, 2 cartons crushed"};
     return ks.map(k => ({text:R[k].text, src:R[k].src, found:found[k] || ""}));
   },
-  questions:() => S.side === "ashby" ? ["Why can case 40877 be disputed?", "What does Kinross hold for case 41102?"] : ["Which disputes are verified, and what do the rules recommend?", "Waive the verified packs"],
+  questions:() => S.side === "ashby" ? ["Which deductions can we dispute, and with what proof?", "What does Ashby's 3PL warehouse hold for the open shortage cases?"] : ["Which disputes are verified, and what do the rules recommend?", "Waive the verified packs"],
   bulk(){ if (S.side !== "nf" || !S.picked) return null; const ids = [...S.picked].filter(id => C[id] && verified(C[id]) && !C[id].dec && !C[id].won); if (!ids.length) return null;
     return {id:"bulk", text:`${ids.length} verified · ${money(ids.reduce((s, id) => s + C[id].amt, 0))}`, label:"Waive selected", busyLabel:"Recording"}; },
   onSwitch(){ const n = E.page.nextUp(); if (S.side === "nf" && !toDecide().some(([id]) => id === S.sel.nf)) S.sel.nf = n || S.sel.nf; },
@@ -903,8 +902,7 @@ function act(key){
     return E.wait(900).then(() => {
       c.as02 = true; H(T(14,8,0), "Remittance PMT-990877 · ship notice mismatch charge $151.00 on NR-450118", "Northfield", "PMT-990877", "ashby,nf");
       c.repaid = true; H(T(35,8,0), "Remittance PMT-991204 · +$88.40 against DM-55102 · matched by Trading Grid", "Northfield · Trading Grid", "PMT-991204", "ashby,nf");
-      H(T(36,9,0), "Supplier ERP matched PMT-991204 to DM-55102 in receivables", "Supplier ERP", "ERP-55102", "ashby");
-      S.clock = T(36,9,0); E.event("Northfield's remittance repaid $88.40; Trading Grid matched it to the deduction.", true, true); E.say("Case 40877 settled: $88.40 repaid and matched."); return "banner"; }); }
+      S.clock = T(35,8,0); E.event("Northfield's remittance repaid $88.40; Trading Grid matched it to the deduction.", true, true); E.say("Case 40877 settled: $88.40 repaid and matched."); return "banner"; }); }
 }
 
 /* Aviator decision cards: when Jordan approves a decide_charge card on the hosted copy, the page records that decision */

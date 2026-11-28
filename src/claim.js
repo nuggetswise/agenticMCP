@@ -64,7 +64,7 @@ const promoCheckOf = (v) => { const r = v._settlement; return { rule: 'Trading G
 function promoRow(db, s, r) {
   const st = caseState(s, r.deduction_ref); const v = promoCheckOf({ _settlement: r });
   const what = `${r.kind} deduction $${r.claimed_amount.toFixed(2)} on ${r.payment} for deal ${r.claimed_deal}; ${st.checked ? v.match : 'not yet matched'}`;
-  const state = st.matched ? 'Repayment matched' : st.repaid ? 'Repaid; to match' : st.decision ? `${st.decision.decision} by Jordan Ellis` : st.disputed ? 'Disputed; awaiting Northfield' : st.accepted ? 'Accepted' : st.checked ? 'Matched by Vividly' : 'Open';
+  const state = st.matched ? 'Repayment matched' : st.repaid ? 'Repaid; to match' : st.decision ? `${st.decision.decision} by Jordan Ellis` : st.disputed ? 'Disputed; awaiting Northfield' : st.accepted ? 'Accepted' : st.checked ? 'Checked by Trading Grid’s promotion rules' : 'Open';
   return { id: r.deduction_ref, record: r.deduction_ref, deal: r.claimed_deal, charge: `Promotion ${r.kind}`, amount: r.claimed_amount, what, state, closed: !!(st.matched || st.accepted || (st.decision && st.decision.decision === 'Upheld')), checked: st.checked ? v.match : null };
 }
 const spec = {
@@ -145,7 +145,7 @@ const spec = {
       const v = promoView(db, s, p.args.record); const st = v.session; const r = v._settlement;
       if (p.action === 'ashby_accepts_charge') { s.clock += MIN; st.accepted = { at: fmtET(iso(s.clock)), by, amount: v.amount }; return { state: 'Shown', response: `Shown to Priya Raman: ${v.charge} $${v.amount.toFixed(2)} on ${v.case} is not disputed; Ashby clears it in the Supplier ERP. Nothing is written there` }; }
       if (p.action === 'submit_dispute') {
-        s.clock += 3 * MIN; const amt = r.unauthorised_amount; const evidence = [`889 ${r.claimed_deal}`, ...(r.reason.match(/852/) ? ['852 history: no report for the claimed week'] : []), ...(r.reason.match(/order window/) ? [`810 ${r.invoice}`] : []), ...(r.reason.match(/Rate/) ? ['856 ship notices in the promoted period'] : []), 'Vividly match'];
+        s.clock += 3 * MIN; const amt = r.unauthorised_amount; const evidence = [`889 ${r.claimed_deal}`, ...(r.reason.match(/852/) ? ['852 history: no report for the claimed week'] : []), ...(r.reason.match(/order window/) ? [`810 ${r.invoice}`] : []), ...(r.reason.match(/Rate/) ? ['856 ship notices in the promoted period'] : []), 'Trading Grid promotion check'];
         st.disputed = { at: fmtET(iso(s.clock)), by, amount: amt, evidence };
         const decision = s.facts.northfield_decision === 'uphold' ? 'Upheld' : 'Waived'; const at = iso(s.clock + 2 * 24 * H);
         ctx.schedule(s, { key: `dec:${v.case}`, at, record: v.case, actor: 'Northfield (synthetic)', synthetic: true, what: `Jordan Ellis ${decision.toLowerCase()} $${amt.toFixed(2)} of ${v.case}`,

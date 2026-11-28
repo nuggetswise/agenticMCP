@@ -804,7 +804,7 @@
   },
   {
    "id": "P20",
-   "name": "P20 Promotion deductions with Vividly",
+   "name": "P20 Promotion deductions",
    "status": "Built",
    "calendar": "P20",
    "seen_by": "Priya Raman, then Jordan Ellis",
@@ -935,10 +935,10 @@
   },
   {
    "id": "P20",
-   "name": "P20 Promotion deductions with Vividly",
+   "name": "P20 Promotion deductions",
    "status": "Planned",
    "agent": "Claim Agent",
-   "tools": "claim_* at the promotion moment (preset promotions), vividly_match",
+   "tools": "claim_* at the promotion moment (preset promotions), promotion_check",
    "spec": "Build prompts doc, P20",
    "note": "Moves to prototypes with its calendar moment, anchors and decisions when built (T3.7)"
   },

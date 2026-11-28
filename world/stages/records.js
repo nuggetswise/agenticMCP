@@ -142,7 +142,7 @@ function generate(L, { W, buyerShipments }) {
     cases.forEach((k, idx) => {
       const x = taken(k.ref); const c = x.c; const id = P20_CASES[k.ref]; const amount = k.unsupported(c); total = r2(total + amount);
       ev(paidAt, 'case.opened', x.i.po, ...CASE, 'NORTHFIELD', { case: id, charge: 'PROMO', kind: 'Promotion deduction', amount: c.amount, deduction: k.ref, deal: c.deal_id, payment: pay.ref, invoice: x.i.invoice, dispute_deadline: etDay(addD(paidAt, 60)) });
-      ev(et('2027-01-06', ['09:20', '09:28', '09:36'][idx]), 'case.dispute', x.i.po, ...CASE, 'ASHBY', { case: id, charge: 'PROMO', amount, deduction: k.ref, deal: c.deal_id, stands: r2(c.amount - amount), vividly_match: k.match,
+      ev(et('2027-01-06', ['09:20', '09:28', '09:36'][idx]), 'case.dispute', x.i.po, ...CASE, 'ASHBY', { case: id, charge: 'PROMO', amount, deduction: k.ref, deal: c.deal_id, stands: r2(c.amount - amount), promotion_check: k.match,
         evidence: k.evidence(c, x), drafted_by: 'Ashby’s promotion deduction rules', approved_by: 'Priya Raman' });
       ev(et('2027-01-07', ['10:00', '10:10', '10:20'][idx]), 'case.decision', x.i.po, ...CASE, 'NORTHFIELD', { case: id, charge: 'PROMO', amount, deduction: k.ref, decision: 'Waived', decided_by: 'Jordan Ellis', reason: k.why(c),
         reviewer_note: `${k.why(c)}. Waive $${amount.toFixed(2)}${c.amount > amount ? `; $${r2(c.amount - amount).toFixed(2)} stands` : ''}.` });

@@ -32,12 +32,14 @@ export default function ({ db, ash, nf, ok, eq, none, n }) {
 
   // The hold: one finding, 12 of 60 cartons, Kinross owns the fix, the charge at stake from the rule.
   const hold = JSON.parse(db.prepare("SELECT data FROM events WHERE kind = 'tg.hold' AND po = 'NR-47400'").get().data); const f = hold.findings[0];
-  eq('p26.hold', [hold.findings.length, hold.sent_to_northfield, f.rule, f.cartons.length, f.cartons_checked, f.owner, f.fix_in, f.exposure_estimate, lotCharge(12)], [1, false, 'NF-4.17', 12, 60, 'Kinross Logistics', 'Kinross load scan', 210, 210]);
+  eq('p26.hold', [hold.findings.length, hold.sent_to_northfield, f.rule, f.cartons.length, f.cartons_checked, f.owner, f.fix_in, f.exposure_estimate, lotCharge(12)], [1, false, 'NF-4.17', 12, 60, 'Kinross Logistics', 'Kinross shipping advice (945)', 210, 210]);
   const v = db.prepare("SELECT data FROM events WHERE kind = 'erp.ship_notice' AND po = 'NR-47400' ORDER BY at").all().map((e) => JSON.parse(e.data));
   eq('p26.first_version_misses_12_lots_corrected_misses_none', v.map((x) => [x.version, x.carton_lots.filter((c) => !c.lot || !c.best_before).length]), [[1, 12], [2, 0]]);
   eq('p26.held_cartons_are_the_ones_with_no_lot', v[0].carton_lots.filter((c) => !c.lot).map((c) => c.sscc), f.cartons);
-  const seq = db.prepare("SELECT kind FROM events WHERE po = 'NR-47400' AND id >= 6000001 AND at >= (SELECT at FROM events WHERE kind = 'tg.hold' AND po = 'NR-47400') ORDER BY at").all().map((e) => e.kind);
-  eq('p26.fix_then_corrected_notice_then_check_then_release', seq, ['tg.hold', 'erp.correction', 'erp.ship_notice', 'tg.check', 'approval', 'wms.departure_scan']);
+  // 27 November 2026: the draft is built from the 11:28 945 and held the same minute; no API departure scan follows.
+  const seq = db.prepare("SELECT kind FROM events WHERE po = 'NR-47400' AND id >= 6000001 AND at >= (SELECT at FROM events WHERE kind = 'tg.hold' AND po = 'NR-47400') ORDER BY at, id").all().map((e) => e.kind);
+  eq('p26.fix_then_corrected_notice_then_check_then_release', seq, ['erp.ship_notice', 'tg.hold', 'erp.correction', 'erp.ship_notice', 'tg.check', 'approval']);
+  none('p26.no_api_warehouse_scans', "SELECT id FROM events WHERE kind IN ('wms.load_scan', 'wms.departure_scan') AND po IN ('NR-47400', 'NR-47403')");
   // The ship notice Northfield receives carries the lot on all 60 cartons, within the hour, and the receipt matches it.
   eq('p26.sent_ship_notice', [n("SELECT count(*) n FROM carton_lots WHERE shipment_id = 'ASN-47400' AND lot = ?".replace('?', `'${P26_LOT.lot}'`)), n("SELECT count(*) n FROM documents WHERE reference = 'ASN-47400' AND doc_type = '856'"),
     db.prepare("SELECT (julianday(sent_at) - julianday(shipped_at)) * 24 < 1 ok FROM shipments WHERE shipment_id = 'ASN-47400'").get().ok], [60, 1, 1]);
@@ -54,8 +56,8 @@ export default function ({ db, ash, nf, ok, eq, none, n }) {
   eq('p26.second_first_version_has_lots_and_no_dates', v2.map((x) => [x.version, x.carton_lots.filter((c) => !c.lot).length, x.carton_lots.filter((c) => !c.best_before).length]), [[1, 0, 36], [2, 0, 0]]);
   // P26 opens at the hold itself, 10:13 (owner, 27 November 2026), so the hold may equal the moment.
   ok('p26.second_hold_open_at_the_moment', db.prepare('SELECT at FROM events WHERE kind = ? AND po = ?').get('tg.hold', P26_SECOND).at <= cal.as_of && db.prepare("SELECT min(at) t FROM events WHERE kind = 'erp.correction' AND po = ?").get(P26_SECOND).t > cal.as_of);
-  const seq2 = db.prepare("SELECT kind FROM events WHERE po = ? AND id >= 6000001 AND at >= (SELECT at FROM events WHERE kind = 'tg.hold' AND po = ?) ORDER BY at").all(P26_SECOND, P26_SECOND).map((e) => e.kind);
-  eq('p26.second_fix_then_corrected_notice_then_check_then_release', seq2, ['tg.hold', 'erp.correction', 'erp.ship_notice', 'tg.check', 'approval', 'wms.departure_scan']);
+  const seq2 = db.prepare("SELECT kind FROM events WHERE po = ? AND id >= 6000001 AND at >= (SELECT at FROM events WHERE kind = 'tg.hold' AND po = ?) ORDER BY at, id").all(P26_SECOND, P26_SECOND).map((e) => e.kind);
+  eq('p26.second_fix_then_corrected_notice_then_check_then_release', seq2, ['tg.hold', 'erp.correction', 'erp.ship_notice', 'tg.check', 'approval']);
   eq('p26.second_receipt_matches', db.prepare("SELECT r.line line, r.qty qty, r.short short FROM receipts r WHERE r.receipt = 'RCV-DC4-47403' ORDER BY r.line").all().map((r) => `${r.line} ${r.qty} ${r.short}`), ['1 36 0', '2 12 0']);
   eq('p26.second_sent_ship_notice_carries_lot_and_date', n(`SELECT count(*) n FROM carton_lots WHERE shipment_id = 'ASN-47403' AND lot = '${P26_LOT.lot}' AND best_before = '${P26_LOT.best_before}'`), 36);
   ok('p26.map_change_ashby_only', ash.prepare("SELECT count(*) n FROM events WHERE kind = 'erp.map_change'").get().n === 1 && nf.prepare("SELECT count(*) n FROM events WHERE kind = 'erp.map_change'").get().n === 0);

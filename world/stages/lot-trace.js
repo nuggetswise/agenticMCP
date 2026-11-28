@@ -22,7 +22,8 @@
 //
 // No warehouse shipping order (940) is added for these orders (26 November 2026: their 945s are, at the existing times): the inventory advice that covers each
 // Kinross pick wave is built by the planning stage before this one runs, and a wave it does not cover would fail its gate.
-// Kinross's allocation, load scan and departure scan are the warehouse records here.
+// Kinross's 940 and 945 are the warehouse records here (27 November 2026: the API load and departure scans are gone);
+// the open orders' lot allocations stay as Kinross API records.
 //
 // Numbering. Documents take their own interchange range (880,000,000 up, world/log.js); events a seventh id range
 // (6,000,001 up, world/build.js). Cartons take SSCC serials from 900,001,001.
@@ -46,8 +47,10 @@ export const LOT_CHARGE = { per_notice: 150, per_carton: 5 }; // Invented: $150 
 const AT = {
   po: day('2027-01-15', '09:20'), ack: day('2027-01-15', '10:05'), wso: day('2027-01-15', '10:30'),
   recall: day('2027-01-18', '09:00'),
-  load: day('2027-01-18', '09:40'), draft: day('2027-01-18', '10:05'), hold: day('2027-01-18', '10:06'),
-  rescan: day('2027-01-18', '10:40'), corrected: day('2027-01-18', '10:48'), recheck: day('2027-01-18', '10:49'), release: day('2027-01-18', '11:00'),
+  // 27 November 2026 (owner: P26 opens at 10:13 and NR-47400 waits on the 945): the draft is built from the 11:28 945,
+  // held at once, fixed by the corrected 945 at 11:30 and released at 11:31. The API load and departure scans are gone.
+  draft: day('2027-01-18', '11:28'), hold: day('2027-01-18', '11:28'),
+  rescan: day('2027-01-18', '11:30'), corrected: day('2027-01-18', '11:30'), recheck: day('2027-01-18', '11:30'), release: day('2027-01-18', '11:31'),
   departed: day('2027-01-18', '11:20'), wsa: day('2027-01-18', '11:28'), sent: day('2027-01-18', '11:32'), received: day('2027-01-19', '07:40'),
 };
 const ORDER = mk(P26_PO, 'DC2', 60, { requested: '2027-01-19', poDate: AT.po.toISOString() });
@@ -78,28 +81,26 @@ function generate(L, ctx) {
     ev(L, x.alloc, 'wms.lot_allocation', x.o.po, KIN, { warehouse_order: `WSO-${x.o.po.slice(3)}`, sku: HONEY, cases: x.o.lines[0].qty, ...P26_LOT });
   }
 
-  // Kinross loads 60 cartons and records the lot on 48; the Supplier ERP builds the ship notice from that scan.
+  // Kinross's 945 at 11:28 records the lot on 48 of 60 cartons; the Supplier ERP builds the ship notice from it.
   const doc = `ASN-${P26_PO.slice(3)}`, shipment = `SHP-${P26_PO.slice(3)}`; let serial = 900001001;
   const cartons = Array.from({ length: 60 }, () => ({ sscc: ctx.W.sscc(serial++), line: 1, qty: 1 }));
   const asScanned = cartons.map((c, i) => ({ sscc: c.sscc, line: 1, sku: HONEY, cases: 1, lot: i < 60 - NO_LOT ? P26_LOT.lot : null, best_before: i < 60 - NO_LOT ? P26_LOT.best_before : null }));
-  ev(L, AT.load, 'wms.load_scan', P26_PO, KIN, { shipment, cartons_loaded: 60, cartons_expected: 60, by_sscc: true, lot_recorded_on: 60 - NO_LOT, lot_not_recorded_on: NO_LOT, note: 'Second pallet layer: carton label read, lot label not read' });
-  ev(L, AT.draft, 'erp.ship_notice', P26_PO, ERP, { document: doc, version: 1, sent_to: 'Trading Grid', cartons: 60, built_from: 'Kinross load scan', carton_lots: asScanned });
+  ev(L, AT.draft, 'erp.ship_notice', P26_PO, ERP, { document: doc, version: 1, sent_to: 'Trading Grid', cartons: 60, built_from: `Shipping advice WSA-${P26_PO.slice(3)} (945)`, carton_lots: asScanned });
   const missing = missingLot(asScanned);
   if (missing.length !== NO_LOT) throw new Error(`lot-trace: expected ${NO_LOT} cartons with no lot, found ${missing.length}`);
   ev(L, AT.hold, 'tg.hold', P26_PO, TG, { document: doc, version: 1, state: 'Held', checked_by: 'Trading Grid lot check before release', sent_to_northfield: false, release_rule: 'AP-1.3',
     findings: [{ line: 1, rule: LOT_RULE, check: 'Lot and best-before date on every carton', finding: `${missing.length} of 60 cartons carry no lot or best-before date`, cartons: missing.map((c) => c.sscc), cartons_checked: 60,
-      owner: 'Kinross Logistics', fix_in: 'Kinross load scan', exposure_estimate: lotCharge(missing.length), charge: `$${LOT_CHARGE.per_notice} per ship notice plus $${LOT_CHARGE.per_carton} per carton` }] });
+      owner: 'Kinross Logistics', fix_in: 'Kinross shipping advice (945)', exposure_estimate: lotCharge(missing.length), charge: `$${LOT_CHARGE.per_notice} per ship notice plus $${LOT_CHARGE.per_carton} per carton` }] });
 
-  // Kinross records the lot on the 12 cartons; the corrected ship notice from the Supplier ERP is the record of the fix.
-  ev(L, AT.rescan, 'erp.correction', P26_PO, KIN, { document: doc, line: 1, rule: LOT_RULE, owner: 'Kinross Logistics', record: `Kinross load scan, ${shipment}`, change: `Lot ${P26_LOT.lot}, best before ${P26_LOT.best_before}, recorded on ${NO_LOT} cartons`, cartons: missing.map((c) => c.sscc) });
+  // Kinross's corrected 945 at 11:30 records the lot on the 12 cartons; the ship notice is rebuilt from it.
+  ev(L, AT.rescan, 'erp.correction', P26_PO, KIN, { document: doc, line: 1, rule: LOT_RULE, owner: 'Kinross Logistics', record: `Shipping advice WSA-${P26_PO.slice(3)}-C (945), ${shipment}`, change: `Lot ${P26_LOT.lot}, best before ${P26_LOT.best_before}, recorded on ${NO_LOT} cartons`, cartons: missing.map((c) => c.sscc) });
   const corrected = asScanned.map((c) => ({ ...c, ...P26_LOT }));
   if (missingLot(corrected).length) throw new Error('lot-trace: the corrected ship notice still has cartons with no lot');
-  ev(L, AT.corrected, 'erp.ship_notice', P26_PO, ERP, { document: doc, version: 2, sent_to: 'Trading Grid', cartons: 60, built_from: 'Kinross load scan', carton_lots: corrected });
+  ev(L, AT.corrected, 'erp.ship_notice', P26_PO, ERP, { document: doc, version: 2, sent_to: 'Trading Grid', cartons: 60, built_from: `Shipping advice WSA-${P26_PO.slice(3)}-C (945)`, carton_lots: corrected });
   ev(L, AT.recheck, 'tg.check', P26_PO, TG, { document: doc, version: 2, result: 'Every carton carries a lot and a best-before date', cartons_checked: 60, rules: [LOT_RULE] });
   ev(L, AT.release, 'approval', P26_PO, TG, { document: doc, approved_by: PRIYA, what: `Release ship notice ${doc} version 2 after every carton carried a lot and a best-before date`, rule: 'AP-1.3', version: 2 });
 
-  // Departed, sent within the hour (NF-4.2), received case for case.
-  ev(L, AT.departed, 'wms.departure_scan', P26_PO, KIN, { shipment, carrier: 'Lakeline Freight' });
+  // Departed 11:20 (on the 945), sent within the hour (NF-4.2), received case for case.
   // Round plan, 26 November 2026 (owner: keep the times, add the 945s): Kinross's 945 at 11:28 carries each carton's lot as
   // first recorded, 12 of 60 without one; the corrected 945 follows at 11:30, and the ship notice at 11:32 matches it.
   D.whOrder(L, ORDER, AT.wso, `WSO-${P26_PO.slice(3)}`, { shipDate: '2027-01-18', qty: { 1: 60 } });

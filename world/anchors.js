@@ -166,7 +166,10 @@ export function anchors(L, W) {
     ev(L, day('2026-11-06', '11:00'), 'tg.hold', po, 'Trading Grid', 'ASHBY', 'API', { document: 'ASN-450118-1 draft', rule: 'NF-4.5', finding: 'Line 1 ship notice 300 against 270 accepted', exposure_estimate: 150, corrected_by: 'Priya Raman', corrected_from: "Shipping advice WSA-450118-1 (945) from Ashby's 3PL warehouse at 18:12: 350 cartons, 270 on line 1 and 80 on line 3", rebuilt_at: iso(day('2026-11-06', '18:12')), release_rule: 'AP-1.3', approved_by: 'Priya Raman', approved_at: iso(day('2026-11-06', '18:18')), released_at: iso(day('2026-11-06', '18:20')) });
     const dep1 = day('2026-11-06', '18:00');
     D.whOrder(L, O, day('2026-11-06', '06:00'), 'WSO-450118', { shipDate: '2026-11-06', qty: { 1: 270, 2: 120, 3: 80 } }); // one warehouse shipping order; Kinross answers it with a 945 per shipment
-    ev(L, addH(dep1, -0.5), 'wms.load_scan', po, 'Kinross warehouse system', 'KINROSS', 'API', { shipment: 'SHP-450118-1', cartons_loaded: 350, cartons_expected: 350, by_sscc: true });
+    // 27 November 2026 (round plan, EDI first): the 945 is the warehouse's record of shipment 1, so its API load scan is
+    // withdrawn (it keeps its place in the event numbering). The departure scan stays: it starts NF-4.2's hour, and the
+    // quarter's caught missing-document finding on this ship notice rests on it.
+    L.retireEvent(addH(dep1, -0.5));
     ev(L, dep1, 'wms.departure_scan', po, 'Kinross warehouse system', 'KINROSS', 'API', { shipment: 'SHP-450118-1', carrier: 'Lakeline Freight' });
     D.whAdvice(L, O, addH(dep1, 0.2), 'WSA-450118-1', { shipmentId: 'SHP-450118-1', shippedAt: dep1, ordered: { 1: 270, 2: 0, 3: 80 }, shipped: { 1: 270, 2: 0, 3: 80 }, cartons: c1.map((c) => ({ ...c, ...(c.line === 3 ? lotOf('ASH-HNY-340', iso(dep1)) || {} : {}) })), tracking: 'BOL-88190', noLedger: true });
     // 27 November 2026: the ship notice is rebuilt from the 3PL warehouse's 945 (18:12) and released at 18:20, inside

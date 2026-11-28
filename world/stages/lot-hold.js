@@ -24,7 +24,7 @@ export const P26_SECOND = 'NR-47403';
 const NAP = 'ASH-NAP-4';
 const AT2 = {
   po: day('2027-01-15', '09:45'), ack: day('2027-01-15', '10:20'), wso: day('2027-01-15', '10:50'), mapChange: day('2027-01-15', '16:30'),
-  load: day('2027-01-18', '09:55'), draft: day('2027-01-18', '10:12'), hold: day('2027-01-18', '10:13'),
+  draft: day('2027-01-18', '10:12'), hold: day('2027-01-18', '10:13'),
   fix: day('2027-01-18', '11:10'), corrected: day('2027-01-18', '11:18'), recheck: day('2027-01-18', '11:19'), release: day('2027-01-18', '11:30'),
   departed: day('2027-01-18', '12:10'), sent: day('2027-01-18', '12:20'), received: day('2027-01-19', '14:30'),
 };
@@ -42,8 +42,9 @@ export function generateSecondHold(L, ctx) {
   ev(L, AT2.mapChange, 'erp.map_change', null, ERP, { map: 'Ashby ship notice map to Northfield', changed_by: 'EDI operations', change: 'Carton loop for ship notices that carry more than one item rebuilt', note: 'The rebuilt loop leaves the best-before date off food cartons' });
   const cartons2 = [...Array.from({ length: 36 }, () => ({ sscc: ctx.W.sscc(serial++), line: 1, qty: 1 })), ...Array.from({ length: 12 }, () => ({ sscc: ctx.W.sscc(serial++), line: 2, qty: 1 }))];
   const sent2 = cartons2.filter((c) => c.line === 1).map((c) => ({ sscc: c.sscc, line: 1, sku: HONEY, cases: 1, lot: P26_LOT.lot, best_before: null }));
-  ev(L, AT2.load, 'wms.load_scan', P26_SECOND, KIN, { shipment: shipment2, cartons_loaded: 48, cartons_expected: 48, by_sscc: true, lot_recorded_on: 36, lot_not_recorded_on: 0 });
-  ev(L, AT2.draft, 'erp.ship_notice', P26_SECOND, ERP, { document: doc2, version: 1, sent_to: 'Trading Grid', cartons: 48, built_from: 'Kinross load scan', carton_lots: sent2 });
+  // 27 November 2026 (round plan, EDI first): no API load or departure scan; the draft is built from the Supplier ERP's
+  // shipment, and the 3PL warehouse's 945 after the 12:10 departure is the warehouse's record of the shipment.
+  ev(L, AT2.draft, 'erp.ship_notice', P26_SECOND, ERP, { document: doc2, version: 1, sent_to: 'Trading Grid', cartons: 48, built_from: `Supplier ERP shipment ${shipment2}`, carton_lots: sent2 });
   const missing2 = missingLot(sent2);
   if (missing2.length !== 36) throw new Error(`lot-trace: expected 36 honey cartons with no best-before date, found ${missing2.length}`);
   ev(L, AT2.hold, 'tg.hold', P26_SECOND, TG, { document: doc2, version: 1, state: 'Held', checked_by: 'Trading Grid lot check before release', sent_to_northfield: false, release_rule: 'AP-1.3',
@@ -52,10 +53,9 @@ export function generateSecondHold(L, ctx) {
   ev(L, AT2.fix, 'erp.correction', P26_SECOND, ERP, { document: doc2, line: 1, rule: LOT_RULE, owner: 'EDI operations', record: 'Ashby ship notice map to Northfield', change: 'Best-before date mapped on every food carton of a ship notice with more than one item', cartons: missing2.map((c) => c.sscc) });
   const corrected2 = sent2.map((c) => ({ ...c, ...P26_LOT }));
   if (missingLot(corrected2).length) throw new Error('lot-hold: the second corrected ship notice still has cartons with no date');
-  ev(L, AT2.corrected, 'erp.ship_notice', P26_SECOND, ERP, { document: doc2, version: 2, sent_to: 'Trading Grid', cartons: 48, built_from: 'Kinross load scan', carton_lots: corrected2 });
+  ev(L, AT2.corrected, 'erp.ship_notice', P26_SECOND, ERP, { document: doc2, version: 2, sent_to: 'Trading Grid', cartons: 48, built_from: `Supplier ERP shipment ${shipment2}`, carton_lots: corrected2 });
   ev(L, AT2.recheck, 'tg.check', P26_SECOND, TG, { document: doc2, version: 2, result: 'Every carton carries a lot and a best-before date', cartons_checked: 36, rules: [LOT_RULE] });
   ev(L, AT2.release, 'approval', P26_SECOND, TG, { document: doc2, approved_by: PRIYA, what: `Release ship notice ${doc2} version 2 after every carton carried a lot and a best-before date`, rule: 'AP-1.3', version: 2 });
-  ev(L, AT2.departed, 'wms.departure_scan', P26_SECOND, KIN, { shipment: shipment2, carrier: 'Lakeline Freight' });
   // Kinross's 945 (26 November 2026): each honey carton with its lot and best-before date, each napkin carton by SSCC.
   D.whOrder(L, ORDER2, AT2.wso, `WSO-${P26_SECOND.slice(3)}`, { shipDate: '2027-01-18', qty: { 1: 36, 2: 12 } });
   D.whAdvice(L, ORDER2, new Date(AT2.departed.getTime() + 5 * 60000), `WSA-${P26_SECOND.slice(3)}`, { shipmentId: shipment2, shippedAt: AT2.departed, cartons: cartons2.map((c) => (c.line === 1 ? { ...c, ...P26_LOT } : c)), noLedger: true });
